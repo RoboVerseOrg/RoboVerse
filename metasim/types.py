@@ -174,39 +174,49 @@ class RobotState:
 
     root_state: RootStateTensor
     """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
-    body_names: list[str]
-    """Body names."""
-    body_state: BodyStateTensor
-    """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13)."""
-    joint_pos: JointStateTensor
+    body_names: list[str] | None = None
+    """Body names. ``None`` when the backend does not expose per-body state
+    (currently pybullet — populates ``body_state=None`` as a TODO)."""
+    body_state: BodyStateTensor | None = None
+    """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is
+    ``(num_envs, num_bodies, 13)``. ``None`` mirrors ``ObjectState`` for
+    backends that don't expose per-body data yet. Downstream code that
+    indexes individual links (e.g. ``body_state[:, body_index, :3]`` for
+    end-effector pose) must None-check first or the call will AttributeError
+    on those backends."""
+    joint_pos: JointStateTensor | None = None
     """Joint positions. Shape is (num_envs, num_joints)."""
-    joint_vel: JointStateTensor
+    joint_vel: JointStateTensor | None = None
     """Joint velocities. Shape is (num_envs, num_joints)."""
-    joint_pos_target: JointStateTensor | None
+    joint_pos_target: JointStateTensor | None = None
     """Joint positions target. Shape is (num_envs, num_joints)."""
-    joint_vel_target: JointStateTensor | None
+    joint_vel_target: JointStateTensor | None = None
     """Joint velocities target. Shape is (num_envs, num_joints)."""
-    joint_effort_target: JointStateTensor | None
+    joint_effort_target: JointStateTensor | None = None
     """Joint effort targets. Shape is (num_envs, num_joints)."""
 
     def __post_init__(self) -> None:
         root_state = _validate_last_dim("root_state", _validate_rank("root_state", self.root_state, 2), 13)
         num_envs = root_state.shape[0]
 
-        body_state = _validate_last_dim("body_state", _validate_rank("body_state", self.body_state, 3), 13)
-        _validate_num_envs("body_state", body_state, num_envs)
-        if body_state.shape[1] != len(self.body_names):
-            raise ValueError(
-                f"body_state second dim must match body_names length {len(self.body_names)}, "
-                f"got shape {tuple(body_state.shape)}"
-            )
+        if self.body_state is not None:
+            body_state = _validate_last_dim("body_state", _validate_rank("body_state", self.body_state, 3), 13)
+            _validate_num_envs("body_state", body_state, num_envs)
+            if self.body_names is not None and body_state.shape[1] != len(self.body_names):
+                raise ValueError(
+                    f"body_state second dim must match body_names length {len(self.body_names)}, "
+                    f"got shape {tuple(body_state.shape)}"
+                )
 
-        joint_pos = _validate_num_envs("joint_pos", _validate_rank("joint_pos", self.joint_pos, 2), num_envs)
-        joint_vel = _validate_num_envs("joint_vel", _validate_rank("joint_vel", self.joint_vel, 2), num_envs)
-        if joint_vel.shape != joint_pos.shape:
-            raise ValueError(
-                f"joint_vel must match joint_pos shape {tuple(joint_pos.shape)}, got {tuple(joint_vel.shape)}"
-            )
+        joint_pos = None
+        if self.joint_pos is not None:
+            joint_pos = _validate_num_envs("joint_pos", _validate_rank("joint_pos", self.joint_pos, 2), num_envs)
+        if self.joint_vel is not None:
+            joint_vel = _validate_num_envs("joint_vel", _validate_rank("joint_vel", self.joint_vel, 2), num_envs)
+            if joint_pos is not None and joint_vel.shape != joint_pos.shape:
+                raise ValueError(
+                    f"joint_vel must match joint_pos shape {tuple(joint_pos.shape)}, got {tuple(joint_vel.shape)}"
+                )
 
         for name, target in (
             ("joint_pos_target", self.joint_pos_target),
@@ -216,7 +226,7 @@ class RobotState:
             if target is None:
                 continue
             target_tensor = _validate_num_envs(name, _validate_rank(name, target, 2), num_envs)
-            if target_tensor.shape != joint_pos.shape:
+            if joint_pos is not None and target_tensor.shape != joint_pos.shape:
                 raise ValueError(
                     f"{name} must match joint_pos shape {tuple(joint_pos.shape)}, got {tuple(target_tensor.shape)}"
                 )

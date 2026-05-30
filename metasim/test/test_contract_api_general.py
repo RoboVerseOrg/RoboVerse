@@ -193,9 +193,11 @@ def test_state_dataclasses_use_explicit_shape_aliases():
         },
         "RobotState": {
             "root_state": "RootStateTensor",
-            "body_state": "BodyStateTensor",
-            "joint_pos": "JointStateTensor",
-            "joint_vel": "JointStateTensor",
+            # body_state mirrors ObjectState: ``None`` allowed for backends
+            # that don't expose per-body data (currently pybullet).
+            "body_state": "BodyStateTensor | None",
+            "joint_pos": "JointStateTensor | None",
+            "joint_vel": "JointStateTensor | None",
             "joint_pos_target": "JointStateTensor | None",
             "joint_vel_target": "JointStateTensor | None",
             "joint_effort_target": "JointStateTensor | None",
@@ -254,12 +256,10 @@ def test_task_info_alias_is_used_in_public_task_apis():
 def test_isaacsim_world_state_to_env_local_does_not_mutate_source():
     from metasim.sim.isaacsim.isaacsim import _world_state_to_env_local
 
-    world_state = torch.tensor(
-        [
-            [0.1, 0.2, 0.3, 1.0, 0.0, 0.0, 0.0, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-            [2.1, 0.2, 0.3, 1.0, 0.0, 0.0, 0.0, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-        ]
-    )
+    world_state = torch.tensor([
+        [0.1, 0.2, 0.3, 1.0, 0.0, 0.0, 0.0, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+        [2.1, 0.2, 0.3, 1.0, 0.0, 0.0, 0.0, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+    ])
     original_world_state = world_state.clone()
     env_origins = torch.tensor([[0.0, 0.0, 0.0], [2.0, 0.0, 0.0]])
 
