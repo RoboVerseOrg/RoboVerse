@@ -60,6 +60,7 @@ def _patch_capture_real_state(env) -> None:
     """
     orig_get_obs = env.get_obs
     robot = env.robot
+    scene = env.scene
 
     def get_obs_with_real():
         d = orig_get_obs()
@@ -68,9 +69,82 @@ def _patch_capture_real_state(env) -> None:
             d.setdefault("joint_action", {})["real_vector"] = np.asarray(real, dtype=float)
         except Exception:
             pass  # achieved-state capture is best-effort; target vector is always present
+        try:
+            # Per-frame world pose of every scene actor -> object-trajectory parity.
+            poses = {}
+            for actor in scene.get_all_actors():
+                p = actor.get_pose()
+                poses[actor.get_name()] = np.asarray([*p.p, *p.q], dtype=float)  # [x,y,z, qw,qx,qy,qz]
+            d["object_poses"] = poses
+        except Exception:
+            pass
         return d
 
     env.get_obs = get_obs_with_real
+
+
+# Infrastructure actors (not manipulated targets) we never need a mesh for.
+_INFRA_ACTORS = {"ground", "wall", "table", "table_wall"}
+
+
+def _install_mesh_hook(pt) -> dict:
+    """Record the exact mesh file RoboTwin loads for each named actor.
+
+    ``create_actor`` resolves an object's mesh via the module-internal
+    ``get_glb_or_obj_file(modeldir, model_id)`` and builds the actor with
+    ``name=modelname`` (= the asset dir name). We wrap that resolver to record
+    ``{modelname: {visual, scale}}`` so the RoboVerse replay can load the *real*
+    mesh (not a primitive proxy) at the recorded pose. The runtime must be
+    prepared (cwd + sys.path) before importing the RoboTwin envs package; the
+    hook is module-level, so it persists across the per-seed retries.
+    """
+    import json as _json
+    import os as _os
+
+    rt = pt.robotwin_dir()
+    pt._prepare_robotwin_runtime(rt)
+    import sys as _sys
+
+    if rt not in _sys.path:
+        _sys.path.insert(0, rt)
+    sink: dict = {}
+    try:
+        # ``envs.utils`` re-exports ``create_actor`` (the function), shadowing the
+        # submodule attribute, so ``import envs.utils.create_actor as cau`` binds
+        # the function. Fetch the actual module object from sys.modules instead.
+        import importlib
+
+        cau = importlib.import_module("envs.utils.create_actor")
+    except Exception as e:
+        print(f"[mesh-hook] could not import create_actor ({type(e).__name__}: {e}); meshes will be located by scan")
+        return sink
+
+    orig = cau.get_glb_or_obj_file
+
+    def hooked(modeldir, model_id):
+        f = orig(modeldir, model_id)
+        try:
+            name = _os.path.basename(str(modeldir).rstrip("/"))
+            if name in ("visual", "collision"):
+                name = _os.path.basename(_os.path.dirname(str(modeldir).rstrip("/")))
+            scale = None
+            jd = _os.path.join(rt, "assets", "objects", name)
+            jf = _os.path.join(jd, "model_data.json" if model_id is None else f"model_data{model_id}.json")
+            if _os.path.exists(jf):
+                scale = _json.load(open(jf)).get("scale")
+            # Record the mesh path relative to the RoboTwin checkout (portable).
+            # create_actor resolves collision first then visual; prefer the visual
+            # (render) mesh for a faithful replay, but keep whatever we got otherwise.
+            rel = _os.path.relpath(str(f), rt)
+            is_visual = f"{_os.sep}visual{_os.sep}" in str(f)
+            if name not in sink or is_visual:
+                sink[name] = {"visual": rel, "scale": scale, "model_id": model_id}
+        except Exception:
+            pass
+        return f
+
+    cau.get_glb_or_obj_file = hooked
+    return sink
 
 
 def _capture_objects(env) -> dict:
@@ -101,6 +175,8 @@ def main(argv: list[str] | None = None) -> int:
     pt = _load_passthrough()
     work_dir = os.path.join(pt.robotwin_dir(), "data", "_rv_bridge")
     os.makedirs(work_dir, exist_ok=True)
+    # Record the real mesh file RoboTwin loads per actor (for mesh-faithful replay).
+    mesh_sink = _install_mesh_hook(pt)
     # State-only: skip RGB/point-cloud rendering so the seed search stays fast.
     # qpos -> command-target ``vector``; endpose -> achieved end-effector world
     # pose per arm. Together with the achieved ``real_vector`` (injected below)
@@ -150,6 +226,16 @@ def main(argv: list[str] | None = None) -> int:
             ]
             left_endpose = [np.asarray(f["endpose"]["left_endpose"], dtype=float) for f in frames if f.get("endpose")]
             right_endpose = [np.asarray(f["endpose"]["right_endpose"], dtype=float) for f in frames if f.get("endpose")]
+            # Per-frame object pose trajectory (manipulated actors only) + their meshes,
+            # so the RoboVerse replay can load real meshes and we can measure object parity.
+            obj_names = [n for n in init_objects if n not in _INFRA_ACTORS]
+            object_traj = {
+                n: np.asarray([
+                    f["object_poses"][n] for f in frames if f.get("object_poses") and n in f["object_poses"]
+                ])
+                for n in obj_names
+            }
+            object_meshes = {n: mesh_sink[n] for n in obj_names if n in mesh_sink}
             success = {
                 "task": args.task,
                 "seed": seed,
@@ -158,6 +244,8 @@ def main(argv: list[str] | None = None) -> int:
                 "left_endpose": left_endpose,  # (T, 7) achieved EE world pose [x,y,z, qw,qx,qy,qz]
                 "right_endpose": right_endpose,  # (T, 7)
                 "init_objects": init_objects,
+                "object_traj": object_traj,  # {actor_name: (T, 7)} manipulated-object world-pose trajectory
+                "object_meshes": object_meshes,  # {actor_name: {visual: relpath, scale, model_id}}
                 "left_gripper_scale": list(env.robot.left_gripper_scale),
                 "right_gripper_scale": list(env.robot.right_gripper_scale),
             }
@@ -175,6 +263,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"SAVED {len(success['vectors'])} frames (seed {success['seed']}) -> {args.out}; "
         f"achieved_qpos={len(success['real_vectors'])} endpose={len(success['left_endpose'])}; "
+        f"obj_traj={ {k: len(v) for k, v in success['object_traj'].items()} } meshes={list(success['object_meshes'])}; "
         f"objects: {list(success['init_objects'])}"
     )
     return 0
