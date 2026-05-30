@@ -25,6 +25,7 @@ PASSTHROUGH_PREFIXES = [
     "MyoSuite/",
     "GymRobotics/",
     "DMControl/",
+    "Libero/",
 ]
 
 
