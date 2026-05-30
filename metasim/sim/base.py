@@ -46,6 +46,21 @@ class BaseSimHandler(ABC):
         self.object_dict = {obj.name: obj for obj in self.objects + self.robots}
         self._tensor_state_cache: TensorState | None = None
         self._dict_state_cache: DictStateBatch | None = None
+        self._actions_cache: CompatActionInput | None = None
+
+    @property
+    def actions_cache(self) -> CompatActionInput | None:
+        """Return the most recently submitted action.
+
+        Set by ``set_dof_targets`` and returned here unchanged. Concrete
+        backends used to implement this themselves (with subtly different
+        attribute names / set times), and ``ParallelHandler`` /
+        ``HybridSimHandler`` didn't implement it at all — so
+        ``handler.actions_cache`` raised ``AttributeError`` on the
+        parallel path even though tests assert it. Centralising the
+        cache on the base ensures every handler honours the contract.
+        """
+        return getattr(self, "_actions_cache", None)
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -321,6 +336,11 @@ class BaseSimHandler(ABC):
             actions: The target actions for the robot.
         """
         self._warn_set_dof_targets(actions)
+        # Centralised ``actions_cache`` contract — see the @property above.
+        # Concrete backends keep their own ``self._actions_cache = actions``
+        # writes for back-compat with their internal use, but the public
+        # contract is now owned by the base.
+        self._actions_cache = actions
         # Backends like MuJoCo write actuator ctrl here, and ``get_states`` reads ctrl
         # back as ``joint_pos_target``. Without invalidation, the cached state held a
         # pre-action joint_pos_target until the next simulate() — silent staleness.

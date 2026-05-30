@@ -257,6 +257,21 @@ def test_set_dof_targets_warning_dedupes(loguru_warnings):
 
 
 @pytest.mark.general
+def test_actions_cache_holds_last_set_dof_targets_input():
+    """The ``actions_cache`` property is a public contract — every concrete
+    handler has its own implementation, and tests assert
+    ``handler.actions_cache is not None`` after ``set_dof_targets``.
+    The base now owns the contract so it holds for ParallelHandler /
+    HybridSimHandler too, where it previously AttributeError'd."""
+    handler = _StubHandler(robots=[_FakeRobot("arm", ["j0", "j1"])])
+    assert handler.actions_cache is None  # before any action
+
+    action = [{"arm": {"dof_pos_target": {"j0": 0.5, "j1": 0.1}}}]
+    handler.set_dof_targets(action)
+    assert handler.actions_cache is action
+
+
+@pytest.mark.general
 def test_set_dof_targets_tensor_input_is_not_validated():
     """Tensor actions are indexed, not name-based — they go through the
     fast path. Validation must skip them."""
