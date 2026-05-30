@@ -172,6 +172,15 @@ if __name__ == "__main__":
 
     os.makedirs("get_started/output", exist_ok=True)
     save_path = f"get_started/output/0_static_scene_{args.sim}.png"
-    log.info(f"Saving image to {save_path}")
-    imageio.imwrite(save_path, next(iter(obs_tensor.cameras.values())).rgb[0].cpu().numpy())
+    if not obs_tensor.cameras:
+        # Newton's SensorTiledCamera init can fail in environments without
+        # the required GL/Warp context (logs a "Cameras disabled" warning
+        # at handler launch). Don't StopIteration on the user — explain.
+        log.warning(
+            f"No camera frames available from {args.sim}; skipping image save. "
+            f"Check earlier logs for backend-side camera-init warnings."
+        )
+    else:
+        log.info(f"Saving image to {save_path}")
+        imageio.imwrite(save_path, next(iter(obs_tensor.cameras.values())).rgb[0].cpu().numpy())
     handler.close()
