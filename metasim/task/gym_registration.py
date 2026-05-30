@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import warnings
 from typing import Any, Callable
 
@@ -15,6 +16,38 @@ from .registry import get_task_class, list_tasks
 # Local fallback registry for vector entry points when Gymnasium does not
 # support the `vector_entry_point` argument in `register()`.
 _VECTOR_ENTRY_POINTS: dict[str, Callable[..., VectorEnv]] = {}
+
+
+def _task_reset_accepts_seed(task_env) -> bool:
+    """Return True iff ``task_env.reset`` accepts a ``seed`` keyword arg.
+
+    ``TaskBase`` / ``RLTaskEnv`` accept ``seed``, but many downstream task
+    subclasses (maniskill / libero / calvin / mjlab) override
+    ``reset(self, states=None, env_ids=None)`` without it. Forwarding
+    ``seed=`` unconditionally would TypeError on those classes — so we
+    inspect the signature and only forward when the target supports it.
+
+    Cached on the instance (``_reset_accepts_seed_cached``) so the
+    introspection happens once per environment, not per reset.
+    """
+    cached = getattr(task_env, "_reset_accepts_seed_cached", None)
+    if cached is not None:
+        return cached
+    try:
+        sig = inspect.signature(task_env.reset)
+        accepts = "seed" in sig.parameters or any(
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+        )
+    except (ValueError, TypeError):
+        accepts = False
+    try:
+        task_env._reset_accepts_seed_cached = accepts
+    except AttributeError:
+        # Some task envs may have frozen __dict__; the introspection still works,
+        # we just can't cache the result.
+        pass
+    return accepts
+
 
 # Use the official enum for autoreset mode (required to silence the warning)
 try:
@@ -58,10 +91,19 @@ class GymEnvWrapper(gym.Env):
         """Reset the environment and return the initial observation."""
         super().reset(seed=seed)
         # Forward the seed to the task so it can propagate to the handler.
-        # Before: ``task_env.reset()`` was called without the seed, so
-        # ``env.reset(seed=42)`` only seeded gym's base RNG and rollouts were
-        # not actually reproducible on the simulator side.
-        obs, info = self.task_env.reset(seed=seed)
+        # Before this method change: ``task_env.reset()`` was called without
+        # the seed, so ``env.reset(seed=42)`` only seeded gym's base RNG and
+        # rollouts were not actually reproducible on the simulator side.
+        #
+        # Many task subclasses (maniskill/libero/calvin/mjlab) override
+        # ``reset(self, states=None, env_ids=None)`` *without* a seed
+        # parameter — passing ``seed=`` unconditionally would TypeError on
+        # those. Detect support via ``inspect.signature`` so the seed is
+        # only forwarded when the target's signature accepts it.
+        if _task_reset_accepts_seed(self.task_env):
+            obs, info = self.task_env.reset(seed=seed)
+        else:
+            obs, info = self.task_env.reset()
         return obs, info
 
     def step(self, action):
@@ -122,8 +164,11 @@ class GymVectorEnvAdapter(VectorEnv):
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """Reset all environments and return initial observations."""
         # Forward the seed so it can propagate to the handler — see the
-        # single-env adapter above for the rationale.
-        obs, info = self.task_env.reset(seed=seed)
+        # single-env adapter above for the subclass-signature rationale.
+        if _task_reset_accepts_seed(self.task_env):
+            obs, info = self.task_env.reset(seed=seed)
+        else:
+            obs, info = self.task_env.reset()
         return obs, info
 
     def step_async(self, actions) -> None:
