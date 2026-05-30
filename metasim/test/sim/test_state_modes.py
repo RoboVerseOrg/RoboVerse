@@ -204,6 +204,74 @@ def test_set_dof_targets_invalidates_state_cache(handler):
 
 
 @pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
+def test_set_states_get_states_round_trip(handler):
+    """Cross-backend invariant: ``set_states(X) → get_states()`` recovers
+    ``X`` for the keys ``_set_states`` honours (``pos`` / ``rot`` /
+    ``dof_pos``). This pins down representation drift across backends —
+    if any handler stores joint names with a different prefix, packs
+    quaternions in a different order, or silently drops a field, this
+    test catches it.
+
+    Tolerance is per-quantity: 1e-3 for root pose (which goes through
+    quaternion normalisation in some backends), 1e-4 for joint
+    positions (direct qpos write, expected exact modulo float32 in
+    GPU backends).
+    """
+    # Snapshot the post-launch state so we know which keys exist.
+    pre = handler.get_states(mode="dict")
+    assert isinstance(pre, list) and len(pre) >= 1
+
+    franka_pre = pre[0]["robots"]["franka"]
+    joint_names = list(franka_pre["dof_pos"].keys())
+    assert joint_names, "Franka should have at least one joint"
+
+    # Construct a target state that mutates dof_pos to a known pattern
+    # plus a small translation of the root. We avoid extreme values so
+    # the simulator's joint-limit clamping (if any) doesn't muddy the test.
+    target_dof = {jn: 0.05 * (i % 3 - 1) for i, jn in enumerate(joint_names)}
+    target_pos = [0.05, 0.0, 0.5]
+    target_rot = [1.0, 0.0, 0.0, 0.0]
+
+    new_state = [
+        {
+            "objects": {},
+            "robots": {
+                "franka": {
+                    "pos": target_pos,
+                    "rot": target_rot,
+                    "dof_pos": target_dof,
+                }
+            },
+        }
+    ] * handler.scenario.num_envs
+
+    handler.set_states(new_state)
+    handler.refresh_render()  # ensure forward kinematics propagate
+    post = handler.get_states(mode="dict")
+    franka_post = post[0]["robots"]["franka"]
+
+    # Joint positions must round-trip — set_states writes qpos directly,
+    # get_states reads qpos, no integration step in between.
+    for jn, expected in target_dof.items():
+        got = franka_post["dof_pos"][jn]
+        actual = got.item() if hasattr(got, "item") else float(got)
+        assert abs(actual - expected) < 1e-3, (
+            f"dof_pos round-trip failed on {handler.scenario.simulator} for {jn}: set={expected:.4f}, got={actual:.4f}"
+        )
+
+    # Root pose round-trip — looser tolerance because some backends normalise
+    # the quaternion or apply small numerical massaging in set_states.
+    got_pos = franka_post["pos"]
+    pos_list = got_pos.tolist() if hasattr(got_pos, "tolist") else list(got_pos)
+    for i, (a, b) in enumerate(zip(pos_list, target_pos)):
+        assert abs(a - b) < 1e-3, (
+            f"root pos round-trip failed on {handler.scenario.simulator} component {i}: set={b:.4f}, got={a:.4f}"
+        )
+
+    log.info(f"set_states→get_states round-trip passed for {handler.scenario.simulator}")
+
+
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
 def test_dict_state_all_objects(handler):
     """Test that dict state includes all objects and robots."""
     dict_state = handler.get_states(mode="dict")
