@@ -64,11 +64,16 @@ def test_contact_forces_isaacgym_with_shared_handler(handler):
 @pytest.mark.mujoco
 def test_contact_forces_mujoco_with_shared_handler(handler):
     """Run ContactForces test using the shared handler process (sim == 'mujoco')."""
-    # Step the simulator a bit so contacts develop reliably.
-    for _ in range(10):
+    # Step long enough for G1 (default z ≈ 0.78m, dt=0.005s) to fall, land,
+    # and develop steady contacts. Free-fall alone is ~80 steps; allow 4×
+    # margin for bounce/settle so the assertion is robust.
+    for _ in range(400):
         handler.simulate()
     query = ContactForces(history_length=3)
     query.bind_handler(handler)
+    # Re-poll once more so the latest snapshot reflects the post-settle state
+    # rather than the moment the query happened to be constructed.
+    query()
     _assert_basic_shapes(handler, query)
 
     current = query.contact_forces  # (num_envs, n_body, 3)
