@@ -463,8 +463,19 @@ class IsaacsimHandler(BaseSimHandler):
                     pos, rot = self._get_pose(obj.name, env_ids=env_ids)
                     self._set_object_pose(obj, pos, rot, env_ids=env_ids)
                 else:
-                    pos = torch.stack([states_flat[env_id][obj.name]["pos"] for env_id in env_ids]).to(self.device)
-                    rot = torch.stack([states_flat[env_id][obj.name]["rot"] for env_id in env_ids]).to(self.device)
+                    # Coerce list / tuple / numpy / torch inputs into a stacked
+                    # tensor on self.device. ``torch.stack`` itself requires
+                    # tensor elements — without ``torch.as_tensor`` here, callers
+                    # that pass plain Python lists (which mujoco / sapien3 /
+                    # newton accept fine) hit ``TypeError: expected Tensor as
+                    # element 0`` and the cross-backend round-trip contract is
+                    # silently broken on isaacsim only.
+                    pos = torch.stack([
+                        torch.as_tensor(states_flat[env_id][obj.name]["pos"], device=self.device) for env_id in env_ids
+                    ])
+                    rot = torch.stack([
+                        torch.as_tensor(states_flat[env_id][obj.name]["rot"], device=self.device) for env_id in env_ids
+                    ])
                     self._set_object_pose(obj, pos, rot, env_ids=env_ids)
 
                 if isinstance(obj, ArticulationObjCfg):
