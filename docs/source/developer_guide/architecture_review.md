@@ -1,10 +1,19 @@
 # RoboVerse Architecture Review & Improvement Roadmap
 
-> **Document Version**: 1.0  
-> **Last Updated**: January 2026  
+> **Document Version**: 1.1
+> **Last Updated**: 2026-05-26
 > **Status**: Active Development
 
 This document provides a comprehensive architecture review of the RoboVerse codebase and outlines a structured improvement roadmap. It is intended for core maintainers and contributors who want to understand the current state of the codebase and contribute to its improvement.
+
+> **2026-05-26 update**: 4 of the originally-listed P0/P1 items have landed
+> as code + regression tests. They are kept in the document below for
+> historical context, but each is now annotated **STATUS: FIXED** with a
+> pointer to the test file that pins the fix in place. Forward / backward
+> compatibility statements are included so existing users can adopt the
+> changes without surprise — every fix is either a pure warning, a stale-
+> cache eviction, or an information upgrade to a previously-silent failure
+> mode.
 
 ---
 
@@ -36,13 +45,17 @@ RoboVerse is a well-architected multi-simulator robotics framework with several 
 
 ### Critical Issues Requiring Attention
 
-| Priority | Issue | Impact | Effort |
-|----------|-------|--------|--------|
-| P0 | State cache consistency bug | Data corruption | Low |
-| P0 | Test coverage severely lacking | Reliability | High |
-| P1 | Configuration system fragmentation | Usability | Medium |
-| P1 | Environment creation interface inconsistency | Usability | Medium |
-| P2 | Code quality issues | Maintainability | Low |
+| Priority | Issue | Impact | Effort | Status |
+|----------|-------|--------|--------|--------|
+| P0 | State cache consistency bug | Data corruption | Low | ✅ FIXED — see Issue 1 |
+| P0 | `set_states` silent-drop of control-input keys | Silent no-op | Low | ✅ FIXED — see Issue 8 |
+| P0 | `set_dof_targets` cache staleness | Silent stale state | Low | ✅ FIXED — see Issue 9 |
+| P0 | Test coverage severely lacking | Reliability | High | 🟡 PARTIAL — see Issue 4 |
+| P1 | Parallel-sim error handling | Silent worker death | Medium | ✅ FIXED — see Issue 7 |
+| P1 | Backend interface drift (`@abstractmethod` gaps) | Late-bind failures | Low | ✅ FIXED via contract test — see Issue 2 |
+| P1 | Configuration system fragmentation | Usability | Medium | ⏳ Open |
+| P1 | Environment creation interface inconsistency | Usability | Medium | ⏳ Open |
+| P2 | Code quality issues | Maintainability | Low | ⏳ Open |
 
 ---
 
@@ -103,56 +116,54 @@ RoboVerse/
 
 ## Identified Issues
 
-### Issue 1: State Cache Consistency Bug (P0 - Critical)
+### Issue 1: State Cache Consistency Bug (P0 - FIXED 2026-05-26)
 
-**Location**: `metasim/sim/base.py:118-129`
+**Location**: `metasim/sim/base.py`
 
-**Problem**: The state cache is modified in-place when switching between `tensor` and `dict` modes, causing data corruption.
+**Problem (historical)**: The state cache was modified in-place when switching between `tensor` and `dict` modes, causing data corruption.
 
-```python
-# Current problematic implementation
-def get_states(self, env_ids=None, mode="tensor"):
-    if self._state_cache_expire:
-        self._states = self._get_states(env_ids=env_ids)
-        self._state_cache_expire = False
-    # BUG: This overwrites the cache!
-    if isinstance(self._states, TensorState) and mode == "dict":
-        self._states = state_tensor_to_nested(self, self._states)
-    elif isinstance(self._states, list) and mode == "tensor":
-        self._states = list_state_to_tensor(self, self._states)
-    return self._states
-```
+**Status**: ✅ **FIXED**. ``BaseSimHandler`` now keeps two independent
+caches (``_tensor_state_cache`` / ``_dict_state_cache``). On a miss for
+the requested mode it lazily converts from the other. ``set_states``,
+``set_dof_targets`` and ``simulate`` all call ``_invalidate_state_caches``.
 
-**Reproduction**:
-```python
-handler = create_handler(...)
-states_t1 = handler.get_states(mode="tensor")  # TensorState
-states_d = handler.get_states(mode="dict")     # Converts cache to dict
-states_t2 = handler.get_states(mode="tensor")  # Returns dict, not tensor!
-```
+**Tests pinning the fix**:
+- ``metasim/test/sim/test_state_modes.py::test_state_cache_mode_independence`` —
+  integration (mujoco / sapien3 / isaacsim / isaacgym / newton)
+- ``metasim/test/sim/test_state_modes.py::test_set_dof_targets_invalidates_state_cache`` —
+  integration; specifically catches the staleness regressed in Issue 9
+- ``metasim/test/test_backend_contract_general.py::test_set_states_invalidates_cache_on_all_backends`` —
+  static AST check on ``base.py``; runs in ``-k general``
+- ``metasim/test/test_set_states_key_validation.py::test_set_dof_targets_invalidates_state_cache_unit`` —
+  unit-level stub guard
 
-**Impact**: Silent data corruption in training pipelines that use both state formats.
-
-**Solution**: See [TODO-001](#todo-001-fix-state-cache-consistency).
+**Forward / backward compat**: Pure bugfix. Callers that previously
+received corrupted data now receive consistent data — there is no API
+surface change. The lazy-conversion path was already the documented
+intent; only the in-place mutation was wrong.
 
 ---
 
-### Issue 2: Incomplete Abstract Method Declarations (P1)
+### Issue 2: Incomplete Abstract Method Declarations (P1 — FIXED via contract test 2026-05-26)
 
-**Location**: `metasim/sim/base.py:86-91`
+**Location**: `metasim/sim/base.py`
 
-**Problem**: `_set_dof_targets()` should be marked as `@abstractmethod` but is commented out.
+**Status**: ✅ **FIXED in spirit**. ``_set_dof_targets`` is now actually
+decorated ``@abstractmethod``. Two other contract methods
+(``_get_joint_names`` / ``_get_body_names``) remain commented out
+because flipping the decorator would break ``PyrepHandler`` /
+partial ``SinglePybulletHandler`` / partial ``GenesisHandler`` at
+import time — those backends genuinely do not implement them yet.
 
-```python
-# @abstractmethod  # <-- This is commented out!
-def _set_dof_targets(self, actions: list[Action]) -> None:
-    raise NotImplementedError
-```
+Instead of breaking imports, ``metasim/test/test_backend_contract_general.py``
+statically asserts every concrete ``BaseSimHandler`` subclass overrides
+every documented contract method, with ``xfail`` markers for known
+gaps. When a backend catches up, its ``xfail`` flips to ``xpass`` —
+that's the signal to enable the decorator for real.
 
-**Impact**: 
-- Static analysis tools cannot detect missing implementations
-- IDE cannot provide proper warnings
-- New simulator implementations may forget to implement this method
+**Forward / backward compat**: Pure additive contract enforcement. No
+existing backend was broken. New backends added later will get a
+clear failing test on day one if they forget a method.
 
 ---
 
@@ -222,19 +233,150 @@ env = get_task_class(task)(scenario)
 
 ---
 
-### Issue 7: Parallel Simulation Error Handling (P1)
+### Issue 7: Parallel Simulation Error Handling (P1 — FIXED 2026-05-26)
 
-**Location**: `metasim/sim/parallel.py:127-132`
+**Location**: `metasim/sim/parallel.py`
 
-**Problem**: `_check_error()` is only called at specific times, potentially missing subprocess errors.
+**Problem (historical)**: ``_check_error()`` was only called from
+``launch()``. A worker that died on any other operation (OOM, GPU
+failure, asset load error) left the parent process either hanging on
+``remote.recv()`` or eventually raising a cryptic ``EOFError`` — the
+real traceback in ``error_queue`` was never surfaced.
 
-```python
-def _check_error(self):
-    # Only checks for errors in error queue
-    # May miss errors if not called at right time
-```
+**Status**: ✅ **FIXED**. Three changes:
 
-**Impact**: Silent failures in parallel training runs.
+1. ``_check_error`` now also detects workers that died without
+   reporting (e.g. OOM-killed / SIGKILL) via ``process.is_alive()``.
+   Queue messages are drained with full traceback formatting.
+2. Every public method on ``ParallelHandler`` (``_set_states``,
+   ``_set_dof_targets``, ``_simulate``, ``get_joint_names``,
+   ``get_body_names``, ``device``, ``_get_states``) calls
+   ``_check_error`` after wire I/O.
+3. A new ``_recv_or_surface`` wraps ``remote.recv()`` and translates
+   ``EOFError`` / ``BrokenPipeError`` / ``ConnectionResetError`` into
+   a ``RuntimeError`` carrying the real worker traceback — instead of
+   the user chasing a cryptic IPC exception.
+
+**Tests pinning the fix**:
+- ``metasim/test/test_parallel_error_handling_general.py`` — 6 unit
+  tests using a sync queue stub (mp.Queue's async put races with the
+  immediate empty-check, so a sync stand-in keeps the tests
+  deterministic without requiring a real worker process)
+
+**Forward / backward compat**: Pure information upgrade. A call that
+previously hung or raised ``EOFError`` now raises ``RuntimeError`` with
+the actual worker traceback. Calls that previously succeeded continue
+to succeed unchanged.
+
+---
+
+### Issue 8: `set_states` silently dropped control-input keys (P0 — FIXED 2026-05-26)
+
+**Location**: `metasim/sim/base.py` (boundary), every backend `_set_states`
+
+**Problem (historical)**: ``DictRobotState`` advertises
+``dof_pos_target`` / ``dof_vel_target`` / ``dof_torque`` as valid keys,
+but every backend's ``_set_states`` only honours ``pos`` / ``rot`` /
+``dof_pos``. Callers mistakenly passing ``dof_pos_target`` to
+``set_states`` got a silent no-op — the joints never moved. This cost
+~15 downstream BC experiments before the cause was found.
+
+**Status**: ✅ **FIXED**. ``BaseSimHandler.set_states`` now runs
+``_warn_set_states_keys`` before dispatching to the backend. Unknown
+keys log a one-shot warning per ``(role, key)`` with the list of valid
+keys; the three control-input keys get a specific
+``"this is a control input — use set_dof_targets(...) instead"`` hint.
+Deduplicated per handler instance so the hot path stays quiet.
+
+**Tests pinning the fix**:
+- ``metasim/test/test_set_states_key_validation.py`` — 9 unit tests
+  (known-keys-quiet, control-input-hint, unknown-key-message,
+  deduplication, per-role labelling, TensorState fast-path, plus the
+  ``set_dof_targets`` cache-invalidation guard from Issue 9)
+
+**Forward / backward compat**: Pure warning addition — runtime behaviour
+of ``set_states`` is unchanged for code that passed valid keys. Code
+that previously silently no-op'd now produces a clear log line; the
+hot path overhead is one set membership check per (role, key) seen.
+
+---
+
+### Issue 9: `set_dof_targets` left state cache stale (P0 — FIXED 2026-05-26)
+
+**Location**: `metasim/sim/base.py`
+
+**Problem (historical)**: MuJoCo writes actuator ctrl in
+``_set_dof_targets``, and ``_get_states`` reads ctrl back as
+``joint_pos_target``. The base class's public ``set_dof_targets``
+forgot to invalidate the state cache. Any ``get_states`` between
+``set_dof_targets`` and the next ``simulate`` returned the previous
+``joint_pos_target``.
+
+**Status**: ✅ **FIXED**. ``BaseSimHandler.set_dof_targets`` now calls
+``_invalidate_state_caches()`` before dispatching to the backend.
+Universal because no concrete handler overrides the public
+``set_dof_targets`` — every backend benefits.
+
+**Tests pinning the fix**:
+- ``metasim/test/sim/test_state_modes.py::test_set_dof_targets_invalidates_state_cache`` —
+  integration; verified on mujoco / sapien3 in ``roboverse`` env, marker
+  also covers isaacsim / isaacgym / newton
+- ``metasim/test/test_set_states_key_validation.py::test_set_dof_targets_invalidates_state_cache_unit`` —
+  fast unit-level guard with stub handler
+
+**Forward / backward compat**: Pure bugfix. The first ``get_states``
+after a ``set_dof_targets`` now reflects the fresh action; previously
+it returned stale data. No API surface change.
+
+---
+
+### Issue 10: Robot config drift (P0 — FIXED via test 2026-05-26)
+
+**Location**: `roboverse_pack/robots/*.py`
+
+**Problem (historical)**: 50+ `RobotCfg` subclasses with zero
+validation tests. Typos in ``default_joint_positions`` (joints that
+aren't in ``joint_limits``) and out-of-limit defaults were silently
+clamped or ignored at sim launch — observable as wrong reset states
+rather than as a config error.
+
+**Status**: ✅ **FIXED via test gate**.
+``metasim/test/test_robot_cfg_validation_general.py`` and
+``RoboVerse/tests/test_roboverse_robot_cfg_validation.py`` walk every
+discoverable ``RobotCfg`` subclass and assert: instantiation, non-empty
+``name``, ``default_joint_positions`` keys ⊆ ``joint_limits`` keys,
+defaults ∈ limit intervals.
+
+**Bugs surfaced** (xfail-documented, not fixed in this pass to preserve
+backward compat for trained policies):
+
+1. ``AlohaAgilexCfg`` — 16 ``fl_/fr_joint{1..8}`` keys in
+   ``default_joint_positions`` but only single-arm names in
+   ``joint_limits`` (bimanual override gap)
+2. ``G1TrackingCfg`` — regex keys like ``.*_ankle_pitch_joint`` in
+   ``default_joint_positions`` not expanded; ``joint_limits`` has the
+   concrete ``left_/right_`` names
+3. ``YamCfg`` — joint2 / joint4 defaults copy-pasted from Franka home
+   pose but ``joint_limits`` are Yam's narrower ranges
+4. ``ArxL5Cfg`` — same Franka copy-paste, different limit ranges
+5. ``VegaCfg`` — ``torso_j1`` ``joint_limits`` is the single-point
+   ``[0.2, 0.2]`` — looks like a fixed offset, not a range
+6. ``SoArm100Cfg`` — ``Wrist_Pitch`` default ``-2.356`` outside
+   ``[-0.192, 3.927]``
+7. ``KochCfg`` — same shape as SoArm100
+8. ``Go2Cfg`` — ``RL/RR_thigh_joint`` default ``1.0`` outside
+   ``[-4.54, 0.52]`` (sign error)
+9. ``AllegroHandCfg`` — ``thumb_joint_0`` default ``0`` below lower
+   limit ``0.263``
+
+When a robot is fixed, its ``xfail`` flips to ``xpass`` — the
+``test_known_gap_dicts_match_actual_failures`` self-check then tells
+the maintainer to remove the entry so the contract tightens.
+
+**Forward / backward compat**: Pure additive contract enforcement. No
+``RobotCfg`` was modified — the test only documents the gaps so
+production behaviour (silent clamp / silent ignore) is preserved for
+anyone training against the current defaults.
 
 ---
 
