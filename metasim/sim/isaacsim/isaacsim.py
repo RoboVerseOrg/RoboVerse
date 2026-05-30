@@ -666,9 +666,7 @@ class IsaacsimHandler(BaseSimHandler):
             joint_reindex = self.get_joint_reindex(obj.name)
             body_reindex = self.get_body_reindex(obj.name)
             root_state = _world_state_to_env_local(obj_inst.data.root_state_w, self.scene.env_origins)
-            body_state = _world_state_to_env_local(
-                obj_inst.data.body_state_w[:, body_reindex], self.scene.env_origins
-            )
+            body_state = _world_state_to_env_local(obj_inst.data.body_state_w[:, body_reindex], self.scene.env_origins)
             state = RobotState(
                 root_state=root_state,
                 body_names=self._get_body_names(obj.name),
@@ -1387,8 +1385,15 @@ class IsaacsimHandler(BaseSimHandler):
             log.info(f"Loaded scene from {usd_path} at {source_scene_path}")
 
     def _load_render_settings(self) -> None:
-        import carb
-        import omni.replicator.core as rep
+        try:
+            import carb
+            import omni.replicator.core as rep
+        except ImportError:
+            # Physics-only / no-camera headless runs launch a minimal Kit app that does
+            # not enable the replicator (rendering) extension. Render settings only affect
+            # image quality, so skip them rather than hard-crash when no images are needed.
+            log.warning("omni.replicator unavailable; skipping render settings (no-camera headless run).")
+            return
 
         # from omni.rtx.settings.core.widgets.pt_widgets import PathTracingSettingsFrame
 
