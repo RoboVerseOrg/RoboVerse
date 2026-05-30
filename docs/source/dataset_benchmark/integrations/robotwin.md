@@ -6,28 +6,42 @@ Tasks live under `envs/<task>.py` and each declares its own scene
 setup, success criterion, and scripted-policy data collector via raw
 SAPIEN API.
 
-Live report:
-<http://localhost:8000/#roboverse/robotwin_integration>.
-
 ## Status
 
+- **All 50 tasks collect successfully (breadth)**: a full sweep
+  (`tools/robotwin_integration/coverage_sweep.py`) ran every registered
+  RoboTwin task through the native code path + data bridge — **50/50**
+  plan and check successfully and emit a dense bimanual trajectory
+  (78–662 frames; some need up to seed 7). This is collection-success
+  across the whole suite, not one hand-picked task.
+- **Replay parity is measured, not asserted**: the parity harness
+  (`tools/robotwin_integration/parity_robotwin.py`) replays the native
+  command-target stream on RoboVerse-SAPIEN3 and compares RoboVerse's
+  *achieved* joint state against RoboTwin's *achieved* joint state
+  (`entity.get_qpos()`, captured by the bridge — not the command target,
+  which would be circular). On `beat_block_hammer` the per-joint achieved
+  delta converges with replay resolution: **0.44 → 0.088 → 0.027 →
+  0.0059 rad max** (mean 0.033 → 0.0008 rad) at settle = 1/4/8/16. The
+  residual is open-loop replay under-stepping, not a mapping error — same
+  URDF, same backend family.
 - **Embodiment loads in RoboVerse**: RoboTwin's ALOHA-AgileX
   (`arx5_description_isaac.urdf`, 38 DoF: dual 6-DoF arms with 2-finger
   mimic grippers + mobile base + sensor mast) loads and steps in
   MetaSim/Sapien3 after one small handler fix
   (`fix/sapien3-passive-joints`).
-- **Data bridge works (verified)**: a RoboTwin demonstration replays in
-  RoboVerse end to end — see *Data bridge* below. `beat_block_hammer`
-  collected natively (curobo planning) → converted to name-keyed `*_v2`
-  → replayed on SAPIEN3 to video.
-- **Native passthrough imports + plans**: with RoboTwin's deps installed
-  in a dedicated `robotwin` conda env, `RoboTwin/<task>` resolves to the
-  live native task (see `_passthrough.py`). The two-env split is required
-  because RoboTwin pins SAPIEN 3.0.0b1 / mplib 0.2.1 / curobo, which
-  conflict with the `roboverse` env's SAPIEN.
-- **Deferred**: hand-porting each task's scene + reward into
-  `roboverse_pack/tasks/robotwin/` (the data bridge sidesteps this for
-  dataset/replay use).
+- **Native passthrough is 1:1 by construction**: with RoboTwin's deps
+  installed in a dedicated `robotwin` conda env, `RoboTwin/<task>`
+  resolves to the live native task (see `_passthrough.py`) — same sim,
+  planner, and `check_success()` as upstream, the way the ManiSkill
+  passthrough is identical to native ManiSkill. The two-env split is
+  required because RoboTwin pins SAPIEN 3.0.0b1 / mplib 0.2.1 / curobo,
+  which conflict with the `roboverse` env's SAPIEN.
+- **Genuine limitations (stated plainly)**: the bridge/replay path is
+  *open-loop state replay* — it does not prove dynamical equivalence,
+  runs no planner/policy in RoboVerse, and does not check task success in
+  RoboVerse. The replayed scene draws the manipulated object as a
+  primitive proxy (real meshes not yet loaded), so contact-rich fidelity
+  and an in-RoboVerse success check remain future work.
 
 ## MetaSim fix that enables this
 
@@ -70,22 +84,39 @@ The bridge is two halves, one per conda env, hand-off via a plain pickle:
 1. **Collect** (`robotwin` env) —
    `tools/robotwin_integration/collect_bridge.py` drives a native RoboTwin
    task (the same `_passthrough` factory), retries seeds until one plans
-   *and* checks successfully, and dumps the dense joint trajectory +
-   initial object poses.
+   *and* checks successfully, and dumps per frame: the command-target
+   `vectors`, RoboTwin's *achieved* qpos `real_vectors`
+   (`entity.get_qpos()`, injected via a runtime hook on `get_obs` — no
+   upstream edit), the achieved end-effector poses `left/right_endpose`,
+   and the initial object poses.
 2. **Replay** (`roboverse` env) —
    `get_started/10_robotwin_aloha_replay.py` converts that pickle into a
-   name-keyed `*_v2` dataset, loads it through `get_traj`, and replays the
-   ALOHA-AgileX embodiment on SAPIEN3 to video.
+   name-keyed `*_v2` dataset (via the shared
+   `roboverse_pack.tasks.robotwin._convert`), loads it through `get_traj`,
+   and replays the ALOHA-AgileX embodiment on SAPIEN3 to video.
+3. **Measure parity** (`roboverse` env) —
+   `tools/robotwin_integration/parity_robotwin.py` runs the same replay
+   and reports the per-joint delta between RoboVerse-achieved and
+   RoboTwin-achieved qpos (`--settle N` controls replay resolution;
+   `--all` sweeps every collected pickle).
 
 ```bash
-# 1. collect a demonstration natively (robotwin env)
+# 1. collect a demonstration natively, with achieved state (robotwin env)
 conda run -n robotwin env MUJOCO_GL=egl python \
   tools/robotwin_integration/collect_bridge.py --task beat_block_hammer \
   --out ~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl
 
+# 1b. (optional) sweep the whole 50-task suite -> coverage.json
+conda run -n robotwin env MUJOCO_GL=egl SAPIEN_HEADLESS=1 python \
+  tools/robotwin_integration/coverage_sweep.py --max-seeds 8
+
 # 2. replay it in RoboVerse (roboverse env)
 MUJOCO_GL=egl python get_started/10_robotwin_aloha_replay.py \
   --bridge ~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl --sim sapien3
+
+# 3. measure achieved-vs-achieved parity (roboverse env)
+MUJOCO_GL=egl python tools/robotwin_integration/parity_robotwin.py \
+  --bridge ~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl --settle 8
 ```
 
 ## Native passthrough

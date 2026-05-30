@@ -46,6 +46,33 @@ def _load_passthrough():
     return mod
 
 
+def _patch_capture_real_state(env) -> None:
+    """Make every saved frame also carry RoboTwin's *achieved* arm qpos.
+
+    RoboTwin's ``joint_action.vector`` is the PD *command target*
+    (``joint.get_drive_target()``), not the physically achieved joint state, so
+    comparing a RoboVerse replay against it would be circular (target-vs-target).
+    The achieved qpos lives in ``robot.get_left/right_arm_real_jointState()``
+    (``entity.get_qpos()``) but is not written to RoboTwin's per-frame cache. We
+    wrap ``env.get_obs`` (the single hook ``_take_picture`` saves) to inject a
+    ``joint_action.real_vector`` = achieved [L_arm(6), L_grip, R_arm(6), R_grip],
+    aligned frame-for-frame with ``vector`` — a runtime-only shim, no upstream edit.
+    """
+    orig_get_obs = env.get_obs
+    robot = env.robot
+
+    def get_obs_with_real():
+        d = orig_get_obs()
+        try:
+            real = list(robot.get_left_arm_real_jointState()) + list(robot.get_right_arm_real_jointState())
+            d.setdefault("joint_action", {})["real_vector"] = np.asarray(real, dtype=float)
+        except Exception:
+            pass  # achieved-state capture is best-effort; target vector is always present
+        return d
+
+    env.get_obs = get_obs_with_real
+
+
 def _capture_objects(env) -> dict:
     """Record every scene actor's initial world pose (wxyz quaternion)."""
     objs: dict = {}
@@ -74,9 +101,13 @@ def main(argv: list[str] | None = None) -> int:
     pt = _load_passthrough()
     work_dir = os.path.join(pt.robotwin_dir(), "data", "_rv_bridge")
     os.makedirs(work_dir, exist_ok=True)
-    # qpos-only: skip RGB/point-cloud rendering so the seed search stays fast.
+    # State-only: skip RGB/point-cloud rendering so the seed search stays fast.
+    # qpos -> command-target ``vector``; endpose -> achieved end-effector world
+    # pose per arm. Together with the achieved ``real_vector`` (injected below)
+    # these are the three signals the RoboVerse parity harness compares against.
     data_type = {k: False for k in ("rgb", "third_view", "depth", "pointcloud", "observer", "endpose", "qpos")}
     data_type["qpos"] = True
+    data_type["endpose"] = True
 
     success = None
     for seed in range(args.max_seeds):
@@ -94,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as e:
             print(f"[seed {seed}] setup failed: {type(e).__name__}: {e}")
             continue
+        _patch_capture_real_state(env)
         init_objects = _capture_objects(env)
         try:
             env.play_once()
@@ -107,11 +139,24 @@ def main(argv: list[str] | None = None) -> int:
                 glob.glob(os.path.join(work_dir, ".cache", f"episode{env.ep_num}", "*.pkl")),
                 key=lambda p: int(os.path.basename(p)[:-4]),
             )
-            vectors = [np.asarray(pickle.load(open(p, "rb"))["joint_action"]["vector"], dtype=float) for p in cache]
+            frames = [pickle.load(open(p, "rb")) for p in cache]
+            vectors = [np.asarray(f["joint_action"]["vector"], dtype=float) for f in frames]
+            # Achieved arm qpos (injected by _patch_capture_real_state) and achieved
+            # end-effector world poses — the signals for honest, non-circular parity.
+            real_vectors = [
+                np.asarray(f["joint_action"]["real_vector"], dtype=float)
+                for f in frames
+                if "real_vector" in f.get("joint_action", {})
+            ]
+            left_endpose = [np.asarray(f["endpose"]["left_endpose"], dtype=float) for f in frames if f.get("endpose")]
+            right_endpose = [np.asarray(f["endpose"]["right_endpose"], dtype=float) for f in frames if f.get("endpose")]
             success = {
                 "task": args.task,
                 "seed": seed,
-                "vectors": vectors,  # (T, 14): [L_arm(6), L_grip, R_arm(6), R_grip]
+                "vectors": vectors,  # (T, 14) command target: [L_arm(6), L_grip, R_arm(6), R_grip]
+                "real_vectors": real_vectors,  # (T, 14) achieved qpos, same layout (empty if capture failed)
+                "left_endpose": left_endpose,  # (T, 7) achieved EE world pose [x,y,z, qw,qx,qy,qz]
+                "right_endpose": right_endpose,  # (T, 7)
                 "init_objects": init_objects,
                 "left_gripper_scale": list(env.robot.left_gripper_scale),
                 "right_gripper_scale": list(env.robot.right_gripper_scale),
@@ -129,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         pickle.dump(success, f)
     print(
         f"SAVED {len(success['vectors'])} frames (seed {success['seed']}) -> {args.out}; "
+        f"achieved_qpos={len(success['real_vectors'])} endpose={len(success['left_endpose'])}; "
         f"objects: {list(success['init_objects'])}"
     )
     return 0

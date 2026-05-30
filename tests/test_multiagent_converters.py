@@ -163,18 +163,19 @@ def test_validate_schema_rejects_missing_agent_key(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Example 10 — RoboTwin ALOHA-AgileX bridge converter
+# RoboTwin ALOHA-AgileX bridge converter (roboverse_pack.tasks.robotwin._convert)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.general
 def test_vector_to_dof_maps_arms_and_scales_grippers():
     """The 14-D bimanual vector lands on the right joints with scaled grippers."""
-    ex10 = _load_example("10_robotwin_aloha_replay.py")
+    from roboverse_pack.tasks.robotwin import _convert
+
     # L arm = 1..6, L grip = 0.5; R arm = 11..16, R grip = 1.0.
     vec = [1, 2, 3, 4, 5, 6, 0.5, 11, 12, 13, 14, 15, 16, 1.0]
     left_scale, right_scale = (0.0, 0.04), (0.0, 0.08)
-    dof = ex10._vector_to_dof(vec, left_scale, right_scale)
+    dof = _convert.vector_to_dof(vec, left_scale, right_scale)
 
     # Left arm joints fl_joint1..6 take vec[0:6].
     for i in range(6):
@@ -195,13 +196,31 @@ def test_vector_to_dof_maps_arms_and_scales_grippers():
 
 
 @pytest.mark.general
-def test_bridge_to_v2_roundtrip(tmp_path):
-    """bridge_to_v2 writes a single-key name-keyed v2 dataset with mapped dofs."""
-    ex10 = _load_example("10_robotwin_aloha_replay.py")
+def test_vector_to_dof_gripper_endpoints_are_byte_exact():
+    """norm=0 -> scale[0] (open) and norm=1 -> scale[1] (closed), no rounding drift."""
+    from roboverse_pack.tasks.robotwin import _convert
+
+    ls, rs = (-0.01, 0.045), (-0.02, 0.05)
+    open_vec = [0] * 6 + [0.0] + [0] * 6 + [0.0]
+    closed_vec = [0] * 6 + [1.0] + [0] * 6 + [1.0]
+    dof_open = _convert.vector_to_dof(open_vec, ls, rs)
+    dof_closed = _convert.vector_to_dof(closed_vec, ls, rs)
+    assert dof_open["fl_joint7"] == ls[0]
+    assert dof_open["fr_joint7"] == rs[0]
+    assert dof_closed["fl_joint7"] == ls[1]
+    assert dof_closed["fr_joint7"] == rs[1]
+
+
+@pytest.mark.general
+def test_bridge_to_v2_roundtrip_and_off_by_one(tmp_path):
+    """bridge_to_v2 seeds init from frame 0 and emits N-1 actions from frames 1:."""
+    from roboverse_pack.tasks.robotwin import _convert
+
     bridge = {
         "vectors": [
             [0, 0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0, 0.0],
             [1, 2, 3, 4, 5, 6, 1.0, 11, 12, 13, 14, 15, 16, 0.0],
+            [2, 3, 4, 5, 6, 7, 0.5, 12, 13, 14, 15, 16, 17, 0.5],
         ],
         "left_gripper_scale": (0.0, 0.04),
         "right_gripper_scale": (0.0, 0.05),
@@ -210,24 +229,36 @@ def test_bridge_to_v2_roundtrip(tmp_path):
         "seed": 7,
     }
     out_path = tmp_path / "robotwin_aloha_v2.pkl"
-    ex10.bridge_to_v2(bridge, str(out_path))
+    _convert.bridge_to_v2(bridge, str(out_path))
 
     with open(out_path, "rb") as f:
         dataset = pickle.load(f)
 
     assert dataset["metadata"]["num_agents"] == 1
-    assert dataset["metadata"]["agents"] == [ex10.ROBOT_NAME]
-    demo = dataset[ex10.ROBOT_NAME][0]
+    assert dataset["metadata"]["agents"] == [_convert.ROBOT_NAME]
+    assert dataset["metadata"]["source_seed"] == 7
+    demo = dataset[_convert.ROBOT_NAME][0]
     # One robot entry plus the static block in the init state.
-    assert ex10.ROBOT_NAME in demo["init_state"]
+    assert _convert.ROBOT_NAME in demo["init_state"]
     assert "block" in demo["init_state"]
-    # N-1 action steps (first frame seeds the init state).
-    assert len(demo["actions"]) == 1
-    target = demo["actions"][0]["dof_pos_target"]
-    assert target["fl_joint1"] == 1.0
-    assert target["fr_joint6"] == 16.0
+    # init_state is frame 0; there are N-1 = 2 action steps from frames 1: (off-by-one guard).
+    assert demo["init_state"][_convert.ROBOT_NAME]["dof_pos"]["fl_joint1"] == 0.0
+    assert len(demo["actions"]) == 2
+    assert demo["actions"][0]["dof_pos_target"]["fl_joint1"] == 1.0
+    assert demo["actions"][1]["dof_pos_target"]["fl_joint1"] == 2.0
+    assert demo["actions"][0]["dof_pos_target"]["fr_joint6"] == 16.0
     # Left gripper fully closed (vec[6]=1.0) -> scale[1].
-    assert target["fl_joint7"] == pytest.approx(0.04)
+    assert demo["actions"][0]["dof_pos_target"]["fl_joint7"] == pytest.approx(0.04)
+
+
+@pytest.mark.general
+def test_example10_imports_shared_converter():
+    """Example 10 must consume the shared converter, not re-define its own."""
+    ex10 = _load_example("10_robotwin_aloha_replay.py")
+    from roboverse_pack.tasks.robotwin import _convert
+
+    # The example re-exports the shared symbol (single source of truth).
+    assert ex10.bridge_to_v2 is _convert.bridge_to_v2
 
 
 # ---------------------------------------------------------------------------

@@ -71,67 +71,13 @@ from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.utils.demo_util import get_traj
-from metasim.utils.demo_util.loader import save_traj_file
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_handler
 from roboverse_pack.robots.aloha_agilex_cfg import AlohaAgilexCfg
 
-ROBOT_NAME = "aloha_agilex"
-# ALOHA-AgileX home/base pose, from RoboTwin's embodiment config.yml (robot_pose).
-ROBOT_POS = [0.0, -0.65, 0.0]
-ROBOT_ROT = [0.707, 0.0, 0.0, 0.707]  # wxyz, 90 deg about z
-
-_L_ARM = [f"fl_joint{i}" for i in range(1, 7)]
-_R_ARM = [f"fr_joint{i}" for i in range(1, 7)]
-# The arx5 URDF exposes 38 active joints (wheels, mast, spare arm links); we
-# drive only the 16 the embodiment controls and pin the rest to zero so
-# set_states/set_dof_targets get a value for every joint.
-_ALL_JOINTS = [
-    "right_wheel", "left_wheel", "fl_castor_wheel", "fr_castor_wheel", "rr_castor_wheel", "rl_castor_wheel",
-    "fl_joint1", "fr_joint1", "lr_joint1", "rr_joint1", "fl_wheel", "fr_wheel", "rr_wheel", "rl_wheel",
-    "fl_joint2", "fr_joint2", "lr_joint2", "rr_joint2", "fl_joint3", "fr_joint3", "lr_joint3", "rr_joint3",
-    "fl_joint4", "fr_joint4", "lr_joint4", "rr_joint4", "fl_joint5", "fr_joint5", "lr_joint5", "rr_joint5",
-    "fl_joint6", "fr_joint6", "lr_joint6", "rr_joint6", "fl_joint7", "fl_joint8", "fr_joint7", "fr_joint8",
-]  # fmt: skip
-
-
-def _vector_to_dof(vec, left_scale, right_scale) -> dict:
-    """Map RoboTwin's 14-D bimanual vector onto the embodiment's joint targets."""
-    dof = {name: 0.0 for name in _ALL_JOINTS}
-    for i, joint in enumerate(_L_ARM):
-        dof[joint] = float(vec[i])
-    for i, joint in enumerate(_R_ARM):
-        dof[joint] = float(vec[7 + i])
-    # Gripper value is normalized [0, 1] (open->closed); both finger joints mimic.
-    left_grip = left_scale[0] + float(vec[6]) * (left_scale[1] - left_scale[0])
-    right_grip = right_scale[0] + float(vec[13]) * (right_scale[1] - right_scale[0])
-    dof["fl_joint7"] = dof["fl_joint8"] = left_grip
-    dof["fr_joint7"] = dof["fr_joint8"] = right_grip
-    return dof
-
-
-def bridge_to_v2(bridge: dict, out_path: str) -> None:
-    """Convert a RoboTwin bridge pickle into a name-keyed ``*_v2`` dataset."""
-    vectors = bridge["vectors"]
-    ls, rs = bridge["left_gripper_scale"], bridge["right_gripper_scale"]
-    init = {ROBOT_NAME: {"pos": ROBOT_POS, "rot": ROBOT_ROT, "dof_pos": _vector_to_dof(vectors[0], ls, rs)}}
-    # RoboTwin's block is a static box; include it for context (the manipulated
-    # mesh object is omitted -- the bridge records only initial object poses).
-    block = bridge["init_objects"].get("box")
-    if block is not None:
-        init["block"] = {"pos": block["pos"], "rot": block["rot"]}
-    actions = [{"dof_pos_target": _vector_to_dof(v, ls, rs)} for v in vectors[1:]]
-    dataset = {
-        ROBOT_NAME: [{"init_state": init, "actions": actions, "states": None}],
-        "metadata": {
-            "num_agents": 1,
-            "agents": [ROBOT_NAME],
-            "source": f"RoboTwin {bridge.get('task', '?')}",
-            "source_seed": bridge.get("seed"),
-        },
-    }
-    save_traj_file(dataset, out_path)
-    log.info(f"Converted RoboTwin '{bridge.get('task')}' ({len(vectors)} frames) -> {out_path}")
+# Trajectory conversion lives in the robotwin pack so the parity harness and this
+# example share one definition of the 14-D vector -> joint mapping.
+from roboverse_pack.tasks.robotwin._convert import bridge_to_v2
 
 
 @dataclass
