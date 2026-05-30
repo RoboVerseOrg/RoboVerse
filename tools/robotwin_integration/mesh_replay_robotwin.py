@@ -123,7 +123,16 @@ def _replay_one(bridge: dict, args) -> dict:
         rv = _safe(n)
         name_map[n] = rv
         mesh = object_meshes.get(n)
-        if mesh:
+        if mesh and mesh.get("type") == "urdf":
+            # URDF-articulation object (pot / cabinet / laptop): load its mobility.urdf.
+            objects.append(
+                RigidObjCfg(
+                    name=rv, urdf_path=os.path.join(args.robotwin_dir, mesh["urdf"]),
+                    physics=phys, fix_base_link=kinematic,
+                )
+            )  # fmt: skip
+        elif mesh and mesh.get("visual"):
+            # Rigid mesh object: wrap the GLB/OBJ in a minimal URDF for sapien3.
             mesh_abs = os.path.join(args.robotwin_dir, mesh["visual"])
             urdf = _glb_to_urdf(mesh_abs, mesh.get("scale"), "outputs/robotwin_coverage/_obj_urdf", rv)
             objects.append(RigidObjCfg(name=rv, urdf_path=urdf, physics=phys, fix_base_link=kinematic))
@@ -134,9 +143,20 @@ def _replay_one(bridge: dict, args) -> dict:
         PrimitiveCubeCfg(name="table", size=(0.8, 0.8, 0.74), color=[0.7, 0.6, 0.5], physics=PhysicStateType.GEOM)
     )
 
-    camera = PinholeCameraCfg(
-        name="main_camera", pos=[1.3, -0.5, 1.5], look_at=[0.1, -0.2, 0.85], width=640, height=480, data_types=["rgb"]
-    )
+    # --observer-cam matches RoboTwin's built-in observer_camera (camera.py) so the
+    # RoboVerse render can be composited frame-for-frame with native_render.py output.
+    if getattr(args, "observer_cam", False):
+        # Match RoboTwin's observer_camera (camera.py): pos [0,0.23,1.33], 4:3,
+        # fovy=93deg (wide). focal_length/horizontal_aperture chosen for ~93deg HFOV.
+        camera = PinholeCameraCfg(
+            name="main_camera", pos=[0.0, 0.23, 1.33], look_at=[0.0, -0.77, 0.31],
+            width=320, height=240, focal_length=10.0, horizontal_aperture=21.0, data_types=["rgb"],
+        )  # fmt: skip
+    else:
+        camera = PinholeCameraCfg(
+            name="main_camera", pos=[1.3, -0.5, 1.5], look_at=[0.1, -0.2, 0.85],
+            width=640, height=480, data_types=["rgb"],
+        )  # fmt: skip
     scenario = ScenarioCfg(
         robots=[robot],
         objects=objects,
@@ -246,6 +266,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sim", default="sapien3")
     ap.add_argument("--settle", type=int, default=8, help="(physics mode) simulate() calls per target")
     ap.add_argument("--video", action="store_true")
+    ap.add_argument(
+        "--observer-cam", action="store_true", help="render from RoboTwin's observer pose (for side-by-side)"
+    )
     ap.add_argument("--robotwin-dir", default=os.path.expanduser("~/projects/robotwin"))
     ap.add_argument("--out", default="outputs/robotwin_coverage/object_parity.json")
     args = ap.parse_args(argv)

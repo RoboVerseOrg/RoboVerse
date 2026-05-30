@@ -61,6 +61,15 @@ def _patch_capture_real_state(env) -> None:
     orig_get_obs = env.get_obs
     robot = env.robot
     scene = env.scene
+    # The robot is itself an articulation; exclude it from the object capture.
+    robot_arts = set()
+    for attr in ("left_entity", "right_entity"):
+        try:
+            ent = getattr(robot, attr, None)
+            if ent is not None:
+                robot_arts.add(ent.get_name())
+        except Exception:
+            pass
 
     def get_obs_with_real():
         d = orig_get_obs()
@@ -70,11 +79,18 @@ def _patch_capture_real_state(env) -> None:
         except Exception:
             pass  # achieved-state capture is best-effort; target vector is always present
         try:
-            # Per-frame world pose of every scene actor -> object-trajectory parity.
+            # Per-frame world pose of every scene object (rigid actors AND URDF
+            # articulations, e.g. the pot/cabinet/laptop) minus the robot itself.
             poses = {}
             for actor in scene.get_all_actors():
                 p = actor.get_pose()
                 poses[actor.get_name()] = np.asarray([*p.p, *p.q], dtype=float)  # [x,y,z, qw,qx,qy,qz]
+            for art in scene.get_all_articulations():
+                name = art.get_name()
+                if name in robot_arts:
+                    continue
+                p = art.get_root_pose() if hasattr(art, "get_root_pose") else art.get_pose()
+                poses[name] = np.asarray([*p.p, *p.q], dtype=float)
             d["object_poses"] = poses
         except Exception:
             pass
@@ -148,19 +164,57 @@ def _install_mesh_hook(pt) -> dict:
 
 
 def _capture_objects(env) -> dict:
-    """Record every scene actor's initial world pose (wxyz quaternion)."""
+    """Record every scene object's initial world pose (rigid actors + articulations)."""
     objs: dict = {}
+    robot_arts = set()
+    for attr in ("left_entity", "right_entity"):
+        try:
+            ent = getattr(env.robot, attr, None)
+            if ent is not None:
+                robot_arts.add(ent.get_name())
+        except Exception:
+            pass
     try:
-        actors = env.scene.get_all_actors()
+        actors = list(env.scene.get_all_actors())
     except Exception:
-        return objs
+        actors = []
     for actor in actors:
         try:
             pose = actor.get_pose()
             objs[actor.get_name()] = {"pos": list(map(float, pose.p)), "rot": list(map(float, pose.q))}
         except Exception:
             continue
+    try:
+        arts = list(env.scene.get_all_articulations())
+    except Exception:
+        arts = []
+    for art in arts:
+        try:
+            if art.get_name() in robot_arts:
+                continue
+            pose = art.get_root_pose() if hasattr(art, "get_root_pose") else art.get_pose()
+            objs[art.get_name()] = {
+                "pos": list(map(float, pose.p)),
+                "rot": list(map(float, pose.q)),
+                "articulation": True,
+            }
+        except Exception:
+            continue
     return objs
+
+
+def _locate_urdf(rt: str, name: str) -> str | None:
+    """Find a URDF-object's ``mobility.urdf`` under ``assets/objects/<name>/`` (returns relpath)."""
+    base = os.path.join(rt, "assets", "objects", name)
+    direct = os.path.join(base, "mobility.urdf")
+    if os.path.exists(direct):
+        return os.path.relpath(direct, rt)
+    if os.path.isdir(base):
+        for sub in sorted(os.listdir(base)):
+            cand = os.path.join(base, sub, "mobility.urdf")
+            if os.path.exists(cand):
+                return os.path.relpath(cand, rt)
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -235,7 +289,16 @@ def main(argv: list[str] | None = None) -> int:
                 ])
                 for n in obj_names
             }
-            object_meshes = {n: mesh_sink[n] for n in obj_names if n in mesh_sink}
+            # Per-object asset: exact mesh from the create_actor hook, else a scanned
+            # mobility.urdf for URDF-articulation objects (pot/cabinet/laptop/...).
+            object_meshes = {}
+            for n in obj_names:
+                if n in mesh_sink:
+                    object_meshes[n] = {**mesh_sink[n], "type": "mesh"}
+                else:
+                    urdf = _locate_urdf(pt.robotwin_dir(), n)
+                    if urdf:
+                        object_meshes[n] = {"urdf": urdf, "type": "urdf"}
             success = {
                 "task": args.task,
                 "seed": seed,
