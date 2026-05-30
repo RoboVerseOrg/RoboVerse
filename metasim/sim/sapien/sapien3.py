@@ -493,8 +493,17 @@ class Sapien3Handler(BaseSimHandler):
             self._build_gs_background()
 
     def close(self):
-        if not self.headless:
-            self.viewer.close()
+        # Idempotent close. Guard ``self.viewer`` with a None check so
+        # that close() called before launch() (e.g. failed __init__) and
+        # close() called twice both no-op cleanly instead of raising
+        # AttributeError on a missing viewer.
+        viewer = getattr(self, "viewer", None)
+        if not self.headless and viewer is not None:
+            try:
+                viewer.close()
+            except Exception:
+                pass
+        self.viewer = None
         self.scene = None
 
     def _get_link_states(self, obj_name: str) -> tuple[list, torch.Tensor]:

@@ -286,8 +286,28 @@ class MJXHandler(BaseSimHandler):
         self._data = self._forward(self._mjx_model, self._data)
 
     def close(self):
-        if hasattr(self, "_viewer") and self._renderer is not None:
-            self._viewer.close()
+        # Idempotent close. The previous version guarded ``_viewer.close()``
+        # behind ``_renderer is not None`` — a real bug, because the
+        # offscreen ``_renderer`` and the interactive ``_viewer`` are
+        # independent (renderer is for camera output, viewer is for the
+        # GUI window). Headless-with-camera would never close the
+        # viewer it didn't have; headed-without-camera would skip closing
+        # the viewer that DID exist. Each handle is now independently
+        # guarded and nullified after close.
+        viewer = getattr(self, "_viewer", None)
+        if viewer is not None:
+            try:
+                viewer.close()
+            except Exception:
+                pass
+            self._viewer = None
+        renderer = getattr(self, "_renderer", None)
+        if renderer is not None:
+            try:
+                renderer.close()
+            except Exception:
+                pass
+            self._renderer = None
 
     def _ensure_id_cache(self, ts: TensorState):
         """Build joint-/actuator-ID lookup tables (one-time per handler)."""

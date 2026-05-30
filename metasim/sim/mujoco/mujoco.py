@@ -1147,8 +1147,15 @@ class MujocoHandler(BaseSimHandler):
             self.viewer.sync()
 
     def close(self):
+        # Idempotent close: nullify each handle after closing so that a
+        # second ``close()`` (e.g. context-manager exit + explicit close)
+        # is a no-op instead of re-closing a torn-down resource.
         if self.viewer is not None:
-            self.viewer.close()
+            try:
+                self.viewer.close()
+            except Exception:
+                pass
+            self.viewer = None
         if self.renderer is not None:
             try:
                 self.renderer.close()
