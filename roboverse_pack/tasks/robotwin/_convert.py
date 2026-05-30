@@ -47,17 +47,19 @@ _ALL_JOINTS = [
 ]  # fmt: skip
 
 
-def vector_to_dof(vec, left_scale, right_scale) -> dict:
+def vector_to_dof(vec, left_scale, right_scale, *, left_mimic=(1.0, 0.0), right_mimic=(1.0, 0.0)) -> dict:
     """Map RoboTwin's 14-D bimanual vector onto the embodiment's joint targets.
 
     ``vec`` is ``[L_arm(6), L_grip, R_arm(6), R_grip]``. Gripper values are the
     normalized ``[0, 1]`` (open -> closed) RoboTwin scalar; each is denormalized
-    to a finger-joint target via ``gripper_scale = [open_val, closed_val]``.
+    to the *driven* finger-joint target via ``gripper_scale = [open_val,
+    closed_val]``. The opposing finger joint follows the embodiment's URDF
+    ``mimic`` spec ``(multiplier, offset)``: ``joint8 = joint7 * mult + offset``.
 
-    Note: for the ALOHA-AgileX embodiment the gripper ``mimic`` spec is unity
-    (``mult=1, offset=0``), so both finger joints take the same denormalized
-    value. A future embodiment with a non-unity mimic multiplier/offset would
-    need that factor applied here.
+    ``left_mimic`` / ``right_mimic`` default to ``(1.0, 0.0)`` — the ALOHA-AgileX
+    unity mimic, where both finger joints take the same value (byte-identical to
+    the previous behaviour). A future embodiment with a non-unity multiplier /
+    non-zero offset passes its spec here instead of silently dropping it.
     """
     dof = {name: 0.0 for name in _ALL_JOINTS}
     for i, joint in enumerate(_L_ARM):
@@ -66,8 +68,10 @@ def vector_to_dof(vec, left_scale, right_scale) -> dict:
         dof[joint] = float(vec[7 + i])
     left_grip = left_scale[0] + float(vec[6]) * (left_scale[1] - left_scale[0])
     right_grip = right_scale[0] + float(vec[13]) * (right_scale[1] - right_scale[0])
-    dof["fl_joint7"] = dof["fl_joint8"] = left_grip
-    dof["fr_joint7"] = dof["fr_joint8"] = right_grip
+    dof["fl_joint7"] = left_grip
+    dof["fl_joint8"] = left_grip * float(left_mimic[0]) + float(left_mimic[1])
+    dof["fr_joint7"] = right_grip
+    dof["fr_joint8"] = right_grip * float(right_mimic[0]) + float(right_mimic[1])
     return dof
 
 

@@ -212,6 +212,24 @@ def test_vector_to_dof_gripper_endpoints_are_byte_exact():
 
 
 @pytest.mark.general
+def test_vector_to_dof_mimic_defaults_unchanged_and_generalizes():
+    """Default mimic keeps joint7==joint8 (byte-identical); a non-unity mimic applies."""
+    from roboverse_pack.tasks.robotwin import _convert
+
+    vec = [0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0, 0, 0.5]
+    ls, rs = (0.0, 0.04), (0.0, 0.08)
+    # Default (ALOHA unity mimic): both finger joints take the same value.
+    dof = _convert.vector_to_dof(vec, ls, rs)
+    assert dof["fl_joint7"] == dof["fl_joint8"] == pytest.approx(0.02)
+    assert dof["fr_joint7"] == dof["fr_joint8"] == pytest.approx(0.04)
+    # Non-unity mimic: joint8 = joint7 * mult + offset (mult/offset not dropped).
+    dof2 = _convert.vector_to_dof(vec, ls, rs, left_mimic=(-1.0, 0.01), right_mimic=(0.5, 0.0))
+    assert dof2["fl_joint7"] == pytest.approx(0.02)
+    assert dof2["fl_joint8"] == pytest.approx(0.02 * -1.0 + 0.01)
+    assert dof2["fr_joint8"] == pytest.approx(0.04 * 0.5)
+
+
+@pytest.mark.general
 def test_bridge_to_v2_roundtrip_and_off_by_one(tmp_path):
     """bridge_to_v2 seeds init from frame 0 and emits N-1 actions from frames 1:."""
     from roboverse_pack.tasks.robotwin import _convert
