@@ -1273,10 +1273,6 @@ class IsaacgymHandler(BaseSimHandler):
         return self._num_envs
 
     @property
-    def actions_cache(self) -> CompatActionInput:
-        return self._actions_cache
-
-    @property
     def device(self) -> torch.device:
         return self._device
 

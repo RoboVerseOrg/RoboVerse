@@ -2592,11 +2592,6 @@ class NewtonHandler(BaseSimHandler):
         """Return the device used for tensors."""
         return torch.device(self._device)
 
-    @property
-    def actions_cache(self) -> CompatActionInput:
-        """Expose the last action input through the shared handler contract."""
-        return self._actions_cache
-
     # Quaternion conversion utilities
     @staticmethod
     def _wxyz_to_xyzw(quat) -> tuple:

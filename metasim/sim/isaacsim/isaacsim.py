@@ -1824,10 +1824,6 @@ class IsaacsimHandler(BaseSimHandler):
                 except Exception as err:
                     log.debug(f"Sensor update failed during visual refresh second pass: {err}")
 
-    @property
-    def actions_cache(self) -> CompatActionInput:
-        return self._actions_cache
-
     def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
         """Drive SimulationApp/scene/sensors for a few frames to settle visual state.
 

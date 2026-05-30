@@ -584,10 +584,6 @@ class GenesisHandler(BaseSimHandler):
         return self.scene_inst.n_envs
 
     @property
-    def actions_cache(self) -> CompatActionInput:
-        return self._actions_cache
-
-    @property
     def device(self) -> torch.device:
         return gs.device
 

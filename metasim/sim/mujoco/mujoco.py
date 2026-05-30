@@ -1345,10 +1345,6 @@ class MujocoHandler(BaseSimHandler):
         return [self._episode_length_buf]
 
     @property
-    def actions_cache(self) -> CompatActionInput:
-        return self._actions_cache
-
-    @property
     def device(self) -> torch.device:
         return torch.device("cpu")
 

@@ -672,10 +672,6 @@ class Sapien3Handler(BaseSimHandler):
             obj_id.set_pose(sapien_core.Pose(p=val["pos"], q=val["rot"]))
 
     @property
-    def actions_cache(self) -> CompatActionInput:
-        return self._actions_cache
-
-    @property
     def device(self) -> torch.device:
         return torch.device("cpu")
 
