@@ -264,7 +264,8 @@ class MujocoHandler(BaseSimHandler):
                 # servo law. Override those runtime parameters from the MetaSim
                 # config when explicit values are provided, and otherwise keep
                 # the asset-authored values.
-                if actuator_cfg.stiffness is not None or actuator_cfg.damping is not None:
+                stiffness_overridden = actuator_cfg.stiffness is not None or actuator_cfg.damping is not None
+                if stiffness_overridden:
                     stiffness = (
                         float(actuator_cfg.stiffness)
                         if actuator_cfg.stiffness is not None
@@ -287,6 +288,28 @@ class MujocoHandler(BaseSimHandler):
                     force_limit = float(actuator_cfg.effort_limit_sim)
                     self.physics.model.actuator_forcelimited[actuator.id] = 1
                     self.physics.model.actuator_forcerange[actuator.id] = [-force_limit, force_limit]
+                elif stiffness_overridden and bool(self.physics.model.actuator_forcelimited[actuator_id]):
+                    # The user overrode stiffness/damping but did not specify
+                    # ``effort_limit_sim``. The MJCF-authored ``forcerange``
+                    # remains active and can silently dominate the new PD gain
+                    # (e.g. Franka MJCF clamps to ±40 N·m, hiding an effective
+                    # K=1e5). Warn once per (robot, joint) so the asymmetry is
+                    # visible. Backends that read URDF instead of MJCF would
+                    # inherit different limits — the user almost always wants
+                    # to know.
+                    fr = self.physics.model.actuator_forcerange[actuator_id]
+                    cache_key = (robot.name, joint_name)
+                    if cache_key not in getattr(self, "_actuator_force_limit_warned", set()):
+                        log.warning(
+                            f"MuJoCo actuator '{robot.name}:{joint_name}': cfg overrides "
+                            f"stiffness/damping but leaves effort_limit_sim unset — the "
+                            f"MJCF-authored forcerange {list(fr)} stays active and may "
+                            f"clamp the new PD output. Cross-backend behaviour will "
+                            f"diverge unless effort_limit_sim is specified."
+                        )
+                        if not hasattr(self, "_actuator_force_limit_warned"):
+                            self._actuator_force_limit_warned = set()
+                        self._actuator_force_limit_warned.add(cache_key)
 
     def _apply_scale_to_mjcf(self, mjcf_model, scale):
         """Apply scale to all geoms, bodies, and sites in the MJCF model."""
@@ -638,9 +661,7 @@ class MujocoHandler(BaseSimHandler):
             inner_freejoint_found = False
             for body in robot_xml.find_all("body"):
                 for child in list(body.all_children()):
-                    if child.tag in ("freejoint",) or (
-                        child.tag == "joint" and getattr(child, "type", None) == "free"
-                    ):
+                    if child.tag in ("freejoint",) or (child.tag == "joint" and getattr(child, "type", None) == "free"):
                         child.remove()
                         inner_freejoint_found = True
 

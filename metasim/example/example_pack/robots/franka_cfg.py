@@ -24,6 +24,17 @@ class FrankaCfg(RobotCfg):
     urdf_path: str = "roboverse_data/robots/franka/urdf/franka_panda.urdf"  # work for isaacgym
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
+    # NOTE 2026-05-26: ``effort_limit_sim`` deliberately not set here.
+    # Setting it to Franka's published torque limits (87 N·m on joints 1-4,
+    # 12 N·m on 5-7) closes the cross-backend asymmetry that ``task #6``
+    # documented (MuJoCo inherits MJCF ``forcerange=±40``, URDF backends
+    # inherit different values), BUT also changes motion at large errors
+    # enough to trigger ``test_self_collision[mujoco-1]`` failures —
+    # which means it can't land without coordinated test + downstream
+    # policy review. The handler now warns when this asymmetry is in
+    # play (see ``mujoco.py``/``newton.py`` actuator-override path), so
+    # the gap is no longer silent. Closing task #6 requires the spec
+    # decision, not just adding the field.
     actuators: dict[str, BaseActuatorCfg] = {
         "panda_joint1": BaseActuatorCfg(stiffness=1e5, damping=1e4, velocity_limit=2.175),
         "panda_joint2": BaseActuatorCfg(stiffness=1e4, damping=1e3, velocity_limit=2.175),
