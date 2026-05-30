@@ -34,15 +34,31 @@ def loguru_warnings():
         _loguru_logger.remove(sink_id)
 
 
+class _FakeRobot:
+    """Stand-in for RobotCfg with just the fields the warn helpers need."""
+
+    def __init__(self, name: str, joints: list[str] | None = None):
+        self.name = name
+        self._joints = joints or []
+
+
 class _StubHandler(BaseSimHandler):
     """Minimal subclass that bypasses ``__init__`` — we only need the
-    ``set_states`` boundary, not a real scenario."""
+    ``set_states`` / ``set_dof_targets`` boundaries, not a real scenario."""
 
-    def __init__(self):
+    def __init__(self, robots: list[_FakeRobot] | None = None):
         self._tensor_state_cache = None
         self._dict_state_cache = None
         self.set_states_calls: list = []
         self.set_dof_targets_calls: list = []
+        self.robots = robots or []
+
+    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        for robot in self.robots:
+            if robot.name == obj_name:
+                names = list(robot._joints)
+                return sorted(names) if sort else names
+        return []
 
     def _set_states(self, states, env_ids=None):
         self.set_states_calls.append((states, env_ids))
@@ -192,6 +208,64 @@ def test_set_dof_targets_invalidates_state_cache_unit():
 
     assert handler._tensor_state_cache is None, "tensor cache not invalidated"
     assert handler._dict_state_cache is None, "dict cache not invalidated"
+
+
+@pytest.mark.general
+def test_set_dof_targets_warns_unknown_robot(loguru_warnings):
+    handler = _StubHandler(robots=[_FakeRobot("arm_a", ["j0", "j1"])])
+    handler.set_dof_targets([{"arm_b": {"dof_pos_target": {"j0": 0.1}}}])
+    out = "\n".join(loguru_warnings)
+    assert "unknown robot" in out
+    assert "arm_b" in out
+    assert "arm_a" in out  # known robot listed for hint
+
+
+@pytest.mark.general
+def test_set_dof_targets_warns_unknown_joint(loguru_warnings):
+    handler = _StubHandler(robots=[_FakeRobot("arm", ["j0", "j1"])])
+    handler.set_dof_targets([{"arm": {"dof_pos_target": {"j99": 0.5}}}])
+    out = "\n".join(loguru_warnings)
+    assert "unknown joint" in out
+    assert "j99" in out
+
+
+@pytest.mark.general
+def test_set_dof_targets_warns_unknown_top_level_key(loguru_warnings):
+    handler = _StubHandler(robots=[_FakeRobot("arm", ["j0"])])
+    handler.set_dof_targets([{"arm": {"dof_pos_targt": {"j0": 0.5}}}])  # typo
+    out = "\n".join(loguru_warnings)
+    assert "unknown key" in out
+    assert "dof_pos_targt" in out
+
+
+@pytest.mark.general
+def test_set_dof_targets_quiet_on_valid_dict(loguru_warnings):
+    handler = _StubHandler(robots=[_FakeRobot("arm", ["j0", "j1"])])
+    handler.set_dof_targets([{"arm": {"dof_pos_target": {"j0": 0.5, "j1": 0.1}}}])
+    out = "\n".join(loguru_warnings)
+    assert "unknown" not in out
+
+
+@pytest.mark.general
+def test_set_dof_targets_warning_dedupes(loguru_warnings):
+    handler = _StubHandler(robots=[_FakeRobot("arm", ["j0"])])
+    action = [{"arm": {"dof_pos_target": {"j99": 0.5}}}]
+    for _ in range(5):
+        handler.set_dof_targets(action)
+    out = "\n".join(loguru_warnings)
+    assert out.count("unknown joint") == 1
+
+
+@pytest.mark.general
+def test_set_dof_targets_tensor_input_is_not_validated():
+    """Tensor actions are indexed, not name-based — they go through the
+    fast path. Validation must skip them."""
+    import torch as _torch
+
+    handler = _StubHandler(robots=[_FakeRobot("arm", ["j0", "j1"])])
+    handler.set_dof_targets(_torch.zeros(1, 2))
+    # Just check no crash; lack of warnings is the contract.
+    assert handler.set_dof_targets_calls
 
 
 @pytest.mark.general

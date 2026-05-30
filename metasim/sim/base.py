@@ -222,6 +222,94 @@ class BaseSimHandler(ABC):
         """
         raise NotImplementedError
 
+    # Keys ``_set_dof_targets`` honours under each robot dict.
+    _SET_DOF_TARGETS_VALID_KEYS = frozenset({"dof_pos_target", "dof_vel_target", "dof_torque", "dof_effort_target"})
+
+    def _warn_set_dof_targets(self, actions: CompatActionInput) -> None:
+        """Surface unknown robot names or joint names in dict actions.
+
+        ``set_dof_targets`` with a list-of-dicts action looks like::
+
+            [{"robot_a": {"dof_pos_target": {"joint1": 0.5, ...}}}]
+
+        Every backend's handler walks the per-robot ``get_joint_names``
+        list and silently skips any joint not in it. A typo like
+        ``panda_joint99`` therefore disappears with no feedback.
+        Tensor-input actions don't have this problem — they're indexed,
+        not name-based — so the bug only bites the dict-API path.
+
+        Warn once per ``(robot, joint)`` or ``(unknown_robot)`` so
+        callers see the silent drop. Robot-name validation also surfaces
+        callers that pass actions for a robot that the scenario does
+        not include.
+        """
+        if not isinstance(actions, list):
+            return
+        robots = getattr(self, "robots", None) or []
+        known_robots = {robot.name for robot in robots}
+        # Build a per-robot known-joint set lazily so the warning is
+        # cheap on the hot path when no unknown name is seen.
+        joint_names_cache: dict[str, set[str]] = {}
+        seen_robots: set[str] = getattr(self, "_set_dof_targets_warned_robots", set())
+        seen_joints: set[tuple[str, str]] = getattr(self, "_set_dof_targets_warned_joints", set())
+        seen_keys: set[tuple[str, str]] = getattr(self, "_set_dof_targets_warned_keys", set())
+        for env_action in actions:
+            if not isinstance(env_action, dict):
+                continue
+            for robot_name, robot_action in env_action.items():
+                if robot_name not in known_robots:
+                    if robot_name not in seen_robots:
+                        seen_robots.add(robot_name)
+                        log.warning(
+                            f"set_dof_targets received action for unknown robot "
+                            f"'{robot_name}'. Known robots: {sorted(known_robots)}. "
+                            f"The action will be silently dropped by every backend."
+                        )
+                    continue
+                if not isinstance(robot_action, dict):
+                    continue
+                # Unknown top-level keys (anything not in dof_*_target / dof_torque).
+                for key in robot_action:
+                    if key in self._SET_DOF_TARGETS_VALID_KEYS:
+                        continue
+                    cache = (robot_name, key)
+                    if cache in seen_keys:
+                        continue
+                    seen_keys.add(cache)
+                    log.warning(
+                        f"set_dof_targets for robot '{robot_name}' got unknown key "
+                        f"'{key}' — it will be ignored. Valid keys: "
+                        f"{sorted(self._SET_DOF_TARGETS_VALID_KEYS)}."
+                    )
+                joint_targets = robot_action.get("dof_pos_target") or {}
+                if not joint_targets:
+                    continue
+                if robot_name not in joint_names_cache:
+                    try:
+                        joint_names_cache[robot_name] = set(self.get_joint_names(robot_name, sort=False))
+                    except Exception:
+                        # Handler may not be fully launched yet; skip name validation.
+                        joint_names_cache[robot_name] = set()
+                known_joints = joint_names_cache[robot_name]
+                if not known_joints:
+                    # Handler can't resolve joint names yet (pre-launch); skip.
+                    continue
+                for joint_name in joint_targets:
+                    if joint_name in known_joints:
+                        continue
+                    cache = (robot_name, joint_name)
+                    if cache in seen_joints:
+                        continue
+                    seen_joints.add(cache)
+                    log.warning(
+                        f"set_dof_targets for robot '{robot_name}' got unknown joint "
+                        f"'{joint_name}' — it will be silently dropped. Known joints: "
+                        f"{sorted(known_joints)}."
+                    )
+        self._set_dof_targets_warned_robots = seen_robots
+        self._set_dof_targets_warned_joints = seen_joints
+        self._set_dof_targets_warned_keys = seen_keys
+
     def set_dof_targets(self, actions: CompatActionInput) -> None:
         """Set the dof targets of the robot.
 
@@ -232,6 +320,7 @@ class BaseSimHandler(ABC):
         Args:
             actions: The target actions for the robot.
         """
+        self._warn_set_dof_targets(actions)
         # Backends like MuJoCo write actuator ctrl here, and ``get_states`` reads ctrl
         # back as ``joint_pos_target``. Without invalidation, the cached state held a
         # pre-action joint_pos_target until the next simulate() — silent staleness.
