@@ -191,6 +191,47 @@ def test_set_seed_is_deterministic_on_numpy_and_torch():
 
 
 @pytest.mark.general
+def test_partial_pose_warns_pos_without_rot(loguru_warnings):
+    """Cross-backend divergence: MuJoCo silently fills missing rot with
+    identity, Sapien3 raises KeyError. Warn at the boundary so the
+    caller knows the input is ambiguous."""
+    handler = _StubHandler()
+    handler.set_states([{"objects": {}, "robots": {"arm": {"pos": [0, 0, 0]}}}])
+    out = "\n".join(loguru_warnings)
+    assert "pos" in out and "rot" in out
+    assert "cross-backend" in out or "diverge" in out
+
+
+@pytest.mark.general
+def test_partial_pose_warns_rot_without_pos(loguru_warnings):
+    handler = _StubHandler()
+    handler.set_states([{"objects": {}, "robots": {"arm": {"rot": [1, 0, 0, 0]}}}])
+    out = "\n".join(loguru_warnings)
+    assert "rot" in out and "pos" in out
+
+
+@pytest.mark.general
+def test_partial_pose_quiet_when_both_present(loguru_warnings):
+    handler = _StubHandler()
+    handler.set_states([{"objects": {}, "robots": {"arm": {"pos": [0, 0, 0], "rot": [1, 0, 0, 0]}}}])
+    out = "\n".join(loguru_warnings)
+    assert "cross-backend" not in out and "diverge" not in out
+
+
+@pytest.mark.general
+def test_partial_pose_warning_dedupes_per_entity(loguru_warnings):
+    """Hot-path reset() may be called many times — warning must fire
+    at most once per (role, entity, missing)."""
+    handler = _StubHandler()
+    state = [{"objects": {}, "robots": {"arm": {"pos": [0, 0, 0]}}}]
+    handler.set_states(state)
+    handler.set_states(state)
+    handler.set_states(state)
+    out = "\n".join(loguru_warnings)
+    assert out.count("cross-backend behaviour diverges") <= 1
+
+
+@pytest.mark.general
 def test_set_seed_differs_with_different_seeds():
     """Sanity: distinct seeds must produce distinct sequences. Otherwise
     set_seed is a no-op and the determinism test above is vacuous."""

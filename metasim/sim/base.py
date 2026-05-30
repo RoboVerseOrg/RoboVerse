@@ -136,10 +136,17 @@ class BaseSimHandler(ABC):
         the joints to move and get a silent no-op — a class of bug that has
         already cost downstream users multiple failed experiments. We warn
         once per (key, role) per handler instance.
+
+        Also flags partial pose input (only ``pos`` or only ``rot``):
+        MuJoCo silently substitutes a default for the missing component
+        (overwriting whatever value the entity had), while Sapien3 raises
+        ``KeyError`` from ``Pose(p=val["pos"], q=val["rot"])``. Same input,
+        divergent behaviour. Warn so the caller can pass both.
         """
         if not isinstance(states, list):
             return
         seen: set[tuple[str, str]] = getattr(self, "_set_states_warned_keys", set())
+        partial_pose_seen: set[tuple[str, str, str]] = getattr(self, "_set_states_partial_pose_warned", set())
         for env_state in states:
             if not isinstance(env_state, dict):
                 continue
@@ -150,9 +157,23 @@ class BaseSimHandler(ABC):
                 bucket = env_state.get(role)
                 if not isinstance(bucket, dict):
                     continue
-                for entity_state in bucket.values():
+                for entity_name, entity_state in bucket.items():
                     if not isinstance(entity_state, dict):
                         continue
+                    # Partial-pose check — pos XOR rot.
+                    has_pos = "pos" in entity_state
+                    has_rot = "rot" in entity_state
+                    if has_pos != has_rot:
+                        missing = "rot" if has_pos else "pos"
+                        pp_key = (role, entity_name, missing)
+                        if pp_key not in partial_pose_seen:
+                            partial_pose_seen.add(pp_key)
+                            log.warning(
+                                f"set_states for {role}:{entity_name} has '{'pos' if has_pos else 'rot'}' "
+                                f"without '{missing}' — cross-backend behaviour diverges: MuJoCo silently "
+                                f"substitutes a default for the missing component, Sapien3 raises KeyError. "
+                                f"Pass both pos and rot together, or omit both."
+                            )
                     for key in entity_state.keys():
                         if key in valid:
                             continue
@@ -172,6 +193,7 @@ class BaseSimHandler(ABC):
                                 f"it will be ignored. Valid keys: {sorted(valid)}."
                             )
         self._set_states_warned_keys = seen
+        self._set_states_partial_pose_warned = partial_pose_seen
 
     def set_states(self, states: TensorState | DictStateBatch, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment."""
