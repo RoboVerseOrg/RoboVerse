@@ -380,6 +380,40 @@ anyone training against the current defaults.
 
 ---
 
+## Warning Catalog (added 2026-05-30)
+
+As part of the 2026-05 hardening pass, ``BaseSimHandler`` and several
+concrete backends started emitting one-shot warnings for the silent-
+drop / cross-backend asymmetry patterns previously hidden inside
+``_set_states`` / ``_set_dof_targets`` / actuator wiring / scenario
+setup. Each warning fires at most once per (handler, gap-identity)
+so hot-path replay does not spam the log; each tells you exactly
+what was dropped and how to make it stop.
+
+| Source | Trigger | Meaning | Fix |
+|---|---|---|---|
+| ``set_states`` | dict has ``dof_pos_target`` / ``dof_vel_target`` / ``dof_torque`` | These are control inputs, not state — every backend silently drops them. | Call ``set_dof_targets(...)`` instead. |
+| ``set_states`` | dict has unknown key | Typo or a field no backend honours. | Use one of ``pos`` / ``rot`` / ``dof_pos``; the warning lists the valid set. |
+| ``set_states`` | dict has ``vel`` / ``ang_vel`` / ``dof_vel`` | Velocity fields are populated by ``get_states`` for inspection, but no backend writes them in ``_set_states`` today (MuJoCo zeros qvel, Sapien3 ignores). | Initialise momentum via ``simulate()`` with a non-zero initial action, or open a feature request for backend-side velocity write. |
+| ``set_states`` | dict has only one of ``pos`` / ``rot`` for an entity | Cross-backend divergence: MuJoCo silently fills the missing component with a default, Sapien3 raises ``KeyError``. | Pass both ``pos`` and ``rot``, or neither. |
+| ``set_dof_targets`` | action targets unknown robot name | Robot not in ``scenario.robots`` — every backend silently drops the action. | Use a robot name listed in the warning's "Known robots" suffix. |
+| ``set_dof_targets`` | dict has unknown joint name under a robot | Joint not in ``handler.get_joint_names(robot.name)`` — silently dropped. | Use one of the joint names from ``get_joint_names``; the warning lists them. |
+| ``set_dof_targets`` | unknown top-level key under a robot | Typo like ``dof_pos_targt``; nothing reaches the actuator. | Use ``dof_pos_target`` / ``dof_vel_target`` / ``dof_torque`` / ``dof_effort_target``. |
+| ``MujocoHandler._apply_actuator_settings`` | ``stiffness`` / ``damping`` set but ``effort_limit_sim`` unset | MJCF-authored ``forcerange`` stays active and silently dominates the new PD gain. Same RoboVerse config → different effective torque per backend. | Set ``effort_limit_sim`` on the actuator cfg to the value you want, or accept the asset-file clamp deliberately. |
+| ``NewtonHandler._apply_actuator_settings`` | same as MuJoCo above | Newton inherits ``joint_effort_limit`` from the asset file. | Same — set ``effort_limit_sim``. |
+| ``NewtonHandler._set_dof_targets`` | ``self._control`` has no ``joint_target_pos`` / ``joint_target_vel`` / ``joint_f`` buffer | Newton model has no position / velocity / effort actuator for the targeted joint. Every action write is dropped. | Verify the MJCF / URDF has actuators on the joints you control, or use ``control_type="effort"`` deliberately. |
+| ``ScenarioCfg.__post_init__`` | duplicate name across robots + objects | ``object_dict = {obj.name: obj for ...}`` in every handler collapses the duplicate. Set / get / step all silently reference the wrong entity. | Give each robot and object a unique ``name``. |
+| ``TaskBase.reset`` / ``RLTaskEnv.reset`` | ``seed=N`` passed but handler has no ``set_seed`` | Reproducibility contract: rollouts are not bit-reproducible on that backend's simulator side. (Won't fire on backends that inherit ``BaseSimHandler.set_seed`` — included for forward-compat against future backends that override.) | Implement ``set_seed`` on the handler, or call ``random.seed`` / ``np.random.seed`` / ``torch.manual_seed`` directly. |
+| ``ParallelHandler._check_error`` | worker process not alive | A multiprocessing worker died (OOM-kill, SIGKILL, segfault) without writing to ``error_queue``. | The exit code is reported in the exception; check the worker log or run with a smaller ``num_envs`` to bisect. |
+| ``ParallelHandler._recv_or_surface`` | ``EOFError`` / ``BrokenPipeError`` on ``remote.recv()`` | Worker closed its pipe — typically the worker process is dead and ``error_queue`` carries the real Python traceback. | The wrapped exception's ``__cause__`` is the original IPC error; the message describes which worker died. |
+
+When you fix a warning's root cause, the warning stops firing — it
+does NOT need a separate "silence" flag. The dedupe lives on the
+handler instance, so each Python process emits each warning at most
+once.
+
+---
+
 ## Improvement Roadmap
 
 ### Phase 1: Critical Fixes (Weeks 1-2)
