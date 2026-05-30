@@ -89,8 +89,93 @@ class BaseSimHandler(ABC):
         self._tensor_state_cache = None
         self._dict_state_cache = None
 
+    ############################################################
+    ## Reproducibility
+    ############################################################
+    def set_seed(self, seed: int) -> None:
+        """Seed the handler's RNG for reproducibility.
+
+        The default implementation seeds Python ``random``, NumPy, and
+        Torch's CPU + (if available) CUDA generators. That's enough for
+        deterministic ``np.random``-based perturbations and any DR
+        callback that uses ``torch.rand``. Backends with extra internal
+        RNG (Newton's warp kernels, Sapien physics noise, etc.) should
+        override and call ``super().set_seed(seed)`` first.
+
+        Closes the ``env.reset(seed=N)`` reproducibility contract that
+        was previously broken: gym would seed its own RNG but ``task.reset``
+        never forwarded the seed to the handler, so rollouts were not
+        actually deterministic on the simulator side.
+        """
+        import random as _random
+
+        import numpy as _np
+
+        _random.seed(seed)
+        _np.random.seed(seed)
+        try:
+            import torch as _torch
+
+            _torch.manual_seed(seed)
+            if _torch.cuda.is_available():
+                _torch.cuda.manual_seed_all(seed)
+        except ImportError:  # pragma: no cover — torch is a hard dep
+            pass
+
+    # Recognised dict-state keys. Anything outside this set is either a typo or
+    # a control input (dof_pos_target / dof_vel_target / dof_torque) that should
+    # be sent via ``set_dof_targets`` instead — ``set_states`` is for hard teleport.
+    _SET_STATES_VALID_OBJECT_KEYS = frozenset({"pos", "rot", "vel", "ang_vel", "dof_pos", "dof_vel"})
+    _SET_STATES_VALID_ROBOT_KEYS = frozenset({"pos", "rot", "vel", "ang_vel", "dof_pos", "dof_vel"})
+    _SET_STATES_CONTROL_KEYS = frozenset({"dof_pos_target", "dof_vel_target", "dof_torque"})
+
+    def _warn_set_states_keys(self, states: DictStateBatch) -> None:
+        """Surface dict keys that ``_set_states`` will silently ignore.
+
+        Without this check a caller can pass e.g. ``dof_pos_target`` expecting
+        the joints to move and get a silent no-op — a class of bug that has
+        already cost downstream users multiple failed experiments. We warn
+        once per (key, role) per handler instance.
+        """
+        if not isinstance(states, list):
+            return
+        seen: set[tuple[str, str]] = getattr(self, "_set_states_warned_keys", set())
+        for env_state in states:
+            if not isinstance(env_state, dict):
+                continue
+            for role, valid in (
+                ("objects", self._SET_STATES_VALID_OBJECT_KEYS),
+                ("robots", self._SET_STATES_VALID_ROBOT_KEYS),
+            ):
+                bucket = env_state.get(role)
+                if not isinstance(bucket, dict):
+                    continue
+                for entity_state in bucket.values():
+                    if not isinstance(entity_state, dict):
+                        continue
+                    for key in entity_state.keys():
+                        if key in valid:
+                            continue
+                        cache_key = (role, key)
+                        if cache_key in seen:
+                            continue
+                        seen.add(cache_key)
+                        if key in self._SET_STATES_CONTROL_KEYS:
+                            log.warning(
+                                f"set_states received '{key}' under '{role}' — this is a control "
+                                f"input, not a state. set_states will NOT apply it. "
+                                f"Use set_dof_targets(...) to drive joints to a target."
+                            )
+                        else:
+                            log.warning(
+                                f"set_states received unknown key '{key}' under '{role}' — "
+                                f"it will be ignored. Valid keys: {sorted(valid)}."
+                            )
+        self._set_states_warned_keys = seen
+
     def set_states(self, states: TensorState | DictStateBatch, env_ids: list[int] | None = None) -> None:
         """Set the states of the environment."""
+        self._warn_set_states_keys(states)
         self._invalidate_state_caches()
         self._set_states(states, env_ids)
 
@@ -111,6 +196,10 @@ class BaseSimHandler(ABC):
         Args:
             actions: The target actions for the robot.
         """
+        # Backends like MuJoCo write actuator ctrl here, and ``get_states`` reads ctrl
+        # back as ``joint_pos_target``. Without invalidation, the cached state held a
+        # pre-action joint_pos_target until the next simulate() — silent staleness.
+        self._invalidate_state_caches()
         self._set_dof_targets(actions)
 
     ############################################################

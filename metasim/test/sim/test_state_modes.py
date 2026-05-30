@@ -17,7 +17,7 @@ from metasim.test.test_utils import assert_close
 from metasim.utils.state import action_input_to_tensor
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
 def test_get_states_dict_mode(handler):
     """Test that get_states with mode='dict' returns list of dicts."""
     dict_state = handler.get_states(mode="dict")
@@ -49,7 +49,7 @@ def test_get_states_dict_mode(handler):
     log.info(f"Get states dict mode test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
 def test_state_mode_conversion_consistency(handler):
     """Test that tensor and dict modes represent the same state."""
     # Set a known state
@@ -107,7 +107,7 @@ def test_state_mode_conversion_consistency(handler):
     log.info(f"State mode conversion consistency test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
 def test_state_mode_multiple_calls(handler):
     """Test that calling get_states with different modes multiple times works correctly."""
     # Call with tensor mode
@@ -139,7 +139,7 @@ def test_state_mode_multiple_calls(handler):
     log.info(f"State mode multiple calls test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
 def test_state_cache_mode_independence(handler):
     """Regression: alternating modes must not invalidate or overwrite the other cache."""
     tensor_a = handler.get_states(mode="tensor")
@@ -161,7 +161,49 @@ def test_state_cache_mode_independence(handler):
     log.info(f"State cache mode independence test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
+def test_set_dof_targets_invalidates_state_cache(handler):
+    """Regression: set_dof_targets writes ctrl in MuJoCo and ``get_states`` reads
+    ctrl back as ``joint_pos_target``. Without cache invalidation, a get_states
+    call after set_dof_targets returned the pre-action target — a silent staleness
+    bug across the entire backend matrix."""
+    # Prime both caches so we can detect either being rebuilt.
+    tensor_pre = handler.get_states(mode="tensor")
+    dict_pre = handler.get_states(mode="dict")
+
+    # Issue an action that does not advance simulation.
+    handler.set_dof_targets(
+        [
+            {
+                "franka": {
+                    "dof_pos_target": {
+                        "panda_joint1": 0.5,
+                        "panda_joint2": -0.5,
+                        "panda_joint3": 0.0,
+                        "panda_joint4": -1.0,
+                        "panda_joint5": 0.0,
+                        "panda_joint6": 1.0,
+                        "panda_joint7": 0.5,
+                        "panda_finger_joint1": 0.04,
+                        "panda_finger_joint2": 0.04,
+                    }
+                }
+            }
+        ]
+        * handler.scenario.num_envs
+    )
+
+    tensor_post = handler.get_states(mode="tensor")
+    dict_post = handler.get_states(mode="dict")
+
+    # Caches must have been rebuilt — otherwise stale joint_pos_target leaks through.
+    assert tensor_post is not tensor_pre, "set_dof_targets did not invalidate tensor cache"
+    assert dict_post is not dict_pre, "set_dof_targets did not invalidate dict cache"
+
+    log.info(f"set_dof_targets cache invalidation test passed for {handler.scenario.simulator}")
+
+
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
 def test_dict_state_all_objects(handler):
     """Test that dict state includes all objects and robots."""
     dict_state = handler.get_states(mode="dict")
@@ -184,7 +226,7 @@ def test_dict_state_all_objects(handler):
     log.info(f"Dict state all objects test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
 def test_handler_accepts_tensor_actions(handler):
     """Handler accepts tensor actions in handler/API order."""
     action_dim = sum(len(handler.get_joint_names(robot.name, sort=True)) for robot in handler.robots)
@@ -194,7 +236,7 @@ def test_handler_accepts_tensor_actions(handler):
     assert handler.actions_cache is not None
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
 def test_handler_accepts_dict_actions(handler):
     """Handler accepts dict-batch actions."""
     dict_actions = [
@@ -211,7 +253,7 @@ def test_handler_accepts_dict_actions(handler):
     assert handler.actions_cache is not None
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "sapien3")
 def test_action_dict_and_tensor_use_same_handler_api_order(handler):
     """Dict actions normalize to the documented handler/API tensor order."""
     dict_actions = [
