@@ -60,8 +60,8 @@ _INFRA = {"ground", "wall", "table", "table_wall"}
 _URDF_TMPL = """<?xml version="1.0"?>
 <robot name="{name}">
   <link name="base">
-    <visual><origin xyz="0 0 0"/><geometry><mesh filename="{mesh}" scale="{sx} {sy} {sz}"/></geometry></visual>
-    <collision><origin xyz="0 0 0"/><geometry><mesh filename="{mesh}" scale="{sx} {sy} {sz}"/></geometry></collision>
+    <visual><origin xyz="0 0 0"/><geometry><mesh filename="{visual}" scale="{sx} {sy} {sz}"/></geometry></visual>
+    <collision><origin xyz="0 0 0"/><geometry><mesh filename="{collision}" scale="{sx} {sy} {sz}"/></geometry></collision>
     <inertial><mass value="0.1"/><inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/></inertial>
   </link>
 </robot>
@@ -73,13 +73,22 @@ def _safe(name: str) -> str:
     return "obj_" + name.replace("-", "_")
 
 
-def _glb_to_urdf(mesh_abs: str, scale, out_dir: str, name: str) -> str:
-    """Wrap a GLB/OBJ mesh in a minimal single-link URDF (sapien loads it via assimp)."""
+def _glb_to_urdf(visual_abs: str, scale, out_dir: str, name: str) -> str:
+    """Wrap a mesh in a minimal single-link URDF (sapien loads GLB/OBJ via assimp).
+
+    The collision geometry points at RoboTwin's dedicated ``collision/`` mesh when
+    present (it is built for physics) rather than the dense visual mesh -- the
+    sapien3 loader turns it into a convex hull, and a tight collision mesh avoids
+    the init interpenetration that ejects concave dynamic objects.
+    """
     os.makedirs(out_dir, exist_ok=True)
     sx, sy, sz = (float(s) for s in (scale if scale else (1, 1, 1)))
+    collision_abs = visual_abs.replace(f"{os.sep}visual{os.sep}", f"{os.sep}collision{os.sep}")
+    if not os.path.exists(collision_abs):
+        collision_abs = visual_abs
     urdf = os.path.join(out_dir, f"{name}.urdf")
     with open(urdf, "w") as f:
-        f.write(_URDF_TMPL.format(name=name, mesh=mesh_abs, sx=sx, sy=sy, sz=sz))
+        f.write(_URDF_TMPL.format(name=name, visual=visual_abs, collision=collision_abs, sx=sx, sy=sy, sz=sz))
     return urdf
 
 
