@@ -34,6 +34,8 @@ except ImportError:
     pass
 
 import argparse
+import glob
+import json
 import os
 import pickle
 
@@ -98,19 +100,8 @@ def _quat_angle(q1, q2) -> float:
     return float(2.0 * np.arccos(min(1.0, d)))
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--bridge", default=os.path.expanduser("~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl"))
-    ap.add_argument("--mode", choices=["kinematic", "physics"], default="kinematic")
-    ap.add_argument("--sim", default="sapien3")
-    ap.add_argument("--settle", type=int, default=8, help="(physics mode) simulate() calls per target")
-    ap.add_argument("--video", action="store_true")
-    ap.add_argument("--robotwin-dir", default=os.path.expanduser("~/projects/robotwin"))
-    ap.add_argument("--out", default="outputs/robotwin_coverage/object_parity.json")
-    args = ap.parse_args(argv)
-
-    with open(args.bridge, "rb") as f:
-        bridge = pickle.load(f)
+def _replay_one(bridge: dict, args) -> dict:
+    """Replay one bridge trajectory; render video and/or measure object parity."""
     task = bridge.get("task", "?")
     ls, rs = bridge["left_gripper_scale"], bridge["right_gripper_scale"]
     vectors = bridge["vectors"]
@@ -242,12 +233,64 @@ def main(argv: list[str] | None = None) -> int:
                 f"[{task}] {n}: moved {moved:.3f}m | final pos err {pos_err[-1]:.4f}m "
                 f"max {pos_err.max():.4f}m | final ang {ang_err[-1]:.3f}rad"
             )
-        import json
-
-        os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-        with open(args.out, "w") as f:
-            json.dump(result, f, indent=2)
     handler.close()
+    return result
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--bridge", default=os.path.expanduser("~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl"))
+    ap.add_argument("--all", action="store_true", help="sweep every *.pkl with object_traj under the bridge dir")
+    ap.add_argument("--bridge-dir", default=os.path.expanduser("~/projects/robotwin/data/_rv_bridge"))
+    ap.add_argument("--mode", choices=["kinematic", "physics"], default="kinematic")
+    ap.add_argument("--sim", default="sapien3")
+    ap.add_argument("--settle", type=int, default=8, help="(physics mode) simulate() calls per target")
+    ap.add_argument("--video", action="store_true")
+    ap.add_argument("--robotwin-dir", default=os.path.expanduser("~/projects/robotwin"))
+    ap.add_argument("--out", default="outputs/robotwin_coverage/object_parity.json")
+    args = ap.parse_args(argv)
+
+    if args.all:
+        paths = sorted(
+            p for p in glob.glob(os.path.join(args.bridge_dir, "*.pkl")) if not os.path.basename(p).startswith("_")
+        )
+    else:
+        paths = [args.bridge]
+
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
+    results = []
+    for i, p in enumerate(paths):
+        if not os.path.exists(p):
+            log.warning(f"[skip] missing {p}")
+            continue
+        with open(p, "rb") as f:
+            bridge = pickle.load(f)
+        # In --all we only measure parity; skip pickles without an object trajectory.
+        if args.all and not bridge.get("object_traj"):
+            continue
+        try:
+            r = _replay_one(bridge, args)
+        except Exception as e:
+            log.error(f"[{i + 1}/{len(paths)}] {bridge.get('task')} FAILED: {type(e).__name__}: {e}")
+            results.append({"task": bridge.get("task"), "mode": args.mode, "error": f"{type(e).__name__}: {e}"})
+            continue
+        results.append(r)
+        with open(args.out, "w") as f:
+            json.dump({"mode": args.mode, "settle": args.settle, "results": results}, f, indent=2)
+
+    if args.mode == "physics":
+        # Aggregate: best (smallest final pos err) object per task, count <= thresholds.
+        per_task = []
+        for r in results:
+            errs = [o["final_pos_err_m"] for o in r.get("objects", {}).values()]
+            moved = [o["moved_m"] for o in r.get("objects", {}).values()]
+            if errs:
+                per_task.append((r["task"], max(errs), max(moved) if moved else 0.0))
+        le5 = sum(1 for _, e, _ in per_task if e <= 0.05)
+        le3 = sum(1 for _, e, _ in per_task if e <= 0.03)
+        log.info(f"\n=== OBJECT-POSE PARITY: {len(per_task)} tasks | <=5cm: {le5} | <=3cm: {le3} ===")
+        for t, e, mv in sorted(per_task, key=lambda x: x[1]):
+            log.info(f"  {e:.4f}m  {t} (object moved {mv:.3f}m)")
     return 0
 
 
