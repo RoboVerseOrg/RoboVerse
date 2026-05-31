@@ -130,6 +130,43 @@ def _dof_array_to_dict(dof_array, joint_names: list[str]) -> dict[str, float]:
     return {jn: dof_array[i] for i, jn in enumerate(joint_names)}
 
 
+def _warn_action_input_drops_non_position(handler: BaseSimHandler, actions: list) -> None:
+    """Warn once when a dict action carries non-position targets dropped here.
+
+    ``action_input_to_tensor`` reads only ``dof_pos_target``; other target
+    keys are silently dropped. Dedupe lives on the handler instance via
+    ``_action_input_warned_keys`` so hot-path rollouts (one warning per
+    (robot, dropped-key) per Python process) don't spam. Tensor / ndarray
+    actions skip this path entirely.
+    """
+    from loguru import logger as _log
+
+    NON_POSITION_KEYS = ("dof_vel_target", "dof_effort_target", "dof_torque")
+    seen: set = getattr(handler, "_action_input_warned_keys", set())
+    for env_action in actions:
+        if not isinstance(env_action, dict):
+            continue
+        for robot_name, robot_action in env_action.items():
+            if not isinstance(robot_action, dict):
+                continue
+            for key in NON_POSITION_KEYS:
+                if robot_action.get(key):
+                    cache_key = (robot_name, key)
+                    if cache_key in seen:
+                        continue
+                    seen.add(cache_key)
+                    _log.warning(
+                        f"action_input_to_tensor: dict action for robot '{robot_name}' includes "
+                        f"'{key}' — this helper reads only 'dof_pos_target' and silently drops "
+                        f"vel/effort targets. If you need non-position semantics, bypass this "
+                        f"helper or pass actions to set_dof_targets directly without conversion."
+                    )
+    try:
+        handler._action_input_warned_keys = seen
+    except AttributeError:
+        pass
+
+
 def action_input_to_tensor(
     handler: BaseSimHandler, actions: CompatActionInput, device: str | torch.device = "cpu"
 ) -> torch.Tensor:
@@ -139,6 +176,12 @@ def action_input_to_tensor(
     ``dof_vel_target`` / ``dof_effort_target``. Backends that need non-position
     semantics on dict actions must handle that path explicitly instead of routing
     those actions through this helper.
+
+    Warns once per (robot, key) when dict actions contain ``dof_vel_target`` /
+    ``dof_effort_target`` — those are silently dropped here, which previously
+    looked like the actions were applied to every backend that goes through
+    this helper (mujoco / pyrep). Surface the drop so callers can either
+    bypass this helper or accept the position-only semantics intentionally.
     """
     if isinstance(actions, torch.Tensor):
         action_tensor = actions.to(device=device, dtype=torch.float32)
@@ -148,6 +191,7 @@ def action_input_to_tensor(
         joint_names_by_robot = {robot.name: handler.get_joint_names(robot.name, sort=True) for robot in handler.robots}
         action_dim = sum(len(joint_names) for joint_names in joint_names_by_robot.values())
         action_tensor = torch.zeros((len(actions), action_dim), dtype=torch.float32, device=device)
+        _warn_action_input_drops_non_position(handler, actions)
 
         for env_id, action in enumerate(actions):
             offset = 0

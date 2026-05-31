@@ -272,6 +272,51 @@ def test_actions_cache_holds_last_set_dof_targets_input():
 
 
 @pytest.mark.general
+def test_action_input_to_tensor_warns_on_non_position_targets(loguru_warnings):
+    """``action_input_to_tensor`` reads only ``dof_pos_target`` and silently
+    drops ``dof_vel_target`` / ``dof_effort_target`` / ``dof_torque``. Any
+    backend routing dict actions through this helper (mujoco / pyrep)
+    would silently miss those — surface the drop via a one-shot warn so
+    callers can either bypass the helper or accept position-only
+    semantics intentionally."""
+    from metasim.utils.state import action_input_to_tensor
+
+    handler = _StubHandler(robots=[_FakeRobot("arm", ["j0", "j1"])])
+    actions = [{"arm": {"dof_pos_target": {"j0": 0.5}, "dof_vel_target": {"j0": 1.0}}}]
+    action_input_to_tensor(handler, actions, device="cpu")
+    out = "\n".join(loguru_warnings)
+    assert "dof_vel_target" in out
+    assert "silently drops" in out
+    assert "arm" in out
+
+
+@pytest.mark.general
+def test_action_input_to_tensor_quiet_on_position_only(loguru_warnings):
+    """Position-only dict actions must not trigger the warning."""
+    from metasim.utils.state import action_input_to_tensor
+
+    handler = _StubHandler(robots=[_FakeRobot("arm", ["j0", "j1"])])
+    actions = [{"arm": {"dof_pos_target": {"j0": 0.5, "j1": 0.1}}}]
+    action_input_to_tensor(handler, actions, device="cpu")
+    out = "\n".join(loguru_warnings)
+    assert "silently drops" not in out
+
+
+@pytest.mark.general
+def test_action_input_to_tensor_dedupes_warning(loguru_warnings):
+    """Hot-path RL training calls the helper thousands of times — the
+    warning must fire at most once per (robot, key) per process."""
+    from metasim.utils.state import action_input_to_tensor
+
+    handler = _StubHandler(robots=[_FakeRobot("arm", ["j0"])])
+    actions = [{"arm": {"dof_pos_target": {"j0": 0.0}, "dof_effort_target": {"j0": 1.0}}}]
+    for _ in range(5):
+        action_input_to_tensor(handler, actions, device="cpu")
+    out = "\n".join(loguru_warnings)
+    assert out.count("silently drops") == 1
+
+
+@pytest.mark.general
 def test_set_dof_targets_tensor_input_is_not_validated():
     """Tensor actions are indexed, not name-based — they go through the
     fast path. Validation must skip them."""
