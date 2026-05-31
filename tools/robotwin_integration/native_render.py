@@ -57,13 +57,23 @@ def main(argv: list[str] | None = None) -> int:
     pt = _load_passthrough()
     work_dir = os.path.join(pt.robotwin_dir(), "data", "_rv_bridge")
     os.makedirs(work_dir, exist_ok=True)
+    # All data_type off: get_obs still fires (it always _update_render()s the scene),
+    # and we capture our OWN match camera below. Rendering RoboTwin's observer too
+    # (third_view) just doubles the per-frame RT cost on long episodes.
     data_type = {k: False for k in ("rgb", "third_view", "depth", "pointcloud", "observer", "endpose", "qpos")}
-    data_type["third_view"] = True  # makes get_obs render the observer camera
 
     env = pt._make_robotwin_env(
         task_name=args.task, task_config=args.task_config, seed=args.seed,
         save_data=False, data_type=data_type, render_freq=0,
     )  # fmt: skip
+
+    # RoboTwin's setup_demo enables the RT shader + the OIDN denoiser; OIDN can
+    # deadlock/leak over a long episode in headless ("OIDN Error: invalid handle").
+    # Drop the denoiser (RT geometry/shadows still render) so long tasks don't hang.
+    try:
+        sapien.render.set_ray_tracing_denoiser("none")
+    except Exception:
+        pass
 
     # Add a roll=0 (world-up) camera matching RoboVerse's PinholeCameraCfg convention
     # (sapien3.py: yaw/pitch from look-dir, roll hardcoded 0), so native + RoboVerse
