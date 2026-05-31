@@ -289,7 +289,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--rgb",
         action="store_true",
-        help="also capture every camera's RGB per frame (for IL policy training; larger pickle, slower)",
+        help="also capture camera RGB per frame (for IL policy training; larger pickle, slower)",
+    )
+    ap.add_argument(
+        "--cameras",
+        nargs="+",
+        default=None,
+        help="with --rgb, only capture these cameras (e.g. head_camera) -> smaller/faster; default all",
     )
     ap.add_argument("--out", required=True, help="output pickle path (single demo) or directory (--num-demos>1)")
     ap.add_argument(
@@ -397,6 +403,8 @@ def main(argv: list[str] | None = None) -> int:
                 cam_names = set()
                 for f in frames:
                     cam_names.update((f.get("observation") or {}).keys())
+                if args.cameras:  # restrict to requested cameras (smaller pickle)
+                    cam_names &= set(args.cameras)
                 for cam in sorted(cam_names):
                     seq = [
                         np.asarray(f["observation"][cam]["rgb"], dtype=np.uint8)
