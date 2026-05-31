@@ -1,8 +1,21 @@
 import copy
 from typing import Dict
 
-import numba
 import numpy as np
+
+try:
+    # numba jit-compiles the batch sequence sampler (fast path). It requires
+    # numpy <= 1.26; on numpy >= 2.0 (now common) numba fails to import. Fall back
+    # to a pure-numpy implementation with identical semantics so IL training still
+    # runs -- a little slower per-batch, but never a hard crash.
+    import numba
+
+    _HAS_NUMBA = True
+    _prange = numba.prange
+except Exception:  # ImportError, or numba's NumPy-version guard
+    numba = None
+    _HAS_NUMBA = False
+    _prange = range
 import torch
 from roboverse_learn.il.utils.normalize_util import get_image_range_normalizer
 from roboverse_learn.il.utils.pytorch_util import dict_apply
@@ -147,7 +160,7 @@ def _batch_sample_sequence(
     idx: np.ndarray,
     sequence_length: int,
 ):
-    for i in numba.prange(len(idx)):
+    for i in _prange(len(idx)):
         buffer_start_idx, buffer_end_idx, sample_start_idx, sample_end_idx = indices[idx[i]]
         data[i, sample_start_idx:sample_end_idx] = input_arr[buffer_start_idx:buffer_end_idx]
         if sample_start_idx > 0:
@@ -156,8 +169,13 @@ def _batch_sample_sequence(
             data[i, sample_end_idx:] = data[i, sample_end_idx - 1]
 
 
-_batch_sample_sequence_sequential = numba.jit(_batch_sample_sequence, nopython=True, parallel=False)
-_batch_sample_sequence_parallel = numba.jit(_batch_sample_sequence, nopython=True, parallel=True)
+if _HAS_NUMBA:
+    _batch_sample_sequence_sequential = numba.jit(_batch_sample_sequence, nopython=True, parallel=False)
+    _batch_sample_sequence_parallel = numba.jit(_batch_sample_sequence, nopython=True, parallel=True)
+else:
+    # Pure-numpy fallback: same function, no jit (numba unavailable on numpy >= 2.0).
+    _batch_sample_sequence_sequential = _batch_sample_sequence
+    _batch_sample_sequence_parallel = _batch_sample_sequence
 
 
 def batch_sample_sequence(
