@@ -26,6 +26,7 @@ PASSTHROUGH_PREFIXES = [
     "GymRobotics/",
     "DMControl/",
     "Libero/",
+    "LiberoPlus/",
 ]
 
 
