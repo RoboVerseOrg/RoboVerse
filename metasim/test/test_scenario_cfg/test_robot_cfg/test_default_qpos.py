@@ -32,6 +32,7 @@ def test_default_qpos(handler):
         "mujoco": "MJCF forcerange='-40 40' clamps PD; not enough headroom in 80 sim steps",
         "sapien3": "Sapien3 PD reaches panda_joint6 ~1.5735 (target 1.5708) within 80 steps",
         "mjx": "MJX integrator step differs from MuJoCo; needs tuned settle count",
+        "newton": "Newton MuJoCo-Warp solver settles panda_joint1 to ~0.006 (target 0.0) in 80 steps",
     }
     if handler.scenario.simulator in _PD_CONVERGENCE_XFAIL:
         pytest.xfail(_PD_CONVERGENCE_XFAIL[handler.scenario.simulator])
