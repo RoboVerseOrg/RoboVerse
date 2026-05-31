@@ -130,6 +130,11 @@ def _replay_one(bridge: dict, args) -> dict:
     real = bridge.get("real_vectors") or vectors
     object_traj = bridge.get("object_traj", {})
     object_meshes = bridge.get("object_meshes", {})
+    object_joint_traj = bridge.get("object_joint_traj", {})
+    object_joint_names = bridge.get("object_joint_names", {})
+    # An articulated object whose joints actually move (door/lid/drawer opening)
+    # must be replayed as an articulation; a static one can use the textured GLB bake.
+    moving_artic = {n: jt for n, jt in object_joint_traj.items() if len(jt) and float(np.ptp(jt, axis=0).max()) > 0.02}
     manip = [n for n in object_traj if n not in _INFRA and len(object_traj[n])]
     log.info(f"[{task}] {len(vectors)} frames; manipulated objects: {manip}; meshes: {list(object_meshes)}")
 
@@ -157,8 +162,14 @@ def _replay_one(bridge: dict, args) -> dict:
                     s = json.load(open(md)).get("scale")
                     uscale = s[0] if isinstance(s, (list, tuple)) else s
             uscale = float(uscale or 1.0)
-            # Prefer a textured GLB baked from the URDF (rest pose) so .mtl textures
-            # render; fall back to ArticulationObjCfg (gray) if the bake fails.
+            if n in moving_artic:
+                # Joints move (door/lid/drawer opens) -> must be an articulation so we
+                # can drive its dof_pos per frame (the GLB bake is frozen at rest pose).
+                artic_names.add(rv)
+                objects.append(ArticulationObjCfg(name=rv, urdf_path=urdf_abs, fix_base_link=kinematic, scale=uscale))
+                continue
+            # Static URDF object: prefer a textured GLB baked from the URDF (rest pose)
+            # so .mtl textures render; fall back to ArticulationObjCfg if the bake fails.
             glb = _urdf_to_glb(urdf_abs, "outputs/robotwin_coverage/_obj_glb", rv)
             if glb is not None:
                 urdf = _glb_to_urdf(
@@ -221,14 +232,23 @@ def _replay_one(bridge: dict, args) -> dict:
 
     handler = get_handler(scenario)
 
-    # Articulation objects (pot/cabinet/...) need a dof_pos in every state set; use
-    # their default (zeros) -- we only replay the rigid root pose, not internal joints.
-    artic_dof = {}
+    # Articulation objects need a dof_pos in every state set. For a *moving* object
+    # (door/lid/drawer) drive its joints from RoboTwin's recorded per-frame qpos
+    # (mapped RoboTwin-joint-name -> RoboVerse-joint-order); otherwise hold at zeros.
+    rv_to_n = {v: k for k, v in name_map.items()}
+    artic_drive = {}  # rv -> (rv_joint_names, cols|None, joint_traj|None)
     for rv in artic_names:
         try:
-            artic_dof[rv] = {j: 0.0 for j in handler.get_joint_names(rv, sort=True)}
+            rv_jnames = handler.get_joint_names(rv, sort=True)
         except Exception:
-            artic_dof[rv] = {}
+            rv_jnames = []
+        n = rv_to_n.get(rv)
+        if n in moving_artic and object_joint_names.get(n):
+            rec = object_joint_names[n]
+            cols = [rec.index(j) if j in rec else None for j in rv_jnames]
+            artic_drive[rv] = (rv_jnames, cols, moving_artic[n])
+        else:
+            artic_drive[rv] = (rv_jnames, None, None)
 
     # Physics mode drives the robot through the canonical get_traj action stream
     # (correctly keyed by robot name), exactly like the joint-parity harness.
@@ -246,8 +266,13 @@ def _replay_one(bridge: dict, args) -> dict:
             p = tr[min(t, len(tr) - 1)]
             rv = name_map[n]
             st = {"pos": [float(x) for x in p[:3]], "rot": [float(x) for x in p[3:7]]}
-            if rv in artic_dof:
-                st["dof_pos"] = artic_dof[rv]
+            if rv in artic_drive:
+                jn, cols, jtraj = artic_drive[rv]
+                if cols is not None:
+                    q = jtraj[min(t, len(jtraj) - 1)]
+                    st["dof_pos"] = {j: (float(q[c]) if c is not None else 0.0) for j, c in zip(jn, cols)}
+                else:
+                    st["dof_pos"] = {j: 0.0 for j in jn}
             out[rv] = st
         # table proxy at RoboTwin's fixed surface
         out["table"] = {"pos": [0.0, 0.0, 0.37], "rot": [1.0, 0.0, 0.0, 0.0]}

@@ -82,6 +82,8 @@ def _patch_capture_real_state(env) -> None:
             # Per-frame world pose of every scene object (rigid actors AND URDF
             # articulations, e.g. the pot/cabinet/laptop) minus the robot itself.
             poses = {}
+            qpos = {}
+            jnames = {}
             for actor in scene.get_all_actors():
                 p = actor.get_pose()
                 poses[actor.get_name()] = np.asarray([*p.p, *p.q], dtype=float)  # [x,y,z, qw,qx,qy,qz]
@@ -91,7 +93,18 @@ def _patch_capture_real_state(env) -> None:
                     continue
                 p = art.get_root_pose() if hasattr(art, "get_root_pose") else art.get_pose()
                 poses[name] = np.asarray([*p.p, *p.q], dtype=float)
+                # Articulation joint qpos (+ names for ordering) -> replay opening
+                # doors/lids/drawers 1:1.
+                try:
+                    q = art.get_qpos()
+                    if q is not None and len(q):
+                        qpos[name] = np.asarray(q, dtype=float)
+                        jnames[name] = [j.get_name() for j in art.get_active_joints()]
+                except Exception:
+                    pass
             d["object_poses"] = poses
+            d["object_qpos"] = qpos
+            d["object_joint_names"] = jnames
         except Exception:
             pass
         return d
@@ -289,6 +302,17 @@ def main(argv: list[str] | None = None) -> int:
                 ])
                 for n in obj_names
             }
+            # Per-frame joint qpos (+ joint names) for articulated objects (doors/lids/drawers).
+            object_joint_traj = {}
+            object_joint_names = {}
+            for n in obj_names:
+                seq = [f["object_qpos"][n] for f in frames if f.get("object_qpos") and n in f.get("object_qpos", {})]
+                if seq:
+                    object_joint_traj[n] = np.asarray(seq)
+                    for f in frames:
+                        if n in f.get("object_joint_names", {}):
+                            object_joint_names[n] = f["object_joint_names"][n]
+                            break
             # Per-object asset: exact mesh from the create_actor hook, else a scanned
             # mobility.urdf for URDF-articulation objects (pot/cabinet/laptop/...).
             object_meshes = {}
@@ -308,6 +332,8 @@ def main(argv: list[str] | None = None) -> int:
                 "right_endpose": right_endpose,  # (T, 7)
                 "init_objects": init_objects,
                 "object_traj": object_traj,  # {actor_name: (T, 7)} manipulated-object world-pose trajectory
+                "object_joint_traj": object_joint_traj,  # {actor_name: (T, ndof)} articulated-object joint qpos
+                "object_joint_names": object_joint_names,  # {actor_name: [joint names]} order of the qpos cols
                 "object_meshes": object_meshes,  # {actor_name: {visual: relpath, scale, model_id}}
                 "left_gripper_scale": list(env.robot.left_gripper_scale),
                 "right_gripper_scale": list(env.robot.right_gripper_scale),
