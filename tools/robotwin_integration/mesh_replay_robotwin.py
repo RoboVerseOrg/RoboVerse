@@ -94,6 +94,28 @@ def _glb_to_urdf(visual_abs: str, scale, out_dir: str, name: str) -> str:
     return urdf
 
 
+def _urdf_to_glb(urdf_abs: str, out_dir: str, name: str) -> str | None:
+    """Bake a URDF-articulation object (at rest config) into one textured GLB.
+
+    sapien3's articulation loader renders the mobility.urdf geometry but drops its
+    ``.mtl`` textures (-> gray). yourdfpy loads the URDF at its default joint
+    config and trimesh exports the assembled scene to a GLB that *embeds* the
+    textures, which then load like any rigid mesh. Static targets only (rest pose).
+    """
+    try:
+        import trimesh  # noqa: F401
+        import yourdfpy
+
+        os.makedirs(out_dir, exist_ok=True)
+        glb = os.path.join(out_dir, f"{name}.glb")
+        if not os.path.exists(glb):
+            yourdfpy.URDF.load(urdf_abs).scene.export(glb)
+        return glb
+    except Exception as e:
+        log.warning(f"urdf->glb failed for {name} ({type(e).__name__}: {e}); falling back to articulation")
+        return None
+
+
 def _quat_angle(q1, q2) -> float:
     """Geodesic angle (rad) between two wxyz quaternions."""
     d = abs(float(np.dot(q1 / (np.linalg.norm(q1) + 1e-9), q2 / (np.linalg.norm(q2) + 1e-9))))
@@ -118,17 +140,15 @@ def _replay_one(bridge: dict, args) -> dict:
     # Build object cfgs: real mesh where we have one, else a small primitive proxy.
     kinematic = args.mode == "kinematic"
     phys = PhysicStateType.XFORM if kinematic else PhysicStateType.GEOM
-    objects, name_map = [], {}
+    objects, name_map, artic_names = [], {}, set()
     for n in manip:
         rv = _safe(n)
         name_map[n] = rv
         mesh = object_meshes.get(n)
         if mesh and mesh.get("type") == "urdf":
-            # URDF-articulation object (pot / cabinet / laptop) -- a multi-link
-            # mobility.urdf, so load it via ArticulationObjCfg (the rigid loader
-            # only reads the first link and drops the rest). RoboTwin sets the
+            # URDF-articulation object (pot / cabinet / laptop). RoboTwin sets the
             # loader scale to model_data["scale"][0]; reproduce it or the object
-            # loads at raw (huge) URDF units.
+            # loads at raw (huge) units.
             urdf_abs = os.path.join(args.robotwin_dir, mesh["urdf"])
             uscale = mesh.get("scale")
             if uscale is None:
@@ -136,11 +156,18 @@ def _replay_one(bridge: dict, args) -> dict:
                 if os.path.exists(md):
                     s = json.load(open(md)).get("scale")
                     uscale = s[0] if isinstance(s, (list, tuple)) else s
-            objects.append(
-                ArticulationObjCfg(
-                    name=rv, urdf_path=urdf_abs, fix_base_link=kinematic, scale=float(uscale or 1.0),
+            uscale = float(uscale or 1.0)
+            # Prefer a textured GLB baked from the URDF (rest pose) so .mtl textures
+            # render; fall back to ArticulationObjCfg (gray) if the bake fails.
+            glb = _urdf_to_glb(urdf_abs, "outputs/robotwin_coverage/_obj_glb", rv)
+            if glb is not None:
+                urdf = _glb_to_urdf(
+                    os.path.abspath(glb), (uscale, uscale, uscale), "outputs/robotwin_coverage/_obj_urdf", rv
                 )
-            )  # fmt: skip
+                objects.append(RigidObjCfg(name=rv, urdf_path=urdf, physics=phys, fix_base_link=kinematic))
+            else:
+                artic_names.add(rv)
+                objects.append(ArticulationObjCfg(name=rv, urdf_path=urdf_abs, fix_base_link=kinematic, scale=uscale))
         elif mesh and mesh.get("visual"):
             # Rigid mesh object: wrap the GLB/OBJ in a minimal URDF for sapien3.
             mesh_abs = os.path.join(args.robotwin_dir, mesh["visual"])
@@ -197,13 +224,11 @@ def _replay_one(bridge: dict, args) -> dict:
     # Articulation objects (pot/cabinet/...) need a dof_pos in every state set; use
     # their default (zeros) -- we only replay the rigid root pose, not internal joints.
     artic_dof = {}
-    for n in manip:
-        if object_meshes.get(n, {}).get("type") == "urdf":
-            rv = name_map[n]
-            try:
-                artic_dof[rv] = {j: 0.0 for j in handler.get_joint_names(rv, sort=True)}
-            except Exception:
-                artic_dof[rv] = {}
+    for rv in artic_names:
+        try:
+            artic_dof[rv] = {j: 0.0 for j in handler.get_joint_names(rv, sort=True)}
+        except Exception:
+            artic_dof[rv] = {}
 
     # Physics mode drives the robot through the canonical get_traj action stream
     # (correctly keyed by robot name), exactly like the joint-parity harness.
