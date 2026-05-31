@@ -107,7 +107,14 @@ def _urdf_to_glb(urdf_abs: str, out_dir: str, name: str) -> str | None:
         import yourdfpy
 
         os.makedirs(out_dir, exist_ok=True)
-        glb = os.path.join(out_dir, f"{name}.glb")
+        # Key the cache by the URDF *instance* dir (e.g. .../060_kitchenpot/100023/),
+        # not just the object name: modelid is random per episode, so a name-only key
+        # would serve a stale bake of a DIFFERENT instance ("same category, wrong
+        # object"). Hash the absolute urdf path so re-collected bridges re-bake.
+        import hashlib
+
+        tag = hashlib.md5(os.path.abspath(urdf_abs).encode()).hexdigest()[:8]
+        glb = os.path.join(out_dir, f"{name}_{tag}.glb")
         if not os.path.exists(glb):
             yourdfpy.URDF.load(urdf_abs).scene.export(glb)
         return glb

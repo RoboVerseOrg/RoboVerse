@@ -223,6 +223,78 @@ def _install_mesh_hook(pt) -> dict:
         eu = _sys.modules.get("envs.utils")
         if eu is not None and hasattr(eu, "create_actor"):
             eu.create_actor = hooked_ca
+
+    # Capture URDF/articulation objects (pot/cabinet/laptop/microwave/...) at their
+    # EXACT instance + scale. These load via create_sapien_urdf_obj, NOT through the
+    # mesh resolver above, so without this the replay (a) scanned for *any*
+    # mobility.urdf -> wrong instance ("same category, different object"), and (b)
+    # had no scale -> the model rendered the wrong size. The articulation is named
+    # ``modelname``; modelid selects the instance subdir (sorted by number) and the
+    # scale lives in that subdir's model_data.json -- replicate RoboTwin's resolution.
+    def _resolve_modeldir(modelname, modelid):
+        base = _os.path.join("assets", "objects", modelname)
+        if modelid is None:
+            return base
+        subs = sorted(
+            (d for d in _os.listdir(base) if _os.path.isdir(_os.path.join(base, d))),
+            key=lambda s: int("".join(ch for ch in s if ch.isdigit()) or 0),
+        )
+        if modelid < len(subs):
+            return _os.path.join(base, subs[modelid])
+        for d in subs:  # fall back to matching the dir name to the id
+            if d.isdigit() and int(d) == modelid:
+                return _os.path.join(base, d)
+        return base
+
+    def _record_urdf(modelname, modelid, scale):
+        try:
+            modeldir = _resolve_modeldir(modelname, modelid)
+            eff_scale = scale
+            jf = _os.path.join(modeldir, "model_data.json")
+            if _os.path.exists(jf):
+                eff_scale = _json.load(open(jf)).get("scale", scale)
+            sink[modelname] = {
+                "urdf": _os.path.join(modeldir, "mobility.urdf"),
+                "scale": eff_scale,
+                "modelid": modelid,
+                "type": "urdf",
+            }
+        except Exception:
+            pass
+
+    # Tasks call ``rand_create_sapien_urdf_obj(modelname, modelid, ...)`` (which
+    # internally calls create_sapien_urdf_obj via rand_create_actor's OWN binding,
+    # so patching create_actor alone is bypassed). Wrap the rand entry point in its
+    # module + the envs.utils re-export.
+    try:
+        rca = importlib.import_module("envs.utils.rand_create_actor")
+    except Exception:
+        rca = None
+    if rca is not None and hasattr(rca, "rand_create_sapien_urdf_obj"):
+        orig_rurdf = rca.rand_create_sapien_urdf_obj
+
+        def hooked_rurdf(scene, modelname, modelid, *a, **k):
+            r = orig_rurdf(scene, modelname, modelid, *a, **k)
+            _record_urdf(modelname, modelid, k.get("scale", 1.0))
+            return r
+
+        rca.rand_create_sapien_urdf_obj = hooked_rurdf
+        eu = _sys.modules.get("envs.utils")
+        if eu is not None and hasattr(eu, "rand_create_sapien_urdf_obj"):
+            eu.rand_create_sapien_urdf_obj = hooked_rurdf
+    # Also wrap the direct (non-rand) entry point for tasks that use it.
+    if hasattr(cau, "create_sapien_urdf_obj"):
+        orig_urdf = cau.create_sapien_urdf_obj
+
+        def hooked_urdf(scene, pose, modelname, scale=1.0, modelid=None, *a, **k):
+            r = orig_urdf(scene, pose, modelname, scale, modelid, *a, **k)
+            _record_urdf(modelname, modelid, scale)
+            return r
+
+        cau.create_sapien_urdf_obj = hooked_urdf
+        eu = _sys.modules.get("envs.utils")
+        if eu is not None and hasattr(eu, "create_sapien_urdf_obj"):
+            eu.create_sapien_urdf_obj = hooked_urdf
     return sink
 
 
