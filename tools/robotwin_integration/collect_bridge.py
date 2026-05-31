@@ -286,7 +286,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--task-config", default="demo_clean")
     ap.add_argument("--max-seeds", type=int, default=25, help="seeds to try before giving up")
     ap.add_argument("--save-freq", type=int, default=10, help="record one frame every N sim steps")
-    ap.add_argument("--out", required=True, help="output pickle path")
+    ap.add_argument(
+        "--rgb",
+        action="store_true",
+        help="also capture every camera's RGB per frame (for IL policy training; larger pickle, slower)",
+    )
+    ap.add_argument("--out", required=True, help="output pickle path (single demo) or directory (--num-demos>1)")
+    ap.add_argument(
+        "--num-demos",
+        type=int,
+        default=1,
+        help="collect this many distinct successful episodes (>1 saves demo_XXXX.pkl under --out dir)",
+    )
+    ap.add_argument("--start-seed", type=int, default=0, help="first seed to try (vary to get distinct demos)")
     args = ap.parse_args(argv)
 
     pt = _load_passthrough()
@@ -301,9 +313,13 @@ def main(argv: list[str] | None = None) -> int:
     data_type = {k: False for k in ("rgb", "third_view", "depth", "pointcloud", "observer", "endpose", "qpos")}
     data_type["qpos"] = True
     data_type["endpose"] = True
+    data_type["rgb"] = bool(args.rgb)  # IL training needs per-frame camera RGB
 
-    success = None
-    for seed in range(args.max_seeds):
+    collected = 0  # number of successful episodes saved so far
+    saved_paths: list[str] = []
+    for seed in range(args.start_seed, args.start_seed + args.max_seeds):
+        if collected >= args.num_demos:
+            break
         try:
             env = pt._make_robotwin_env(
                 task_name=args.task,
@@ -373,6 +389,22 @@ def main(argv: list[str] | None = None) -> int:
                     urdf = _locate_urdf(pt.robotwin_dir(), n)
                     if urdf:
                         object_meshes[n] = {"urdf": urdf, "type": "urdf"}
+            # Per-frame camera RGB for IL policy training (only when --rgb). RoboTwin's
+            # get_obs nests frames under f["observation"][cam]["rgb"] (uint8 HxWx3);
+            # capture every camera so DP/ACT can train on head + wrist views.
+            rgb_traj = {}
+            if args.rgb:
+                cam_names = set()
+                for f in frames:
+                    cam_names.update((f.get("observation") or {}).keys())
+                for cam in sorted(cam_names):
+                    seq = [
+                        np.asarray(f["observation"][cam]["rgb"], dtype=np.uint8)
+                        for f in frames
+                        if f.get("observation", {}).get(cam, {}).get("rgb") is not None
+                    ]
+                    if seq:
+                        rgb_traj[cam] = np.asarray(seq)
             success = {
                 "task": args.task,
                 "seed": seed,
@@ -387,22 +419,40 @@ def main(argv: list[str] | None = None) -> int:
                 "object_meshes": object_meshes,  # {actor_name: {visual: relpath, scale, model_id}}
                 "left_gripper_scale": list(env.robot.left_gripper_scale),
                 "right_gripper_scale": list(env.robot.right_gripper_scale),
+                "rgb": rgb_traj,  # {camera_name: (T, H, W, 3) uint8} -- only when --rgb (else {})
             }
             env.close_env()
-            break
+            # Single-demo (default): write to --out verbatim (backward compatible).
+            # Multi-demo: --out is a directory of demo_XXXX.pkl files.
+            if args.num_demos == 1:
+                out_path = args.out
+            else:
+                out_path = os.path.join(args.out, f"demo_{collected:04d}.pkl")
+            os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+            with open(out_path, "wb") as fp:
+                pickle.dump(success, fp)
+            saved_paths.append(out_path)
+            collected += 1
+            print(
+                f"  [demo {collected}/{args.num_demos}] seed {seed}: {len(success['vectors'])} frames, "
+                f"rgb={ {k: tuple(v.shape) for k, v in success['rgb'].items()} } -> {out_path}"
+            )
+            continue
         env.close_env()
 
-    if success is None:
+    if collected == 0:
         print(f"NO_SUCCESS: no successful episode in {args.max_seeds} seeds for {args.task!r}")
         return 2
+    if args.num_demos > 1:
+        print(f"SAVED {collected} demo(s) -> {args.out}")
+        return 0
 
-    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    with open(args.out, "wb") as f:
-        pickle.dump(success, f)
+    # Single-demo summary (the loop already wrote args.out; print the detailed log).
     print(
         f"SAVED {len(success['vectors'])} frames (seed {success['seed']}) -> {args.out}; "
         f"achieved_qpos={len(success['real_vectors'])} endpose={len(success['left_endpose'])}; "
         f"obj_traj={ {k: len(v) for k, v in success['object_traj'].items()} } meshes={list(success['object_meshes'])}; "
+        f"rgb={ {k: tuple(v.shape) for k, v in success['rgb'].items()} }; "
         f"objects: {list(success['init_objects'])}"
     )
     return 0
