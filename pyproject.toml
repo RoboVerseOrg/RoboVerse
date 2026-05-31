@@ -36,7 +36,7 @@ examples = ["rich", "rootutils", "tyro"]
 teleop = ["pygame"]
 visualization = ["rerun-sdk", "trimesh", "viser", "yourdfpy"]
 # Simulator extras are intended for the per-simulator Python environments documented in
-# docs/source/metasim/get_started/installation.rst, not as an arbitrary co-installable matrix.
+# docs/source/get_started/installation.rst, not as an arbitrary co-installable matrix.
 isaacsim = [
     "torch==2.7.0+cu128",
     "torchvision==0.22.0+cu128",

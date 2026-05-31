@@ -42,7 +42,7 @@ Run a small example scene:
 python metasim/example/control_test.py --sim mujoco --headless
 ```
 
-For simulator-specific setup, see the [installation guide](https://roboverse.wiki/metasim/get_started/installation/) and the local docs in [`docs/source/metasim/get_started/installation.rst`](docs/source/metasim/get_started/installation.rst).
+For simulator-specific setup, see the [installation guide](https://roboverse.wiki/metasim/get_started/installation/) and the local docs in [`docs/source/get_started/installation.rst`](docs/source/get_started/installation.rst).
 
 ## Installation Cheatsheet
 
@@ -109,10 +109,10 @@ The same high-level pattern applies when a downstream package provides richer ta
 
 - [MetaSim user guide](https://roboverse.wiki/metasim/)
 - [Quick-start tutorials](https://roboverse.wiki/metasim/get_started/quick_start/)
-- [Architecture overview](docs/source/metasim/concept/architecture.md)
-- [Task system](docs/source/metasim/concept/task.md)
+- [Architecture overview](docs/source/concept/architecture.md)
+- [Task system](docs/source/concept/task.md)
 - [Package discovery](metasim/utils/package_discovery.py)
-- [Autotest guide](docs/source/metasim/developer_guide/autotest.md)
+- [Autotest guide](docs/source/developer_guide/autotest.md)
 
 ## Development
 
@@ -123,7 +123,7 @@ pytest metasim/test/ -k general
 python -m pip wheel . --no-deps --no-build-isolation -w /tmp/metasim-wheelhouse
 ```
 
-Simulator-backed tests should be run only in the matching environment described in [`ENVIRONMENTS.md`](ENVIRONMENTS.md) and the [autotest guide](docs/source/metasim/developer_guide/autotest.md).
+Simulator-backed tests should be run only in the matching environment described in [`ENVIRONMENTS.md`](ENVIRONMENTS.md) and the [autotest guide](docs/source/developer_guide/autotest.md).
 
 ## Community
 

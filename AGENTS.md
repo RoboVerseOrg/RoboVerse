@@ -9,7 +9,7 @@ The goals are:
 - keep downstream RoboVerse/content-pack concerns out of MetaSim unless the change is explicitly about integration
 
 For testing infrastructure details, also refer to:
-- [docs/source/metasim/developer_guide/autotest.md](./docs/source/metasim/developer_guide/autotest.md)
+- [docs/source/developer_guide/autotest.md](./docs/source/developer_guide/autotest.md)
 - [ENVIRONMENTS.md](./ENVIRONMENTS.md)
 - [README.md](./README.md)
 
@@ -51,7 +51,7 @@ For testing infrastructure details, also refer to:
 ### Source Of Truth
 
 The authoritative test workflow is the MetaSim autotest guide:
-- [docs/source/metasim/developer_guide/autotest.md](./docs/source/metasim/developer_guide/autotest.md)
+- [docs/source/developer_guide/autotest.md](./docs/source/developer_guide/autotest.md)
 
 When there is any doubt about pytest structure, markers, suite registration, handler reuse, or backend-specific commands, follow that guide.
 
@@ -149,7 +149,7 @@ Blender tests require `bpy`; do not assume they require GPU access unless the sp
 
 - Read the relevant existing code paths first.
 - Read the existing test file for the area before adding a new test.
-- If the change touches testing infrastructure or simulator-specific behavior, check `docs/source/metasim/developer_guide/autotest.md`.
+- If the change touches testing infrastructure or simulator-specific behavior, check `docs/source/developer_guide/autotest.md`.
 
 ### Before Adding Files
 
