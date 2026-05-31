@@ -207,6 +207,16 @@ def _replay_one(bridge: dict, args) -> dict:
             objects.append(
                 RigidObjCfg(name=rv, urdf_path=urdf, physics=phys, fix_base_link=(phys == PhysicStateType.XFORM))
             )
+        elif mesh and mesh.get("type") == "box":
+            # create_box primitive (target marker / block): use its real half-size
+            # (-> full size) and color instead of a generic red proxy cube.
+            hs = mesh.get("half_size") or [0.025, 0.025, 0.025]
+            col = mesh.get("color") or [0.8, 0.2, 0.2]
+            objects.append(
+                PrimitiveCubeCfg(
+                    name=rv, size=tuple(2 * float(h) for h in hs), color=[float(c) for c in col[:3]], physics=phys
+                )
+            )
         else:
             objects.append(PrimitiveCubeCfg(name=rv, size=(0.05, 0.05, 0.05), color=[0.8, 0.2, 0.2], physics=phys))
     # Static table surface proxy (RoboTwin's table top sits at z=0.74).

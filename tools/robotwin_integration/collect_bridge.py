@@ -173,6 +173,34 @@ def _install_mesh_hook(pt) -> dict:
         return f
 
     cau.get_glb_or_obj_file = hooked
+
+    # Also capture create_box primitives (target markers / blocks) so the replay
+    # uses their real half-size + color instead of a generic red proxy cube.
+    if hasattr(cau, "create_box"):
+        orig_box = cau.create_box
+
+        def hooked_box(scene, pose, half_size, color=None, is_static=False, name="", *a, **k):
+            try:
+                if name:
+                    hs = [float(x) for x in half_size] if hasattr(half_size, "__iter__") else [float(half_size)] * 3
+                    sink[name] = {
+                        "type": "box",
+                        "half_size": hs,
+                        "color": [float(c) for c in color] if color is not None else None,
+                        "is_static": bool(is_static),
+                    }
+            except Exception:
+                pass
+            return orig_box(scene, pose, half_size, *a, color=color, is_static=is_static, name=name, **k)
+
+        cau.create_box = hooked_box
+        # Tasks do ``from .utils import *``, which re-exports create_box into the
+        # ``envs.utils`` package namespace -- a SEPARATE binding the task copies at
+        # import time. Patch it there too (before the task is imported) so the hook
+        # actually sees the call.
+        eu = _sys.modules.get("envs.utils")
+        if eu is not None and hasattr(eu, "create_box"):
+            eu.create_box = hooked_box
     return sink
 
 
@@ -318,7 +346,7 @@ def main(argv: list[str] | None = None) -> int:
             object_meshes = {}
             for n in obj_names:
                 if n in mesh_sink:
-                    object_meshes[n] = {**mesh_sink[n], "type": "mesh"}
+                    object_meshes[n] = {**mesh_sink[n], "type": mesh_sink[n].get("type", "mesh")}
                 else:
                     urdf = _locate_urdf(pt.robotwin_dir(), n)
                     if urdf:
