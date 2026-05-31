@@ -132,6 +132,10 @@ def main(argv: list[str] | None = None) -> int:
         act = [j.get_name() for j in rob.get_active_joints()]
         lidx = [act.index(n) for n in env.robot.left_arm_joints_name]
         ridx = [act.index(n) for n in env.robot.right_arm_joints_name]
+        # Gripper joints: (qpos-index, mimic mult, offset); value = scale[0] + norm*(scale[1]-scale[0]).
+        lgrip = [(act.index(j[0].get_name()), j[1], j[2]) for j in env.robot.left_gripper]
+        rgrip = [(act.index(j[0].get_name()), j[1], j[2]) for j in env.robot.right_gripper]
+        lgs, rgs = env.robot.left_gripper_scale, env.robot.right_gripper_scale
         actors = {a.get_name(): a for a in env.scene.get_all_actors()}
         arts = {a.get_name(): a for a in env.scene.get_all_articulations() if a.get_name() != rob.get_name()}
         for t in range(len(real)):
@@ -140,6 +144,12 @@ def main(argv: list[str] | None = None) -> int:
                 q[ix] = real[t][i]
             for i, ix in enumerate(ridx):
                 q[ix] = real[t][7 + i]
+            lbase = lgs[0] + float(real[t][6]) * (lgs[1] - lgs[0])
+            for ix, mult, off in lgrip:
+                q[ix] = lbase * mult + off
+            rbase = rgs[0] + float(real[t][13]) * (rgs[1] - rgs[0])
+            for ix, mult, off in rgrip:
+                q[ix] = rbase * mult + off
             rob.set_qpos(q)
             for name, tr in otraj.items():
                 p = tr[min(t, len(tr) - 1)]
