@@ -8,6 +8,13 @@ SAPIEN API.
 
 ## Status
 
+- **Full policy-reproduction pipeline (collect → train → eval)**: a RoboVerse
+  user can collect RoboTwin expert demos, train a Diffusion Policy with
+  RoboVerse's own `roboverse_learn/il`, and evaluate it **closed-loop in the
+  native RoboTwin env** — the same three-step experience as RoboTwin, with a
+  directly comparable success rate. See [Policy reproduction](#policy-reproduction-same-experience-as-robotwin).
+  The data path runs through the *unmodified* `data2zarr_dp.py`; the eval rolls
+  the policy through RoboTwin's own `take_action` interface.
 - **All 50 tasks collect successfully (breadth)**: a full sweep
   (`tools/robotwin_integration/coverage_sweep.py`) ran every registered
   RoboTwin task through the native code path + data bridge — **50/50**
@@ -80,6 +87,68 @@ Two-line change in `_build_sapien`, plus a regression test at
 
 Locator (`roboverse_pack/robots/aloha_agilex_cfg.py`) searches
 `~/projects/robotwin/assets/` or `$ROBOTWIN_ASSETS`.
+
+## Policy reproduction (same experience as RoboTwin)
+
+A RoboVerse user can reproduce a RoboTwin policy result end to end — collect
+expert demos, train an imitation policy, evaluate it closed-loop — using
+RoboVerse's own imitation-learning stack (`roboverse_learn/il`), the same
+three-step `collect → train → eval` flow a RoboTwin user runs. The trained
+policy is evaluated **closed-loop in the native RoboTwin environment** (via the
+passthrough), so its success rate is directly comparable to RoboTwin's expert.
+
+```bash
+# 1. COLLECT — expert demos with head-camera RGB (robotwin env).
+#    One seed per subprocess under a timeout, so a headless-RT hang costs one
+#    seed, not the batch; gathers N distinct successful episodes.
+bash tools/robotwin_integration/collect_demos_robust.sh \
+  --task beat_block_hammer \
+  --out-dir ~/projects/robotwin/data/_rv_bridge/bbh_train \
+  --want 40 --camera head_camera
+
+# 2. TRAIN — RoboVerse Diffusion Policy on the RoboTwin demos (roboverse env).
+#    Converts bridge pkls -> demo dirs -> zarr (the *unmodified* data2zarr_dp.py)
+#    -> DP training, with the bimanual 14-D / 240x320 shape overrides.
+bash tools/robotwin_integration/train_dp_robotwin.sh \
+  --task beat_block_hammer \
+  --bridge-dir ~/projects/robotwin/data/_rv_bridge/bbh_train \
+  --num 40 --epochs 300 --policy ddpm_unet
+
+# 3. EVAL — closed-loop in native RoboTwin, one command (starts the policy
+#    server in the roboverse env, runs the env in the robotwin env, reports the
+#    success rate, tears the server down).
+bash tools/robotwin_integration/eval_dp_robotwin.sh \
+  --task beat_block_hammer \
+  --ckpt il_outputs/ddpm_unet/beat_block_hammer/checkpoints/300.ckpt \
+  --num-eval 20 --start-seed 100
+```
+
+The state/action are **non-circular**: the policy's state observation is
+RoboTwin's *achieved* joint qpos (`real_vector`), and the action it learns is the
+command target (`vector`) — the same two signals the parity harness uses. The
+eval rolls the policy out through `env.take_action(action, 'qpos')`, the exact
+closed-loop interface RoboTwin's own `script/eval_policy.py` uses (TOPP-
+interpolates the 14-D waypoint, steps physics, fires `eval_success` on
+`check_success()`).
+
+Two implementation notes that make this work across the env split:
+
+- **Env-decoupled eval.** The DP model + its deps run in the `roboverse` env, but
+  the only closed-loop RoboTwin env runs in the `robotwin` env (conflicting
+  SAPIEN/torch). `dp_policy_server.py` (roboverse env) serves inference over a
+  socket and `eval_robotwin_policy.py`'s `DPPolicy` (robotwin env) is a thin
+  client — mirroring RoboTwin's own policy server/client split. `eval_dp_robotwin.sh`
+  hides this behind one command.
+- **numba is optional.** The IL image dataset jit-compiles its sampler with numba,
+  which fails to import on numpy ≥ 2.0; it now falls back to a pure-numpy path so
+  training runs on a modern-numpy `roboverse` env.
+
+An **open-loop action-replay** baseline is built into the same eval harness
+(`--policy replay --bridge <pkl>`): it feeds RoboTwin's recorded action stream
+back through `take_action` (TOPP, not the original curobo plan). On
+`beat_block_hammer` it reproduces success 4/5 closed-loop — a sharp datapoint that
+also motivates the reactive DP policy (open-loop replay has no feedback
+correction; a learned policy does).
 
 ## Data bridge
 
