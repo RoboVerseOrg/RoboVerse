@@ -373,15 +373,15 @@ class MotionCommandCfg:
 
 
 class _MotionLoader:
-    """Minimal port of mjlab ``MotionLoader``.
+    """Port of mjlab ``MotionLoader`` (tasks/tracking/mdp/commands.py:36-60).
 
     Loads (joint_pos, joint_vel, body_pos_w, body_quat_w, body_lin_vel_w,
-    body_ang_vel_w) tensors. ``body_indexes`` selects the rows of the
-    body-* tensors that correspond to the bodies named in
-    ``MotionCommandCfg.body_names`` (resolution done by the caller).
+    body_ang_vel_w). The body-* arrays in the npz span the robot's FULL body
+    list; ``body_indexes`` (robot body ids in ``cfg.body_names`` order) slices
+    them to the tracked bodies at load time, exactly like native.
     """
 
-    def __init__(self, motion_file: str | None, n_bodies: int, device):
+    def __init__(self, motion_file: str | None, body_indexes, n_bodies: int, device):
         import numpy as np
 
         self.device = device
@@ -402,14 +402,24 @@ class _MotionLoader:
             return
 
         data = np.load(motion_file)
-        # body_indexes-style slicing left for caller; we keep the full
-        # body-axis here and slice via [..., body_indexes] downstream.
         self.joint_pos = torch.tensor(data["joint_pos"], dtype=torch.float32, device=device)
         self.joint_vel = torch.tensor(data["joint_vel"], dtype=torch.float32, device=device)
-        self.body_pos_w = torch.tensor(data["body_pos_w"], dtype=torch.float32, device=device)
-        self.body_quat_w = torch.tensor(data["body_quat_w"], dtype=torch.float32, device=device)
-        self.body_lin_vel_w = torch.tensor(data["body_lin_vel_w"], dtype=torch.float32, device=device)
-        self.body_ang_vel_w = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32, device=device)
+        # Full-body arrays sliced to the tracked bodies (native parity:
+        # ``self.body_pos_w = self._body_pos_w[:, self._body_indexes]``).
+        full_pos = torch.tensor(data["body_pos_w"], dtype=torch.float32, device=device)
+        full_quat = torch.tensor(data["body_quat_w"], dtype=torch.float32, device=device)
+        full_lin = torch.tensor(data["body_lin_vel_w"], dtype=torch.float32, device=device)
+        full_ang = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32, device=device)
+        if body_indexes is not None:
+            idx = torch.as_tensor(body_indexes, dtype=torch.long, device=device)
+            full_pos = full_pos[:, idx]
+            full_quat = full_quat[:, idx]
+            full_lin = full_lin[:, idx]
+            full_ang = full_ang[:, idx]
+        self.body_pos_w = full_pos
+        self.body_quat_w = full_quat
+        self.body_lin_vel_w = full_lin
+        self.body_ang_vel_w = full_ang
         self.time_step_total = self.joint_pos.shape[0]
         self._is_identity = False
 
@@ -447,28 +457,44 @@ class MotionCommandManager:
         N = env.num_envs
 
         # Resolve body indices in the robot's body name list.
+        #
+        # Native parity (commands.py:71-79): the anchor index used to read the
+        # MOTION arrays is the anchor's position within ``cfg.body_names``
+        # (``motion_anchor_body_index``); ``body_indexes`` are the robot body
+        # ids in ``cfg.body_names`` order, used to slice the full-body motion
+        # arrays AND to read the robot's own per-body world state.
         self._mujoco_body_ids: list[int] = []
+        self._body_indexes: list[int] = []
         if cfg.body_names:
             if hasattr(env.handler, "physics"):
                 import mujoco
 
                 model = env.handler.physics.model
                 mp = model.ptr if hasattr(model, "ptr") else model
+                # Map robot body name -> 0-based body index (excluding worldbody).
+                # The motion npz body axis spans robot bodies 0..nbody-1, i.e.
+                # MuJoCo body id minus 1 (worldbody is id 0).
                 for name in cfg.body_names:
                     bid = mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_BODY, name)
                     self._mujoco_body_ids.append(int(bid))
-                # Anchor body index inside cfg.body_names.
+                    self._body_indexes.append(int(bid) - 1)
+                # Anchor index INTO cfg.body_names (native motion_anchor_body_index).
                 if cfg.anchor_body_name in cfg.body_names:
                     self._anchor_idx = cfg.body_names.index(cfg.anchor_body_name)
                 else:
                     self._anchor_idx = 0
-                # Resolve anchor mujoco body id separately (may not be in body_names).
+                # Robot anchor MuJoCo body id (native robot_anchor_body_index).
                 self._anchor_bid = mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_BODY, cfg.anchor_body_name)
             else:
                 self._anchor_idx = 0
                 self._anchor_bid = -1
 
-        self.motion = _MotionLoader(cfg.motion_file, len(cfg.body_names), device)
+        self.motion = _MotionLoader(
+            cfg.motion_file,
+            self._body_indexes if self._body_indexes else None,
+            len(cfg.body_names),
+            device,
+        )
         self.time_steps = torch.zeros(N, dtype=torch.long, device=device)
         self._time_acc = torch.zeros(N, device=device)
         self._next_resample = torch.zeros(N, device=device)
@@ -587,12 +613,31 @@ class MotionCommandManager:
     def current(self) -> torch.Tensor:
         """Return ``(N, J*2)`` concatenated joint_pos+joint_vel reference at the current frame.
 
+        Native parity: ``MotionCommand.command`` (commands.py:125-127) is
+        ``cat([joint_pos, joint_vel])`` of the MOTION reference at the current
+        frame. Consumed by ``mdp.generated_commands`` (the ``command`` obs term).
         Empty if identity-tracking mode.
         """
-        return torch.cat(
-            [self.motion.joint_pos[self.time_steps], self.motion.joint_vel[self.time_steps]],
-            dim=-1,
-        )
+        return self.command
+
+    # ------------------------------------------------------------------
+    # motion reference joint state (native MotionCommand.joint_pos/joint_vel).
+    # ------------------------------------------------------------------
+
+    @property
+    def joint_pos(self) -> torch.Tensor:
+        """Motion reference joint positions at the current frame (N, J)."""
+        return self.motion.joint_pos[self.time_steps]
+
+    @property
+    def joint_vel(self) -> torch.Tensor:
+        """Motion reference joint velocities at the current frame (N, J)."""
+        return self.motion.joint_vel[self.time_steps]
+
+    @property
+    def command(self) -> torch.Tensor:
+        """Concatenated motion reference joint_pos+joint_vel (N, 2J)."""
+        return torch.cat([self.joint_pos, self.joint_vel], dim=-1)
 
     # ------------------------------------------------------------------
     # robot-side world-frame body state (read from MuJoCo physics.data).

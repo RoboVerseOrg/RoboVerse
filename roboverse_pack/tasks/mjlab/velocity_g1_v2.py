@@ -608,21 +608,98 @@ class VelocityRoughG1Task(_G1TaskBase):
 
 
 # Bodies tracked by mjlab tracking_flat_g1 — the G1 humanoid's principal
-# kinematic chain. Matches mjlab/tasks/tracking/config/g1/tracking_flat.py
-# body_names. Used by MotionCommand for relative-body anchor errors.
+# kinematic chain. EXACT match to mjlab/tasks/tracking/config/g1/env_cfgs.py
+# (``motion_cmd.body_names``, 14 bodies, anchor = ``torso_link``). The anchor
+# MUST be torso_link (not pelvis) for the ``motion_anchor_*_b`` obs terms to
+# match native, and the body list order is load-bearing (it indexes the motion
+# arrays). Used by MotionCommand for the command + anchor obs and the body
+# error rewards.
+_G1_TRACKING_ANCHOR_BODY = "torso_link"
 _G1_TRACKING_BODY_NAMES: tuple[str, ...] = (
     "pelvis",
-    "left_hip_pitch_link",
+    "left_hip_roll_link",
     "left_knee_link",
     "left_ankle_roll_link",
-    "right_hip_pitch_link",
+    "right_hip_roll_link",
     "right_knee_link",
     "right_ankle_roll_link",
-    "left_shoulder_pitch_link",
+    "torso_link",
+    "left_shoulder_roll_link",
     "left_elbow_link",
-    "right_shoulder_pitch_link",
+    "left_wrist_yaw_link",
+    "right_shoulder_roll_link",
     "right_elbow_link",
+    "right_wrist_yaw_link",
 )
+
+
+@configclass
+class _G1TrackingObsCfg:
+    """mjlab tracking actor obs (G1) — full / state-estimation variant.
+
+    Term order (160-D) EXACTLY matches native ``tracking_env_cfg`` actor group:
+      command(58)            — motion joint_pos+joint_vel reference
+      motion_anchor_pos_b(3) — desired anchor pos in robot anchor body frame
+      motion_anchor_ori_b(6) — desired anchor ori (rot-matrix first 2 cols)
+      base_lin_vel(3)        — imu_lin_vel sensor (pelvis IMU)
+      base_ang_vel(3)        — imu_ang_vel sensor (pelvis IMU)
+      joint_pos(29)          — joint_pos_rel (vs default; biased→0 for parity)
+      joint_vel(29)          — joint_vel_rel
+      actions(29)            — last_action
+
+    The critic group is unused by the policy rollout here, so we mirror the
+    actor terms (native's critic adds body_pos/body_ori; not required for the
+    actor parity contract).
+    """
+
+    @configclass
+    class ActorCfg:
+        command = ObsTerm(func=obs.generated_commands, params={"command_name": "motion"})
+        motion_anchor_pos_b = ObsTerm(func=obs.motion_anchor_pos_b, params={"command_name": "motion"})
+        motion_anchor_ori_b = ObsTerm(func=obs.motion_anchor_ori_b, params={"command_name": "motion"})
+        base_lin_vel = ObsTerm(func=obs.base_lin_vel, params={"asset_cfg": _G1_TRUNK})
+        base_ang_vel = ObsTerm(func=obs.base_ang_vel, params={"asset_cfg": _G1_TRUNK})
+        joint_pos = ObsTerm(
+            func=obs.joint_pos_rel,
+            params={"asset_cfg": _G1_JOINTS, "default": _G1_DEFAULT_POSE_NP.tolist()},
+        )
+        joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _G1_JOINTS})
+        last_action = ObsTerm(func=obs.last_action)
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        pass
+
+    actor = ActorCfg()
+    critic = CriticCfg()
+
+
+@configclass
+class _G1TrackingNoStateEstObsCfg:
+    """mjlab tracking actor obs (G1) — no-state-estimation variant (154-D).
+
+    Drops ``motion_anchor_pos_b`` and ``base_lin_vel`` from the full term set,
+    matching native ``unitree_g1_flat_tracking_env_cfg(has_state_estimation=False)``.
+    """
+
+    @configclass
+    class ActorCfg:
+        command = ObsTerm(func=obs.generated_commands, params={"command_name": "motion"})
+        motion_anchor_ori_b = ObsTerm(func=obs.motion_anchor_ori_b, params={"command_name": "motion"})
+        base_ang_vel = ObsTerm(func=obs.base_ang_vel, params={"asset_cfg": _G1_TRUNK})
+        joint_pos = ObsTerm(
+            func=obs.joint_pos_rel,
+            params={"asset_cfg": _G1_JOINTS, "default": _G1_DEFAULT_POSE_NP.tolist()},
+        )
+        joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _G1_JOINTS})
+        last_action = ObsTerm(func=obs.last_action)
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        pass
+
+    actor = ActorCfg()
+    critic = CriticCfg()
 
 
 @configclass
@@ -667,9 +744,21 @@ class _G1TrackingRewardsCfg(_G1RewardsCfg):
 
 @configclass
 class TrackingFlatG1EnvCfg(VelocityFlatG1EnvCfg):
-    """Tracking-flat-G1 cfg = velocity cfg with rewards swapped to tracking."""
+    """Tracking-flat-G1 cfg = velocity cfg with tracking rewards + tracking obs.
 
+    The actor obs is the native tracking structure (command + motion anchor
+    terms + base vel + joint state + actions), NOT the velocity obs.
+    """
+
+    observations = _G1TrackingObsCfg()
     rewards = _G1TrackingRewardsCfg()
+
+
+@configclass
+class TrackingFlatG1NoStateEstEnvCfg(TrackingFlatG1EnvCfg):
+    """No-state-estimation tracking cfg: drops motion_anchor_pos_b + base_lin_vel."""
+
+    observations = _G1TrackingNoStateEstObsCfg()
 
 
 class _G1TrackingTaskBase(_G1TaskBase):
@@ -690,22 +779,24 @@ class _G1TrackingTaskBase(_G1TaskBase):
     """
 
     motion_file: str | None = None  # subclass / cfg can override
+    env_cfg_cls = TrackingFlatG1EnvCfg  # subclass overrides (e.g. no-state-est)
     cfg: TrackingFlatG1EnvCfg
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:
         super().__init__(scenario=scenario, device=device)
-        # Swap to tracking cfg so the manager loop picks up the new reward terms.
-        self.cfg = TrackingFlatG1EnvCfg()
+        # Swap to tracking cfg so the manager loop picks up the tracking obs +
+        # reward terms.
+        self.cfg = self.env_cfg_cls()
         # Reinitialize episode_reward buffers for the new term names.
         self._init_buffers()
 
-        # Register MotionCommand. body_names map to robot's body name list;
-        # mjlab tracking_flat_g1 uses pelvis as anchor.
+        # Register MotionCommand. Anchor = torso_link (native parity); the
+        # body_names list order indexes the motion arrays.
         self.command_managers["motion"] = MotionCommandManager(
             self,
             MotionCommandCfg(
                 entity_name="g1",
-                anchor_body_name="pelvis",
+                anchor_body_name=_G1_TRACKING_ANCHOR_BODY,
                 body_names=_G1_TRACKING_BODY_NAMES,
                 motion_file=self.motion_file,
             ),
@@ -739,11 +830,13 @@ class TrackingFlatG1Task(_G1TrackingTaskBase):
 
 
 @register_task("mjlab.tracking_flat_g1_no_state_est_v2")
-class TrackingFlatG1NoStateEstTask(_G1TrackingTaskBase):
-    """``tracking_flat_g1_v2`` no-state-est variant.
+class TrackingFlatG1NoStateEstTask(TrackingFlatG1Task):
+    """``tracking_flat_g1_v2`` no-state-estimation variant.
 
-    Drops base lin/ang velocity from actor obs (matches mjlab's asymmetric
-    observation setup). Currently inherits the symmetric obs from the base -
-    this matches the existing observation_group_names structure; mjlab's
-    actor-side noise on state-est is the next refinement.
+    Uses the no-state-est tracking obs cfg, which DROPS ``motion_anchor_pos_b``
+    and ``base_lin_vel`` from the actor obs (native
+    ``unitree_g1_flat_tracking_env_cfg(has_state_estimation=False)``). Inherits
+    the motion-file resolution from the full variant.
     """
+
+    env_cfg_cls = TrackingFlatG1NoStateEstEnvCfg

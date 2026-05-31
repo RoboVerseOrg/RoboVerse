@@ -119,6 +119,55 @@ def last_action(env, env_states) -> torch.Tensor:
 
 
 # ---------------------------------------------------------------------------
+# motion-tracking obs — port of mjlab tasks/tracking/mdp/observations.py
+#
+# These read the MotionCommandManager's anchor frames (all quats wxyz, the same
+# convention the manager reads from ``data.xquat`` and the motion npz) and
+# express the desired anchor pose in the robot anchor's body frame, mirroring
+# ``motion_anchor_pos_b`` / ``motion_anchor_ori_b`` exactly.
+# ---------------------------------------------------------------------------
+
+
+def motion_anchor_pos_b(env, env_states, *, command_name: str) -> torch.Tensor:
+    """Desired anchor position in the robot anchor body frame. Shape ``(N, 3)``.
+
+    Native (tracking/mdp/observations.py:18-28):
+    ``subtract_frame_transforms(robot_anchor_pos_w, robot_anchor_quat_w,
+    anchor_pos_w, anchor_quat_w)`` and keep the position part.
+    """
+    from mjlab.utils.lab_api.math import subtract_frame_transforms
+
+    mgr = env.command_managers[command_name]
+    pos, _ = subtract_frame_transforms(
+        mgr.robot_anchor_pos_w,
+        mgr.robot_anchor_quat_w,
+        mgr.anchor_pos_w,
+        mgr.anchor_quat_w,
+    )
+    return pos.view(env.num_envs, -1)
+
+
+def motion_anchor_ori_b(env, env_states, *, command_name: str) -> torch.Tensor:
+    """Desired anchor orientation in the robot anchor body frame. Shape ``(N, 6)``.
+
+    Native (tracking/mdp/observations.py:31-41): take the rotation from
+    ``subtract_frame_transforms``, convert to a rotation matrix and keep its
+    first two columns (6-D continuous rotation representation).
+    """
+    from mjlab.utils.lab_api.math import matrix_from_quat, subtract_frame_transforms
+
+    mgr = env.command_managers[command_name]
+    _, ori = subtract_frame_transforms(
+        mgr.robot_anchor_pos_w,
+        mgr.robot_anchor_quat_w,
+        mgr.anchor_pos_w,
+        mgr.anchor_quat_w,
+    )
+    mat = matrix_from_quat(ori)
+    return mat[..., :2].reshape(mat.shape[0], -1)
+
+
+# ---------------------------------------------------------------------------
 # manipulation obs — port of mjlab tasks/manipulation/mdp/observations.py
 # ---------------------------------------------------------------------------
 
