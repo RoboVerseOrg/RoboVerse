@@ -226,9 +226,9 @@ class _G1RewardsCfg:
     to return zero until sensor wiring lands; one-shot warnings ensure
     silent degradation is visible.
 
-    Plus a non-mjlab ``alive`` survival bonus to compensate for early
-    ``fell_over`` resets while PPO learns balance — removed once full
-    sensor wiring lets the foot rewards carry the signal.
+    For mjlab reward 1:1 the term set + weights match mjlab's G1
+    ``velocity_env_cfg``; the previous non-mjlab ``alive`` survival bonus
+    has been removed (mjlab has no such term).
     """
 
     track_linear_velocity = RewTerm(
@@ -245,11 +245,6 @@ class _G1RewardsCfg:
         func=rew.upright,
         weight=1.0,
         params={"asset_cfg": _G1_TRUNK, "std": math.sqrt(0.2)},
-    )
-    # alive: non-mjlab survival bonus until sensor wiring carries the signal.
-    alive = RewTerm(
-        func=lambda env, env_states: torch.ones(env.num_envs, device=env.device),
-        weight=2.0,
     )
     pose = RewTerm(
         func=rew.variable_posture,
