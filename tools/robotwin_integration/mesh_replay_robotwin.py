@@ -156,11 +156,12 @@ def _replay_one(bridge: dict, args) -> dict:
     # --observer-cam matches RoboTwin's built-in observer_camera (camera.py) so the
     # RoboVerse render can be composited frame-for-frame with native_render.py output.
     if getattr(args, "observer_cam", False):
-        # Match RoboTwin's observer_camera (camera.py): pos [0,0.23,1.33], 4:3,
-        # fovy=93deg (wide). focal_length/horizontal_aperture chosen for ~93deg HFOV.
+        # Matched side-by-side camera: identical pos/look_at/fovy to native_render's
+        # roll=0 world-up camera, so the two videos composite frame-for-frame.
+        # fovy 55deg on a 512^2 sensor -> focal_length/horizontal_aperture below.
         camera = PinholeCameraCfg(
-            name="main_camera", pos=[0.0, 0.23, 1.33], look_at=[0.0, -0.77, 0.31],
-            width=320, height=240, focal_length=10.0, horizontal_aperture=21.0, data_types=["rgb"],
+            name="main_camera", pos=[0.0, 0.6, 1.35], look_at=[0.0, -0.3, 0.78],
+            width=512, height=512, focal_length=20.0, horizontal_aperture=20.955, data_types=["rgb"],
         )  # fmt: skip
     else:
         camera = PinholeCameraCfg(

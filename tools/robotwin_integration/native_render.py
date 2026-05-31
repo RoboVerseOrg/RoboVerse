@@ -43,10 +43,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--task-config", default="demo_clean")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--save-freq", type=int, default=15)
+    ap.add_argument("--cam-pos", type=float, nargs=3, default=[0.0, 0.6, 1.35])
+    ap.add_argument("--cam-lookat", type=float, nargs=3, default=[0.0, -0.3, 0.78])
+    ap.add_argument("--fovy", type=float, default=55.0)
+    ap.add_argument("--width", type=int, default=512)
+    ap.add_argument("--height", type=int, default=512)
     ap.add_argument("--out", required=True)
     args = ap.parse_args(argv)
 
     import imageio.v2 as imageio
+    import sapien
 
     pt = _load_passthrough()
     work_dir = os.path.join(pt.robotwin_dir(), "data", "_rv_bridge")
@@ -59,16 +65,35 @@ def main(argv: list[str] | None = None) -> int:
         save_data=False, data_type=data_type, render_freq=0,
     )  # fmt: skip
 
+    # Add a roll=0 (world-up) camera matching RoboVerse's PinholeCameraCfg convention
+    # (sapien3.py: yaw/pitch from look-dir, roll hardcoded 0), so native + RoboVerse
+    # render from the *identical* viewpoint and composite frame-for-frame.
+    pos = np.array(args.cam_pos, dtype=float)
+    look = np.array(args.cam_lookat, dtype=float)
+    fwd = look - pos
+    fwd /= np.linalg.norm(fwd) + 1e-9
+    left = np.cross([0.0, 0.0, 1.0], fwd)
+    left /= np.linalg.norm(left) + 1e-9
+    up = np.cross(fwd, left)
+    mat = np.eye(4)
+    mat[:3, 0], mat[:3, 1], mat[:3, 2], mat[:3, 3] = fwd, left, up, pos
+    cam = env.scene.add_camera(
+        name="match", width=args.width, height=args.height, fovy=np.deg2rad(args.fovy), near=0.05, far=100
+    )
+    cam.entity.set_pose(sapien.Pose(mat))
+
     frames: list = []
     orig_get_obs = env.get_obs
 
     def hooked():
         d = orig_get_obs()
         try:
-            rgb = env.cameras.get_observer_rgb()  # HxWx3 uint8
-            frames.append(np.asarray(rgb)[..., :3])
+            env.scene.update_render()
+            cam.take_picture()
+            rgb = cam.get_picture("Color")  # HxWx4 float [0,1]
+            frames.append((np.clip(np.asarray(rgb)[..., :3], 0, 1) * 255).astype(np.uint8))
         except Exception as e:
-            print(f"observer grab failed: {type(e).__name__}: {e}")
+            print(f"camera grab failed: {type(e).__name__}: {e}")
         return d
 
     env.get_obs = hooked
