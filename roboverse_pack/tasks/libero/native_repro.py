@@ -59,15 +59,28 @@ def _local_asset_roots() -> list[str]:
     return list(dict.fromkeys(roots))
 
 
-def _build_asset_index(roots: list[str]) -> dict[str, str]:
-    index: dict[str, str] = {}
+def _build_asset_index(roots: list[str]) -> dict[str, list[str]]:
+    """Map every trailing path-suffix of each local asset file to its abspath(s).
+
+    LIBERO object meshes/textures use NON-unique generic filenames — every object
+    directory ships a ``texture_map.png`` / ``textured_vis.msh`` / ``texture.png``.
+    Indexing by basename alone collides them (all objects would grab whichever
+    same-named file was walked first → wrong textures on every object). So we key
+    by ALL trailing suffixes (``texture_map.png``, ``alphabet_soup/texture_map.png``,
+    ``stable_hope_objects/alphabet_soup/texture_map.png``, …) and let
+    :func:`_resolve` pick the LONGEST suffix that maps to exactly one file.
+    """
+    index: dict[str, list[str]] = {}
     for root in roots:
         for r, _d, fnames in os.walk(root):
             for fn in fnames:
                 ap = os.path.join(r, fn)
-                index.setdefault(fn, ap)
-                rel = os.path.relpath(ap, root)
-                index.setdefault(rel, ap)
+                parts = ap.split(os.sep)
+                for k in range(1, len(parts) + 1):
+                    suffix = "/".join(parts[-k:])
+                    lst = index.setdefault(suffix, [])
+                    if ap not in lst:
+                        lst.append(ap)
     return index
 
 
@@ -82,11 +95,25 @@ def localize_model_xml(model_file_xml: str) -> tuple[str, dict]:
     n_fixed = 0
 
     def _resolve(fileref: str) -> str | None:
-        base = os.path.basename(fileref)
-        if fileref in index:
-            return index[fileref]
-        if base in index:
-            return index[base]
+        # Normalize away ``a/../b`` segments, then match the LONGEST trailing
+        # path-suffix of the original ref that maps to exactly ONE local file.
+        # This disambiguates generic names like ``texture_map.png`` by their
+        # parent dirs (``alphabet_soup/texture_map.png`` is unique even though
+        # the basename is shared by every object).
+        norm = os.path.normpath(fileref.replace("\\", "/"))
+        parts = [p for p in norm.split("/") if p not in ("", ".")]
+        # longest suffix first
+        for k in range(len(parts), 0, -1):
+            suffix = "/".join(parts[-k:])
+            cands = index.get(suffix)
+            if cands and len(cands) == 1:
+                return cands[0]
+        # fall back to the shortest unambiguous match we can get (basename),
+        # preferring a deterministic pick so behaviour is stable, not random.
+        base = parts[-1] if parts else ""
+        cands = index.get(base)
+        if cands:
+            return sorted(cands)[0]
         return None
 
     def _repl(m: re.Match) -> str:
