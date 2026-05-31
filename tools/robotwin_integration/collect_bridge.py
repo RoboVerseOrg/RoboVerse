@@ -340,6 +340,17 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as e:
             print(f"[seed {seed}] setup failed: {type(e).__name__}: {e}")
             continue
+        if args.rgb:
+            # RoboTwin's setup_demo enables the RT shader + OIDN denoiser; OIDN can
+            # deadlock headless on a long episode ("OIDN Error: invalid handle"),
+            # hanging multi-demo RGB collection. Drop the denoiser (RT geometry still
+            # renders) -- same workaround as native_render.py.
+            try:
+                import sapien
+
+                sapien.render.set_ray_tracing_denoiser("none")
+            except Exception:
+                pass
         _patch_capture_real_state(env)
         init_objects = _capture_objects(env)
         try:
