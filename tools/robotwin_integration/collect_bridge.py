@@ -232,11 +232,21 @@ def _install_mesh_hook(pt) -> dict:
     # ``modelname``; modelid selects the instance subdir (sorted by number) and the
     # scale lives in that subdir's model_data.json -- replicate RoboTwin's resolution.
     def _resolve_modeldir(modelname, modelid):
+        # MUST match RoboTwin's create_sapien_urdf_obj exactly: it builds the
+        # instance list as the subdirs EXCLUDING "visual" (and non-instance entries),
+        # sorted by their numeric name, then indexes by modelid. Including "visual"
+        # (which sorts to 0) shifts every instance -> "same category, wrong object".
         base = _os.path.join("assets", "objects", modelname)
         if modelid is None:
             return base
         subs = sorted(
-            (d for d in _os.listdir(base) if _os.path.isdir(_os.path.join(base, d))),
+            (
+                d
+                for d in _os.listdir(base)
+                if d != "visual"
+                and _os.path.isdir(_os.path.join(base, d))
+                and _os.path.exists(_os.path.join(base, d, "mobility.urdf"))
+            ),
             key=lambda s: int("".join(ch for ch in s if ch.isdigit()) or 0),
         )
         if modelid < len(subs):
