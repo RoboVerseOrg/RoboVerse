@@ -237,8 +237,14 @@ def _replay_one(bridge: dict, args) -> dict:
                 "robots": {ROBOT_NAME: {"pos": ROBOT_POS, "rot": ROBOT_ROT, "dof_pos": vector_to_dof(real[t], ls, rs)}},
                 "objects": _obj_state(t),
             }
+            # Pure playback: teleport to the exact recorded state, then refresh the
+            # render WITHOUT a physics step. Running simulate() here makes the PD
+            # controller lurch the arm toward stale dof targets every frame -> violent
+            # shaking; skipping it entirely leaves the render stale. refresh_render()
+            # updates the scene render so the camera sees RoboTwin's exact qpos.
             handler.set_states([st])
-            handler.simulate()
+            if hasattr(handler, "refresh_render"):
+                handler.refresh_render()
         else:
             # Robot driven by command target; objects dynamic (contact only).
             handler.set_dof_targets([robot_actions[t - 1]])
