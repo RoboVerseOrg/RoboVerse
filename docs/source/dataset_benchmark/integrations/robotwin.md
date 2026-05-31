@@ -36,12 +36,24 @@ SAPIEN API.
   passthrough is identical to native ManiSkill. The two-env split is
   required because RoboTwin pins SAPIEN 3.0.0b1 / mplib 0.2.1 / curobo,
   which conflict with the `roboverse` env's SAPIEN.
+- **Mesh-faithful, 1:1-verified replay**: the replay
+  (`tools/robotwin_integration/mesh_replay_robotwin.py`) loads the *real*
+  RoboTwin object meshes (rigid GLB/OBJ; URDF articulations baked to
+  textured GLB or driven as articulations when they move — doors/lids
+  open), with ray-traced rendering (`--rt`) matching RoboTwin. A
+  native-vs-RoboVerse side-by-side (`sidebyside.py`, ground truth from
+  `native_render.py --replay-bridge`) confirms robot pose + object
+  positions + motion + camera + RT lighting are **frame-for-frame 1:1**
+  (the native side replays the *same* bridge trajectory, so it is the
+  identical episode, not a coincidental match).
 - **Genuine limitations (stated plainly)**: the bridge/replay path is
-  *open-loop state replay* — it does not prove dynamical equivalence,
-  runs no planner/policy in RoboVerse, and does not check task success in
-  RoboVerse. The replayed scene draws the manipulated object as a
-  primitive proxy (real meshes not yet loaded), so contact-rich fidelity
-  and an in-RoboVerse success check remain future work.
+  *open-loop state replay* — a tight delta proves trajectory fidelity, not
+  dynamical equivalence, and runs no planner/policy in RoboVerse. The
+  separate *physics* object-parity (objects move by contact, not
+  teleported) reaches ≤5 cm for ~26/46 tasks and diverges for complex
+  contact (the open-loop limit). Pixel-level render parity is bounded by
+  the engines (RT vs. RoboTwin's exact lights); a *moving* URDF object
+  renders untextured (sapien3's articulation loader drops `.mtl`).
 
 ## MetaSim fix that enables this
 
@@ -88,35 +100,52 @@ The bridge is two halves, one per conda env, hand-off via a plain pickle:
    `vectors`, RoboTwin's *achieved* qpos `real_vectors`
    (`entity.get_qpos()`, injected via a runtime hook on `get_obs` — no
    upstream edit), the achieved end-effector poses `left/right_endpose`,
-   and the initial object poses.
+   the **per-frame world pose of every scene object** `object_traj`
+   (rigid actors *and* URDF articulations via `get_all_articulations()`),
+   the **articulation joint qpos** `object_joint_traj` (so opening doors
+   replay), and each object's real mesh/URDF path `object_meshes`.
 2. **Replay** (`roboverse` env) —
-   `get_started/10_robotwin_aloha_replay.py` converts that pickle into a
-   name-keyed `*_v2` dataset (via the shared
-   `roboverse_pack.tasks.robotwin._convert`), loads it through `get_traj`,
-   and replays the ALOHA-AgileX embodiment on SAPIEN3 to video.
+   `tools/robotwin_integration/mesh_replay_robotwin.py` converts the
+   trajectory to `*_v2` (shared `roboverse_pack.tasks.robotwin._convert`)
+   and replays the ALOHA-AgileX embodiment **with the real object meshes**
+   on SAPIEN3 to video. `--mode kinematic` is faithful playback (robot +
+   objects teleported to the recorded state each frame); `--mode physics`
+   drives the robot by command targets and lets objects move by contact
+   (for object-pose parity). `--rt` ray-traces to match RoboTwin;
+   `--observer-cam --cam-pos/--cam-lookat/--fovy` set a matched camera.
+   (`get_started/10_robotwin_aloha_replay.py` is the minimal get-started
+   version with a primitive object proxy.)
 3. **Measure parity** (`roboverse` env) —
-   `tools/robotwin_integration/parity_robotwin.py` runs the same replay
-   and reports the per-joint delta between RoboVerse-achieved and
-   RoboTwin-achieved qpos (`--settle N` controls replay resolution;
-   `--all` sweeps every collected pickle).
+   `tools/robotwin_integration/parity_robotwin.py` reports the per-joint
+   delta between RoboVerse-achieved and RoboTwin-achieved qpos (`--settle N`
+   replay resolution; `--all` sweeps every pickle).
+4. **Verify 1:1** (both envs) — `tools/robotwin_integration/sidebyside.py`
+   builds a native-vs-RoboVerse proof video for any task: it renders the
+   RoboTwin ground truth (`native_render.py --replay-bridge`, which drives
+   the native env from the *same* bridge trajectory instead of re-planning)
+   and the RoboVerse replay from an identical camera, and composites them
+   frame-for-frame.
 
 ```bash
-# 1. collect a demonstration natively, with achieved state (robotwin env)
+# 1. collect a demonstration natively, with achieved state + objects (robotwin env)
 conda run -n robotwin env MUJOCO_GL=egl python \
-  tools/robotwin_integration/collect_bridge.py --task beat_block_hammer \
-  --out ~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl
+  tools/robotwin_integration/collect_bridge.py --task move_can_pot \
+  --out ~/projects/robotwin/data/_rv_bridge/move_can_pot.pkl
 
 # 1b. (optional) sweep the whole 50-task suite -> coverage.json
 conda run -n robotwin env MUJOCO_GL=egl SAPIEN_HEADLESS=1 python \
   tools/robotwin_integration/coverage_sweep.py --max-seeds 8
 
-# 2. replay it in RoboVerse (roboverse env)
-MUJOCO_GL=egl python get_started/10_robotwin_aloha_replay.py \
-  --bridge ~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl --sim sapien3
+# 2. mesh-faithful, ray-traced replay in RoboVerse (roboverse env)
+MUJOCO_GL=egl python tools/robotwin_integration/mesh_replay_robotwin.py \
+  --bridge ~/projects/robotwin/data/_rv_bridge/move_can_pot.pkl --mode kinematic --video --rt
 
-# 3. measure achieved-vs-achieved parity (roboverse env)
+# 3. measure achieved-vs-achieved joint parity (roboverse env)
 MUJOCO_GL=egl python tools/robotwin_integration/parity_robotwin.py \
-  --bridge ~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl --settle 8
+  --bridge ~/projects/robotwin/data/_rv_bridge/move_can_pot.pkl --settle 8
+
+# 4. one-command native-vs-RoboVerse 1:1 side-by-side (roboverse env)
+conda run -n roboverse python tools/robotwin_integration/sidebyside.py --task move_can_pot
 ```
 
 ## Native passthrough
