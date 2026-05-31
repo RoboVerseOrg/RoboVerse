@@ -50,11 +50,28 @@ def test_replay_policy_reset_rewinds():
 
 
 @pytest.mark.general
-def test_dp_policy_without_ckpt_fails_loud():
-    """An unconfigured DP policy must raise, not quietly degrade to a no-op."""
+def test_dp_policy_without_server_fails_loud():
+    """Selecting --policy dp without a --server must raise, not silently no-op."""
     ev = _load_eval()
-    with pytest.raises(NotImplementedError):
-        ev.DPPolicy("/no/such/ckpt.pth")
+
+    class A:
+        policy, bridge, server, camera = "dp", None, None, "head_camera"
+
+    with pytest.raises(SystemExit):
+        ev._build_policy(A())  # dp needs --server
+
+
+@pytest.mark.general
+def test_dp_joint_qpos_prefers_achieved_then_command():
+    """The DP client reads achieved real_vector, falling back to the command vector."""
+    ev = _load_eval()
+    import numpy as np
+
+    real = np.arange(14, dtype=float)
+    obs_real = {"joint_action": {"real_vector": real, "vector": np.zeros(14)}}
+    assert np.allclose(ev.DPPolicy._robotwin_joint_qpos(obs_real), real)
+    obs_cmd = {"joint_action": {"vector": real}}
+    assert np.allclose(ev.DPPolicy._robotwin_joint_qpos(obs_cmd), real)
 
 
 @pytest.mark.general
@@ -62,7 +79,7 @@ def test_policy_builder_validates_required_args():
     ev = _load_eval()
 
     class A:
-        policy, bridge, ckpt, camera = "replay", None, None, "head_camera"
+        policy, bridge, server, camera = "replay", None, None, "head_camera"
 
     with pytest.raises(SystemExit):
         ev._build_policy(A())  # replay needs --bridge

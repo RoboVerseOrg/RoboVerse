@@ -79,22 +79,72 @@ class ReplayPolicy(Policy):
 
 
 class DPPolicy(Policy):
-    """A RoboVerse-trained DP/ACT checkpoint (roboverse_learn/il).
+    """A RoboVerse-trained DP checkpoint, served from the roboverse env.
 
-    Kept thin: the IL model + its obs preprocessing live in roboverse_learn; this
-    only adapts RoboTwin's obs dict (head_camera RGB + joint state) to the model's
-    expected input and the 14-D action back out. Filled in once a checkpoint exists
-    (#19); until then it raises an actionable error rather than silently no-op'ing.
+    The DP model + its deps run in the ``roboverse`` env (``dp_policy_server.py``);
+    this client (``robotwin`` env) sends RoboTwin's head-camera RGB + joint state and
+    receives a 14-D joint action chunk, caching it and emitting one action per step
+    (chunked inference, matching DefaultEvalRunner.get_action). Env-decoupled the way
+    RoboTwin's own policy server/client split is, so the conflicting SAPIEN/torch
+    builds never share a process.
     """
 
-    def __init__(self, ckpt: str, camera: str = "head_camera"):
-        self.ckpt = ckpt
+    def __init__(self, server: str, camera: str = "head_camera"):
+        import socket as _socket
+
+        host, _, port = server.partition(":")
+        self._addr = (host or "127.0.0.1", int(port or "5599"))
         self.camera = camera
-        raise NotImplementedError(
-            "DP policy eval needs a trained checkpoint (task #19). Train with "
-            "roboverse_learn/il/train.py on a RoboTwin zarr, then wire the DP "
-            "inference here (or use --server with policy_model_server in roboverse env)."
-        )
+        self._sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        self._sock.connect(self._addr)
+        self._cache: list = []
+        info = self._rpc({"cmd": "ping"})
+        self.n_action_steps = int(info.get("n_action_steps", 1))
+        print(f"[dp client] connected to {self._addr}, n_action_steps={self.n_action_steps}")
+
+    # --- length-prefixed pickle RPC (mirrors dp_policy_server) ---
+    def _rpc(self, obj):
+        import struct
+
+        body = pickle.dumps(obj)
+        self._sock.sendall(struct.pack(">I", len(body)) + body)
+        header = self._recv_exactly(4)
+        (length,) = struct.unpack(">I", header)
+        return pickle.loads(self._recv_exactly(length))
+
+    def _recv_exactly(self, n: int) -> bytes:
+        buf = b""
+        while len(buf) < n:
+            chunk = self._sock.recv(n - len(buf))
+            if not chunk:
+                raise ConnectionError("dp_policy_server closed the connection")
+            buf += chunk
+        return buf
+
+    def reset(self) -> None:
+        self._cache = []
+        self._rpc({"cmd": "reset"})
+
+    def predict(self, obs: dict) -> np.ndarray | None:
+        if not self._cache:
+            try:
+                head = obs["observation"][self.camera]["rgb"]
+            except (KeyError, TypeError) as e:
+                raise RuntimeError(
+                    f"obs has no observation[{self.camera!r}]['rgb'] -- run the env with data_type rgb=True"
+                ) from e
+            jq = self._robotwin_joint_qpos(obs)
+            resp = self._rpc({"cmd": "predict", "head_camera": np.asarray(head), "joint_qpos": jq})
+            self._cache = [np.asarray(a, dtype=float) for a in resp["action_chunk"]]
+        return self._cache.pop(0) if self._cache else None
+
+    @staticmethod
+    def _robotwin_joint_qpos(obs: dict) -> np.ndarray:
+        """Pull the 14-D [L_arm(6), L_grip, R_arm(6), R_grip] state from RoboTwin obs."""
+        ja = obs.get("joint_action", {})
+        # collect_bridge records achieved qpos as real_vector; fall back to the command vector.
+        v = ja.get("real_vector", ja.get("vector"))
+        return np.asarray(v, dtype=float)
 
 
 def _build_policy(args) -> Policy:
@@ -104,9 +154,11 @@ def _build_policy(args) -> Policy:
         with open(os.path.expanduser(args.bridge), "rb") as f:
             return ReplayPolicy(pickle.load(f))
     if args.policy == "dp":
-        if not args.ckpt:
-            raise SystemExit("--policy dp requires --ckpt <checkpoint>")
-        return DPPolicy(args.ckpt, args.camera)
+        if not args.server:
+            raise SystemExit(
+                "--policy dp requires --server <host:port> (start dp_policy_server.py in the roboverse env)"
+            )
+        return DPPolicy(args.server, args.camera)
     raise SystemExit(f"unknown policy {args.policy!r}")
 
 
@@ -142,7 +194,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--task-config", default="demo_clean")
     ap.add_argument("--policy", choices=["replay", "dp"], default="replay")
     ap.add_argument("--bridge", default=None, help="bridge pkl (for --policy replay; uses its recorded seed)")
-    ap.add_argument("--ckpt", default=None, help="checkpoint (for --policy dp)")
+    ap.add_argument("--server", default=None, help="dp_policy_server host:port (for --policy dp; default port 5599)")
     ap.add_argument("--camera", default="head_camera", help="image obs camera for --policy dp")
     ap.add_argument("--num-eval", type=int, default=1, help="episodes to evaluate")
     ap.add_argument("--start-seed", type=int, default=None, help="first seed (default: bridge seed for replay, else 0)")
