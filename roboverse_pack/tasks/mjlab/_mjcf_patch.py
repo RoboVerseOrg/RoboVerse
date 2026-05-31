@@ -158,6 +158,42 @@ GO1_KP = {
 }
 
 
+def patch_mjcf_set_body_pos(
+    mjcf_path: str,
+    *,
+    body_name: str,
+    pos: tuple[float, float, float],
+    cache: bool = True,
+) -> str:
+    """Set a named body's ``pos`` in an MJCF, return path to the patched XML.
+
+    Used to replicate an init-state base offset that the upstream framework
+    applies via a keyframe rather than the MJCF body pos. For the YAM the
+    mjlab ``HOME_KEYFRAME`` places the base ``arm`` body at z=0.01
+    (asset_zoo/robots/i2rt_yam/yam_constants.py HOME_KEYFRAME ``pos``);
+    the raw yam.xml leaves it at the worldbody origin, so without this the
+    whole robot (and every site world position) sits 0.01 m too low.
+    """
+    key = hashlib.md5(f"{mjcf_path}|{body_name}|{pos}".encode()).hexdigest()[:12]
+    out_path = os.path.join(tempfile.gettempdir(), f"mjlab_bodypos_{key}.xml")
+    if cache and os.path.exists(out_path):
+        return out_path
+
+    spec = mujoco.MjSpec.from_file(mjcf_path)
+    orig_dir = os.path.dirname(os.path.abspath(mjcf_path))
+    spec.meshdir = os.path.join(orig_dir, spec.meshdir) if spec.meshdir else orig_dir
+
+    body = spec.body(body_name)
+    if body is None:
+        raise ValueError(f"patch_mjcf_set_body_pos: body '{body_name}' not found in {mjcf_path}")
+    body.pos = list(pos)
+
+    spec.compile()
+    with open(out_path, "w") as f:
+        f.write(spec.to_xml())
+    return out_path
+
+
 def patch_mjcf_add_cube_and_table(
     mjcf_path: str,
     cube_pos: tuple[float, float, float] = (0.3, 0.0, 0.05),

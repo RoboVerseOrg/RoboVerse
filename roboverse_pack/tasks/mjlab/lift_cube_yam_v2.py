@@ -40,7 +40,12 @@ from roboverse_learn.managers import (
 )
 
 from ._locator import mjlab_asset
-from ._mjcf_patch import YAM_KP, patch_mjcf_add_cube_and_table, patch_mjcf_with_pd_actuators
+from ._mjcf_patch import (
+    YAM_KP,
+    patch_mjcf_add_cube_and_table,
+    patch_mjcf_set_body_pos,
+    patch_mjcf_with_pd_actuators,
+)
 from .mdp import (
     SceneEntityCfg,
 )
@@ -62,9 +67,17 @@ from .mdp.commands import (
 from .mdp.curriculums import reward_curriculum
 
 
+# mjlab HOME_KEYFRAME places the YAM base ``arm`` body at z=0.01; the raw
+# yam.xml leaves it at the worldbody origin. Match it so site world positions
+# (grasp_site -> ee_to_cube obs) line up with native mjlab.
+# See asset_zoo/robots/i2rt_yam/yam_constants.py HOME_KEYFRAME pos=(0, 0, 0.01).
+_YAM_BASE_POS: tuple[float, float, float] = (0.0, 0.0, 0.01)
+
+
 def _yam_with_pd_and_cube(yam_xml_path: str) -> str:
-    """Apply both PD actuator injection AND cube/table injection to YAM."""
-    pd_xml = patch_mjcf_with_pd_actuators(yam_xml_path, YAM_KP)
+    """Apply base-offset + PD actuator injection AND cube/table injection to YAM."""
+    base_xml = patch_mjcf_set_body_pos(yam_xml_path, body_name="arm", pos=_YAM_BASE_POS)
+    pd_xml = patch_mjcf_with_pd_actuators(base_xml, YAM_KP)
     return patch_mjcf_add_cube_and_table(pd_xml)
 
 
@@ -96,8 +109,55 @@ def _yam_newton_objects() -> list:
 
 
 _YAM_XML = "asset_zoo/robots/i2rt_yam/xmls/yam.xml"
-_YAM_JOINTS_NAMES: tuple[str, ...] = ("joint1", "joint2", "joint3", "joint4", "joint5", "joint6")
+# mjlab YAM obs/joint set = 8 joints (6 arm + 2 fingers), in MJCF declaration
+# order. ``entity.joint_names`` on the native side is exactly this order; see
+# asset_zoo/robots/i2rt_yam/xmls/yam.xml joints + equality (left/right finger).
+_YAM_JOINTS_NAMES: tuple[str, ...] = (
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6",
+    "left_finger",
+    "right_finger",
+)
 _YAM_JOINTS = SceneEntityCfg("yam", joint_names=_YAM_JOINTS_NAMES)
+
+# mjlab actuated joints (action space) = 6 arm + left_finger; right_finger is
+# coupled via the MJCF equality constraint (mimic gripper). 7 actions total.
+# See yam_constants.py ARM_ACTUATORS + ACTUATOR_DM_4310_LINEAR_CRANK and
+# yam.xml <equality><joint joint1="left_finger" joint2="right_finger"/>.
+_YAM_ACTION_JOINT_NAMES: tuple[str, ...] = (
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6",
+    "left_finger",
+)
+
+# mjlab default joint pose (HOME_KEYFRAME), in ``_YAM_JOINTS_NAMES`` order.
+# ``joint_pos_rel`` subtracts this so obs is centered exactly as mjlab feeds
+# its policy (envs/mdp/observations.py joint_pos_rel: joint_pos - default).
+# See yam_constants.py HOME_KEYFRAME (left/right finger = ±0.0375/2).
+_YAM_DEFAULT_JOINT_POS: tuple[float, ...] = (
+    0.0,
+    1.047,
+    1.05,
+    -0.9,
+    0.0,
+    0.0,
+    0.0375 / 2,
+    -0.0375 / 2,
+)
+
+# EE site + base body for the ee_to_cube / cube_to_goal privileged obs terms.
+# mjlab uses ``grasp_site`` (config/yam/env_cfgs.py:59) and rotates deltas into
+# the robot base frame (the ``arm`` body); see manipulation/mdp/observations.py.
+_YAM_GRASP_SITE = "grasp_site"
+_YAM_BASE_BODY = "arm"
 
 
 # ---------------------------------------------------------------------------
@@ -179,10 +239,36 @@ reset_yam_default_pose = reset_yam_with_cube
 
 @configclass
 class _YamObsCfg:
+    """Actor/critic obs = mjlab YAM lift_cube proprio group, term-for-term.
+
+    Native layout (manipulation/lift_cube_env_cfg.py:26-52, config/yam):
+      joint_pos(8), joint_vel(8), ee_to_cube(3), cube_to_goal(3), actions(7) = 29D.
+    ``joint_pos`` subtracts the YAM home pose (mjlab ``joint_pos_rel``).
+    """
+
     @configclass
     class ActorCfg:
-        joint_pos = ObsTerm(func=obs.joint_pos_rel, params={"asset_cfg": _YAM_JOINTS})
+        joint_pos = ObsTerm(
+            func=obs.joint_pos_rel,
+            params={"asset_cfg": _YAM_JOINTS, "default": _YAM_DEFAULT_JOINT_POS},
+        )
         joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _YAM_JOINTS})
+        ee_to_cube = ObsTerm(
+            func=obs.ee_to_object_distance,
+            params={
+                "object_name": "cube",
+                "site_name": _YAM_GRASP_SITE,
+                "base_body_name": _YAM_BASE_BODY,
+            },
+        )
+        cube_to_goal = ObsTerm(
+            func=obs.object_to_goal_distance,
+            params={
+                "object_name": "cube",
+                "command_name": "lift_height",
+                "base_body_name": _YAM_BASE_BODY,
+            },
+        )
         last_action = ObsTerm(func=obs.last_action)
 
     @configclass
@@ -322,7 +408,8 @@ class _YamTaskBase(ManagerBasedRVEnv):
             # don't exist as MJCF bodies here, so add them as scene objects so
             # the lift rewards + LiftingCommand have a cube to track.
             scenario.objects = _yam_newton_objects()
-        self.num_actions = len(_YAM_JOINTS_NAMES)
+        # mjlab YAM action space = 7 (6 arm + left_finger mimic gripper).
+        self.num_actions = len(_YAM_ACTION_JOINT_NAMES)
         self._actuated_qvel_ids: np.ndarray | None = None
         super().__init__(scenario=scenario or self.scenario, cfg=cfg, device=device)
 
@@ -383,7 +470,13 @@ class _YamTaskBase(ManagerBasedRVEnv):
         action_np = processed_action.detach().cpu().numpy().reshape(-1)
         action_np = np.clip(action_np, -3.0, 3.0)
         target = self._ACTION_SCALE * action_np
-        self.handler.physics.data.ctrl[:6] = target
+        # action[:6] -> 6 arm PD actuators (joint1..joint6). action[6] is the
+        # left_finger mimic-gripper command; the YAM PD patch (_mjcf_patch.YAM_KP)
+        # only actuates the 6 arm joints, so the gripper channel is carried in
+        # the action vector (for last_action obs parity) but not driven here.
+        n_ctrl = self.handler.physics.data.ctrl.shape[0]
+        n = min(6, n_ctrl, target.shape[0])
+        self.handler.physics.data.ctrl[:n] = target[:n]
 
 
 @register_task("mjlab.lift_cube_yam_v2")

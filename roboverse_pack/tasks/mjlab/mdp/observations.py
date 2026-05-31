@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import torch
 
-from ._math import base_ang_vel_imu_b, base_lin_vel_imu_b, projected_gravity_b
+from ._math import base_ang_vel_imu_b, base_lin_vel_imu_b, projected_gravity_b, quat_apply_inverse_xyzw
 from .scene_entity import (
     SceneEntityCfg,
     entity_joint_pos,
@@ -116,6 +116,110 @@ def last_action(env, env_states) -> torch.Tensor:
     if env._action is None:
         return torch.zeros((env.num_envs, env.num_actions), device=env.device)
     return env._action
+
+
+# ---------------------------------------------------------------------------
+# manipulation obs — port of mjlab tasks/manipulation/mdp/observations.py
+# ---------------------------------------------------------------------------
+
+
+def _site_pos_w(env, *, site_name: str) -> torch.Tensor:
+    """World-frame position of a named MuJoCo site. Shape ``(num_envs, 3)``.
+
+    Scene-MJCF path (YAM lift_cube): the robot loads as the scene rather
+    than a registered RobotCfg entity, so read the site directly from
+    ``physics.data.site_xpos`` (mirrors ``robot.data.site_pos_w`` on the
+    mjlab side, which for the YAM ``grasp_site`` is the same world point).
+    """
+    import mujoco
+    import numpy as np
+
+    physics = env.handler.physics
+    mp = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
+    sid = mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_SITE, site_name)
+    pos = np.asarray(physics.data.site_xpos[sid], dtype=np.float32)
+    return torch.as_tensor(pos, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
+
+
+def _body_pos_w(env, *, body_name: str) -> torch.Tensor:
+    """World-frame position of a named MuJoCo body. Shape ``(num_envs, 3)``.
+
+    Mirrors mjlab ``obj.data.root_link_pos_w`` for the free-floating cube.
+    """
+    import mujoco
+    import numpy as np
+
+    physics = env.handler.physics
+    mp = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
+    bid = mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_BODY, body_name)
+    pos = np.asarray(physics.data.xpos[bid], dtype=np.float32)
+    return torch.as_tensor(pos, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
+
+
+def _base_quat_xyzw(env, *, body_name: str) -> torch.Tensor:
+    """World-frame orientation (xyzw) of the robot base body. Shape ``(num_envs, 4)``.
+
+    mjlab rotates the ee/cube/goal deltas into the robot base frame via
+    ``quat_inv(robot.data.root_link_quat_w)``. For the fixed-base YAM the
+    base (``arm`` body) is at identity, but read it from ``data.xquat``
+    (wxyz) and convert to xyzw so this stays correct for any base pose.
+    """
+    import mujoco
+    import numpy as np
+
+    physics = env.handler.physics
+    mp = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
+    bid = mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_BODY, body_name)
+    q_wxyz = np.asarray(physics.data.xquat[bid], dtype=np.float32)
+    q_xyzw = np.array([q_wxyz[1], q_wxyz[2], q_wxyz[3], q_wxyz[0]], dtype=np.float32)
+    return torch.as_tensor(q_xyzw, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
+
+
+def ee_to_object_distance(
+    env,
+    env_states,
+    *,
+    object_name: str,
+    site_name: str,
+    base_body_name: str = "arm",
+) -> torch.Tensor:
+    """Distance vector from end effector to object in the robot base frame.
+
+    Port of mjlab ``manipulation.mdp.ee_to_object_distance``: returns
+    ``quat_apply(quat_inv(base_quat_w), obj_pos_w - ee_pos_w)`` where the EE
+    is the ``site_name`` site and the object is ``object_name``'s body.
+    Shape ``(num_envs, 3)``.
+    """
+    ee_pos_w = _site_pos_w(env, site_name=site_name)
+    obj_pos_w = _body_pos_w(env, body_name=object_name)
+    distance_vec_w = obj_pos_w - ee_pos_w
+    base_quat = _base_quat_xyzw(env, body_name=base_body_name)
+    return quat_apply_inverse_xyzw(base_quat, distance_vec_w)
+
+
+def object_to_goal_distance(
+    env,
+    env_states,
+    *,
+    object_name: str,
+    command_name: str,
+    base_body_name: str = "arm",
+) -> torch.Tensor:
+    """Distance vector from object to goal in the robot base frame.
+
+    Port of mjlab ``manipulation.mdp.object_to_goal_distance``: returns
+    ``quat_apply(quat_inv(base_quat_w), goal_pos_w - obj_pos_w)`` where the
+    goal is the ``command_name`` LiftingCommand target. Shape ``(num_envs, 3)``.
+    """
+    obj_pos_w = _body_pos_w(env, body_name=object_name)
+    mgr = getattr(env, "command_managers", {}).get(command_name)
+    if mgr is None:
+        goal_pos_w = obj_pos_w
+    else:
+        goal_pos_w = mgr.target_pos
+    distance_vec_w = goal_pos_w - obj_pos_w
+    base_quat = _base_quat_xyzw(env, body_name=base_body_name)
+    return quat_apply_inverse_xyzw(base_quat, distance_vec_w)
 
 
 # ---------------------------------------------------------------------------
