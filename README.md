@@ -12,7 +12,7 @@
   <a href="https://github.com/RoboVerseOrg/MetaSim/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License"></a>
 </p>
 
-![MetaSim](docs/source/metasim/images/tea.jpg)
+![MetaSim](https://roboverseorg.github.io/static/images/metasim.svg)
 
 MetaSim provides the common simulation layer used by RoboVerse: simulator handlers, declarative scenario configuration, task registration, package discovery, typed simulation state, queries, domain randomization utilities, protocol simulation utilities, and lightweight example assets. It is designed so a robot-learning workflow can keep its task logic stable while switching between simulator backends.
 
