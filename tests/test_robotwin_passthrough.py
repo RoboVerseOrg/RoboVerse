@@ -61,6 +61,22 @@ def test_register_is_lazy_idempotent_and_safe(tmp_path, monkeypatch):
 
 
 @pytest.mark.general
+def test_list_robotwin_tasks(tmp_path, monkeypatch):
+    """list_robotwin_tasks returns prefixed ids (and bare names) from the checkout."""
+    envs = tmp_path / "envs"
+    envs.mkdir()
+    for name in ("beat_block_hammer", "place_shoe"):
+        (envs / f"{name}.py").write_text("class Stub: ...\n")
+    (envs / "_base_task.py").write_text("# infra\n")
+    monkeypatch.setenv("ROBOTWIN_DIR", str(tmp_path))
+    assert _passthrough.list_robotwin_tasks() == ["RoboTwin/beat_block_hammer", "RoboTwin/place_shoe"]
+    assert _passthrough.list_robotwin_tasks(prefix="") == ["beat_block_hammer", "place_shoe"]
+    # Missing checkout -> [].
+    monkeypatch.setenv("ROBOTWIN_DIR", str(tmp_path / "nope"))
+    assert _passthrough.list_robotwin_tasks() == []
+
+
+@pytest.mark.general
 def test_register_no_checkout_returns_empty(tmp_path, monkeypatch):
     """With ROBOTWIN_DIR pointing nowhere, registration returns [] without error."""
     monkeypatch.setenv("ROBOTWIN_DIR", str(tmp_path / "nope"))

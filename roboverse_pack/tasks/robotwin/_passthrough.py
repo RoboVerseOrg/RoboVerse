@@ -166,6 +166,18 @@ def _make_robotwin_env(task_name: str, task_config: str = "demo_clean", seed: in
     return env
 
 
+def list_robotwin_tasks(prefix: str = "RoboTwin/") -> list[str]:
+    """Return the discoverable RoboTwin task ids (``RoboTwin/<name>``).
+
+    A convenience for enumerating RoboTwin tasks without importing RoboTwin or
+    having to know the ``RoboTwin/<name>`` naming convention (they live only in
+    gymnasium's registry, not MetaSim's ``list_tasks()``). Pure filename scan, so
+    it is safe when RoboTwin's deps are absent; returns ``[]`` if the checkout is
+    missing. Pass ``prefix=""`` for the bare task names.
+    """
+    return [f"{prefix}{name}" for name in _discover_task_names(robotwin_dir())]
+
+
 def register_robotwin_passthrough(prefix: str = "RoboTwin/") -> list[str]:
     """Register every RoboTwin task as ``RoboTwin/<name>`` (lazy entry point).
 
