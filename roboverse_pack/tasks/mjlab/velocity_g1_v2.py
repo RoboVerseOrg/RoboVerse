@@ -395,19 +395,17 @@ def _g1_scenario() -> ScenarioCfg:
         robots=[],
         # mjlab parity:
         #   dt=0.005, decimation=4 (matches mjlab native; 5ms substep × 4 = 20ms control = 50Hz)
-        #   newton_mujoco_iterations=10, ls_iterations=20 — mjlab's SolverMuJoCo config for
-        #   stable stiff PD on 29-DOF humanoid. Without these, mujoco_warp default fewer
-        #   iters → G1 pendulum-swings past 70° limit_angle in ~25 steps.
-        sim_params=SimParamCfg(
-            dt=0.005,
-            newton_mujoco_iterations=10,
-            newton_mujoco_ls_iterations=20,
-        ),
+        # NOTE: the mujoco backend gets its solver iterations (100/50) from the MJCF
+        # patched in `patch_mjcf_with_pd_actuators`, so no solver knobs are needed here.
+        # TODO(newton-path): mjlab's SolverMuJoCo uses iterations=10, ls_iterations=20 for
+        # stable stiff PD on the 29-DOF humanoid. The current metasim SimParamCfg no longer
+        # exposes `newton_mujoco_iterations`/`newton_mujoco_ls_iterations`; restore solver-iter
+        # control on the Newton path (via MJCF option or a SimParamCfg field) before training G1.
+        sim_params=SimParamCfg(dt=0.005),
         decimation=4,
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=True,
     )
 
 

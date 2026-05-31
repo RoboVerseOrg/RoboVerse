@@ -76,7 +76,6 @@ def smoke_newton() -> tuple[int, int]:
                 simulator="newton",
                 num_envs=4,
                 headless=True,
-                add_default_ground=True,
             )
             TCls = get_task_class(task_name)
             env = TCls(scenario=scn, device="cuda:0")

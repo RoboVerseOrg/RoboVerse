@@ -51,7 +51,6 @@ def _cartpole_scenario(task: inv.MjlabTask):
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=False,  # cartpole.xml already declares a floor
     )
     return scenario
 
@@ -83,7 +82,6 @@ def _yam_scenario(task: inv.MjlabTask):
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=False,  # raw rollout doesn't add a ground either
     )
 
 
@@ -108,7 +106,6 @@ def _quadruped_scenario(task: inv.MjlabTask, name: str = "go1"):
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=False,
     )
 
 
@@ -133,7 +130,6 @@ def _humanoid_scenario(task: inv.MjlabTask, name: str = "g1"):
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=False,
     )
 
 

@@ -4,9 +4,14 @@ These tasks load mjlab's bare unitree_g1 / unitree_go1 MJCFs through
 MetaSim's `RobotCfg` path. The fix-branch `fix/mujoco-mjlab-task-parity`
 lets these compile despite the author-declared `<freejoint>` inside
 each robot's root body (MetaSim now promotes the freejoint to the
-attachment wrapper). With `add_default_ground=False` the physics step
-matches raw mujoco within 1e-13 (g1) and ~0.16 rad (go1, residual due
-to MetaSim's all-pairs self-collision-exclude semantics).
+attachment wrapper). The physics step matches raw mujoco within 1e-13
+(g1) and ~0.16 rad (go1, residual due to MetaSim's all-pairs
+self-collision-exclude semantics).
+
+NOTE: the current metasim `ScenarioCfg` always adds a default ground when
+`ground=None` (the old `add_default_ground=False` no-ground path was
+removed). The bitwise free-evolution parity harness adds the same ground
+to its raw-mujoco reference so the comparison stays apples-to-apples.
 """
 
 from __future__ import annotations
@@ -40,7 +45,6 @@ def _floating_scenario(robot_name: str, mjcf_relpath: str, num_joints: int) -> S
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=False,
     )
 
 

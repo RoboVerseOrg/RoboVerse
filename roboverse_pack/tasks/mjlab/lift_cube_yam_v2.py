@@ -289,7 +289,6 @@ def _yam_scenario() -> ScenarioCfg:
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=False,
     )
 
 
