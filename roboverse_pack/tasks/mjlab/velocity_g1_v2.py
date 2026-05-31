@@ -62,6 +62,8 @@ from .mdp.sensors import (
     BuiltinSensorCfg,
     ContactSensor,
     ContactSensorCfg,
+    HeightScanSensor,
+    HeightScanSensorCfg,
     TerrainHeightSensor,
     TerrainHeightSensorCfg,
 )
@@ -210,6 +212,37 @@ class _G1ObsCfg:
         joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _G1_JOINTS})
         last_action = ObsTerm(func=obs.last_action)
         command = ObsTerm(func=obs.generated_commands, params={"command_name": "twist"})
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        pass
+
+    actor = ActorCfg()
+    critic = CriticCfg()
+
+
+# mjlab terrain_scan: GridPatternCfg(size=(1.6, 1.0), resolution=0.1), yaw-aligned,
+# max_distance=5.0 (velocity_env_cfg.py:44-54). height_scan obs scale =
+# 1/max_distance = 0.2 (velocity_env_cfg.py:204).
+_G1_HEIGHT_SCAN_SCALE = 1.0 / 5.0
+
+
+@configclass
+class _G1RoughObsCfg:
+    """mjlab ROUGH actor obs (G1) = flat 99-D proprio + ``height_scan(187)``.
+
+    Mirrors the native rough velocity cfg's ROUGH obs group, which appends a
+    ``height_scan`` term reading the ``terrain_scan`` grid raycast sensor
+    (``velocity_env_cfg.py:200-205``). 17 (x) x 11 (y) = 187 downward yaw-aligned
+    rays over the G1 pelvis; per-ray value ``(frame_z - hit_z) * (1/max_distance)``.
+    """
+
+    @configclass
+    class ActorCfg(_G1ObsCfg.ActorCfg):
+        height_scan = ObsTerm(
+            func=obs.height_scan,
+            params={"sensor_name": "terrain_scan", "scale": _G1_HEIGHT_SCAN_SCALE},
+        )
 
     @configclass
     class CriticCfg(ActorCfg):
@@ -440,13 +473,27 @@ class VelocityFlatG1EnvCfg(ManagerBasedRVEnvCfg):
     curriculum = _G1CurriculumCfg()
 
 
+@configclass
+class VelocityRoughG1EnvCfg(VelocityFlatG1EnvCfg):
+    """Rough-terrain G1 env cfg — flat proprio obs + trailing ``height_scan(187)``."""
+
+    observations = _G1RoughObsCfg()
+
+
 class _G1TaskBase(ManagerBasedRVEnv):
     """Shared scaffold for all G1 velocity variants (flat / rough)."""
 
     scenario = _g1_scenario()
+    env_cfg_cls = VelocityFlatG1EnvCfg
+    # Cfg the base env is CONSTRUCTED with. Defaults to env_cfg_cls; the tracking
+    # subclass overrides this to a velocity cfg so the obs computed during
+    # super().__init__() carries no motion terms (the "motion" command isn't
+    # registered until after super()), then swaps self.cfg to the tracking cfg.
+    build_cfg_cls: type[ManagerBasedRVEnvCfg] | None = None
+    use_height_scan = False
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:
-        cfg = VelocityFlatG1EnvCfg()
+        cfg = (self.build_cfg_cls or self.env_cfg_cls)()
         sim = getattr(scenario, "simulator", None) if scenario else None
         if scenario is not None and sim == "mujoco":
             scenario.robots = []
@@ -505,6 +552,21 @@ class _G1TaskBase(ManagerBasedRVEnv):
                 body_name="pelvis",
             ),
         )
+        # Rough-terrain only: terrain_scan grid raycast feeding height_scan obs.
+        # mjlab sets the frame to the G1 pelvis (config/g1/env_cfgs.py:40).
+        if self.use_height_scan:
+            self._mjlab_sensors["terrain_scan"] = HeightScanSensor(
+                self,
+                HeightScanSensorCfg(
+                    name="terrain_scan",
+                    frame_body="pelvis",
+                    size=(1.6, 1.0),
+                    resolution=0.1,
+                    ray_alignment="yaw",
+                    max_distance=5.0,
+                    geom_groups=(0,),
+                ),
+            )
         # Self-collision contact sensor (mjlab config/g1/env_cfgs.py:69-77):
         # subtree(pelvis) vs subtree(pelvis), history_length=4. The
         # ``self_only`` flag restricts matched contacts to robot-internal pairs
@@ -604,7 +666,14 @@ class VelocityFlatG1Task(_G1TaskBase):
 
 @register_task("mjlab.velocity_rough_g1_v2")
 class VelocityRoughG1Task(_G1TaskBase):
-    """Same scaffold as flat. Rough terrain wiring deferred (needs height-field MJCF)."""
+    """G1 rough-terrain velocity task: flat proprio obs + height_scan(187).
+
+    Actor obs = ``_G1ObsCfg`` 99-D proprio + trailing ``height_scan`` term reading
+    the yaw-aligned 17x11 ``terrain_scan`` grid raycast over the pelvis.
+    """
+
+    env_cfg_cls = VelocityRoughG1EnvCfg
+    use_height_scan = True
 
 
 # Bodies tracked by mjlab tracking_flat_g1 — the G1 humanoid's principal
@@ -780,6 +849,10 @@ class _G1TrackingTaskBase(_G1TaskBase):
 
     motion_file: str | None = None  # subclass / cfg can override
     env_cfg_cls = TrackingFlatG1EnvCfg  # subclass overrides (e.g. no-state-est)
+    # Build the base env with the velocity cfg (no motion obs terms) so
+    # super().__init__() doesn't compute motion obs before the "motion" command
+    # is registered below; __init__ then swaps self.cfg to env_cfg_cls (tracking).
+    build_cfg_cls = VelocityFlatG1EnvCfg
     cfg: TrackingFlatG1EnvCfg
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:

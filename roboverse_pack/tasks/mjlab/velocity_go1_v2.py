@@ -79,6 +79,8 @@ from .mdp.sensors import (
     BuiltinSensorCfg,
     ContactSensor,
     ContactSensorCfg,
+    HeightScanSensor,
+    HeightScanSensorCfg,
     TerrainHeightSensor,
     TerrainHeightSensorCfg,
 )
@@ -218,6 +220,38 @@ class _Go1ObsCfg:
         joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _GO1_JOINTS})
         last_action = ObsTerm(func=obs.last_action)
         command = ObsTerm(func=obs.generated_commands, params={"command_name": "twist"})
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        pass
+
+    actor = ActorCfg()
+    critic = CriticCfg()
+
+
+# mjlab terrain_scan: GridPatternCfg(size=(1.6, 1.0), resolution=0.1), yaw-aligned,
+# max_distance=5.0 (velocity_env_cfg.py:44-54). height_scan obs scale =
+# 1/max_distance = 0.2 (velocity_env_cfg.py:204).
+_GO1_HEIGHT_SCAN_SCALE = 1.0 / 5.0
+
+
+@configclass
+class _Go1RoughObsCfg:
+    """mjlab ROUGH actor obs = flat 48-D proprio + ``height_scan(187)`` appended.
+
+    Matches the native rough velocity cfg, whose ROUGH obs group adds a trailing
+    ``height_scan`` term reading the ``terrain_scan`` grid raycast sensor
+    (``velocity_env_cfg.py:200-205``). The 187-D grid is 17 (x: -0.8..0.8) x 11
+    (y: -0.5..0.5) downward rays, yaw-aligned to the Go1 trunk; per-ray value is
+    ``(frame_z - hit_z) * (1/max_distance)``.
+    """
+
+    @configclass
+    class ActorCfg(_Go1ObsCfg.ActorCfg):
+        height_scan = ObsTerm(
+            func=obs.height_scan,
+            params={"sensor_name": "terrain_scan", "scale": _GO1_HEIGHT_SCAN_SCALE},
+        )
 
     @configclass
     class CriticCfg(ActorCfg):
@@ -492,13 +526,22 @@ class VelocityFlatGo1EnvCfg(ManagerBasedRVEnvCfg):
     curriculum = _Go1CurriculumCfg()
 
 
+@configclass
+class VelocityRoughGo1EnvCfg(VelocityFlatGo1EnvCfg):
+    """Rough-terrain Go1 env cfg — flat proprio obs + trailing ``height_scan(187)``."""
+
+    observations = _Go1RoughObsCfg()
+
+
 class _Go1TaskBase(ManagerBasedRVEnv):
     """Shared scaffold for all go1 velocity variants (flat / rough)."""
 
     scenario = _go1_scenario()
+    env_cfg_cls = VelocityFlatGo1EnvCfg
+    use_height_scan = False
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:
-        cfg = VelocityFlatGo1EnvCfg()
+        cfg = self.env_cfg_cls()
         # Two-path scenario handling (mirror cartpole_v2):
         #   mujoco: scene-MJCF self-contained — drop trainer-injected robots
         #   newton: needs RobotCfg list — keep trainer-injected mjlab_go1
@@ -590,6 +633,22 @@ class _Go1TaskBase(ManagerBasedRVEnv):
                 body_name="trunk",
             ),
         )
+
+        # Rough-terrain only: the terrain_scan grid raycast feeding height_scan
+        # obs. mjlab sets the frame to the Go1 trunk (config/go1/env_cfgs.py:50).
+        if self.use_height_scan:
+            self._mjlab_sensors["terrain_scan"] = HeightScanSensor(
+                self,
+                HeightScanSensorCfg(
+                    name="terrain_scan",
+                    frame_body="trunk",
+                    size=(1.6, 1.0),
+                    resolution=0.1,
+                    ray_alignment="yaw",
+                    max_distance=5.0,
+                    geom_groups=(0,),
+                ),
+            )
 
         # mjlab parity: ActionManager (declarative scale/offset for joint pos action).
         # Mirrors mjlab/tasks/velocity/velocity_env_cfg.py:165 — scale=0.5,
@@ -702,4 +761,11 @@ class VelocityFlatGo1Task(_Go1TaskBase):
 
 @register_task("mjlab.velocity_rough_go1_v2")
 class VelocityRoughGo1Task(_Go1TaskBase):
-    """Same scaffold as flat go1. Rough terrain wiring deferred (needs height-field MJCF)."""
+    """Go1 rough-terrain velocity task: flat proprio obs + height_scan(187).
+
+    Actor obs = ``_Go1ObsCfg`` 48-D proprio + trailing ``height_scan`` term that
+    reads the yaw-aligned 17x11 ``terrain_scan`` grid raycast (mjlab parity).
+    """
+
+    env_cfg_cls = VelocityRoughGo1EnvCfg
+    use_height_scan = True

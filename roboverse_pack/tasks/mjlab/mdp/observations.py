@@ -118,6 +118,32 @@ def last_action(env, env_states) -> torch.Tensor:
     return env._action
 
 
+def height_scan(
+    env, env_states, *, sensor_name: str, offset: float = 0.0, scale: float = 1.0, num_rays: int = 187
+) -> torch.Tensor:
+    """Terrain height-scan obs from a grid raycast sensor (mjlab 1:1).
+
+    Port of mjlab ``envs/mdp/observations.py:height_scan`` + the rough velocity
+    cfg's ``scale=1/terrain_scan.max_distance`` (``velocity_env_cfg.py:204``).
+    Reads the :class:`HeightScanSensor` registered on ``env._mjlab_sensors``: the
+    per-ray height is ``frame_z - hit_z`` (misses already filled with the sensor's
+    ``max_distance``), then multiplied by ``scale`` and with ``offset`` subtracted.
+
+    During env construction the first ``reset()`` computes obs before the task
+    registers its sensors; if the sensor is missing we emit a fixed-dim zero
+    vector (``num_rays``) so the obs layout stays stable. By the time the policy
+    runs (or the parity harness recomputes), the sensor is present.
+
+    Shape: ``(num_envs, num_rays)`` (187 for the velocity grid).
+    """
+    sensor = getattr(env, "_mjlab_sensors", {}).get(sensor_name)
+    if sensor is None:
+        return torch.zeros(env.num_envs, num_rays, device=env.device)
+    sensor.update()
+    heights = sensor.data.heights  # (N, R)
+    return (heights - offset) * scale
+
+
 # ---------------------------------------------------------------------------
 # motion-tracking obs — port of mjlab tasks/tracking/mdp/observations.py
 #

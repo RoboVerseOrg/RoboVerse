@@ -660,3 +660,210 @@ class BuiltinSensor:
             return
         val = np.asarray(f[self._body_id], dtype=np.float32)
         self._data.copy_(torch.from_numpy(val).unsqueeze(0).expand(self.env.num_envs, -1))
+
+
+# ---------------------------------------------------------------------------
+# HeightScanSensor — grid of downward rays over the terrain (mjlab RayCastSensor
+# with a GridPatternCfg + ``height_scan`` obs). RoboVerse port of mjlab's
+# ``mjlab/sensor/raycast_sensor.py`` for the rough-terrain velocity tasks.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class HeightScanSensorCfg:
+    """Config for the terrain height-scan grid raycast sensor.
+
+    Mirrors mjlab ``RayCastSensorCfg`` + ``GridPatternCfg`` as used by
+    ``velocity_env_cfg.terrain_scan`` (``mjlab/tasks/velocity/velocity_env_cfg.py:44``):
+    ``GridPatternCfg(size=(1.6, 1.0), resolution=0.1)``, ``ray_alignment="yaw"``,
+    ``max_distance=5.0``, ``include_geom_groups=(0,)`` (terrain only).
+    """
+
+    name: str = "terrain_scan"
+    frame_body: str = "trunk"
+    """Body whose (yaw-aligned) frame the ray grid is attached to."""
+    size: tuple[float, float] = (1.6, 1.0)
+    """Grid size (length-x, width-y) in metres."""
+    resolution: float = 0.1
+    """Spacing between rays in metres."""
+    direction: tuple[float, float, float] = (0.0, 0.0, -1.0)
+    """Ray direction in the (yaw-aligned) frame-local coordinates."""
+    ray_alignment: Literal["base", "yaw", "world"] = "yaw"
+    max_distance: float = 5.0
+    geom_groups: tuple[int, ...] = (0,)
+    """Which MuJoCo geom groups participate (0 = terrain)."""
+
+
+@dataclass
+class HeightScanData:
+    """Output of the height-scan sensor."""
+
+    distances: torch.Tensor | None = None  # (N, R) ray distances; <0 = miss
+    heights: torch.Tensor | None = None  # (N, R) frame_z - hit_z; miss = max_distance
+    frame_pos_w: torch.Tensor | None = None  # (N, 3) frame world position
+    num_rays: int = 0
+
+
+def _grid_local_offsets(size: tuple[float, float], res: float) -> np.ndarray:
+    """Generate grid-pattern local ray offsets, matching mjlab exactly.
+
+    Port of ``GridPatternCfg.generate_rays`` (``raycast_sensor.py:65``):
+    ``x = arange(-sx/2, sx/2 + res*0.5, res)``, same for ``y``, then
+    ``meshgrid(x, y, indexing="xy")`` and a row-major (y-major) flatten.
+    Returns ``(R, 3)`` with z=0.
+    """
+    sx, sy = size
+    x = np.arange(-sx / 2, sx / 2 + res * 0.5, res, dtype=np.float32)
+    y = np.arange(-sy / 2, sy / 2 + res * 0.5, res, dtype=np.float32)
+    # torch.meshgrid(indexing="xy") -> grids of shape (len(y), len(x)); flatten
+    # is row-major (y outer, x inner). np.meshgrid default indexing="xy" matches.
+    grid_x, grid_y = np.meshgrid(x, y)  # both (len(y), len(x))
+    offsets = np.zeros((grid_x.size, 3), dtype=np.float32)
+    offsets[:, 0] = grid_x.reshape(-1)
+    offsets[:, 1] = grid_y.reshape(-1)
+    return offsets
+
+
+def _yaw_rotation_matrix(rot_mat: np.ndarray) -> np.ndarray:
+    """Yaw-only rotation matrix from a full 3x3, matching mjlab.
+
+    Port of ``RayCastSensor._extract_yaw_rotation`` (``raycast_sensor.py:826``):
+    project the X-axis onto the XY plane (fall back to the Y-axis when the
+    X-axis is near-vertical, threshold 0.1), build the orthonormal yaw basis.
+    """
+    x_axis = rot_mat[:, 0].astype(np.float64)
+    x_proj = x_axis.copy()
+    x_proj[2] = 0.0
+    x_norm = np.linalg.norm(x_proj)
+    if x_norm < 0.1:
+        y_axis = rot_mat[:, 1].astype(np.float64)
+        y_proj = y_axis.copy()
+        y_proj[2] = 0.0
+        y_norm = max(np.linalg.norm(y_proj), 1e-6)
+        y_proj = y_proj / y_norm
+        x_dir = np.array([y_proj[1], -y_proj[0], 0.0], dtype=np.float64)
+    else:
+        x_dir = x_proj / x_norm
+    # Y of the yaw frame is Z x X (left-handed-safe): [-x_y, x_x, 0].
+    y_dir = np.array([-x_dir[1], x_dir[0], 0.0], dtype=np.float64)
+    z_dir = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+    out = np.stack([x_dir, y_dir, z_dir], axis=1)  # columns are basis vectors
+    return out
+
+
+class HeightScanSensor:
+    """Grid of yaw-aligned downward rays over the terrain.
+
+    RoboVerse port of mjlab ``RayCastSensor`` with a ``GridPatternCfg``. On the
+    MuJoCo backend each ray is cast with ``mujoco.mj_ray`` against the configured
+    geom groups (terrain only). The ``height_scan`` observation reads
+    ``frame_z - hit_z`` per ray (= ray distance for vertical rays); misses return
+    ``max_distance``. Single-env (RoboVerse MuJoCo path); the env loop is forward-
+    compat only.
+    """
+
+    def __init__(self, env, cfg: HeightScanSensorCfg):
+        self.env = env
+        self.cfg = cfg
+        device = env.device
+        self.device = device
+
+        self._local_offsets = _grid_local_offsets(cfg.size, cfg.resolution)  # (R, 3)
+        R = self._local_offsets.shape[0]
+        self._R = R
+        N = env.num_envs
+        self._N = N
+        self._distances = torch.full((N, R), -1.0, device=device, dtype=torch.float32)
+        self._heights = torch.full((N, R), float(cfg.max_distance), device=device, dtype=torch.float32)
+        self._frame_pos_w = torch.zeros((N, 3), device=device, dtype=torch.float32)
+
+        # Newton path is not supported for the grid raycast (no per-env mj_ray);
+        # leave buffers at their miss defaults.
+        self._newton = not hasattr(env.handler, "physics")
+        if self._newton:
+            self._body_id = -1
+            return
+
+        import mujoco
+
+        physics = env.handler.physics
+        mp = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
+        bid = mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_BODY, cfg.frame_body)
+        if bid < 0:
+            raise ValueError(f"HeightScanSensor: frame body '{cfg.frame_body}' not found.")
+        self._body_id = bid
+
+        self._geomgroup = np.zeros(6, dtype=np.uint8)
+        for g in cfg.geom_groups:
+            if 0 <= g < 6:
+                self._geomgroup[g] = 1
+
+    @property
+    def num_rays(self) -> int:
+        """Total number of rays in the grid (e.g. 17x11 = 187)."""
+        return self._R
+
+    @property
+    def data(self) -> HeightScanData:
+        """Return the current height-scan reading."""
+        return HeightScanData(
+            distances=self._distances,
+            heights=self._heights,
+            frame_pos_w=self._frame_pos_w,
+            num_rays=self._R,
+        )
+
+    def reset(self, env_ids: torch.Tensor | None = None) -> None:
+        """Reset cached rays to miss defaults for the given envs."""
+        if env_ids is None or env_ids.numel() == 0:
+            return
+        ids = env_ids.long().to(self.device)
+        self._distances[ids] = -1.0
+        self._heights[ids] = float(self.cfg.max_distance)
+        self._frame_pos_w[ids] = 0.0
+
+    def update(self, dt: float | None = None) -> None:
+        """Cast the yaw-aligned grid downward and cache distances / heights."""
+        if self._newton:
+            return
+        import mujoco
+
+        physics = self.env.handler.physics
+        data = physics.data
+        mp = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
+
+        frame_pos = np.asarray(data.xpos[self._body_id], dtype=np.float64)
+        frame_mat = np.asarray(data.xmat[self._body_id], dtype=np.float64).reshape(3, 3)
+
+        if self.cfg.ray_alignment == "yaw":
+            rot = _yaw_rotation_matrix(frame_mat)
+        elif self.cfg.ray_alignment == "world":
+            rot = np.eye(3, dtype=np.float64)
+        else:  # base
+            rot = frame_mat
+
+        # World offsets + direction (rot @ offset, rot @ direction).
+        offsets = self._local_offsets.astype(np.float64)  # (R, 3)
+        world_offsets = offsets @ rot.T  # (R, 3)
+        direction = np.asarray(self.cfg.direction, dtype=np.float64)
+        direction = direction / np.linalg.norm(direction)
+        world_dir = rot @ direction  # (3,)
+
+        max_dist = float(self.cfg.max_distance)
+        dist_np = np.full(self._R, -1.0, dtype=np.float32)
+        height_np = np.full(self._R, max_dist, dtype=np.float32)
+        geomid_out = np.zeros(1, dtype=np.int32)
+        env_idx = 0
+        for r in range(self._R):
+            origin = frame_pos + world_offsets[r]
+            d = mujoco.mj_ray(mp, data.ptr, origin, world_dir, self._geomgroup, 1, -1, geomid_out)
+            if d < 0 or d > max_dist:
+                dist_np[r] = -1.0
+                height_np[r] = max_dist
+            else:
+                hit_z = origin[2] + world_dir[2] * d
+                dist_np[r] = float(d)
+                height_np[r] = float(frame_pos[2] - hit_z)
+        self._distances[env_idx] = torch.from_numpy(dist_np).to(self.device)
+        self._heights[env_idx] = torch.from_numpy(height_np).to(self.device)
+        self._frame_pos_w[env_idx] = torch.from_numpy(frame_pos.astype(np.float32)).to(self.device)
