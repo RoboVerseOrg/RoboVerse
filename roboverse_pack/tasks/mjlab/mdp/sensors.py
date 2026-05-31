@@ -57,6 +57,11 @@ class ContactSensorCfg:
     """Mjlab parity. Always 1 in current RoboVerse path."""
     track_air_time: bool = False
     history_length: int = 0
+    self_only: bool = False
+    """When True, only count contacts where BOTH geoms belong to the primary
+    subtree (robot-internal self-collisions). Mirrors mjlab's
+    subtree-vs-subtree ``ContactMatch`` (e.g. g1 ``self_collision``); excludes
+    foot-ground and any contact with an external body."""
 
 
 @dataclass
@@ -292,6 +297,20 @@ class ContactSensor:
             prim_b2 = self._primary_subtree_root[b2] if b2 < len(self._primary_subtree_root) else -1
 
             if prim_b1 < 0 and prim_b2 < 0:
+                continue
+
+            # Self-collision mode: require BOTH geoms inside the primary subtree.
+            # A contact with the floor / any external body (one side prim<0) is
+            # not a self-collision and is skipped.
+            if self.cfg.self_only:
+                if prim_b1 < 0 or prim_b2 < 0:
+                    continue
+                p_idx = prim_b1
+                f6 = np.zeros(6, dtype=np.float64)
+                mujoco.mj_contactForce(mp, data.ptr, i, f6)
+                found_np[env_idx, p_idx] += 1.0
+                force_np[env_idx, p_idx] += f6[:3].astype(np.float32)
+                dist_np[env_idx, p_idx] = min(dist_np[env_idx, p_idx], float(con.dist))
                 continue
 
             # If both sides are primary (shouldn't normally happen), skip

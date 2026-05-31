@@ -267,20 +267,31 @@ class _Go1RewardsCfg:
         params={
             "asset_cfg": _GO1_JOINTS,
             "command_name": "twist",
-            # mjlab Go1 stance: hips strict, knees moderate, calves looser.
-            "std_standing": {".*_hip_.*": 0.10, ".*_thigh_.*": 0.15, ".*_calf_.*": 0.20},
-            "std_walking": {".*_hip_.*": 0.20, ".*_thigh_.*": 0.30, ".*_calf_.*": 0.40},
-            "std_running": {".*_hip_.*": 0.30, ".*_thigh_.*": 0.45, ".*_calf_.*": 0.60},
+            # mjlab Go1 stance (config/go1/env_cfgs.py:186-197): hip/thigh strict,
+            # calf looser. EXACT match to native std maps.
+            "std_standing": {
+                r".*(FR|FL|RR|RL)_(hip|thigh)_joint.*": 0.05,
+                r".*(FR|FL|RR|RL)_calf_joint.*": 0.1,
+            },
+            "std_walking": {
+                r".*(FR|FL|RR|RL)_(hip|thigh)_joint.*": 0.3,
+                r".*(FR|FL|RR|RL)_calf_joint.*": 0.6,
+            },
+            "std_running": {
+                r".*(FR|FL|RR|RL)_(hip|thigh)_joint.*": 0.3,
+                r".*(FR|FL|RR|RL)_calf_joint.*": 0.6,
+            },
             "walking_threshold": 0.05,
             "running_threshold": 1.5,
             "default_pose": _GO1_DEFAULT_POSE.unsqueeze(0),
         },
     )
 
-    # Penalties — generic.
+    # Penalties — generic. mjlab go1 leaves body_ang_vel at weight 0.0
+    # (config/go1/env_cfgs.py:206); only g1 (humanoid) penalizes it.
     body_ang_vel = RewTerm(
         func=rew.body_angular_velocity_penalty,
-        weight=-0.05,
+        weight=0.0,
         params={"asset_cfg": _GO1_TRUNK},
     )
     dof_pos_limits = RewTerm(
@@ -291,9 +302,9 @@ class _Go1RewardsCfg:
     action_rate_l2 = RewTerm(func=rew.action_rate_l2, weight=-0.1)
 
     # Sensor-dependent — now FIRING (replaced stubs with real fn bodies).
-    # Mjlab quadruped overrides for go1:
-    #   angular_momentum=0.0 (mjlab leaves this 0 for quadrupeds; only humanoids care)
-    #   air_time=1.0 (encourage feet to lift off)
+    # Mjlab quadruped overrides for go1 (config/go1/env_cfgs.py:206-208):
+    #   angular_momentum=0.0, body_ang_vel=0.0, air_time=0.0
+    #   (mjlab leaves these at 0 for the quadruped; only g1 humanoid uses them)
     angular_momentum = RewTerm(
         func=rew.angular_momentum_penalty,
         weight=0.0,
@@ -301,7 +312,7 @@ class _Go1RewardsCfg:
     )
     air_time = RewTerm(
         func=rew.feet_air_time,
-        weight=1.0,  # mjlab default for go1.
+        weight=0.0,  # mjlab go1 sets air_time weight 0.0 (config/go1/env_cfgs.py:208).
         params={
             "sensor_name": "feet_ground_contact",
             "threshold_min": 0.05,

@@ -150,7 +150,13 @@ _G1_ALL_JOINT_NAMES: tuple[str, ...] = (
     "right_wrist_yaw_joint",
 )
 _G1_JOINTS = SceneEntityCfg("g1", joint_names=_G1_ALL_JOINT_NAMES)
+# Root body (freejoint). Used for base lin/ang vel + projected-gravity OBS,
+# matching mjlab which reads root_link_* from the pelvis.
 _G1_TRUNK = SceneEntityCfg("g1", body_names=("pelvis",))
+# Torso body. mjlab's ``upright`` and ``body_ang_vel`` REWARDS read
+# ``torso_link`` (config/g1/env_cfgs.py:147-148), a different body than the
+# pelvis root, so the reward terms must target torso_link explicitly.
+_G1_TORSO = SceneEntityCfg("g1", body_names=("torso_link",))
 
 
 def reward_forward_velocity_g1(env, env_states, *, target: float = 0.5) -> torch.Tensor:
@@ -244,7 +250,7 @@ class _G1RewardsCfg:
     upright = RewTerm(
         func=rew.upright,
         weight=1.0,
-        params={"asset_cfg": _G1_TRUNK, "std": math.sqrt(0.2)},
+        params={"asset_cfg": _G1_TORSO, "std": math.sqrt(0.2)},
     )
     pose = RewTerm(
         func=rew.variable_posture,
@@ -252,33 +258,41 @@ class _G1RewardsCfg:
         params={
             "asset_cfg": _G1_JOINTS,
             "command_name": "twist",
-            # mjlab G1 stance: legs tight, arms looser to allow swing.
-            "std_standing": {
-                ".*hip.*": 0.10,
-                ".*knee.*": 0.15,
-                ".*ankle.*": 0.20,
-                ".*waist.*": 0.15,
-                ".*shoulder.*": 0.20,
-                ".*elbow.*": 0.25,
-                ".*wrist.*": 0.30,
-            },
+            # mjlab G1 stance — EXACT match to native std maps
+            # (config/g1/env_cfgs.py:107-145). Standing = uniform 0.05; walking
+            # and running use per-joint-group stds (legs/ankle/waist/arms).
+            "std_standing": {".*": 0.05},
             "std_walking": {
-                ".*hip.*": 0.20,
-                ".*knee.*": 0.30,
-                ".*ankle.*": 0.30,
-                ".*waist.*": 0.25,
-                ".*shoulder.*": 0.40,
-                ".*elbow.*": 0.50,
-                ".*wrist.*": 0.60,
+                r".*hip_pitch.*": 0.3,
+                r".*hip_roll.*": 0.15,
+                r".*hip_yaw.*": 0.15,
+                r".*knee.*": 0.35,
+                r".*ankle_pitch.*": 0.25,
+                r".*ankle_roll.*": 0.1,
+                r".*waist_yaw.*": 0.2,
+                r".*waist_roll.*": 0.08,
+                r".*waist_pitch.*": 0.1,
+                r".*shoulder_pitch.*": 0.15,
+                r".*shoulder_roll.*": 0.15,
+                r".*shoulder_yaw.*": 0.1,
+                r".*elbow.*": 0.15,
+                r".*wrist.*": 0.3,
             },
             "std_running": {
-                ".*hip.*": 0.30,
-                ".*knee.*": 0.45,
-                ".*ankle.*": 0.45,
-                ".*waist.*": 0.40,
-                ".*shoulder.*": 0.60,
-                ".*elbow.*": 0.70,
-                ".*wrist.*": 0.80,
+                r".*hip_pitch.*": 0.5,
+                r".*hip_roll.*": 0.2,
+                r".*hip_yaw.*": 0.2,
+                r".*knee.*": 0.6,
+                r".*ankle_pitch.*": 0.35,
+                r".*ankle_roll.*": 0.15,
+                r".*waist_yaw.*": 0.3,
+                r".*waist_roll.*": 0.08,
+                r".*waist_pitch.*": 0.2,
+                r".*shoulder_pitch.*": 0.5,
+                r".*shoulder_roll.*": 0.2,
+                r".*shoulder_yaw.*": 0.15,
+                r".*elbow.*": 0.35,
+                r".*wrist.*": 0.3,
             },
             "walking_threshold": 0.05,
             "running_threshold": 1.5,
@@ -288,7 +302,7 @@ class _G1RewardsCfg:
     body_ang_vel = RewTerm(
         func=rew.body_angular_velocity_penalty,
         weight=-0.05,
-        params={"asset_cfg": _G1_TRUNK},
+        params={"asset_cfg": _G1_TORSO},
     )
     dof_pos_limits = RewTerm(
         func=rew.joint_pos_limits,
@@ -298,8 +312,8 @@ class _G1RewardsCfg:
     action_rate_l2 = RewTerm(func=rew.action_rate_l2, weight=-0.1)
 
     # Sensor-dep — NOW FIRING with real sensors registered.
-    # mjlab G1 weights from mjlab/tasks/velocity/config/g1/env_cfgs.py:
-    #   angular_momentum: -0.02, air_time: 1.0
+    # mjlab G1 weights (config/g1/env_cfgs.py:153-155):
+    #   body_ang_vel: -0.05, angular_momentum: -0.02, air_time: 0.0
     angular_momentum = RewTerm(
         func=rew.angular_momentum_penalty,
         weight=-0.02,
@@ -307,7 +321,7 @@ class _G1RewardsCfg:
     )
     air_time = RewTerm(
         func=rew.feet_air_time,
-        weight=1.0,  # mjlab G1 default
+        weight=0.0,  # mjlab g1 sets air_time weight 0.0 (config/g1/env_cfgs.py:155).
         params={
             "sensor_name": "feet_ground_contact",
             "threshold_min": 0.05,
@@ -346,6 +360,13 @@ class _G1RewardsCfg:
         func=rew.soft_landing,
         weight=-1e-5,
         params={"sensor_name": "feet_ground_contact", "command_name": "twist", "command_threshold": 0.05},
+    )
+    # mjlab g1 keeps self_collisions on BOTH rough and flat
+    # (config/g1/env_cfgs.py:157-161; flat only drops terrain_scan/height_scan).
+    self_collisions = RewTerm(
+        func=rew.self_collision_cost,
+        weight=-1.0,
+        params={"sensor_name": "self_collision", "force_threshold": 10.0},
     )
 
 
@@ -482,6 +503,22 @@ class _G1TaskBase(ManagerBasedRVEnv):
                 name="robot/root_angmom",
                 field="subtree_angmom",
                 body_name="pelvis",
+            ),
+        )
+        # Self-collision contact sensor (mjlab config/g1/env_cfgs.py:69-77):
+        # subtree(pelvis) vs subtree(pelvis), history_length=4. The
+        # ``self_only`` flag restricts matched contacts to robot-internal pairs
+        # (both geoms inside the pelvis subtree), excluding foot-ground, so the
+        # self_collision_cost reward only counts genuine self-contacts.
+        self._mjlab_sensors["self_collision"] = ContactSensor(
+            self,
+            ContactSensorCfg(
+                name="self_collision",
+                primary_bodies=("pelvis",),
+                secondary_body=None,
+                self_only=True,
+                fields=("found", "force"),
+                history_length=4,
             ),
         )
 

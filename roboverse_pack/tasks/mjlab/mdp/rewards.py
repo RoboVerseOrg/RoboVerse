@@ -38,7 +38,15 @@ import warnings
 import numpy as np
 import torch
 
-from ._math import base_ang_vel_b, base_lin_vel_b, projected_gravity_b
+from ._math import (
+    GRAVITY_W,
+    base_ang_vel_b,
+    base_lin_vel_b,
+    body_ang_vel_w,
+    body_quat_w_xyzw,
+    projected_gravity_b,
+    quat_apply_inverse_xyzw,
+)
 from .scene_entity import (
     SceneEntityCfg,
     entity_joint_pos,
@@ -195,13 +203,25 @@ def upright(
 ) -> torch.Tensor:
     """Reward for keeping the base upright (no terrain-normal variant).
 
-    Penalizes the xy components of projected gravity in body frame —
-    they are zero when upright. ``mdp.upright`` port for the flat-ground
-    case (terrain-normal variant deferred to sensor wiring phase).
+    Penalizes the xy components of projected gravity expressed in the
+    *configured body's* frame — zero when upright. ``mdp.upright`` port for
+    the flat-ground case (terrain-normal variant deferred to sensor wiring).
+
+    mjlab projects ``gravity_vec_w`` into ``body_link_quat_w[body_ids]`` — the
+    orientation of the body named in ``asset_cfg.body_names`` (g1: ``torso_link``,
+    go1: ``trunk``), NOT necessarily the free-joint root. We read that body's
+    world quat so the frame matches mjlab even when the body ≠ root.
 
     Shape: ``(num_envs,)``.
     """
-    pg = projected_gravity_b(env, env_states, asset_cfg.name)
+    body_names = getattr(asset_cfg, "body_names", ()) or ()
+    if body_names:
+        body_name = body_names[0] if isinstance(body_names, (tuple, list)) else body_names
+        quat = body_quat_w_xyzw(env, env_states, asset_cfg.name, body_name)
+        gravity_w = torch.tensor(GRAVITY_W, device=env.device, dtype=torch.float32).expand(env.num_envs, -1)
+        pg = quat_apply_inverse_xyzw(quat, gravity_w)
+    else:
+        pg = projected_gravity_b(env, env_states, asset_cfg.name)
     xy_sq = pg[:, 0] ** 2 + pg[:, 1] ** 2
     return torch.exp(-xy_sq / std**2)
 
@@ -322,15 +342,24 @@ def body_angular_velocity_penalty(
     *,
     asset_cfg: SceneEntityCfg,
 ) -> torch.Tensor:
-    """Penalize base xy angular velocity (don't penalize yaw — that's commanded).
+    """Penalize body xy angular velocity (don't penalize yaw — that's commanded).
 
-    ``mdp.body_angular_velocity_penalty`` port using base ang vel as proxy
-    when no specific body subset is provided.
+    ``mdp.body_angular_velocity_penalty`` port. mjlab reads the *world-frame*
+    angular velocity of the configured body (``body_link_ang_vel_w[body_ids]``)
+    and squares its xy components — NOT the body-frame root ang vel. We read the
+    named body's world-frame ang vel so the frame + body both match mjlab
+    (g1: ``torso_link``); falls back to base-frame root ang vel only if no body
+    is configured.
 
     Shape: ``(num_envs,)`` — typically combined with a negative weight.
     """
-    ang_b = base_ang_vel_b(env, env_states, asset_cfg.name)
-    return ang_b[:, 0] ** 2 + ang_b[:, 1] ** 2
+    body_names = getattr(asset_cfg, "body_names", ()) or ()
+    if body_names:
+        body_name = body_names[0] if isinstance(body_names, (tuple, list)) else body_names
+        ang = body_ang_vel_w(env, env_states, asset_cfg.name, body_name)
+    else:
+        ang = base_ang_vel_b(env, env_states, asset_cfg.name)
+    return ang[:, 0] ** 2 + ang[:, 1] ** 2
 
 
 def joint_pos_limits(env, env_states, *, asset_cfg: SceneEntityCfg) -> torch.Tensor:

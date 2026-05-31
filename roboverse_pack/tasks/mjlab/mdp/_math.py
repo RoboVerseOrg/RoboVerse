@@ -186,3 +186,80 @@ def projected_gravity_b(env, env_states, asset_name: str) -> torch.Tensor:
     quat, _, _ = get_base_state(env, env_states, asset_name)
     gravity_w = torch.tensor(GRAVITY_W, device=env.device, dtype=torch.float32).expand(env.num_envs, -1)
     return quat_apply_inverse_xyzw(quat, gravity_w)
+
+
+# ---------------------------------------------------------------------------
+# Named-body world-frame readers.
+#
+# mjlab's ``upright`` and ``body_angular_velocity_penalty`` rewards do NOT read
+# the free-joint root; they read a *specific* body (``body_link_quat_w`` /
+# ``body_link_ang_vel_w`` indexed by ``asset_cfg.body_ids``). For go1 that body
+# (``trunk``) coincides with the root, but for g1 it is ``torso_link`` — a
+# different body than the ``pelvis`` root — so reading the root quat/angvel
+# diverges from mjlab. These helpers read the requested body by name from
+# MuJoCo (``data.xquat`` for orientation, ``mj_objectVelocity`` for the
+# world-frame spatial velocity) with a Newton ``body_state`` fallback.
+# ---------------------------------------------------------------------------
+
+
+def body_quat_w_xyzw(env, env_states, asset_name: str, body_name: str) -> torch.Tensor:
+    """World-frame orientation (xyzw) of a named body. Shape ``(num_envs, 4)``.
+
+    Mirrors mjlab ``asset.data.body_link_quat_w[:, body_ids]``.
+    """
+    handler = getattr(env, "handler", None)
+    physics = getattr(handler, "physics", None)
+    if physics is not None:
+        import mujoco
+
+        m = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
+        bid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, body_name)
+        if bid >= 0:
+            q = np.asarray(physics.data.xquat[bid], dtype=np.float32)  # wxyz
+            quat_xyzw = torch.tensor([q[1], q[2], q[3], q[0]], device=env.device, dtype=torch.float32)
+            return quat_xyzw.unsqueeze(0).expand(env.num_envs, -1)
+    # Newton fallback: pull the body's quat from the batched body_state.
+    rs = env_states.robots.get(asset_name) if asset_name in env_states.robots else None
+    if rs is not None and getattr(rs, "body_state", None) is not None:
+        names = rs.body_names
+        col = next(
+            (i for i, n in enumerate(names) if n == body_name or n.endswith("/" + body_name) or n.endswith(body_name)),
+            None,
+        )
+        if col is not None:
+            q_wxyz = rs.body_state[:, col, 3:7]
+            return torch.cat([q_wxyz[:, 1:4], q_wxyz[:, 0:1]], dim=-1)
+    # Last resort: root quat (correct when the body IS the root, e.g. go1 trunk).
+    quat, _, _ = get_base_state(env, env_states, asset_name)
+    return quat
+
+
+def body_ang_vel_w(env, env_states, asset_name: str, body_name: str) -> torch.Tensor:
+    """World-frame angular velocity of a named body. Shape ``(num_envs, 3)``.
+
+    Mirrors mjlab ``asset.data.body_link_ang_vel_w[:, body_ids]``.
+    """
+    handler = getattr(env, "handler", None)
+    physics = getattr(handler, "physics", None)
+    if physics is not None:
+        import mujoco
+
+        m = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
+        bid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, body_name)
+        if bid >= 0:
+            v = np.zeros(6, dtype=np.float64)
+            # flg_local=0 -> world frame; mj_objectVelocity returns (ang(3), lin(3)).
+            mujoco.mj_objectVelocity(m, physics.data.ptr, mujoco.mjtObj.mjOBJ_BODY, bid, v, 0)
+            ang_w = torch.tensor(v[:3], device=env.device, dtype=torch.float32)
+            return ang_w.unsqueeze(0).expand(env.num_envs, -1)
+    rs = env_states.robots.get(asset_name) if asset_name in env_states.robots else None
+    if rs is not None and getattr(rs, "body_state", None) is not None:
+        names = rs.body_names
+        col = next(
+            (i for i, n in enumerate(names) if n == body_name or n.endswith("/" + body_name) or n.endswith(body_name)),
+            None,
+        )
+        if col is not None:
+            return rs.body_state[:, col, 10:13]
+    _, _, ang_w = get_base_state(env, env_states, asset_name)
+    return ang_w

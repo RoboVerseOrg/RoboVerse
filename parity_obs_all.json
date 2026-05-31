@@ -111,53 +111,53 @@
     {
       "task": "mjlab.lift_cube_yam_v2",
       "obs_dim": 29,
-      "rv_dim": 18,
+      "rv_dim": 29,
       "max_dobs": null,
       "structural": false,
       "per_term": {},
       "joint_order_match": null,
       "notes": [
         "native_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('actions', 7)]",
-        "rv_actor_terms=[('joint_pos', 6), ('joint_vel', 6), ('last_action', 6)]"
+        "rv_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('last_action', 7)]"
       ]
     },
     {
       "task": "mjlab.lift_cube_yam_depth_v2",
       "obs_dim": 29,
-      "rv_dim": 4114,
+      "rv_dim": 4125,
       "max_dobs": null,
       "structural": false,
       "per_term": {},
       "joint_order_match": null,
       "notes": [
         "native_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('actions', 7)]",
-        "rv_actor_terms=[('joint_pos', 6), ('joint_vel', 6), ('last_action', 6), ('depth', 4096)]"
+        "rv_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('last_action', 7), ('depth', 4096)]"
       ]
     },
     {
       "task": "mjlab.lift_cube_yam_rgb_v2",
       "obs_dim": 29,
-      "rv_dim": 12306,
+      "rv_dim": 12317,
       "max_dobs": null,
       "structural": false,
       "per_term": {},
       "joint_order_match": null,
       "notes": [
         "native_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('actions', 7)]",
-        "rv_actor_terms=[('joint_pos', 6), ('joint_vel', 6), ('last_action', 6), ('rgb', 12288)]"
+        "rv_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('last_action', 7), ('rgb', 12288)]"
       ]
     },
     {
       "task": "mjlab.multi_cube_seg_yam_v2",
       "obs_dim": 29,
-      "rv_dim": 18,
+      "rv_dim": 29,
       "max_dobs": null,
       "structural": false,
       "per_term": {},
       "joint_order_match": null,
       "notes": [
         "native_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('actions', 7)]",
-        "rv_actor_terms=[('joint_pos', 6), ('joint_vel', 6), ('last_action', 6), ('seg', 0)]"
+        "rv_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('last_action', 7), ('seg', 0)]"
       ]
     },
     {
