@@ -144,11 +144,22 @@ def _replay_one(bridge: dict, args) -> dict:
 
     # Build object cfgs: real mesh where we have one, else a small primitive proxy.
     kinematic = args.mode == "kinematic"
-    phys = PhysicStateType.XFORM if kinematic else PhysicStateType.GEOM
-    objects, name_map, artic_names = [], {}, set()
+
+    def _moves(name):
+        tr = object_traj[name]
+        return len(tr) > 1 and float(np.ptp(np.asarray(tr)[:, :3], axis=0).max()) > 0.02
+
+    # In physics mode, only the *manipulated* (moving) object is dynamic; static
+    # targets (baskets/plates/boxes the object is placed into, which RoboTwin loads
+    # `is_static`) must be kinematic or they get knocked around and ejected.
+    objects, name_map, artic_names, dynamic_names = [], {}, set(), set()
     for n in manip:
         rv = _safe(n)
         name_map[n] = rv
+        is_dynamic = (not kinematic) and _moves(n)
+        phys = PhysicStateType.GEOM if is_dynamic else PhysicStateType.XFORM
+        if is_dynamic:
+            dynamic_names.add(rv)
         mesh = object_meshes.get(n)
         if mesh and mesh.get("type") == "urdf":
             # URDF-articulation object (pot / cabinet / laptop). RoboTwin sets the
@@ -166,7 +177,11 @@ def _replay_one(bridge: dict, args) -> dict:
                 # Joints move (door/lid/drawer opens) -> must be an articulation so we
                 # can drive its dof_pos per frame (the GLB bake is frozen at rest pose).
                 artic_names.add(rv)
-                objects.append(ArticulationObjCfg(name=rv, urdf_path=urdf_abs, fix_base_link=kinematic, scale=uscale))
+                objects.append(
+                    ArticulationObjCfg(
+                        name=rv, urdf_path=urdf_abs, fix_base_link=(phys == PhysicStateType.XFORM), scale=uscale
+                    )
+                )
                 continue
             # Static URDF object: prefer a textured GLB baked from the URDF (rest pose)
             # so .mtl textures render; fall back to ArticulationObjCfg if the bake fails.
@@ -175,15 +190,23 @@ def _replay_one(bridge: dict, args) -> dict:
                 urdf = _glb_to_urdf(
                     os.path.abspath(glb), (uscale, uscale, uscale), "outputs/robotwin_coverage/_obj_urdf", rv
                 )
-                objects.append(RigidObjCfg(name=rv, urdf_path=urdf, physics=phys, fix_base_link=kinematic))
+                objects.append(
+                    RigidObjCfg(name=rv, urdf_path=urdf, physics=phys, fix_base_link=(phys == PhysicStateType.XFORM))
+                )
             else:
                 artic_names.add(rv)
-                objects.append(ArticulationObjCfg(name=rv, urdf_path=urdf_abs, fix_base_link=kinematic, scale=uscale))
+                objects.append(
+                    ArticulationObjCfg(
+                        name=rv, urdf_path=urdf_abs, fix_base_link=(phys == PhysicStateType.XFORM), scale=uscale
+                    )
+                )
         elif mesh and mesh.get("visual"):
             # Rigid mesh object: wrap the GLB/OBJ in a minimal URDF for sapien3.
             mesh_abs = os.path.join(args.robotwin_dir, mesh["visual"])
             urdf = _glb_to_urdf(mesh_abs, mesh.get("scale"), "outputs/robotwin_coverage/_obj_urdf", rv)
-            objects.append(RigidObjCfg(name=rv, urdf_path=urdf, physics=phys, fix_base_link=kinematic))
+            objects.append(
+                RigidObjCfg(name=rv, urdf_path=urdf, physics=phys, fix_base_link=(phys == PhysicStateType.XFORM))
+            )
         else:
             objects.append(PrimitiveCubeCfg(name=rv, size=(0.05, 0.05, 0.05), color=[0.8, 0.2, 0.2], physics=phys))
     # Static table surface proxy (RoboTwin's table top sits at z=0.74).
@@ -318,6 +341,8 @@ def _replay_one(bridge: dict, args) -> dict:
                 handler.simulate()
             state = handler.get_states(mode="tensor")
             for n in manip:
+                if name_map[n] not in dynamic_names:
+                    continue  # static targets stay put; only measure the moving object
                 root = state.objects[name_map[n]].root_state[0].detach().cpu().numpy()
                 rv_obj_traj[n].append(root[:7])  # [x,y,z, qw,qx,qy,qz]
         if obs_saver is not None:
@@ -330,6 +355,8 @@ def _replay_one(bridge: dict, args) -> dict:
     result = {"task": task, "mode": args.mode, "frames": n_frames, "objects": {}}
     if not kinematic:
         for n in manip:
+            if name_map[n] not in dynamic_names:
+                continue
             rt = object_traj[n][1:]
             rv = np.asarray(rv_obj_traj[n])
             m = min(len(rt), len(rv))
