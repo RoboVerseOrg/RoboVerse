@@ -49,6 +49,9 @@ DEPTH_EPSILON = 1e-8
 class SinglePybulletHandler(BaseSimHandler):
     """Pybullet Handler class."""
 
+    # ``_set_states`` indexes per-env dicts; the base converts TensorState input.
+    _set_states_input_type = "dict"
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         """Initialize the Pybullet Handler.
 

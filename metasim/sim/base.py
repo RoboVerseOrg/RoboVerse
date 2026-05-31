@@ -26,7 +26,40 @@ except ImportError:
 
 
 class BaseSimHandler(ABC):
-    """Base class for simulation handler."""
+    """Base class for simulation handler.
+
+    Contract summary (enforced by ``@abstractmethod`` unless noted):
+
+    Required by every backend:
+        - ``_set_states(states, env_ids=None)``
+        - ``_set_dof_targets(actions)``
+        - ``_get_states(env_ids=None)``
+        - ``_simulate()``
+
+    Required by every backend, enforced only with a runtime
+    ``NotImplementedError`` (kept un-decorated to avoid breaking
+    historical handler stubs that subclassed without the method):
+        - ``close()``
+        - ``device`` (property)
+
+    Optional / sensible defaults provided:
+        - ``render()`` — backends without a viewer raise; that's expected.
+        - ``refresh_render()`` — no-op default; hybrid backends override.
+        - ``_get_joint_names(obj_name, sort=True)`` — returns ``[]``
+          (consistent with the docstring saying "for non-articulation
+          objects, return an empty list").
+        - ``_get_body_names(obj_name, sort=True)`` — returns ``[]``.
+        - ``flush_visual_updates(**kwargs)`` — no-op; backends with
+          independent renderers override.
+
+    Backends also declare what their ``_set_states`` accepts via the
+    class attribute ``_set_states_input_type``. ``"both"`` (the default)
+    passes the caller's input through untouched; ``"dict"`` means the
+    handler only consumes ``list[DictEnvState]`` and the base converts
+    a ``TensorState`` for it.
+    """
+
+    _set_states_input_type: Literal["dict", "both"] = "both"
 
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         self.scenario = scenario
@@ -61,6 +94,21 @@ class BaseSimHandler(ABC):
         cache on the base ensures every handler honours the contract.
         """
         return getattr(self, "_actions_cache", None)
+
+        # When True, ``flush_visual_updates`` is deferred — the domain
+        # randomization pipeline sets this to batch many visual edits and
+        # flush once. Declared on the base so randomizers can set it
+        # uniformly regardless of backend.
+        self._defer_all_visual_flushes: bool = False
+
+    def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
+        """Settle pending visual edits (no-op by default).
+
+        Backends that drive a renderer independently from the physics
+        step (Isaac Sim, hybrid Blender) override this to step the render
+        pipeline forward; physics-only backends keep the no-op.
+        """
+        return
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -100,9 +148,24 @@ class BaseSimHandler(ABC):
         raise NotImplementedError
 
     def _invalidate_state_caches(self) -> None:
-        """Mark both tensor and dict state caches as stale."""
+        """Mark both tensor and dict state caches as stale.
+
+        Called automatically by ``set_states``/``simulate``. Subclasses or
+        custom mutation paths (e.g. randomizers that poke the underlying
+        sim outside the public API) must call ``invalidate_state_caches``
+        themselves, since the base handler cannot detect those edits.
+        """
         self._tensor_state_cache = None
         self._dict_state_cache = None
+
+    def invalidate_state_caches(self) -> None:
+        """Public alias for ``_invalidate_state_caches``.
+
+        Use this from any code path that mutates physics state outside
+        ``set_states``/``simulate`` so subsequent ``get_states`` calls
+        refetch from the simulator instead of returning stale values.
+        """
+        self._invalidate_state_caches()
 
     ############################################################
     ## Reproducibility
@@ -225,10 +288,31 @@ class BaseSimHandler(ABC):
         self._set_states_partial_pose_warned = partial_pose_seen
 
     def set_states(self, states: TensorState | DictStateBatch, env_ids: list[int] | None = None) -> None:
-        """Set the states of the environment."""
+        """Set the states of the environment.
+
+        Input is first normalised to the shape the backend declared via
+        ``_set_states_input_type``. Cache invalidation runs *after*
+        ``_set_states`` returns (via try/finally): if anything inside the
+        mutation re-enters ``get_states``, the pre-mutation cache must
+        not survive past it.
+
+        Also runs ``_warn_set_states_keys`` against the raw dict input so
+        silent-drop / partial-pose / read-only-key mistakes surface as a
+        one-shot warning (see :py:meth:`_warn_set_states_keys`).
+        """
         self._warn_set_states_keys(states)
-        self._invalidate_state_caches()
-        self._set_states(states, env_ids)
+        normalised = self._normalise_set_states_input(states)
+        try:
+            self._set_states(normalised, env_ids)
+        finally:
+            self._invalidate_state_caches()
+
+    def _normalise_set_states_input(self, states):
+        """Coerce ``states`` to the shape declared by ``_set_states_input_type``."""
+        wanted = type(self)._set_states_input_type
+        if wanted == "dict" and isinstance(states, TensorState):
+            return state_tensor_to_nested(self, states)
+        return states
 
     @abstractmethod
     def _set_dof_targets(self, actions: CompatActionInput) -> None:
@@ -416,29 +500,34 @@ class BaseSimHandler(ABC):
         raise NotImplementedError
 
     def simulate(self):
-        """Simulate the environment."""
-        self._invalidate_state_caches()
-        self._simulate()
+        """Simulate the environment.
+
+        See ``set_states`` for the rationale on invalidating after the
+        mutation rather than before.
+        """
+        try:
+            self._simulate()
+        finally:
+            self._invalidate_state_caches()
 
     ############################################################
     ## Misc
     ############################################################
-    # @abstractmethod
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the joint names for a given object.
-        For a new simulator, you should implement this method.
 
-        Note:
-            Different simulators may have different joint order, but joint names should be the same.
+        Default implementation returns an empty list, matching the
+        documented contract "for non-articulation objects, return an
+        empty list". Articulation-aware backends override.
 
         Args:
             obj_name (str): The name of the object.
-            sort (bool): Whether to sort the joint names. Default is True. If True, the joint names are returned in alphabetical order. If False, the joint names are returned in the order defined by the simulator.
+            sort (bool): Whether to sort the joint names alphabetically.
 
         Returns:
-            list[str]: A list of joint names. For non-articulation objects, return an empty list.
+            list[str]: A list of joint names, or ``[]`` for non-articulations.
         """
-        raise NotImplementedError
+        return []
 
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the joint names for a given object."""
@@ -487,22 +576,21 @@ class BaseSimHandler(ABC):
 
         return self._joint_reindex_cache_inverse[obj_name] if inverse else self._joint_reindex_cache[obj_name]
 
-    # @abstractmethod
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the body names for a given object.
-        For a new simulator, you should implement this method.
 
-        Note:
-            Different simulators may have different body order, but body names should be the same.
+        Default implementation returns an empty list, matching the
+        documented contract "for non-articulation objects, return an
+        empty list". Articulation-aware backends override.
 
         Args:
             obj_name (str): The name of the object.
-            sort (bool): Whether to sort the body names. Default is True. If True, the body names are returned in alphabetical order. If False, the body names are returned in the order defined by the simulator.
+            sort (bool): Whether to sort the body names alphabetically.
 
         Returns:
-            list[str]: A list of body names. For non-articulation objects, return an empty list.
+            list[str]: A list of body names, or ``[]`` for non-articulations.
         """
-        raise NotImplementedError
+        return []
 
     def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the body names for a given object."""

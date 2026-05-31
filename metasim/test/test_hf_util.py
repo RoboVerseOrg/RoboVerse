@@ -60,8 +60,11 @@ def test_check_and_download_single_falls_back_to_private_roboverse_data(monkeypa
         ("RoboVerseOrg/roboverse_data", "private/object.usd", "dataset"),
         ("SomaStacksOrg/roboverse_data", "private/object.usd", "dataset"),
     ]
+    # ``hf_util.LOCAL_DIR`` is resolved to an absolute path at import time
+    # (M5: ``hf_util: make LOCAL_DIR absolute and reject path traversal``)
+    # so the test must reference the constant rather than the literal name.
     assert download_calls == [
-        ("SomaStacksOrg/roboverse_data", "private/object.usd", "dataset", "roboverse_data"),
+        ("SomaStacksOrg/roboverse_data", "private/object.usd", "dataset", hf_util.LOCAL_DIR),
     ]
 
 

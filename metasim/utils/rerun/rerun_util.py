@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import math
 import os
-import xml.etree.ElementTree as ET
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from pathlib import Path
 
 import numpy as np

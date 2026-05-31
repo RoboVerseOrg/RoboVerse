@@ -54,14 +54,20 @@ def get_sim_handler_class(sim: SimType):
         The simulator handler class.
     """
     if sim == SimType.ISAACLAB:
-        try:
-            from metasim.sim.isaaclab import IsaaclabHandler
+        # Backward-compat shim: the standalone IsaacLab handler was removed in
+        # commit b752bb2 (C3). Existing callers that pass SimType.ISAACLAB
+        # are routed to the IsaacSim handler, which uses the ``isaaclab``
+        # Python package internally and is the modern successor.
+        import warnings
 
-            return IsaaclabHandler
-        except ImportError as e:
-            log.error("IsaacLab is not installed, please install it first")
-            raise e
-    elif sim == SimType.ISAACGYM:
+        warnings.warn(
+            "SimType.ISAACLAB is deprecated; use SimType.ISAACSIM. "
+            "Dispatching to the IsaacSim handler.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        sim = SimType.ISAACSIM
+    if sim == SimType.ISAACGYM:
         try:
             from metasim.sim.isaacgym import IsaacgymHandler
 

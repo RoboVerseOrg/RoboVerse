@@ -84,7 +84,7 @@ _REQUIRED_METHODS = (
 _KNOWN_GAPS: dict[tuple[str, str], str] = {
     ("PyrepHandler", "_get_joint_names"): "pyrep RLBench backend in transition",
     ("PyrepHandler", "_get_body_names"): "pyrep RLBench backend in transition",
-    ("PyrepHandler", "close"): "pyrep RLBench backend in transition",
+    # PyrepHandler.close gap closed by pr/audit-fixes 22ad5ca (stub handler).
     ("SinglePybulletHandler", "_get_body_names"): "pybullet backend partially implemented",
     ("GenesisHandler", "_get_body_names"): "genesis backend partially implemented",
 }

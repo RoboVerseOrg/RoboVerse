@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import math
 import os
-import xml.etree.ElementTree as ET
 from copy import deepcopy
 
 import numpy as np
@@ -37,6 +36,7 @@ from metasim.types import CompatActionInput
 from metasim.utils.gs_util import alpha_blend_rgba
 from metasim.utils.math import quat_from_euler_np
 from metasim.utils.state import CameraState, ObjectState, RobotState, TensorState, adapt_actions_to_dict
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 
 from .sapien2 import _load_init_pose
 
@@ -139,6 +139,9 @@ def load_actor_from_urdf(
 
 class Sapien3Handler(BaseSimHandler):
     """Sapien3 Handler class."""
+
+    # ``_set_states`` indexes per-env dicts; the base converts TensorState input.
+    _set_states_input_type = "dict"
 
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         assert parse_version(sapien.__version__) >= parse_version("3.0.0a0"), "Sapien3 is required"
@@ -494,15 +497,16 @@ class Sapien3Handler(BaseSimHandler):
 
     def close(self):
         # Idempotent close. Guard ``self.viewer`` with a None check so
-        # that close() called before launch() (e.g. failed __init__) and
-        # close() called twice both no-op cleanly instead of raising
-        # AttributeError on a missing viewer.
+        # close() called before launch() (e.g. failed __init__) and close()
+        # called twice both no-op cleanly instead of raising AttributeError.
+        # Teardown errors are logged at WARN — silent ``pass`` previously
+        # masked real failures during interpreter shutdown.
         viewer = getattr(self, "viewer", None)
         if not self.headless and viewer is not None:
             try:
                 viewer.close()
-            except Exception:
-                pass
+            except Exception as err:
+                log.warning(f"Sapien3 viewer.close() raised during teardown: {err}")
         self.viewer = None
         self.scene = None
 

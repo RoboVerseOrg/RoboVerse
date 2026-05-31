@@ -17,7 +17,6 @@ class PhysicStateType(enum.IntEnum):
 class SimType(enum.Enum):
     """Simulator type."""
 
-    ISAACLAB = "isaaclab"
     ISAACSIM = "isaacsim"
     ISAACGYM = "isaacgym"
     GENESIS = "genesis"
@@ -29,3 +28,11 @@ class SimType(enum.Enum):
     BLENDER = "blender"
     MJX = "mjx"
     NEWTON = "newton"
+    # Deprecated alias. The standalone IsaacLab handler was removed; the
+    # IsaacSim handler now uses the ``isaaclab`` Python package directly.
+    # Existing call sites that still reference ``SimType.ISAACLAB``
+    # (e.g. ``scripts/conversion/convert_traj_v1_to_v2.py``) keep working
+    # — the dispatcher routes ISAACLAB → ISAACSIM and emits a
+    # DeprecationWarning on first use. Remove once downstream stops
+    # referencing this enum value.
+    ISAACLAB = "isaaclab"

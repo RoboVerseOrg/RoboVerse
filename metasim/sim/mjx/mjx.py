@@ -308,7 +308,8 @@ class MJXHandler(BaseSimHandler):
         # GUI window). Headless-with-camera would never close the
         # viewer it didn't have; headed-without-camera would skip closing
         # the viewer that DID exist. Each handle is now independently
-        # guarded and nullified after close.
+        # guarded and nullified after close so a second close() call is
+        # a clean no-op rather than re-closing a torn-down handle.
         viewer = getattr(self, "_viewer", None)
         if viewer is not None:
             try:

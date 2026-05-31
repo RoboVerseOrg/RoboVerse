@@ -41,16 +41,20 @@ class ScenarioCfg:
     # runtime
     render: RenderCfg = RenderCfg()
     sim_params: SimParamCfg = SimParamCfg()
+    # Must list every value in ``metasim.constants.SimType``. Keep alphabetised.
     simulator: (
         Literal[
-            "isaaclab",
+            "blender",
+            "genesis",
             "isaacgym",
+            "isaacsim",
+            "mjx",
+            "mujoco",
+            "newton",
+            "pybullet",
+            "pyrep",
             "sapien2",
             "sapien3",
-            "genesis",
-            "pybullet",
-            "mujoco",
-            "blender",
         ]
         | None
     ) = None

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import gc
-import xml.etree.ElementTree as ET
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from typing import TYPE_CHECKING
 
 import torch

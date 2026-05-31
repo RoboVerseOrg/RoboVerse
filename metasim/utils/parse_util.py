@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import os
-import xml.etree.ElementTree as ET
 from pathlib import Path
+
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 
 
 def extract_mesh_paths_from_urdf(urdf_file_path):
@@ -123,75 +124,99 @@ def _extract_mtl_textures(mtl_file_path):
     return textures
 
 
-def extract_paths_from_mjcf(xml_file_path: str) -> list[str]:
-    """Extract all referenced mesh, texture, and include-xml file paths from a MuJoCo XML file.
+def extract_paths_from_mjcf(xml_file_path: str, _max_include_depth: int = 8) -> list[str]:
+    """Extract referenced mesh, texture, and include-xml paths from a MuJoCo XML.
+
+    Follows ``<include file="..."/>`` transitively so a scene that pulls
+    in a robot file which itself includes a materials file resolves the
+    deeper mesh/texture references too. Already-visited absolute paths
+    are tracked to break include cycles.
 
     Args:
-        xml_file_path (str): Path to the MuJoCo XML file
+        xml_file_path: Path to the MuJoCo XML file.
+        _max_include_depth: Hard cap on include recursion, guarding
+            against a pathological mutually-recursive XML.
 
     Returns:
-        list: List of absolute paths to all referenced mesh, texture, and include-xml files
+        list[str]: Absolute paths to every referenced mesh, texture, and
+        ``<include>`` XML, plus the transitive references of those includes.
     """
-    path = Path(xml_file_path)
-    # Read MJCF XML as UTF-8 and replace invalid bytes (Windows default encoding can be cp1252)
-    mujoco_xml = path.read_text(encoding="utf-8", errors="replace")
-    try:
-        root = ET.fromstring(mujoco_xml)
-    except ET.ParseError as err:
-        # Some shipped MJCF files (e.g. roboverse_data/robots/franka/mjcf/mjx_panda.xml)
-        # are tolerated by MuJoCo's own native parser but tripped up by
-        # Python's strict ET.fromstring (unbalanced ``<body>`` tags, etc.).
-        # The whole ``check_assets`` path skipped the test instead of letting
-        # the backend's own loader handle the file. Treat the parse failure
-        # as "no extractable mesh/texture/include paths to download" — the
-        # backend's own MJCF parser will either succeed or fail with a more
-        # specific error at launch time.
-        from loguru import logger as _log
+    visited: set[str] = set()
 
-        _log.warning(
-            f"extract_paths_from_mjcf: strict-XML parse failed on {xml_file_path} ({err}); "
-            f"skipping asset extraction. Backend's own MJCF parser may still accept this file."
-        )
-        return []
+    def _collect(file_path: str, depth: int) -> list[str]:
+        path = Path(file_path)
+        resolved = str(path.resolve())
+        if resolved in visited:
+            return []
+        visited.add(resolved)
+        if depth > _max_include_depth:
+            return []
 
-    # Parse compiler asset directories. Per the MJCF spec, `assetdir` sets the
-    # default search path for BOTH meshes and textures; `meshdir`/`texturedir`,
-    # when present, override it for their respective asset types. Honoring
-    # `assetdir` lets robots that use only the combined attribute (e.g. several
-    # mujoco_menagerie models: google_robot, hello_robot_stretch) resolve their
-    # meshes locally instead of falling through to a doomed HuggingFace fetch.
-    compiler_node = root.find(".//compiler")
-    assetdir = compiler_node.get("assetdir") if compiler_node is not None else None
-    meshdir = compiler_node.get("meshdir") if compiler_node is not None else None
-    texturedir = compiler_node.get("texturedir") if compiler_node is not None else None
+        try:
+            mujoco_xml = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            # If a transitive include points to a file we haven't fetched
+            # yet, we still want the caller (hf_util) to attempt download
+            # — return the absolute path so it's enqueued, but stop
+            # recursing into a file we can't read.
+            return []
 
-    # Handle texture paths
-    texture_basepath = path.parent
-    if texturedir is not None:
-        texture_basepath = texture_basepath / texturedir
-    elif assetdir is not None:
-        texture_basepath = texture_basepath / assetdir
-    texture_nodes = root.findall(".//texture")
-    texture_relpaths = [texture.get("file") for texture in texture_nodes if texture.get("file") is not None]
-    texture_abspaths = [texture_basepath / rel for rel in texture_relpaths]
+        try:
+            root = ET.fromstring(mujoco_xml)
+        except ET.ParseError as err:
+            # Some shipped MJCF files (e.g. originally roboverse_data/robots/
+            # franka/mjcf/mjx_panda.xml before its fix) are tolerated by
+            # MuJoCo's native parser but trip up Python's strict ET — unbalanced
+            # ``<body>`` tags, missing wrappers, etc. Treat as "no extractable
+            # paths to download" so the backend's own loader gets a chance to
+            # surface a more specific error at launch time.
+            from loguru import logger as _log
 
-    # Parse meshdir (falls back to assetdir)
-    mesh_basepath = path.parent
-    if meshdir is not None:
-        mesh_basepath = mesh_basepath / meshdir
-    elif assetdir is not None:
-        mesh_basepath = mesh_basepath / assetdir
+            _log.warning(
+                f"extract_paths_from_mjcf: strict-XML parse failed on {file_path} ({err}); "
+                f"skipping asset extraction. Backend's own MJCF parser may still accept this file."
+            )
+            return []
 
-    # Handle mesh paths
-    mesh_nodes = root.findall(".//mesh")
-    mesh_relpaths = [mesh.get("file") for mesh in mesh_nodes if mesh.get("file") is not None]
-    mesh_abspaths = [mesh_basepath / rel for rel in mesh_relpaths]
+        # Parse compiler asset directories. Per the MJCF spec, ``assetdir``
+        # sets the default search path for BOTH meshes and textures;
+        # ``meshdir`` / ``texturedir`` override it for their respective asset
+        # types. Honouring ``assetdir`` lets robots that use only the combined
+        # attribute (e.g. google_robot, hello_robot_stretch in mujoco_menagerie)
+        # resolve meshes locally instead of falling through to a doomed
+        # HuggingFace fetch.
+        compiler_node = root.find(".//compiler")
+        assetdir = compiler_node.get("assetdir") if compiler_node is not None else None
+        meshdir = compiler_node.get("meshdir") if compiler_node is not None else None
+        texturedir = compiler_node.get("texturedir") if compiler_node is not None else None
 
-    # Handler include-xml
-    include_nodes = root.findall(".//include")
-    include_relpaths = [include.get("file") for include in include_nodes if include.get("file") is not None]
-    include_abspaths = [path.parent / rel for rel in include_relpaths]
+        texture_basepath = path.parent
+        if texturedir is not None:
+            texture_basepath = texture_basepath / texturedir
+        elif assetdir is not None:
+            texture_basepath = texture_basepath / assetdir
+        texture_relpaths = [t.get("file") for t in root.findall(".//texture") if t.get("file") is not None]
+        texture_abspaths = [texture_basepath / rel for rel in texture_relpaths]
 
-    paths = texture_abspaths + mesh_abspaths + include_abspaths
-    paths = [str(path.resolve()) for path in paths]
-    return paths
+        mesh_basepath = path.parent
+        if meshdir is not None:
+            mesh_basepath = mesh_basepath / meshdir
+        elif assetdir is not None:
+            mesh_basepath = mesh_basepath / assetdir
+        mesh_relpaths = [m.get("file") for m in root.findall(".//mesh") if m.get("file") is not None]
+        mesh_abspaths = [mesh_basepath / rel for rel in mesh_relpaths]
+
+        include_relpaths = [i.get("file") for i in root.findall(".//include") if i.get("file") is not None]
+        include_abspaths = [path.parent / rel for rel in include_relpaths]
+
+        own_paths = [str(p.resolve()) for p in texture_abspaths + mesh_abspaths + include_abspaths]
+
+        # Recurse into includes that exist on disk; for missing ones we
+        # already enqueued the absolute path above.
+        for inc_abs in include_abspaths:
+            if inc_abs.exists():
+                own_paths.extend(_collect(str(inc_abs), depth + 1))
+
+        return own_paths
+
+    return _collect(xml_file_path, depth=0)

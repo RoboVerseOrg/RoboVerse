@@ -708,6 +708,14 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_seg_data = instance_seg_data.squeeze(-1)
             if instance_id_seg_data is not None:
                 instance_id_seg_data = instance_id_seg_data.squeeze(-1)
+            # Depth comes in as ``(envs, H, W, 1)``; ``CameraState.depth`` is
+            # documented as rank 3 (``(envs, H, W)``). Match the existing
+            # instance-seg squeeze convention so ``CameraState`` validation
+            # doesn't reject the tensor. The GS-blending branch below
+            # rebuilds depth_data with its own ``unsqueeze(-1)`` so we
+            # don't have to track shapes through that path either.
+            if depth_data is not None and depth_data.ndim == 4 and depth_data.shape[-1] == 1:
+                depth_data = depth_data.squeeze(-1)
 
             # GS background blending
             if (

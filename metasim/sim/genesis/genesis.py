@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-import xml.etree.ElementTree as ET
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -59,6 +59,10 @@ except ImportError:
 
 
 class GenesisHandler(BaseSimHandler):
+    # ``_set_states`` indexes ``state["objects"]`` directly, so it only
+    # accepts the list-of-dict form; the base converts TensorState input.
+    _set_states_input_type = "dict"
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
         self._actions_cache: CompatActionInput = []
