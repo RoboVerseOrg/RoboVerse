@@ -156,11 +156,15 @@ def _replay_one(bridge: dict, args) -> dict:
     for n in manip:
         rv = _safe(n)
         name_map[n] = rv
-        is_dynamic = (not kinematic) and _moves(n)
+        mesh = object_meshes.get(n)
+        # Prefer RoboTwin's captured is_static flag; fall back to inferring from
+        # whether the recorded trajectory actually moved.
+        captured_static = mesh.get("is_static") if mesh else None
+        is_static = captured_static if captured_static is not None else (not _moves(n))
+        is_dynamic = (not kinematic) and not is_static
         phys = PhysicStateType.GEOM if is_dynamic else PhysicStateType.XFORM
         if is_dynamic:
             dynamic_names.add(rv)
-        mesh = object_meshes.get(n)
         if mesh and mesh.get("type") == "urdf":
             # URDF-articulation object (pot / cabinet / laptop). RoboTwin sets the
             # loader scale to model_data["scale"][0]; reproduce it or the object

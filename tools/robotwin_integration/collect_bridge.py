@@ -201,6 +201,28 @@ def _install_mesh_hook(pt) -> dict:
         eu = _sys.modules.get("envs.utils")
         if eu is not None and hasattr(eu, "create_box"):
             eu.create_box = hooked_box
+
+    # Capture create_actor's is_static flag (e.g. baskets/scales loaded static) so
+    # the replay can match RoboTwin's static/dynamic choice exactly rather than
+    # inferring it from whether the object moved. create_actor signature:
+    # (scene, pose, modelname, scale, convex, is_static, model_id).
+    if hasattr(cau, "create_actor"):
+        orig_ca = cau.create_actor
+
+        def hooked_ca(scene, pose, modelname, *a, **k):
+            r = orig_ca(scene, pose, modelname, *a, **k)
+            try:
+                is_static = k.get("is_static", a[2] if len(a) >= 3 else False)
+                if modelname in sink:
+                    sink[modelname]["is_static"] = bool(is_static)
+            except Exception:
+                pass
+            return r
+
+        cau.create_actor = hooked_ca
+        eu = _sys.modules.get("envs.utils")
+        if eu is not None and hasattr(eu, "create_actor"):
+            eu.create_actor = hooked_ca
     return sink
 
 
