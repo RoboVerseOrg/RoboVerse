@@ -123,6 +123,21 @@ class MJXHandler(BaseSimHandler):
 
         if not self.headless:
             self._viewer = mujoco.viewer.launch_passive(self._mj_model, self._render_data)
+
+        # Eagerly compile + allocate the MJX data buffer here so that
+        # ``set_dof_targets`` / ``get_states`` can be called immediately
+        # after launch without first going through ``set_states``. Other
+        # backends (mujoco / sapien3 / newton / isaacsim) have ``_data``
+        # available after launch; MJX previously deferred allocation to
+        # the first ``set_states`` call, breaking the cross-backend
+        # contract that handler methods work right after ``launch()``.
+        # ``_init_mjx_once`` (called from set_states later) is guarded
+        # by the ``_mjx_done`` flag so it stays a no-op.
+        if not getattr(self, "_mjx_done", False):
+            self._init_mjx()
+            self._ensure_id_cache()  # populate joint/actuator id maps from self.robots / self.objects
+            self._mjx_done = True
+
         log.info(f"MJXHandler launched · envs={self.num_envs}")
         log.warning("MJX currently does not support batch rendering — only env_id = 0 will be used for camera output")
 
@@ -309,17 +324,32 @@ class MJXHandler(BaseSimHandler):
                 pass
             self._renderer = None
 
-    def _ensure_id_cache(self, ts: TensorState):
-        """Build joint-/actuator-ID lookup tables (one-time per handler)."""
+    def _ensure_id_cache(self, ts: TensorState | None = None):
+        """Build joint-/actuator-ID lookup tables (one-time per handler).
+
+        Accepts ``ts=None`` so the cache can be populated from
+        ``self.robots`` / ``self.objects`` names alone — needed because
+        ``set_dof_targets`` / ``get_states`` can now be called
+        immediately after ``launch()`` without first going through
+        ``set_states`` (which used to be the only entry that supplied a
+        TensorState here).
+        """
         if hasattr(self, "_robot_joint_ids"):
             return
 
         mjm = self._mj_model
         mjx_m = self._mjx_model
 
+        if ts is not None:
+            robot_names = list(ts.robots)
+            object_names = list(ts.objects)
+        else:
+            robot_names = [r.name for r in self.robots]
+            object_names = [o.name for o in self.objects]
+
         # ----- robots ----------------------------------------------------
         self._robot_joint_ids, self._robot_act_ids = {}, {}
-        for rname in ts.robots:
+        for rname in robot_names:
             full_jnames = [f"{rname}/{jn}" for jn in self._get_jnames(rname, sort=True)]
             j_ids = [mujoco.mj_name2id(mjm, mujoco.mjtObj.mjOBJ_JOINT, n) for n in full_jnames]
             a_ids = sorted_actuator_ids(mjx_m, f"{rname}/")
@@ -328,7 +358,7 @@ class MJXHandler(BaseSimHandler):
 
         # ----- objects ---------------------------------------------------
         self._object_joint_ids, self._object_act_ids = {}, {}
-        for oname in ts.objects:
+        for oname in object_names:
             full_jnames = [f"{oname}/{jn}" for jn in self._get_jnames(oname, sort=True)]
             j_ids = [mujoco.mj_name2id(mjm, mujoco.mjtObj.mjOBJ_JOINT, n) for n in full_jnames]
             a_ids = sorted_actuator_ids(mjx_m, f"{oname}/")

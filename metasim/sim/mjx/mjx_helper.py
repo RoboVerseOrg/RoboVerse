@@ -18,12 +18,19 @@ def t2j(arr: torch.Tensor, device: str | torch.device | None = "cuda") -> jnp.nd
     if device is not None and arr.device != torch.device(device):
         arr = arr.to(device, non_blocking=True)
 
-    # Try JAX 7.0+ new API first
+    # JAX 0.10+ requires that the input expose ``__dlpack__`` directly.
+    # Torch tensors satisfy that protocol natively, so try passing the
+    # tensor straight in first — fall back to the legacy wrapped path
+    # for older JAX builds. Catch ``TypeError`` (newer JAX) and
+    # ``AttributeError`` (older JAX missing ``from_dlpack``) so the
+    # cascade works across both API generations.
     try:
-        return jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
-    except AttributeError:
-        # Fallback to old API
-        return jax.dlpack.from_dlpack(arr.__dlpack__())
+        return jax.dlpack.from_dlpack(arr)
+    except (TypeError, AttributeError):
+        try:
+            return jax.dlpack.from_dlpack(torch.utils.dlpack.to_dlpack(arr))
+        except AttributeError:
+            return jax.dlpack.from_dlpack(arr.__dlpack__())
 
 
 def j2t(a: jax.Array, device="cuda") -> torch.Tensor:
@@ -34,12 +41,16 @@ def j2t(a: jax.Array, device="cuda") -> torch.Tensor:
         if a.device.platform != plat:
             a = jax.device_put(a, jax.devices(plat)[tgt.index or 0])
 
-    # Try JAX 7.0+ new API first
+    # Symmetric to ``t2j``: newer torch.from_dlpack accepts the JAX array
+    # directly via ``__dlpack__`` protocol; older builds need an explicit
+    # wrap. Catch both TypeError and AttributeError for cross-version safety.
     try:
-        return torch.from_dlpack(jax.dlpack.to_dlpack(a))
-    except AttributeError:
-        # Fallback to old API
-        return torch.from_dlpack(a.__dlpack__())
+        return torch.from_dlpack(a)
+    except (TypeError, AttributeError):
+        try:
+            return torch.from_dlpack(jax.dlpack.to_dlpack(a))
+        except AttributeError:
+            return torch.from_dlpack(a.__dlpack__())
 
 
 # -----------------------------------------------------------------------------

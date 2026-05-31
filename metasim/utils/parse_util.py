@@ -135,7 +135,24 @@ def extract_paths_from_mjcf(xml_file_path: str) -> list[str]:
     path = Path(xml_file_path)
     # Read MJCF XML as UTF-8 and replace invalid bytes (Windows default encoding can be cp1252)
     mujoco_xml = path.read_text(encoding="utf-8", errors="replace")
-    root = ET.fromstring(mujoco_xml)
+    try:
+        root = ET.fromstring(mujoco_xml)
+    except ET.ParseError as err:
+        # Some shipped MJCF files (e.g. roboverse_data/robots/franka/mjcf/mjx_panda.xml)
+        # are tolerated by MuJoCo's own native parser but tripped up by
+        # Python's strict ET.fromstring (unbalanced ``<body>`` tags, etc.).
+        # The whole ``check_assets`` path skipped the test instead of letting
+        # the backend's own loader handle the file. Treat the parse failure
+        # as "no extractable mesh/texture/include paths to download" — the
+        # backend's own MJCF parser will either succeed or fail with a more
+        # specific error at launch time.
+        from loguru import logger as _log
+
+        _log.warning(
+            f"extract_paths_from_mjcf: strict-XML parse failed on {xml_file_path} ({err}); "
+            f"skipping asset extraction. Backend's own MJCF parser may still accept this file."
+        )
+        return []
 
     # Parse compiler asset directories. Per the MJCF spec, `assetdir` sets the
     # default search path for BOTH meshes and textures; `meshdir`/`texturedir`,

@@ -19,7 +19,12 @@ class FrankaCfg(RobotCfg):
     fix_base_link: bool = True
     usd_path: str = "roboverse_data/robots/franka/usd/franka_v2.usd"
     mjcf_path: str = "roboverse_data/robots/franka/mjcf/panda.xml"
-    mjx_mjcf_path: str = "roboverse_data/robots/franka/mjcf/mjx_panda.xml"
+    # mjx_panda.xml was shipped as a WIP stub (missing the entire <asset>
+    # mesh block, structurally malformed XML, no <worldbody> open tag).
+    # Until a proper MJX-tuned MJCF lands, point MJX at the same fully-
+    # populated ``panda.xml`` MuJoCo uses — it parses cleanly through
+    # ``mjx_helper.compile`` and unblocks every -k mjx integration test.
+    mjx_mjcf_path: str = "roboverse_data/robots/franka/mjcf/panda.xml"
     # urdf_path: str = "roboverse_data/robots/franka/urdf/panda.urdf"  # work for pybullet and sapien
     urdf_path: str = "roboverse_data/robots/franka/urdf/franka_panda.urdf"  # work for isaacgym
     enabled_gravity: bool = False
