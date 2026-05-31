@@ -75,6 +75,52 @@ def test_dp_joint_qpos_prefers_achieved_then_command():
 
 
 @pytest.mark.general
+def test_dp_client_chunk_caching(monkeypatch):
+    """DPPolicy emits one action per step from a cached chunk, re-querying when empty."""
+    ev = _load_eval()
+    import numpy as np
+
+    # Build a DPPolicy without opening a socket (skip __init__), wire a fake RPC.
+    pol = ev.DPPolicy.__new__(ev.DPPolicy)
+    pol.camera = "head_camera"
+    pol._cache = []
+    calls = {"n": 0}
+
+    def fake_rpc(msg):
+        calls["n"] += 1
+        # return a fresh 3-step chunk each predict, tagged by call index
+        base = calls["n"] * 10
+        return {"action_chunk": [np.full(14, base + i, dtype=float) for i in range(3)]}
+
+    pol._rpc = fake_rpc
+    obs = {"observation": {"head_camera": {"rgb": np.zeros((4, 4, 3), np.uint8)}}, "robot_joint_state": np.zeros(14)}
+
+    a0 = pol.predict(obs)
+    a1 = pol.predict(obs)
+    a2 = pol.predict(obs)  # exhausts the first chunk (3 actions, 1 rpc call)
+    assert calls["n"] == 1
+    assert a0[0] == 10 and a1[0] == 11 and a2[0] == 12
+    a3 = pol.predict(obs)  # cache empty -> a second rpc call
+    assert calls["n"] == 2
+    assert a3[0] == 20
+
+
+@pytest.mark.general
+def test_dp_client_raises_on_server_error(monkeypatch):
+    """A server-side predict error must propagate, not be silently swallowed."""
+    ev = _load_eval()
+    import numpy as np
+
+    pol = ev.DPPolicy.__new__(ev.DPPolicy)
+    pol.camera = "head_camera"
+    pol._cache = []
+    pol._rpc = lambda msg: {"error": "boom", "traceback": "..."}
+    obs = {"observation": {"head_camera": {"rgb": np.zeros((4, 4, 3), np.uint8)}}, "robot_joint_state": np.zeros(14)}
+    with pytest.raises(RuntimeError, match="dp server predict failed"):
+        pol.predict(obs)
+
+
+@pytest.mark.general
 def test_policy_builder_validates_required_args():
     ev = _load_eval()
 
