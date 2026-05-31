@@ -150,7 +150,7 @@ def _replay_one(bridge: dict, args) -> dict:
             objects.append(PrimitiveCubeCfg(name=rv, size=(0.05, 0.05, 0.05), color=[0.8, 0.2, 0.2], physics=phys))
     # Static table surface proxy (RoboTwin's table top sits at z=0.74).
     objects.append(
-        PrimitiveCubeCfg(name="table", size=(0.8, 0.8, 0.74), color=[0.7, 0.6, 0.5], physics=PhysicStateType.GEOM)
+        PrimitiveCubeCfg(name="table", size=(0.96, 0.96, 0.74), color=[0.85, 0.85, 0.85], physics=PhysicStateType.GEOM)
     )
 
     # --observer-cam matches RoboTwin's built-in observer_camera (camera.py) so the
@@ -179,6 +179,19 @@ def _replay_one(bridge: dict, args) -> dict:
         headless=True,
         add_default_ground=True,
     )
+    # Ray-traced render to match RoboTwin (_base_task sets the same), a GLOBAL sapien
+    # setting -- must run before the renderer/handler is created.
+    if getattr(args, "rt", False):
+        try:
+            import sapien
+
+            sapien.render.set_camera_shader_dir("rt")
+            sapien.render.set_ray_tracing_samples_per_pixel(32)
+            sapien.render.set_ray_tracing_path_depth(8)
+            sapien.render.set_ray_tracing_denoiser("oidn")
+        except Exception as e:
+            log.warning(f"RT shader unavailable: {e}")
+
     handler = get_handler(scenario)
 
     # Articulation objects (pot/cabinet/...) need a dof_pos in every state set; use
@@ -301,6 +314,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--observer-cam", action="store_true", help="render from RoboTwin's observer pose (for side-by-side)"
     )
+    ap.add_argument("--rt", action="store_true", help="ray-traced render (matches RoboTwin's RT shader)")
     ap.add_argument("--robotwin-dir", default=os.path.expanduser("~/projects/robotwin"))
     ap.add_argument("--out", default="outputs/robotwin_coverage/object_parity.json")
     args = ap.parse_args(argv)
