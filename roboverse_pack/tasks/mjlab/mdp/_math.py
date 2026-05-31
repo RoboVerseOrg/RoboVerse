@@ -97,16 +97,88 @@ def get_base_state(env, env_states, asset_name: str) -> tuple[torch.Tensor, torc
     )
 
 
+def read_builtin_sensor(env, sensor_name: str) -> torch.Tensor | None:
+    """Read a named MuJoCo sensor's value from ``physics.data.sensordata``.
+
+    mjlab's velocity / tracking actor obs read ``base_lin_vel`` and
+    ``base_ang_vel`` from the robot's IMU **velocimeter** (``imu_lin_vel``)
+    and **gyro** (``imu_ang_vel``) site sensors, not from the free-joint
+    ``qvel``. The velocimeter reports the linear velocity of the *IMU site*
+    expressed in the site frame, which differs from the body-origin velocity
+    by ``ω × r_site_offset``; the gyro reports the site-frame angular
+    velocity. The scene-MJCF the RoboVerse tasks load retains these sensors,
+    so reading them here reproduces mjlab's ``builtin_sensor`` term bitwise.
+
+    Returns ``(num_envs, dim)`` or ``None`` if the sensor or the MuJoCo
+    physics handle is unavailable (e.g. the Newton GPU path), in which case
+    callers fall back to the qvel-based reconstruction.
+    """
+    handler = getattr(env, "handler", None)
+    physics = getattr(handler, "physics", None)
+    if physics is None:
+        return None
+    try:
+        import mujoco
+
+        model = physics.model
+        mp = model.ptr if hasattr(model, "ptr") else model
+        sid = mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_SENSOR, sensor_name)
+        if sid < 0:
+            return None
+        adr = int(mp.sensor_adr[sid])
+        dim = int(mp.sensor_dim[sid])
+        sd = np.asarray(physics.data.sensordata[adr : adr + dim], dtype=np.float32)
+        return torch.tensor(sd, device=env.device, dtype=torch.float32).reshape(1, dim).expand(env.num_envs, -1)
+    except Exception:
+        return None
+
+
 def base_lin_vel_b(env, env_states, asset_name: str) -> torch.Tensor:
-    """Body-frame linear velocity of the asset's base. Shape ``(num_envs, 3)``."""
+    """Body-origin linear velocity of the asset's base, body frame. ``(num_envs, 3)``.
+
+    This is the **body-link** velocity (mjlab ``asset.data.root_link_lin_vel_b``),
+    used by the locomotion *rewards* (``track_linear_velocity`` etc). The
+    *observations* instead read the IMU velocimeter via ``base_lin_vel_imu_b`` —
+    mjlab deliberately uses different velocity sources for obs vs reward (the IMU
+    site velocity differs from the body-origin velocity by ``ω × r_imu_offset``).
+    """
     quat, lin_w, _ = get_base_state(env, env_states, asset_name)
     return quat_apply_inverse_xyzw(quat, lin_w)
 
 
 def base_ang_vel_b(env, env_states, asset_name: str) -> torch.Tensor:
-    """Body-frame angular velocity of the asset's base. Shape ``(num_envs, 3)``."""
+    """Body-origin angular velocity of the asset's base, body frame. ``(num_envs, 3)``.
+
+    Body-link angular velocity (mjlab ``asset.data.root_link_ang_vel_b``), used by
+    *rewards*. Observations use the IMU gyro via ``base_ang_vel_imu_b``.
+    """
     quat, _, ang_w = get_base_state(env, env_states, asset_name)
     return quat_apply_inverse_xyzw(quat, ang_w)
+
+
+def base_lin_vel_imu_b(env, env_states, asset_name: str) -> torch.Tensor:
+    """IMU-velocimeter linear velocity for *observations*. ``(num_envs, 3)``.
+
+    Prefers the robot's ``imu_lin_vel`` velocimeter sensor (mjlab obs parity:
+    velocity of the IMU site, in site frame); falls back to the body-origin
+    velocity (``base_lin_vel_b``) when no such sensor exists (e.g. Newton path).
+    """
+    sensed = read_builtin_sensor(env, "imu_lin_vel")
+    if sensed is not None:
+        return sensed
+    return base_lin_vel_b(env, env_states, asset_name)
+
+
+def base_ang_vel_imu_b(env, env_states, asset_name: str) -> torch.Tensor:
+    """IMU-gyro angular velocity for *observations*. ``(num_envs, 3)``.
+
+    Prefers the robot's ``imu_ang_vel`` gyro sensor (mjlab obs parity); falls
+    back to ``base_ang_vel_b`` when no such sensor exists.
+    """
+    sensed = read_builtin_sensor(env, "imu_ang_vel")
+    if sensed is not None:
+        return sensed
+    return base_ang_vel_b(env, env_states, asset_name)
 
 
 def projected_gravity_b(env, env_states, asset_name: str) -> torch.Tensor:

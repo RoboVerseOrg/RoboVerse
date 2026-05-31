@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import torch
 
-from ._math import base_ang_vel_b, base_lin_vel_b, projected_gravity_b
+from ._math import base_ang_vel_imu_b, base_lin_vel_imu_b, projected_gravity_b
 from .scene_entity import (
     SceneEntityCfg,
     entity_joint_pos,
@@ -30,13 +30,13 @@ from .scene_entity import (
 
 
 def base_lin_vel(env, env_states, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Body-frame base linear velocity. mjlab ``builtin_sensor(imu_lin_vel)``."""
-    return base_lin_vel_b(env, env_states, asset_cfg.name)
+    """Base linear velocity obs. mjlab ``builtin_sensor(imu_lin_vel)`` (IMU site)."""
+    return base_lin_vel_imu_b(env, env_states, asset_cfg.name)
 
 
 def base_ang_vel(env, env_states, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Body-frame base angular velocity. mjlab ``builtin_sensor(imu_ang_vel)``."""
-    return base_ang_vel_b(env, env_states, asset_cfg.name)
+    """Base angular velocity obs. mjlab ``builtin_sensor(imu_ang_vel)`` (IMU gyro)."""
+    return base_ang_vel_imu_b(env, env_states, asset_cfg.name)
 
 
 def projected_gravity(env, env_states, asset_cfg: SceneEntityCfg) -> torch.Tensor:

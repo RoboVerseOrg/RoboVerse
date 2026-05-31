@@ -1,0 +1,188 @@
+{
+  "K": 32,
+  "tol": 1e-05,
+  "results": [
+    {
+      "task": "mjlab.cartpole_balance_v2",
+      "obs_dim": 5,
+      "rv_dim": 5,
+      "max_dobs": 5.960464477539063e-08,
+      "structural": true,
+      "per_term": {
+        "cart_pos": 0.0,
+        "pole_angle": 5.960464477539063e-08,
+        "cart_vel": 0.0,
+        "pole_vel": 0.0
+      },
+      "joint_order_match": true,
+      "notes": []
+    },
+    {
+      "task": "mjlab.cartpole_swingup_v2",
+      "obs_dim": 5,
+      "rv_dim": 5,
+      "max_dobs": 5.960464477539063e-08,
+      "structural": true,
+      "per_term": {
+        "cart_pos": 0.0,
+        "pole_angle": 5.960464477539063e-08,
+        "cart_vel": 0.0,
+        "pole_vel": 0.0
+      },
+      "joint_order_match": true,
+      "notes": []
+    },
+    {
+      "task": "mjlab.velocity_flat_go1_v2",
+      "obs_dim": 48,
+      "rv_dim": 48,
+      "max_dobs": 2.384185791015625e-07,
+      "structural": true,
+      "per_term": {
+        "base_lin_vel": 2.384185791015625e-07,
+        "base_ang_vel": 2.384185791015625e-07,
+        "projected_gravity": 1.1920928955078125e-07,
+        "joint_pos": 0.0,
+        "joint_vel": 0.0,
+        "actions": 0.0,
+        "command": 0.0
+      },
+      "joint_order_match": true,
+      "notes": []
+    },
+    {
+      "task": "mjlab.velocity_rough_go1_v2",
+      "obs_dim": 235,
+      "rv_dim": 48,
+      "max_dobs": 2.384185791015625e-07,
+      "structural": "prefix",
+      "per_term": {
+        "base_lin_vel": 2.384185791015625e-07,
+        "base_ang_vel": 2.384185791015625e-07,
+        "projected_gravity": 1.1920928955078125e-07,
+        "joint_pos": 0.0,
+        "joint_vel": 0.0,
+        "last_action": 0.0,
+        "command": 0.0
+      },
+      "joint_order_match": true,
+      "notes": [
+        "PREFIX-ONLY: RV missing native trailing terms [('height_scan', 187)]"
+      ]
+    },
+    {
+      "task": "mjlab.velocity_flat_g1_v2",
+      "obs_dim": 99,
+      "rv_dim": 99,
+      "max_dobs": 2.384185791015625e-07,
+      "structural": true,
+      "per_term": {
+        "base_lin_vel": 1.7881393432617188e-07,
+        "base_ang_vel": 2.384185791015625e-07,
+        "projected_gravity": 1.1920928955078125e-07,
+        "joint_pos": 0.0,
+        "joint_vel": 0.0,
+        "actions": 0.0,
+        "command": 0.0
+      },
+      "joint_order_match": true,
+      "notes": []
+    },
+    {
+      "task": "mjlab.velocity_rough_g1_v2",
+      "obs_dim": 286,
+      "rv_dim": 99,
+      "max_dobs": 2.980232238769531e-07,
+      "structural": "prefix",
+      "per_term": {
+        "base_lin_vel": 2.384185791015625e-07,
+        "base_ang_vel": 2.980232238769531e-07,
+        "projected_gravity": 1.1920928955078125e-07,
+        "joint_pos": 0.0,
+        "joint_vel": 0.0,
+        "last_action": 0.0,
+        "command": 0.0
+      },
+      "joint_order_match": true,
+      "notes": [
+        "PREFIX-ONLY: RV missing native trailing terms [('height_scan', 187)]"
+      ]
+    },
+    {
+      "task": "mjlab.lift_cube_yam_v2",
+      "obs_dim": 29,
+      "rv_dim": 18,
+      "max_dobs": null,
+      "structural": false,
+      "per_term": {},
+      "joint_order_match": null,
+      "notes": [
+        "native_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('actions', 7)]",
+        "rv_actor_terms=[('joint_pos', 6), ('joint_vel', 6), ('last_action', 6)]"
+      ]
+    },
+    {
+      "task": "mjlab.lift_cube_yam_depth_v2",
+      "obs_dim": 29,
+      "rv_dim": 4114,
+      "max_dobs": null,
+      "structural": false,
+      "per_term": {},
+      "joint_order_match": null,
+      "notes": [
+        "native_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('actions', 7)]",
+        "rv_actor_terms=[('joint_pos', 6), ('joint_vel', 6), ('last_action', 6), ('depth', 4096)]"
+      ]
+    },
+    {
+      "task": "mjlab.lift_cube_yam_rgb_v2",
+      "obs_dim": 29,
+      "rv_dim": 12306,
+      "max_dobs": null,
+      "structural": false,
+      "per_term": {},
+      "joint_order_match": null,
+      "notes": [
+        "native_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('actions', 7)]",
+        "rv_actor_terms=[('joint_pos', 6), ('joint_vel', 6), ('last_action', 6), ('rgb', 12288)]"
+      ]
+    },
+    {
+      "task": "mjlab.multi_cube_seg_yam_v2",
+      "obs_dim": 29,
+      "rv_dim": 18,
+      "max_dobs": null,
+      "structural": false,
+      "per_term": {},
+      "joint_order_match": null,
+      "notes": [
+        "native_actor_terms=[('joint_pos', 8), ('joint_vel', 8), ('ee_to_cube', 3), ('cube_to_goal', 3), ('actions', 7)]",
+        "rv_actor_terms=[('joint_pos', 6), ('joint_vel', 6), ('last_action', 6), ('seg', 0)]"
+      ]
+    },
+    {
+      "task": "mjlab.tracking_flat_g1_v2",
+      "obs_dim": null,
+      "rv_dim": null,
+      "max_dobs": null,
+      "structural": false,
+      "per_term": {},
+      "joint_order_match": null,
+      "notes": [
+        "BLOCKED: native tracking env requires a motion npz (MotionCommandCfg.motion_file). mjlab sources it from a W&B 'motions' artifact at eval time; none is bundled in the repo. Set MJLAB_G1_MOTION_FILE to a MotionLoader-schema npz to compare. Also note RV tracking actor obs structurally differs from native (native = command, motion_anchor_pos_b, motion_anchor_ori_b, base_lin_vel, base_ang_vel, joint_pos, joint_vel, actions; RV reuses the velocity obs)."
+      ]
+    },
+    {
+      "task": "mjlab.tracking_flat_g1_no_state_est_v2",
+      "obs_dim": null,
+      "rv_dim": null,
+      "max_dobs": null,
+      "structural": false,
+      "per_term": {},
+      "joint_order_match": null,
+      "notes": [
+        "BLOCKED: native tracking env requires a motion npz (MotionCommandCfg.motion_file). mjlab sources it from a W&B 'motions' artifact at eval time; none is bundled in the repo. Set MJLAB_G1_MOTION_FILE to a MotionLoader-schema npz to compare. Also note RV tracking actor obs structurally differs from native (native = command, motion_anchor_pos_b, motion_anchor_ori_b, base_lin_vel, base_ang_vel, joint_pos, joint_vel, actions; RV reuses the velocity obs)."
+      ]
+    }
+  ]
+}
