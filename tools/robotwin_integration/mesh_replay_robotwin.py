@@ -57,7 +57,7 @@ from metasim.utils.setup_util import get_handler
 from roboverse_pack.robots.aloha_agilex_cfg import AlohaAgilexCfg
 from roboverse_pack.tasks.robotwin._convert import ROBOT_NAME, ROBOT_POS, ROBOT_ROT, bridge_to_v2, vector_to_dof
 
-_INFRA = {"ground", "wall", "table", "table_wall"}
+_INFRA = {"ground", "wall", "table", "table_wall", "floor"}
 
 _URDF_TMPL = """<?xml version="1.0"?>
 <robot name="{name}">
@@ -223,9 +223,22 @@ def _replay_one(bridge: dict, args) -> dict:
             )
         else:
             objects.append(PrimitiveCubeCfg(name=rv, size=(0.05, 0.05, 0.05), color=[0.8, 0.2, 0.2], physics=phys))
-    # Static table surface proxy (RoboTwin's table top sits at z=0.74).
+    # Static scene proxies matching RoboTwin's create_table_and_wall EXACTLY so the
+    # side-by-side render looks 1:1, not just geometrically aligned:
+    #   table  create_table(length=1.2, width=0.7, height=0.74), color (1,1,1) white
+    #   wall   create_box(p=[0,1,1.5], half_size=[3,0.6,1.5]),    color (1,0.9,0.9)
+    # (RoboTwin envs/_base_task.py create_table_and_wall + envs/utils create_table.)
     objects.append(
-        PrimitiveCubeCfg(name="table", size=(0.96, 0.96, 0.74), color=[0.85, 0.85, 0.85], physics=PhysicStateType.GEOM)
+        PrimitiveCubeCfg(name="table", size=(1.2, 0.7, 0.74), color=[1.0, 1.0, 1.0], physics=PhysicStateType.GEOM)
+    )
+    # (RoboTwin also has a pinkish wall at [0,1,1.5], but it sits *behind* the observer
+    #  camera (both engines look in -y), so it never enters frame -- omitted to avoid a
+    #  stray warm RT reflection that the native render doesn't show.)
+    # Gray floor proxy with its top at z=0, matching RoboTwin's neutral add_ground(0).
+    # MetaSim's default ground is tan (base_color [202,164,114]); replacing it with a
+    # gray surface (add_default_ground disabled below) removes the biggest render gap.
+    objects.append(
+        PrimitiveCubeCfg(name="floor", size=(12.0, 12.0, 0.04), color=[0.78, 0.78, 0.78], physics=PhysicStateType.GEOM)
     )
 
     # --observer-cam matches RoboTwin's built-in observer_camera (camera.py) so the
@@ -254,7 +267,7 @@ def _replay_one(bridge: dict, args) -> dict:
         simulator=args.sim,
         num_envs=1,
         headless=True,
-        add_default_ground=True,
+        add_default_ground=False,  # replaced by the gray "floor" proxy (matches RoboTwin's neutral ground)
     )
     # Ray-traced render to match RoboTwin (_base_task sets the same), a GLOBAL sapien
     # setting -- must run before the renderer/handler is created.
@@ -313,8 +326,10 @@ def _replay_one(bridge: dict, args) -> dict:
                 else:
                     st["dof_pos"] = {j: 0.0 for j in jn}
             out[rv] = st
-        # table proxy at RoboTwin's fixed surface
+        # table + wall proxies at RoboTwin's fixed poses (create_table_and_wall):
+        # table centred so its top sits at z=0.74; wall behind the table at [0,1,1.5].
         out["table"] = {"pos": [0.0, 0.0, 0.37], "rot": [1.0, 0.0, 0.0, 0.0]}
+        out["floor"] = {"pos": [0.0, 0.0, -0.02], "rot": [1.0, 0.0, 0.0, 0.0]}
         return out
 
     # Initial state: robot home (achieved frame 0) + objects at frame 0.
