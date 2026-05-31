@@ -170,9 +170,27 @@ def _build_policy(args) -> Policy:
     raise SystemExit(f"unknown policy {args.policy!r}")
 
 
-def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: bool) -> tuple[bool, int]:
+def _robotwin_step_lim(pt, task: str) -> int:
+    """RoboTwin's per-task eval step budget (task_config/_eval_step_limit.yml).
+
+    Matching this is part of evaluating "the same as RoboTwin": its own eval judges
+    a policy over exactly this many steps (e.g. beat_block_hammer = 400). The env
+    only loads it when eval_mode=True (which also switches to unseen textures); we
+    want the real budget while keeping training-consistent (seen) textures, so we
+    read the table directly. Falls back to 1000 if the task isn't listed.
+    """
+    try:
+        import yaml
+
+        path = os.path.join(pt.robotwin_dir(), "task_config", "_eval_step_limit.yml")
+        with open(path) as f:
+            return int(yaml.safe_load(f).get(task, 1000))
+    except Exception:
+        return 1000
+
+
+def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: bool, step_lim: int) -> tuple[bool, int]:
     """Run one closed-loop episode; return (success, steps_taken)."""
-    # is_test=True makes setup_demo load the per-task step_lim and enable eval mode.
     data_type = {k: False for k in ("rgb", "third_view", "depth", "pointcloud", "observer", "endpose", "qpos")}
     data_type["rgb"] = rgb  # the policy may consume head_camera RGB
     env = pt._make_robotwin_env(
@@ -180,7 +198,9 @@ def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: b
     )  # fmt: skip
     policy.reset()
     try:
-        step_lim = env.step_lim or 1000
+        # Use RoboTwin's real per-task budget (env.step_lim is only set under
+        # eval_mode, which we avoid to keep seen textures); fall back to the table.
+        step_lim = int(env.step_lim) if getattr(env, "step_lim", None) else step_lim
         while env.take_action_cnt < step_lim:
             obs = env.get_obs()
             # Inject the achieved 14-D joint state [L_arm(6), L_grip, R_arm(6), R_grip]
@@ -232,10 +252,13 @@ def main(argv: list[str] | None = None) -> int:
     else:
         base_seed = 0
 
+    step_lim = _robotwin_step_lim(pt, args.task)
+    print(f"[{args.task}] eval step budget = {step_lim} (RoboTwin's per-task limit)")
+
     successes = 0
     for i in range(args.num_eval):
         seed = base_seed + i
-        succ, steps = _eval_one(pt, args.task, args.task_config, seed, policy, needs_rgb)
+        succ, steps = _eval_one(pt, args.task, args.task_config, seed, policy, needs_rgb, step_lim)
         successes += int(succ)
         print(f"[{args.task} seed {seed}] {'SUCCESS' if succ else 'FAIL'} ({steps} steps)")
 
