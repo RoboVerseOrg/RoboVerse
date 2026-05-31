@@ -48,7 +48,7 @@ from loguru import logger as log
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.utils.demo_util import get_traj
@@ -124,11 +124,21 @@ def _replay_one(bridge: dict, args) -> dict:
         name_map[n] = rv
         mesh = object_meshes.get(n)
         if mesh and mesh.get("type") == "urdf":
-            # URDF-articulation object (pot / cabinet / laptop): load its mobility.urdf.
+            # URDF-articulation object (pot / cabinet / laptop) -- a multi-link
+            # mobility.urdf, so load it via ArticulationObjCfg (the rigid loader
+            # only reads the first link and drops the rest). RoboTwin sets the
+            # loader scale to model_data["scale"][0]; reproduce it or the object
+            # loads at raw (huge) URDF units.
+            urdf_abs = os.path.join(args.robotwin_dir, mesh["urdf"])
+            uscale = mesh.get("scale")
+            if uscale is None:
+                md = os.path.join(os.path.dirname(urdf_abs), "model_data.json")
+                if os.path.exists(md):
+                    s = json.load(open(md)).get("scale")
+                    uscale = s[0] if isinstance(s, (list, tuple)) else s
             objects.append(
-                RigidObjCfg(
-                    name=rv, urdf_path=os.path.join(args.robotwin_dir, mesh["urdf"]),
-                    physics=phys, fix_base_link=kinematic,
+                ArticulationObjCfg(
+                    name=rv, urdf_path=urdf_abs, fix_base_link=kinematic, scale=float(uscale or 1.0),
                 )
             )  # fmt: skip
         elif mesh and mesh.get("visual"):
@@ -170,6 +180,17 @@ def _replay_one(bridge: dict, args) -> dict:
     )
     handler = get_handler(scenario)
 
+    # Articulation objects (pot/cabinet/...) need a dof_pos in every state set; use
+    # their default (zeros) -- we only replay the rigid root pose, not internal joints.
+    artic_dof = {}
+    for n in manip:
+        if object_meshes.get(n, {}).get("type") == "urdf":
+            rv = name_map[n]
+            try:
+                artic_dof[rv] = {j: 0.0 for j in handler.get_joint_names(rv, sort=True)}
+            except Exception:
+                artic_dof[rv] = {}
+
     # Physics mode drives the robot through the canonical get_traj action stream
     # (correctly keyed by robot name), exactly like the joint-parity harness.
     robot_actions = None
@@ -184,7 +205,11 @@ def _replay_one(bridge: dict, args) -> dict:
         for n in manip:
             tr = object_traj[n]
             p = tr[min(t, len(tr) - 1)]
-            out[name_map[n]] = {"pos": [float(x) for x in p[:3]], "rot": [float(x) for x in p[3:7]]}
+            rv = name_map[n]
+            st = {"pos": [float(x) for x in p[:3]], "rot": [float(x) for x in p[3:7]]}
+            if rv in artic_dof:
+                st["dof_pos"] = artic_dof[rv]
+            out[rv] = st
         # table proxy at RoboTwin's fixed surface
         out["table"] = {"pos": [0.0, 0.0, 0.37], "rot": [1.0, 0.0, 0.0, 0.0]}
         return out
