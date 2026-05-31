@@ -667,13 +667,21 @@ class Sapien3Handler(BaseSimHandler):
 
             if isinstance(self.object_dict[name], ArticulationObjCfg):
                 joint_names = self.object_joint_order[name]
-                qpos_list = []
-                for i, joint_name in enumerate(joint_names):
-                    qpos_list.append(val["dof_pos"][joint_name])
+                # Cross-backend contract: ``dof_pos`` is optional in the dict
+                # state (mujoco / isaacsim skip absent joints, sapien3 used to
+                # KeyError on missing 'dof_pos'). Default missing entries to 0
+                # so test_collision and other partial-state callers work
+                # uniformly across backends. The set_states key validator on
+                # the base already warns if a caller forgot dof_pos entirely.
+                dof_pos = val.get("dof_pos") or {}
+                qpos_list = [float(dof_pos.get(joint_name, 0.0)) for joint_name in joint_names]
                 obj_id.set_qpos(np.array(qpos_list))
 
-            # Reset base position and orientation
-            obj_id.set_pose(sapien_core.Pose(p=val["pos"], q=val["rot"]))
+            # Reset base position and orientation. Default both pos/rot if
+            # absent (the base validator already warns on partial-pose input).
+            pos = val.get("pos", [0.0, 0.0, 0.0])
+            rot = val.get("rot", [1.0, 0.0, 0.0, 0.0])
+            obj_id.set_pose(sapien_core.Pose(p=pos, q=rot))
 
     @property
     def device(self) -> torch.device:
