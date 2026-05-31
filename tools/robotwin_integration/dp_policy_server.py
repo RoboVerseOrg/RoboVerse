@@ -56,37 +56,53 @@ def _send_msg(conn: socket.socket, obj) -> None:
 class _DPInference:
     """Loads a DP checkpoint and runs the model's predict_action over an obs deque.
 
-    Reuses RoboVerse's DefaultRunner (builds the model from the ckpt cfg) +
-    DefaultEvalRunner (loads weights, maintains the n_obs_steps deque, calls
-    policy.predict_action). The scenario-coupled action post-processing in
-    DefaultEvalRunner.get_action is bypassed: we feed pre-formatted
-    {head_cam, agent_pos} straight to predict_action and return the raw joint
-    action chunk, so this runs with scenario=None (no RoboVerse env needed).
+    Builds only RoboVerse's DefaultRunner (which constructs the model from the ckpt
+    cfg and is scenario-free) and replicates DefaultEvalRunner's obs handling --
+    the n_obs_steps deque + last-n stacking + policy.predict_action. We deliberately
+    do NOT instantiate DefaultEvalRunner: its __post_init__ calls
+    get_curobo_models(scenario.robots[0]) for the (here-unused) IK/action path,
+    which requires a full RoboVerse scenario. Feeding pre-formatted
+    {head_cam, agent_pos} straight to the model keeps this server env-only (no
+    RoboVerse simulation needed), so it can run alongside the robotwin-env client.
     """
 
     def __init__(self, ckpt: str, device: str = "cuda:0"):
+        from collections import deque
+
         import dill
         import torch
 
-        from roboverse_learn.il.runners.default_eval_runner import DefaultEvalRunner
         from roboverse_learn.il.runners.default_runner import DefaultRunner
 
         self.torch = torch
         payload = torch.load(open(ckpt, "rb"), pickle_module=dill)
         cfg = payload["cfg"]
         self.n_action_steps = int(cfg.n_action_steps)
+        self.n_obs_steps = int(cfg.n_obs_steps)
         self.device = device
 
         runner = DefaultRunner(cfg)  # builds the model architecture from the ckpt cfg
-        # DefaultEvalRunner._init_policy re-reads the ckpt, loads weights into the
-        # model, picks the EMA model when trained with EMA, and sets eval mode.
-        self.eval_runner = DefaultEvalRunner(
-            runner, scenario=None, num_envs=1, checkpoint_path=ckpt, device=device, task_name=cfg.task_name,
-        )  # fmt: skip
-        print(f"[dp_server] loaded {ckpt} (n_action_steps={self.n_action_steps}, device={device})", flush=True)
+        runner.load_payload(payload, exclude_keys=None, include_keys=None)  # restore weights
+        policy = runner.ema_model if cfg.train_config.training_params.use_ema else runner.model
+        policy.to(device)
+        policy.eval()
+        self.policy = policy
+        self._obs = deque(maxlen=self.n_obs_steps)
+        print(
+            f"[dp_server] loaded {ckpt} (n_obs={self.n_obs_steps}, n_action={self.n_action_steps}, device={device})",
+            flush=True,
+        )
 
     def reset(self) -> None:
-        self.eval_runner.reset()
+        self._obs.clear()
+
+    def _stacked(self, key: str):
+        """Stack the last n_obs_steps of one obs key -> (1, To, *feat), front-padded."""
+        torch = self.torch
+        items = [o[key] for o in self._obs]  # each (1, *feat)
+        while len(items) < self.n_obs_steps:  # pad front with the oldest available
+            items.insert(0, items[0])
+        return torch.stack(items, dim=1)  # (1, To, *feat)
 
     def predict(self, head_camera, joint_qpos):
         import numpy as np
@@ -96,9 +112,11 @@ class _DPInference:
         img = torch.from_numpy(np.ascontiguousarray(head_camera)).to(self.device).float() / 255.0
         img = img.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
         agent_pos = torch.from_numpy(np.asarray(joint_qpos, dtype=np.float32)).to(self.device).unsqueeze(0)  # (1, A)
-        processed = {"head_cam": img, "agent_pos": agent_pos}
-        chunk = self.eval_runner.predict_action(processed)  # (n_action, num_envs, action_dim)
-        return chunk[:, 0, :].detach().cpu().numpy()  # (n_action, action_dim)
+        self._obs.append({"head_cam": img, "agent_pos": agent_pos})
+        obs_dict = {"head_cam": self._stacked("head_cam"), "agent_pos": self._stacked("agent_pos")}
+        with torch.no_grad():
+            chunk = self.policy.predict_action(obs_dict)["action"]  # (1, n_action, action_dim)
+        return chunk[0].detach().to(torch.float32).cpu().numpy()  # (n_action, action_dim)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -132,8 +150,13 @@ def main(argv: list[str] | None = None) -> int:
                     engine.reset()
                     _send_msg(conn, {"ok": True})
                 elif cmd == "predict":
-                    chunk = engine.predict(msg["head_camera"], msg["joint_qpos"])
-                    _send_msg(conn, {"action_chunk": chunk})
+                    try:
+                        chunk = engine.predict(msg["head_camera"], msg["joint_qpos"])
+                        _send_msg(conn, {"action_chunk": chunk})
+                    except Exception as e:  # surface inference errors to the client
+                        import traceback
+
+                        _send_msg(conn, {"error": f"{type(e).__name__}: {e}", "traceback": traceback.format_exc()})
                 else:
                     _send_msg(conn, {"error": f"unknown cmd {cmd!r}"})
         except Exception as e:  # keep the server alive across client errors

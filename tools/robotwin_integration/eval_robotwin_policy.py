@@ -135,14 +135,22 @@ class DPPolicy(Policy):
                 ) from e
             jq = self._robotwin_joint_qpos(obs)
             resp = self._rpc({"cmd": "predict", "head_camera": np.asarray(head), "joint_qpos": jq})
+            if "error" in resp:
+                raise RuntimeError(f"dp server predict failed: {resp['error']}\n{resp.get('traceback', '')}")
             self._cache = [np.asarray(a, dtype=float) for a in resp["action_chunk"]]
         return self._cache.pop(0) if self._cache else None
 
     @staticmethod
     def _robotwin_joint_qpos(obs: dict) -> np.ndarray:
-        """Pull the 14-D [L_arm(6), L_grip, R_arm(6), R_grip] state from RoboTwin obs."""
+        """Pull the 14-D [L_arm(6), L_grip, R_arm(6), R_grip] state from RoboTwin obs.
+
+        Prefer the achieved state injected by the eval loop (``robot_joint_state``,
+        read from the robot exactly like collect_bridge's training ``real_vector``);
+        fall back to a script-populated ``joint_action`` if present.
+        """
+        if obs.get("robot_joint_state") is not None:
+            return np.asarray(obs["robot_joint_state"], dtype=float)
         ja = obs.get("joint_action", {})
-        # collect_bridge records achieved qpos as real_vector; fall back to the command vector.
         v = ja.get("real_vector", ja.get("vector"))
         return np.asarray(v, dtype=float)
 
@@ -175,6 +183,17 @@ def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: b
         step_lim = env.step_lim or 1000
         while env.take_action_cnt < step_lim:
             obs = env.get_obs()
+            # Inject the achieved 14-D joint state [L_arm(6), L_grip, R_arm(6), R_grip]
+            # the SAME way collect_bridge records `real_vector` (the DP's training
+            # state obs): in eval mode obs["joint_action"] isn't script-populated, so
+            # read it straight from the robot for train/eval consistency.
+            try:
+                obs["robot_joint_state"] = np.asarray(
+                    list(env.robot.get_left_arm_real_jointState()) + list(env.robot.get_right_arm_real_jointState()),
+                    dtype=float,
+                )
+            except Exception:
+                pass
             action = policy.predict(obs)
             if action is None:
                 break
