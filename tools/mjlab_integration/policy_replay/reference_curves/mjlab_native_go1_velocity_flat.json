@@ -1,0 +1,2516 @@
+{
+  "task": "Mjlab-Velocity-Flat-Unitree-Go1",
+  "source": "mjlab native (mujoco_warp)",
+  "commit": "898a700",
+  "num_envs": 4096,
+  "max_iterations": 500,
+  "machine": "RTX PRO 6000 Blackwell cuda:1",
+  "final": {
+    "iter": 499,
+    "mean_reward": 75.45,
+    "track_lin_vel": 1.4685
+  },
+  "best_mean_reward": 77.08,
+  "curve": [
+    {
+      "iter": 0,
+      "mean_reward": -0.13,
+      "track_lin_vel": 0.005
+    },
+    {
+      "iter": 1,
+      "mean_reward": -0.93,
+      "track_lin_vel": 0.0149
+    },
+    {
+      "iter": 2,
+      "mean_reward": -1.09,
+      "track_lin_vel": 0.0251
+    },
+    {
+      "iter": 3,
+      "mean_reward": -1.21,
+      "track_lin_vel": 0.0348
+    },
+    {
+      "iter": 4,
+      "mean_reward": -1.01,
+      "track_lin_vel": 0.039
+    },
+    {
+      "iter": 5,
+      "mean_reward": -0.95,
+      "track_lin_vel": 0.0431
+    },
+    {
+      "iter": 6,
+      "mean_reward": -0.99,
+      "track_lin_vel": 0.0441
+    },
+    {
+      "iter": 7,
+      "mean_reward": -0.5,
+      "track_lin_vel": 0.0549
+    },
+    {
+      "iter": 8,
+      "mean_reward": -0.38,
+      "track_lin_vel": 0.0544
+    },
+    {
+      "iter": 9,
+      "mean_reward": 0.16,
+      "track_lin_vel": 0.0566
+    },
+    {
+      "iter": 10,
+      "mean_reward": 0.34,
+      "track_lin_vel": 0.0594
+    },
+    {
+      "iter": 11,
+      "mean_reward": 0.59,
+      "track_lin_vel": 0.062
+    },
+    {
+      "iter": 12,
+      "mean_reward": 0.85,
+      "track_lin_vel": 0.0627
+    },
+    {
+      "iter": 13,
+      "mean_reward": 0.98,
+      "track_lin_vel": 0.063
+    },
+    {
+      "iter": 14,
+      "mean_reward": 1.3,
+      "track_lin_vel": 0.0667
+    },
+    {
+      "iter": 15,
+      "mean_reward": 1.44,
+      "track_lin_vel": 0.0684
+    },
+    {
+      "iter": 16,
+      "mean_reward": 1.95,
+      "track_lin_vel": 0.0819
+    },
+    {
+      "iter": 17,
+      "mean_reward": 1.73,
+      "track_lin_vel": 0.0866
+    },
+    {
+      "iter": 18,
+      "mean_reward": 2.11,
+      "track_lin_vel": 0.0799
+    },
+    {
+      "iter": 19,
+      "mean_reward": 2.71,
+      "track_lin_vel": 0.0844
+    },
+    {
+      "iter": 20,
+      "mean_reward": 2.87,
+      "track_lin_vel": 0.0904
+    },
+    {
+      "iter": 21,
+      "mean_reward": 3.42,
+      "track_lin_vel": 0.1072
+    },
+    {
+      "iter": 22,
+      "mean_reward": 3.93,
+      "track_lin_vel": 0.1297
+    },
+    {
+      "iter": 23,
+      "mean_reward": 4.42,
+      "track_lin_vel": 0.1167
+    },
+    {
+      "iter": 24,
+      "mean_reward": 4.25,
+      "track_lin_vel": 0.1064
+    },
+    {
+      "iter": 25,
+      "mean_reward": 4.92,
+      "track_lin_vel": 0.1552
+    },
+    {
+      "iter": 26,
+      "mean_reward": 5.85,
+      "track_lin_vel": 0.1706
+    },
+    {
+      "iter": 27,
+      "mean_reward": 6.85,
+      "track_lin_vel": 0.2012
+    },
+    {
+      "iter": 28,
+      "mean_reward": 7.21,
+      "track_lin_vel": 0.2193
+    },
+    {
+      "iter": 29,
+      "mean_reward": 7.42,
+      "track_lin_vel": 0.1958
+    },
+    {
+      "iter": 30,
+      "mean_reward": 8.05,
+      "track_lin_vel": 0.2343
+    },
+    {
+      "iter": 31,
+      "mean_reward": 9.45,
+      "track_lin_vel": 0.2863
+    },
+    {
+      "iter": 32,
+      "mean_reward": 10.83,
+      "track_lin_vel": 0.268
+    },
+    {
+      "iter": 33,
+      "mean_reward": 11.51,
+      "track_lin_vel": 0.2312
+    },
+    {
+      "iter": 34,
+      "mean_reward": 11.85,
+      "track_lin_vel": 0.2593
+    },
+    {
+      "iter": 35,
+      "mean_reward": 12.36,
+      "track_lin_vel": 0.2977
+    },
+    {
+      "iter": 36,
+      "mean_reward": 12.65,
+      "track_lin_vel": 0.2383
+    },
+    {
+      "iter": 37,
+      "mean_reward": 13.27,
+      "track_lin_vel": 0.3163
+    },
+    {
+      "iter": 38,
+      "mean_reward": 14.83,
+      "track_lin_vel": 0.6227
+    },
+    {
+      "iter": 39,
+      "mean_reward": 16.04,
+      "track_lin_vel": 0.3543
+    },
+    {
+      "iter": 40,
+      "mean_reward": 17.01,
+      "track_lin_vel": 0.3817
+    },
+    {
+      "iter": 41,
+      "mean_reward": 17.92,
+      "track_lin_vel": 0.391
+    },
+    {
+      "iter": 42,
+      "mean_reward": 18.92,
+      "track_lin_vel": 0.4374
+    },
+    {
+      "iter": 43,
+      "mean_reward": 20.47,
+      "track_lin_vel": 0.5024
+    },
+    {
+      "iter": 44,
+      "mean_reward": 24.15,
+      "track_lin_vel": 0.5707
+    },
+    {
+      "iter": 45,
+      "mean_reward": 25.45,
+      "track_lin_vel": 0.5083
+    },
+    {
+      "iter": 46,
+      "mean_reward": 25.97,
+      "track_lin_vel": 0.54
+    },
+    {
+      "iter": 47,
+      "mean_reward": 28.33,
+      "track_lin_vel": 0.6194
+    },
+    {
+      "iter": 48,
+      "mean_reward": 29.6,
+      "track_lin_vel": 0.5596
+    },
+    {
+      "iter": 49,
+      "mean_reward": 30.12,
+      "track_lin_vel": 0.5399
+    },
+    {
+      "iter": 50,
+      "mean_reward": 31.64,
+      "track_lin_vel": 0.59
+    },
+    {
+      "iter": 51,
+      "mean_reward": 33.73,
+      "track_lin_vel": 0.6198
+    },
+    {
+      "iter": 52,
+      "mean_reward": 34.89,
+      "track_lin_vel": 0.6103
+    },
+    {
+      "iter": 53,
+      "mean_reward": 33.58,
+      "track_lin_vel": 0.5847
+    },
+    {
+      "iter": 54,
+      "mean_reward": 36.46,
+      "track_lin_vel": 0.5968
+    },
+    {
+      "iter": 55,
+      "mean_reward": 36.47,
+      "track_lin_vel": 0.5812
+    },
+    {
+      "iter": 56,
+      "mean_reward": 37.44,
+      "track_lin_vel": 0.5895
+    },
+    {
+      "iter": 57,
+      "mean_reward": 36.98,
+      "track_lin_vel": 0.5837
+    },
+    {
+      "iter": 58,
+      "mean_reward": 36.88,
+      "track_lin_vel": 0.5382
+    },
+    {
+      "iter": 59,
+      "mean_reward": 38.28,
+      "track_lin_vel": 0.5541
+    },
+    {
+      "iter": 60,
+      "mean_reward": 38.74,
+      "track_lin_vel": 0.5697
+    },
+    {
+      "iter": 61,
+      "mean_reward": 38.75,
+      "track_lin_vel": 0.5413
+    },
+    {
+      "iter": 62,
+      "mean_reward": 38.87,
+      "track_lin_vel": 0.6017
+    },
+    {
+      "iter": 63,
+      "mean_reward": 39.04,
+      "track_lin_vel": 0.5928
+    },
+    {
+      "iter": 64,
+      "mean_reward": 38.09,
+      "track_lin_vel": 0.5129
+    },
+    {
+      "iter": 65,
+      "mean_reward": 39.54,
+      "track_lin_vel": 0.5921
+    },
+    {
+      "iter": 66,
+      "mean_reward": 36.82,
+      "track_lin_vel": 0.4772
+    },
+    {
+      "iter": 67,
+      "mean_reward": 34.56,
+      "track_lin_vel": 0.4429
+    },
+    {
+      "iter": 68,
+      "mean_reward": 35.22,
+      "track_lin_vel": 0.4995
+    },
+    {
+      "iter": 69,
+      "mean_reward": 36.54,
+      "track_lin_vel": 0.41
+    },
+    {
+      "iter": 70,
+      "mean_reward": 35.92,
+      "track_lin_vel": 0.4731
+    },
+    {
+      "iter": 71,
+      "mean_reward": 35.67,
+      "track_lin_vel": 0.4274
+    },
+    {
+      "iter": 72,
+      "mean_reward": 37.02,
+      "track_lin_vel": 0.5053
+    },
+    {
+      "iter": 73,
+      "mean_reward": 38.82,
+      "track_lin_vel": 0.5425
+    },
+    {
+      "iter": 74,
+      "mean_reward": 39.68,
+      "track_lin_vel": 0.4322
+    },
+    {
+      "iter": 75,
+      "mean_reward": 39.59,
+      "track_lin_vel": 0.4727
+    },
+    {
+      "iter": 76,
+      "mean_reward": 38.63,
+      "track_lin_vel": 0.4148
+    },
+    {
+      "iter": 77,
+      "mean_reward": 36.55,
+      "track_lin_vel": 0.4406
+    },
+    {
+      "iter": 78,
+      "mean_reward": 37.02,
+      "track_lin_vel": 0.4905
+    },
+    {
+      "iter": 79,
+      "mean_reward": 38.75,
+      "track_lin_vel": 0.4136
+    },
+    {
+      "iter": 80,
+      "mean_reward": 40.28,
+      "track_lin_vel": 0.5578
+    },
+    {
+      "iter": 81,
+      "mean_reward": 41.12,
+      "track_lin_vel": 0.5403
+    },
+    {
+      "iter": 82,
+      "mean_reward": 41.03,
+      "track_lin_vel": 0.4781
+    },
+    {
+      "iter": 83,
+      "mean_reward": 42.64,
+      "track_lin_vel": 0.4577
+    },
+    {
+      "iter": 84,
+      "mean_reward": 42.66,
+      "track_lin_vel": 0.5139
+    },
+    {
+      "iter": 85,
+      "mean_reward": 45.55,
+      "track_lin_vel": 0.5527
+    },
+    {
+      "iter": 86,
+      "mean_reward": 47.8,
+      "track_lin_vel": 0.5685
+    },
+    {
+      "iter": 87,
+      "mean_reward": 48.95,
+      "track_lin_vel": 0.5585
+    },
+    {
+      "iter": 88,
+      "mean_reward": 48.07,
+      "track_lin_vel": 0.5377
+    },
+    {
+      "iter": 89,
+      "mean_reward": 48.41,
+      "track_lin_vel": 0.4817
+    },
+    {
+      "iter": 90,
+      "mean_reward": 49.81,
+      "track_lin_vel": 0.6075
+    },
+    {
+      "iter": 91,
+      "mean_reward": 49.63,
+      "track_lin_vel": 0.5896
+    },
+    {
+      "iter": 92,
+      "mean_reward": 50.9,
+      "track_lin_vel": 0.6147
+    },
+    {
+      "iter": 93,
+      "mean_reward": 50.88,
+      "track_lin_vel": 0.5301
+    },
+    {
+      "iter": 94,
+      "mean_reward": 51.14,
+      "track_lin_vel": 0.5821
+    },
+    {
+      "iter": 95,
+      "mean_reward": 53.02,
+      "track_lin_vel": 0.6135
+    },
+    {
+      "iter": 96,
+      "mean_reward": 51.26,
+      "track_lin_vel": 0.565
+    },
+    {
+      "iter": 97,
+      "mean_reward": 53.02,
+      "track_lin_vel": 0.5979
+    },
+    {
+      "iter": 98,
+      "mean_reward": 53.59,
+      "track_lin_vel": 0.6096
+    },
+    {
+      "iter": 99,
+      "mean_reward": 54.52,
+      "track_lin_vel": 0.564
+    },
+    {
+      "iter": 100,
+      "mean_reward": 50.11,
+      "track_lin_vel": 0.5791
+    },
+    {
+      "iter": 101,
+      "mean_reward": 53.41,
+      "track_lin_vel": 0.5917
+    },
+    {
+      "iter": 102,
+      "mean_reward": 52.75,
+      "track_lin_vel": 0.5921
+    },
+    {
+      "iter": 103,
+      "mean_reward": 51.78,
+      "track_lin_vel": 0.5837
+    },
+    {
+      "iter": 104,
+      "mean_reward": 51.07,
+      "track_lin_vel": 0.5975
+    },
+    {
+      "iter": 105,
+      "mean_reward": 46.46,
+      "track_lin_vel": 0.5535
+    },
+    {
+      "iter": 106,
+      "mean_reward": 46.19,
+      "track_lin_vel": 0.5539
+    },
+    {
+      "iter": 107,
+      "mean_reward": 45.93,
+      "track_lin_vel": 0.4806
+    },
+    {
+      "iter": 108,
+      "mean_reward": 42.0,
+      "track_lin_vel": 0.4261
+    },
+    {
+      "iter": 109,
+      "mean_reward": 46.47,
+      "track_lin_vel": 0.5599
+    },
+    {
+      "iter": 110,
+      "mean_reward": 47.89,
+      "track_lin_vel": 0.4854
+    },
+    {
+      "iter": 111,
+      "mean_reward": 45.36,
+      "track_lin_vel": 0.4853
+    },
+    {
+      "iter": 112,
+      "mean_reward": 45.55,
+      "track_lin_vel": 0.4913
+    },
+    {
+      "iter": 113,
+      "mean_reward": 43.43,
+      "track_lin_vel": 0.4299
+    },
+    {
+      "iter": 114,
+      "mean_reward": 45.99,
+      "track_lin_vel": 0.4528
+    },
+    {
+      "iter": 115,
+      "mean_reward": 47.28,
+      "track_lin_vel": 0.5857
+    },
+    {
+      "iter": 116,
+      "mean_reward": 46.54,
+      "track_lin_vel": 0.4323
+    },
+    {
+      "iter": 117,
+      "mean_reward": 43.55,
+      "track_lin_vel": 0.4831
+    },
+    {
+      "iter": 118,
+      "mean_reward": 45.99,
+      "track_lin_vel": 0.4184
+    },
+    {
+      "iter": 119,
+      "mean_reward": 46.25,
+      "track_lin_vel": 0.5754
+    },
+    {
+      "iter": 120,
+      "mean_reward": 46.37,
+      "track_lin_vel": 0.5074
+    },
+    {
+      "iter": 121,
+      "mean_reward": 48.2,
+      "track_lin_vel": 0.4849
+    },
+    {
+      "iter": 122,
+      "mean_reward": 46.95,
+      "track_lin_vel": 0.5158
+    },
+    {
+      "iter": 123,
+      "mean_reward": 46.41,
+      "track_lin_vel": 0.4795
+    },
+    {
+      "iter": 124,
+      "mean_reward": 47.18,
+      "track_lin_vel": 0.5776
+    },
+    {
+      "iter": 125,
+      "mean_reward": 45.94,
+      "track_lin_vel": 0.3677
+    },
+    {
+      "iter": 126,
+      "mean_reward": 49.75,
+      "track_lin_vel": 0.5916
+    },
+    {
+      "iter": 127,
+      "mean_reward": 52.79,
+      "track_lin_vel": 0.503
+    },
+    {
+      "iter": 128,
+      "mean_reward": 51.74,
+      "track_lin_vel": 0.5724
+    },
+    {
+      "iter": 129,
+      "mean_reward": 53.03,
+      "track_lin_vel": 0.6488
+    },
+    {
+      "iter": 130,
+      "mean_reward": 53.06,
+      "track_lin_vel": 0.627
+    },
+    {
+      "iter": 131,
+      "mean_reward": 53.28,
+      "track_lin_vel": 0.5595
+    },
+    {
+      "iter": 132,
+      "mean_reward": 55.82,
+      "track_lin_vel": 0.6152
+    },
+    {
+      "iter": 133,
+      "mean_reward": 55.31,
+      "track_lin_vel": 0.5995
+    },
+    {
+      "iter": 134,
+      "mean_reward": 56.4,
+      "track_lin_vel": 0.6083
+    },
+    {
+      "iter": 135,
+      "mean_reward": 56.52,
+      "track_lin_vel": 0.6378
+    },
+    {
+      "iter": 136,
+      "mean_reward": 57.15,
+      "track_lin_vel": 0.6245
+    },
+    {
+      "iter": 137,
+      "mean_reward": 57.52,
+      "track_lin_vel": 0.6012
+    },
+    {
+      "iter": 138,
+      "mean_reward": 57.02,
+      "track_lin_vel": 0.6032
+    },
+    {
+      "iter": 139,
+      "mean_reward": 59.43,
+      "track_lin_vel": 0.666
+    },
+    {
+      "iter": 140,
+      "mean_reward": 58.27,
+      "track_lin_vel": 0.6014
+    },
+    {
+      "iter": 141,
+      "mean_reward": 56.29,
+      "track_lin_vel": 0.5929
+    },
+    {
+      "iter": 142,
+      "mean_reward": 56.79,
+      "track_lin_vel": 0.632
+    },
+    {
+      "iter": 143,
+      "mean_reward": 54.44,
+      "track_lin_vel": 0.5592
+    },
+    {
+      "iter": 144,
+      "mean_reward": 56.92,
+      "track_lin_vel": 0.6143
+    },
+    {
+      "iter": 145,
+      "mean_reward": 55.01,
+      "track_lin_vel": 0.5902
+    },
+    {
+      "iter": 146,
+      "mean_reward": 53.5,
+      "track_lin_vel": 0.5948
+    },
+    {
+      "iter": 147,
+      "mean_reward": 52.57,
+      "track_lin_vel": 0.5555
+    },
+    {
+      "iter": 148,
+      "mean_reward": 51.78,
+      "track_lin_vel": 0.5289
+    },
+    {
+      "iter": 149,
+      "mean_reward": 51.78,
+      "track_lin_vel": 0.5906
+    },
+    {
+      "iter": 150,
+      "mean_reward": 52.53,
+      "track_lin_vel": 0.5829
+    },
+    {
+      "iter": 151,
+      "mean_reward": 50.41,
+      "track_lin_vel": 0.5055
+    },
+    {
+      "iter": 152,
+      "mean_reward": 51.21,
+      "track_lin_vel": 0.5206
+    },
+    {
+      "iter": 153,
+      "mean_reward": 50.33,
+      "track_lin_vel": 0.5737
+    },
+    {
+      "iter": 154,
+      "mean_reward": 48.99,
+      "track_lin_vel": 0.4543
+    },
+    {
+      "iter": 155,
+      "mean_reward": 50.55,
+      "track_lin_vel": 0.5104
+    },
+    {
+      "iter": 156,
+      "mean_reward": 50.44,
+      "track_lin_vel": 0.5308
+    },
+    {
+      "iter": 157,
+      "mean_reward": 50.3,
+      "track_lin_vel": 0.5051
+    },
+    {
+      "iter": 158,
+      "mean_reward": 49.88,
+      "track_lin_vel": 0.5177
+    },
+    {
+      "iter": 159,
+      "mean_reward": 48.98,
+      "track_lin_vel": 0.5449
+    },
+    {
+      "iter": 160,
+      "mean_reward": 48.52,
+      "track_lin_vel": 0.5021
+    },
+    {
+      "iter": 161,
+      "mean_reward": 48.29,
+      "track_lin_vel": 0.5605
+    },
+    {
+      "iter": 162,
+      "mean_reward": 50.82,
+      "track_lin_vel": 0.6
+    },
+    {
+      "iter": 163,
+      "mean_reward": 51.43,
+      "track_lin_vel": 0.533
+    },
+    {
+      "iter": 164,
+      "mean_reward": 49.63,
+      "track_lin_vel": 0.6023
+    },
+    {
+      "iter": 165,
+      "mean_reward": 46.05,
+      "track_lin_vel": 0.4531
+    },
+    {
+      "iter": 166,
+      "mean_reward": 45.99,
+      "track_lin_vel": 0.5595
+    },
+    {
+      "iter": 167,
+      "mean_reward": 50.05,
+      "track_lin_vel": 0.4932
+    },
+    {
+      "iter": 168,
+      "mean_reward": 50.33,
+      "track_lin_vel": 0.5526
+    },
+    {
+      "iter": 169,
+      "mean_reward": 53.33,
+      "track_lin_vel": 0.5604
+    },
+    {
+      "iter": 170,
+      "mean_reward": 54.66,
+      "track_lin_vel": 0.6257
+    },
+    {
+      "iter": 171,
+      "mean_reward": 56.88,
+      "track_lin_vel": 0.6805
+    },
+    {
+      "iter": 172,
+      "mean_reward": 54.67,
+      "track_lin_vel": 0.6312
+    },
+    {
+      "iter": 173,
+      "mean_reward": 57.48,
+      "track_lin_vel": 0.6636
+    },
+    {
+      "iter": 174,
+      "mean_reward": 55.77,
+      "track_lin_vel": 0.6528
+    },
+    {
+      "iter": 175,
+      "mean_reward": 56.58,
+      "track_lin_vel": 0.6161
+    },
+    {
+      "iter": 176,
+      "mean_reward": 58.63,
+      "track_lin_vel": 0.6194
+    },
+    {
+      "iter": 177,
+      "mean_reward": 57.71,
+      "track_lin_vel": 0.6697
+    },
+    {
+      "iter": 178,
+      "mean_reward": 57.21,
+      "track_lin_vel": 0.6198
+    },
+    {
+      "iter": 179,
+      "mean_reward": 58.95,
+      "track_lin_vel": 0.7025
+    },
+    {
+      "iter": 180,
+      "mean_reward": 59.64,
+      "track_lin_vel": 0.699
+    },
+    {
+      "iter": 181,
+      "mean_reward": 59.94,
+      "track_lin_vel": 0.7433
+    },
+    {
+      "iter": 182,
+      "mean_reward": 59.08,
+      "track_lin_vel": 0.7078
+    },
+    {
+      "iter": 183,
+      "mean_reward": 58.45,
+      "track_lin_vel": 0.6611
+    },
+    {
+      "iter": 184,
+      "mean_reward": 58.97,
+      "track_lin_vel": 0.7074
+    },
+    {
+      "iter": 185,
+      "mean_reward": 58.6,
+      "track_lin_vel": 0.728
+    },
+    {
+      "iter": 186,
+      "mean_reward": 58.12,
+      "track_lin_vel": 0.6622
+    },
+    {
+      "iter": 187,
+      "mean_reward": 55.69,
+      "track_lin_vel": 0.674
+    },
+    {
+      "iter": 188,
+      "mean_reward": 58.33,
+      "track_lin_vel": 0.6956
+    },
+    {
+      "iter": 189,
+      "mean_reward": 56.06,
+      "track_lin_vel": 0.6709
+    },
+    {
+      "iter": 190,
+      "mean_reward": 53.64,
+      "track_lin_vel": 0.6158
+    },
+    {
+      "iter": 191,
+      "mean_reward": 56.02,
+      "track_lin_vel": 0.678
+    },
+    {
+      "iter": 192,
+      "mean_reward": 57.22,
+      "track_lin_vel": 0.6573
+    },
+    {
+      "iter": 193,
+      "mean_reward": 54.98,
+      "track_lin_vel": 0.6699
+    },
+    {
+      "iter": 194,
+      "mean_reward": 52.36,
+      "track_lin_vel": 0.5806
+    },
+    {
+      "iter": 195,
+      "mean_reward": 53.44,
+      "track_lin_vel": 0.6834
+    },
+    {
+      "iter": 196,
+      "mean_reward": 53.44,
+      "track_lin_vel": 0.5687
+    },
+    {
+      "iter": 197,
+      "mean_reward": 49.89,
+      "track_lin_vel": 0.6297
+    },
+    {
+      "iter": 198,
+      "mean_reward": 51.48,
+      "track_lin_vel": 0.5915
+    },
+    {
+      "iter": 199,
+      "mean_reward": 51.02,
+      "track_lin_vel": 0.6015
+    },
+    {
+      "iter": 200,
+      "mean_reward": 54.56,
+      "track_lin_vel": 0.661
+    },
+    {
+      "iter": 201,
+      "mean_reward": 56.74,
+      "track_lin_vel": 0.6534
+    },
+    {
+      "iter": 202,
+      "mean_reward": 55.71,
+      "track_lin_vel": 0.6933
+    },
+    {
+      "iter": 203,
+      "mean_reward": 54.27,
+      "track_lin_vel": 0.7488
+    },
+    {
+      "iter": 204,
+      "mean_reward": 55.73,
+      "track_lin_vel": 0.7501
+    },
+    {
+      "iter": 205,
+      "mean_reward": 54.13,
+      "track_lin_vel": 0.6743
+    },
+    {
+      "iter": 206,
+      "mean_reward": 54.57,
+      "track_lin_vel": 0.7104
+    },
+    {
+      "iter": 207,
+      "mean_reward": 54.15,
+      "track_lin_vel": 0.6233
+    },
+    {
+      "iter": 208,
+      "mean_reward": 51.86,
+      "track_lin_vel": 0.5835
+    },
+    {
+      "iter": 209,
+      "mean_reward": 53.14,
+      "track_lin_vel": 0.6144
+    },
+    {
+      "iter": 210,
+      "mean_reward": 58.94,
+      "track_lin_vel": 0.7716
+    },
+    {
+      "iter": 211,
+      "mean_reward": 58.33,
+      "track_lin_vel": 0.7152
+    },
+    {
+      "iter": 212,
+      "mean_reward": 57.02,
+      "track_lin_vel": 0.6993
+    },
+    {
+      "iter": 213,
+      "mean_reward": 59.87,
+      "track_lin_vel": 0.7887
+    },
+    {
+      "iter": 214,
+      "mean_reward": 57.52,
+      "track_lin_vel": 0.7017
+    },
+    {
+      "iter": 215,
+      "mean_reward": 58.08,
+      "track_lin_vel": 0.6854
+    },
+    {
+      "iter": 216,
+      "mean_reward": 59.5,
+      "track_lin_vel": 0.7594
+    },
+    {
+      "iter": 217,
+      "mean_reward": 58.48,
+      "track_lin_vel": 0.7783
+    },
+    {
+      "iter": 218,
+      "mean_reward": 60.95,
+      "track_lin_vel": 0.7954
+    },
+    {
+      "iter": 219,
+      "mean_reward": 59.78,
+      "track_lin_vel": 0.7685
+    },
+    {
+      "iter": 220,
+      "mean_reward": 60.36,
+      "track_lin_vel": 0.8039
+    },
+    {
+      "iter": 221,
+      "mean_reward": 62.77,
+      "track_lin_vel": 0.8254
+    },
+    {
+      "iter": 222,
+      "mean_reward": 60.8,
+      "track_lin_vel": 0.7913
+    },
+    {
+      "iter": 223,
+      "mean_reward": 61.68,
+      "track_lin_vel": 0.8127
+    },
+    {
+      "iter": 224,
+      "mean_reward": 62.24,
+      "track_lin_vel": 0.8236
+    },
+    {
+      "iter": 225,
+      "mean_reward": 63.42,
+      "track_lin_vel": 0.8636
+    },
+    {
+      "iter": 226,
+      "mean_reward": 61.39,
+      "track_lin_vel": 0.7823
+    },
+    {
+      "iter": 227,
+      "mean_reward": 59.55,
+      "track_lin_vel": 0.7987
+    },
+    {
+      "iter": 228,
+      "mean_reward": 60.43,
+      "track_lin_vel": 0.7824
+    },
+    {
+      "iter": 229,
+      "mean_reward": 61.08,
+      "track_lin_vel": 0.8055
+    },
+    {
+      "iter": 230,
+      "mean_reward": 57.74,
+      "track_lin_vel": 0.7789
+    },
+    {
+      "iter": 231,
+      "mean_reward": 55.94,
+      "track_lin_vel": 0.6846
+    },
+    {
+      "iter": 232,
+      "mean_reward": 58.09,
+      "track_lin_vel": 0.7301
+    },
+    {
+      "iter": 233,
+      "mean_reward": 57.23,
+      "track_lin_vel": 0.7917
+    },
+    {
+      "iter": 234,
+      "mean_reward": 57.79,
+      "track_lin_vel": 0.7193
+    },
+    {
+      "iter": 235,
+      "mean_reward": 58.59,
+      "track_lin_vel": 0.8131
+    },
+    {
+      "iter": 236,
+      "mean_reward": 57.56,
+      "track_lin_vel": 0.7556
+    },
+    {
+      "iter": 237,
+      "mean_reward": 59.16,
+      "track_lin_vel": 0.7682
+    },
+    {
+      "iter": 238,
+      "mean_reward": 52.89,
+      "track_lin_vel": 0.7483
+    },
+    {
+      "iter": 239,
+      "mean_reward": 57.38,
+      "track_lin_vel": 0.8111
+    },
+    {
+      "iter": 240,
+      "mean_reward": 57.06,
+      "track_lin_vel": 0.7966
+    },
+    {
+      "iter": 241,
+      "mean_reward": 58.0,
+      "track_lin_vel": 0.804
+    },
+    {
+      "iter": 242,
+      "mean_reward": 58.13,
+      "track_lin_vel": 0.8519
+    },
+    {
+      "iter": 243,
+      "mean_reward": 60.52,
+      "track_lin_vel": 0.8398
+    },
+    {
+      "iter": 244,
+      "mean_reward": 57.67,
+      "track_lin_vel": 0.8336
+    },
+    {
+      "iter": 245,
+      "mean_reward": 58.33,
+      "track_lin_vel": 0.8359
+    },
+    {
+      "iter": 246,
+      "mean_reward": 56.6,
+      "track_lin_vel": 0.7522
+    },
+    {
+      "iter": 247,
+      "mean_reward": 59.06,
+      "track_lin_vel": 0.8511
+    },
+    {
+      "iter": 248,
+      "mean_reward": 56.4,
+      "track_lin_vel": 0.7156
+    },
+    {
+      "iter": 249,
+      "mean_reward": 55.96,
+      "track_lin_vel": 0.7274
+    },
+    {
+      "iter": 250,
+      "mean_reward": 56.54,
+      "track_lin_vel": 0.8876
+    },
+    {
+      "iter": 251,
+      "mean_reward": 59.74,
+      "track_lin_vel": 0.9416
+    },
+    {
+      "iter": 252,
+      "mean_reward": 59.71,
+      "track_lin_vel": 0.8956
+    },
+    {
+      "iter": 253,
+      "mean_reward": 60.34,
+      "track_lin_vel": 0.8248
+    },
+    {
+      "iter": 254,
+      "mean_reward": 60.13,
+      "track_lin_vel": 0.8546
+    },
+    {
+      "iter": 255,
+      "mean_reward": 57.44,
+      "track_lin_vel": 0.7887
+    },
+    {
+      "iter": 256,
+      "mean_reward": 57.88,
+      "track_lin_vel": 0.8051
+    },
+    {
+      "iter": 257,
+      "mean_reward": 63.04,
+      "track_lin_vel": 0.8864
+    },
+    {
+      "iter": 258,
+      "mean_reward": 59.32,
+      "track_lin_vel": 0.8295
+    },
+    {
+      "iter": 259,
+      "mean_reward": 62.33,
+      "track_lin_vel": 0.9201
+    },
+    {
+      "iter": 260,
+      "mean_reward": 61.02,
+      "track_lin_vel": 0.8958
+    },
+    {
+      "iter": 261,
+      "mean_reward": 60.53,
+      "track_lin_vel": 0.8911
+    },
+    {
+      "iter": 262,
+      "mean_reward": 61.42,
+      "track_lin_vel": 0.9322
+    },
+    {
+      "iter": 263,
+      "mean_reward": 60.51,
+      "track_lin_vel": 0.8589
+    },
+    {
+      "iter": 264,
+      "mean_reward": 62.9,
+      "track_lin_vel": 0.8906
+    },
+    {
+      "iter": 265,
+      "mean_reward": 62.77,
+      "track_lin_vel": 0.9077
+    },
+    {
+      "iter": 266,
+      "mean_reward": 63.15,
+      "track_lin_vel": 0.9196
+    },
+    {
+      "iter": 267,
+      "mean_reward": 62.98,
+      "track_lin_vel": 0.9311
+    },
+    {
+      "iter": 268,
+      "mean_reward": 61.48,
+      "track_lin_vel": 0.9454
+    },
+    {
+      "iter": 269,
+      "mean_reward": 62.14,
+      "track_lin_vel": 0.8981
+    },
+    {
+      "iter": 270,
+      "mean_reward": 58.3,
+      "track_lin_vel": 0.8284
+    },
+    {
+      "iter": 271,
+      "mean_reward": 60.13,
+      "track_lin_vel": 0.8292
+    },
+    {
+      "iter": 272,
+      "mean_reward": 57.75,
+      "track_lin_vel": 0.8711
+    },
+    {
+      "iter": 273,
+      "mean_reward": 59.09,
+      "track_lin_vel": 0.8942
+    },
+    {
+      "iter": 274,
+      "mean_reward": 59.08,
+      "track_lin_vel": 0.8377
+    },
+    {
+      "iter": 275,
+      "mean_reward": 59.58,
+      "track_lin_vel": 0.8615
+    },
+    {
+      "iter": 276,
+      "mean_reward": 59.01,
+      "track_lin_vel": 0.9042
+    },
+    {
+      "iter": 277,
+      "mean_reward": 59.62,
+      "track_lin_vel": 0.8419
+    },
+    {
+      "iter": 278,
+      "mean_reward": 57.7,
+      "track_lin_vel": 0.7262
+    },
+    {
+      "iter": 279,
+      "mean_reward": 58.15,
+      "track_lin_vel": 0.834
+    },
+    {
+      "iter": 280,
+      "mean_reward": 58.49,
+      "track_lin_vel": 0.8066
+    },
+    {
+      "iter": 281,
+      "mean_reward": 60.41,
+      "track_lin_vel": 0.8732
+    },
+    {
+      "iter": 282,
+      "mean_reward": 61.56,
+      "track_lin_vel": 0.9258
+    },
+    {
+      "iter": 283,
+      "mean_reward": 58.72,
+      "track_lin_vel": 0.7994
+    },
+    {
+      "iter": 284,
+      "mean_reward": 57.97,
+      "track_lin_vel": 0.7941
+    },
+    {
+      "iter": 285,
+      "mean_reward": 61.68,
+      "track_lin_vel": 0.905
+    },
+    {
+      "iter": 286,
+      "mean_reward": 61.25,
+      "track_lin_vel": 0.894
+    },
+    {
+      "iter": 287,
+      "mean_reward": 60.68,
+      "track_lin_vel": 0.8822
+    },
+    {
+      "iter": 288,
+      "mean_reward": 61.78,
+      "track_lin_vel": 0.8806
+    },
+    {
+      "iter": 289,
+      "mean_reward": 61.13,
+      "track_lin_vel": 0.9366
+    },
+    {
+      "iter": 290,
+      "mean_reward": 59.98,
+      "track_lin_vel": 0.8872
+    },
+    {
+      "iter": 291,
+      "mean_reward": 62.86,
+      "track_lin_vel": 0.9772
+    },
+    {
+      "iter": 292,
+      "mean_reward": 61.53,
+      "track_lin_vel": 0.953
+    },
+    {
+      "iter": 293,
+      "mean_reward": 62.12,
+      "track_lin_vel": 0.8554
+    },
+    {
+      "iter": 294,
+      "mean_reward": 63.55,
+      "track_lin_vel": 0.9595
+    },
+    {
+      "iter": 295,
+      "mean_reward": 61.28,
+      "track_lin_vel": 0.9133
+    },
+    {
+      "iter": 296,
+      "mean_reward": 61.99,
+      "track_lin_vel": 0.9273
+    },
+    {
+      "iter": 297,
+      "mean_reward": 63.58,
+      "track_lin_vel": 0.9608
+    },
+    {
+      "iter": 298,
+      "mean_reward": 63.85,
+      "track_lin_vel": 0.9607
+    },
+    {
+      "iter": 299,
+      "mean_reward": 62.89,
+      "track_lin_vel": 0.9251
+    },
+    {
+      "iter": 300,
+      "mean_reward": 63.99,
+      "track_lin_vel": 0.9647
+    },
+    {
+      "iter": 301,
+      "mean_reward": 65.61,
+      "track_lin_vel": 0.9572
+    },
+    {
+      "iter": 302,
+      "mean_reward": 64.03,
+      "track_lin_vel": 0.9809
+    },
+    {
+      "iter": 303,
+      "mean_reward": 63.16,
+      "track_lin_vel": 0.9485
+    },
+    {
+      "iter": 304,
+      "mean_reward": 62.57,
+      "track_lin_vel": 0.9071
+    },
+    {
+      "iter": 305,
+      "mean_reward": 64.23,
+      "track_lin_vel": 0.9284
+    },
+    {
+      "iter": 306,
+      "mean_reward": 64.02,
+      "track_lin_vel": 0.9465
+    },
+    {
+      "iter": 307,
+      "mean_reward": 65.36,
+      "track_lin_vel": 0.9778
+    },
+    {
+      "iter": 308,
+      "mean_reward": 62.77,
+      "track_lin_vel": 0.8976
+    },
+    {
+      "iter": 309,
+      "mean_reward": 65.64,
+      "track_lin_vel": 0.9997
+    },
+    {
+      "iter": 310,
+      "mean_reward": 63.75,
+      "track_lin_vel": 0.9872
+    },
+    {
+      "iter": 311,
+      "mean_reward": 64.03,
+      "track_lin_vel": 0.9711
+    },
+    {
+      "iter": 312,
+      "mean_reward": 63.8,
+      "track_lin_vel": 0.9972
+    },
+    {
+      "iter": 313,
+      "mean_reward": 63.67,
+      "track_lin_vel": 0.9562
+    },
+    {
+      "iter": 314,
+      "mean_reward": 64.11,
+      "track_lin_vel": 0.9906
+    },
+    {
+      "iter": 315,
+      "mean_reward": 64.02,
+      "track_lin_vel": 0.9483
+    },
+    {
+      "iter": 316,
+      "mean_reward": 65.27,
+      "track_lin_vel": 0.9808
+    },
+    {
+      "iter": 317,
+      "mean_reward": 61.69,
+      "track_lin_vel": 0.8891
+    },
+    {
+      "iter": 318,
+      "mean_reward": 62.83,
+      "track_lin_vel": 0.9473
+    },
+    {
+      "iter": 319,
+      "mean_reward": 63.59,
+      "track_lin_vel": 0.9594
+    },
+    {
+      "iter": 320,
+      "mean_reward": 62.72,
+      "track_lin_vel": 0.925
+    },
+    {
+      "iter": 321,
+      "mean_reward": 64.15,
+      "track_lin_vel": 1.042
+    },
+    {
+      "iter": 322,
+      "mean_reward": 63.81,
+      "track_lin_vel": 1.0658
+    },
+    {
+      "iter": 323,
+      "mean_reward": 64.46,
+      "track_lin_vel": 0.9912
+    },
+    {
+      "iter": 324,
+      "mean_reward": 63.2,
+      "track_lin_vel": 0.9629
+    },
+    {
+      "iter": 325,
+      "mean_reward": 64.99,
+      "track_lin_vel": 0.9338
+    },
+    {
+      "iter": 326,
+      "mean_reward": 65.61,
+      "track_lin_vel": 0.9977
+    },
+    {
+      "iter": 327,
+      "mean_reward": 64.52,
+      "track_lin_vel": 1.0448
+    },
+    {
+      "iter": 328,
+      "mean_reward": 65.19,
+      "track_lin_vel": 1.0037
+    },
+    {
+      "iter": 329,
+      "mean_reward": 64.3,
+      "track_lin_vel": 1.0532
+    },
+    {
+      "iter": 330,
+      "mean_reward": 66.11,
+      "track_lin_vel": 1.0863
+    },
+    {
+      "iter": 331,
+      "mean_reward": 65.2,
+      "track_lin_vel": 1.0516
+    },
+    {
+      "iter": 332,
+      "mean_reward": 64.02,
+      "track_lin_vel": 0.9774
+    },
+    {
+      "iter": 333,
+      "mean_reward": 66.2,
+      "track_lin_vel": 1.0516
+    },
+    {
+      "iter": 334,
+      "mean_reward": 66.73,
+      "track_lin_vel": 1.0141
+    },
+    {
+      "iter": 335,
+      "mean_reward": 65.65,
+      "track_lin_vel": 1.0208
+    },
+    {
+      "iter": 336,
+      "mean_reward": 65.73,
+      "track_lin_vel": 1.055
+    },
+    {
+      "iter": 337,
+      "mean_reward": 65.36,
+      "track_lin_vel": 1.0258
+    },
+    {
+      "iter": 338,
+      "mean_reward": 64.2,
+      "track_lin_vel": 0.9951
+    },
+    {
+      "iter": 339,
+      "mean_reward": 67.77,
+      "track_lin_vel": 1.0523
+    },
+    {
+      "iter": 340,
+      "mean_reward": 66.17,
+      "track_lin_vel": 0.9908
+    },
+    {
+      "iter": 341,
+      "mean_reward": 65.1,
+      "track_lin_vel": 0.9952
+    },
+    {
+      "iter": 342,
+      "mean_reward": 66.06,
+      "track_lin_vel": 1.047
+    },
+    {
+      "iter": 343,
+      "mean_reward": 68.82,
+      "track_lin_vel": 1.1302
+    },
+    {
+      "iter": 344,
+      "mean_reward": 67.32,
+      "track_lin_vel": 1.0567
+    },
+    {
+      "iter": 345,
+      "mean_reward": 67.72,
+      "track_lin_vel": 1.0768
+    },
+    {
+      "iter": 346,
+      "mean_reward": 67.82,
+      "track_lin_vel": 1.1034
+    },
+    {
+      "iter": 347,
+      "mean_reward": 66.53,
+      "track_lin_vel": 1.0852
+    },
+    {
+      "iter": 348,
+      "mean_reward": 68.37,
+      "track_lin_vel": 1.057
+    },
+    {
+      "iter": 349,
+      "mean_reward": 67.43,
+      "track_lin_vel": 1.088
+    },
+    {
+      "iter": 350,
+      "mean_reward": 69.44,
+      "track_lin_vel": 1.1232
+    },
+    {
+      "iter": 351,
+      "mean_reward": 68.12,
+      "track_lin_vel": 1.1142
+    },
+    {
+      "iter": 352,
+      "mean_reward": 68.49,
+      "track_lin_vel": 1.1124
+    },
+    {
+      "iter": 353,
+      "mean_reward": 68.73,
+      "track_lin_vel": 1.1135
+    },
+    {
+      "iter": 354,
+      "mean_reward": 68.15,
+      "track_lin_vel": 1.0874
+    },
+    {
+      "iter": 355,
+      "mean_reward": 67.52,
+      "track_lin_vel": 1.0964
+    },
+    {
+      "iter": 356,
+      "mean_reward": 68.45,
+      "track_lin_vel": 1.0801
+    },
+    {
+      "iter": 357,
+      "mean_reward": 68.58,
+      "track_lin_vel": 1.0829
+    },
+    {
+      "iter": 358,
+      "mean_reward": 67.07,
+      "track_lin_vel": 1.0756
+    },
+    {
+      "iter": 359,
+      "mean_reward": 68.8,
+      "track_lin_vel": 1.1406
+    },
+    {
+      "iter": 360,
+      "mean_reward": 67.34,
+      "track_lin_vel": 1.1193
+    },
+    {
+      "iter": 361,
+      "mean_reward": 68.21,
+      "track_lin_vel": 1.1007
+    },
+    {
+      "iter": 362,
+      "mean_reward": 69.77,
+      "track_lin_vel": 1.1303
+    },
+    {
+      "iter": 363,
+      "mean_reward": 68.35,
+      "track_lin_vel": 1.159
+    },
+    {
+      "iter": 364,
+      "mean_reward": 65.32,
+      "track_lin_vel": 1.0811
+    },
+    {
+      "iter": 365,
+      "mean_reward": 69.54,
+      "track_lin_vel": 1.1614
+    },
+    {
+      "iter": 366,
+      "mean_reward": 68.97,
+      "track_lin_vel": 1.1421
+    },
+    {
+      "iter": 367,
+      "mean_reward": 68.57,
+      "track_lin_vel": 1.1315
+    },
+    {
+      "iter": 368,
+      "mean_reward": 66.98,
+      "track_lin_vel": 1.1531
+    },
+    {
+      "iter": 369,
+      "mean_reward": 67.74,
+      "track_lin_vel": 1.1539
+    },
+    {
+      "iter": 370,
+      "mean_reward": 66.33,
+      "track_lin_vel": 0.9944
+    },
+    {
+      "iter": 371,
+      "mean_reward": 66.01,
+      "track_lin_vel": 1.1144
+    },
+    {
+      "iter": 372,
+      "mean_reward": 66.63,
+      "track_lin_vel": 1.0692
+    },
+    {
+      "iter": 373,
+      "mean_reward": 69.38,
+      "track_lin_vel": 1.1591
+    },
+    {
+      "iter": 374,
+      "mean_reward": 69.27,
+      "track_lin_vel": 1.1638
+    },
+    {
+      "iter": 375,
+      "mean_reward": 67.53,
+      "track_lin_vel": 1.0763
+    },
+    {
+      "iter": 376,
+      "mean_reward": 68.74,
+      "track_lin_vel": 1.2114
+    },
+    {
+      "iter": 377,
+      "mean_reward": 68.4,
+      "track_lin_vel": 1.1272
+    },
+    {
+      "iter": 378,
+      "mean_reward": 67.13,
+      "track_lin_vel": 1.071
+    },
+    {
+      "iter": 379,
+      "mean_reward": 68.05,
+      "track_lin_vel": 1.127
+    },
+    {
+      "iter": 380,
+      "mean_reward": 68.65,
+      "track_lin_vel": 1.153
+    },
+    {
+      "iter": 381,
+      "mean_reward": 69.27,
+      "track_lin_vel": 1.1142
+    },
+    {
+      "iter": 382,
+      "mean_reward": 69.83,
+      "track_lin_vel": 1.1956
+    },
+    {
+      "iter": 383,
+      "mean_reward": 69.05,
+      "track_lin_vel": 1.0928
+    },
+    {
+      "iter": 384,
+      "mean_reward": 70.81,
+      "track_lin_vel": 1.2298
+    },
+    {
+      "iter": 385,
+      "mean_reward": 71.43,
+      "track_lin_vel": 1.2114
+    },
+    {
+      "iter": 386,
+      "mean_reward": 71.24,
+      "track_lin_vel": 1.1986
+    },
+    {
+      "iter": 387,
+      "mean_reward": 70.72,
+      "track_lin_vel": 1.1127
+    },
+    {
+      "iter": 388,
+      "mean_reward": 70.63,
+      "track_lin_vel": 1.1929
+    },
+    {
+      "iter": 389,
+      "mean_reward": 71.51,
+      "track_lin_vel": 1.1936
+    },
+    {
+      "iter": 390,
+      "mean_reward": 71.25,
+      "track_lin_vel": 1.2412
+    },
+    {
+      "iter": 391,
+      "mean_reward": 70.35,
+      "track_lin_vel": 1.21
+    },
+    {
+      "iter": 392,
+      "mean_reward": 71.0,
+      "track_lin_vel": 1.2021
+    },
+    {
+      "iter": 393,
+      "mean_reward": 71.35,
+      "track_lin_vel": 1.1956
+    },
+    {
+      "iter": 394,
+      "mean_reward": 71.42,
+      "track_lin_vel": 1.1973
+    },
+    {
+      "iter": 395,
+      "mean_reward": 69.64,
+      "track_lin_vel": 1.1652
+    },
+    {
+      "iter": 396,
+      "mean_reward": 71.25,
+      "track_lin_vel": 1.2815
+    },
+    {
+      "iter": 397,
+      "mean_reward": 69.26,
+      "track_lin_vel": 1.0928
+    },
+    {
+      "iter": 398,
+      "mean_reward": 68.75,
+      "track_lin_vel": 1.1606
+    },
+    {
+      "iter": 399,
+      "mean_reward": 70.99,
+      "track_lin_vel": 1.2142
+    },
+    {
+      "iter": 400,
+      "mean_reward": 69.7,
+      "track_lin_vel": 1.1549
+    },
+    {
+      "iter": 401,
+      "mean_reward": 68.94,
+      "track_lin_vel": 1.1078
+    },
+    {
+      "iter": 402,
+      "mean_reward": 68.43,
+      "track_lin_vel": 1.1349
+    },
+    {
+      "iter": 403,
+      "mean_reward": 71.06,
+      "track_lin_vel": 1.2416
+    },
+    {
+      "iter": 404,
+      "mean_reward": 69.86,
+      "track_lin_vel": 1.2052
+    },
+    {
+      "iter": 405,
+      "mean_reward": 69.09,
+      "track_lin_vel": 1.1956
+    },
+    {
+      "iter": 406,
+      "mean_reward": 70.54,
+      "track_lin_vel": 1.1697
+    },
+    {
+      "iter": 407,
+      "mean_reward": 70.86,
+      "track_lin_vel": 1.208
+    },
+    {
+      "iter": 408,
+      "mean_reward": 69.92,
+      "track_lin_vel": 1.1162
+    },
+    {
+      "iter": 409,
+      "mean_reward": 69.69,
+      "track_lin_vel": 1.2056
+    },
+    {
+      "iter": 410,
+      "mean_reward": 67.35,
+      "track_lin_vel": 1.1192
+    },
+    {
+      "iter": 411,
+      "mean_reward": 71.56,
+      "track_lin_vel": 1.2522
+    },
+    {
+      "iter": 412,
+      "mean_reward": 70.64,
+      "track_lin_vel": 1.1582
+    },
+    {
+      "iter": 413,
+      "mean_reward": 70.57,
+      "track_lin_vel": 1.2062
+    },
+    {
+      "iter": 414,
+      "mean_reward": 71.81,
+      "track_lin_vel": 1.2558
+    },
+    {
+      "iter": 415,
+      "mean_reward": 69.02,
+      "track_lin_vel": 1.1719
+    },
+    {
+      "iter": 416,
+      "mean_reward": 69.8,
+      "track_lin_vel": 1.2434
+    },
+    {
+      "iter": 417,
+      "mean_reward": 69.4,
+      "track_lin_vel": 1.2209
+    },
+    {
+      "iter": 418,
+      "mean_reward": 70.02,
+      "track_lin_vel": 1.2311
+    },
+    {
+      "iter": 419,
+      "mean_reward": 70.35,
+      "track_lin_vel": 1.1907
+    },
+    {
+      "iter": 420,
+      "mean_reward": 71.83,
+      "track_lin_vel": 1.2028
+    },
+    {
+      "iter": 421,
+      "mean_reward": 71.9,
+      "track_lin_vel": 1.2906
+    },
+    {
+      "iter": 422,
+      "mean_reward": 72.44,
+      "track_lin_vel": 1.2993
+    },
+    {
+      "iter": 423,
+      "mean_reward": 71.16,
+      "track_lin_vel": 1.2042
+    },
+    {
+      "iter": 424,
+      "mean_reward": 72.44,
+      "track_lin_vel": 1.2885
+    },
+    {
+      "iter": 425,
+      "mean_reward": 69.71,
+      "track_lin_vel": 1.2105
+    },
+    {
+      "iter": 426,
+      "mean_reward": 72.51,
+      "track_lin_vel": 1.2774
+    },
+    {
+      "iter": 427,
+      "mean_reward": 71.8,
+      "track_lin_vel": 1.2862
+    },
+    {
+      "iter": 428,
+      "mean_reward": 72.39,
+      "track_lin_vel": 1.2957
+    },
+    {
+      "iter": 429,
+      "mean_reward": 71.65,
+      "track_lin_vel": 1.2695
+    },
+    {
+      "iter": 430,
+      "mean_reward": 71.82,
+      "track_lin_vel": 1.284
+    },
+    {
+      "iter": 431,
+      "mean_reward": 72.77,
+      "track_lin_vel": 1.2654
+    },
+    {
+      "iter": 432,
+      "mean_reward": 74.12,
+      "track_lin_vel": 1.3088
+    },
+    {
+      "iter": 433,
+      "mean_reward": 73.04,
+      "track_lin_vel": 1.2502
+    },
+    {
+      "iter": 434,
+      "mean_reward": 73.8,
+      "track_lin_vel": 1.2887
+    },
+    {
+      "iter": 435,
+      "mean_reward": 72.8,
+      "track_lin_vel": 1.2706
+    },
+    {
+      "iter": 436,
+      "mean_reward": 73.4,
+      "track_lin_vel": 1.3439
+    },
+    {
+      "iter": 437,
+      "mean_reward": 72.64,
+      "track_lin_vel": 1.2813
+    },
+    {
+      "iter": 438,
+      "mean_reward": 73.9,
+      "track_lin_vel": 1.3093
+    },
+    {
+      "iter": 439,
+      "mean_reward": 72.27,
+      "track_lin_vel": 1.2441
+    },
+    {
+      "iter": 440,
+      "mean_reward": 71.59,
+      "track_lin_vel": 1.2565
+    },
+    {
+      "iter": 441,
+      "mean_reward": 73.18,
+      "track_lin_vel": 1.3829
+    },
+    {
+      "iter": 442,
+      "mean_reward": 72.6,
+      "track_lin_vel": 1.2484
+    },
+    {
+      "iter": 443,
+      "mean_reward": 71.97,
+      "track_lin_vel": 1.2538
+    },
+    {
+      "iter": 444,
+      "mean_reward": 73.47,
+      "track_lin_vel": 1.294
+    },
+    {
+      "iter": 445,
+      "mean_reward": 71.88,
+      "track_lin_vel": 1.2364
+    },
+    {
+      "iter": 446,
+      "mean_reward": 71.48,
+      "track_lin_vel": 1.3156
+    },
+    {
+      "iter": 447,
+      "mean_reward": 72.14,
+      "track_lin_vel": 1.2555
+    },
+    {
+      "iter": 448,
+      "mean_reward": 73.39,
+      "track_lin_vel": 1.3188
+    },
+    {
+      "iter": 449,
+      "mean_reward": 73.45,
+      "track_lin_vel": 1.321
+    },
+    {
+      "iter": 450,
+      "mean_reward": 71.66,
+      "track_lin_vel": 1.3014
+    },
+    {
+      "iter": 451,
+      "mean_reward": 72.28,
+      "track_lin_vel": 1.3862
+    },
+    {
+      "iter": 452,
+      "mean_reward": 73.69,
+      "track_lin_vel": 1.2829
+    },
+    {
+      "iter": 453,
+      "mean_reward": 71.6,
+      "track_lin_vel": 1.2897
+    },
+    {
+      "iter": 454,
+      "mean_reward": 71.15,
+      "track_lin_vel": 1.2661
+    },
+    {
+      "iter": 455,
+      "mean_reward": 72.23,
+      "track_lin_vel": 1.3038
+    },
+    {
+      "iter": 456,
+      "mean_reward": 73.43,
+      "track_lin_vel": 1.2823
+    },
+    {
+      "iter": 457,
+      "mean_reward": 73.09,
+      "track_lin_vel": 1.3278
+    },
+    {
+      "iter": 458,
+      "mean_reward": 73.23,
+      "track_lin_vel": 1.3368
+    },
+    {
+      "iter": 459,
+      "mean_reward": 73.21,
+      "track_lin_vel": 1.3818
+    },
+    {
+      "iter": 460,
+      "mean_reward": 73.46,
+      "track_lin_vel": 1.3149
+    },
+    {
+      "iter": 461,
+      "mean_reward": 75.14,
+      "track_lin_vel": 1.3824
+    },
+    {
+      "iter": 462,
+      "mean_reward": 73.57,
+      "track_lin_vel": 1.3445
+    },
+    {
+      "iter": 463,
+      "mean_reward": 73.93,
+      "track_lin_vel": 1.3571
+    },
+    {
+      "iter": 464,
+      "mean_reward": 73.93,
+      "track_lin_vel": 1.3875
+    },
+    {
+      "iter": 465,
+      "mean_reward": 74.23,
+      "track_lin_vel": 1.3288
+    },
+    {
+      "iter": 466,
+      "mean_reward": 74.96,
+      "track_lin_vel": 1.3643
+    },
+    {
+      "iter": 467,
+      "mean_reward": 75.59,
+      "track_lin_vel": 1.389
+    },
+    {
+      "iter": 468,
+      "mean_reward": 74.97,
+      "track_lin_vel": 1.3717
+    },
+    {
+      "iter": 469,
+      "mean_reward": 73.75,
+      "track_lin_vel": 1.3949
+    },
+    {
+      "iter": 470,
+      "mean_reward": 74.46,
+      "track_lin_vel": 1.3798
+    },
+    {
+      "iter": 471,
+      "mean_reward": 75.12,
+      "track_lin_vel": 1.3471
+    },
+    {
+      "iter": 472,
+      "mean_reward": 75.04,
+      "track_lin_vel": 1.4047
+    },
+    {
+      "iter": 473,
+      "mean_reward": 76.32,
+      "track_lin_vel": 1.4244
+    },
+    {
+      "iter": 474,
+      "mean_reward": 76.0,
+      "track_lin_vel": 1.4575
+    },
+    {
+      "iter": 475,
+      "mean_reward": 76.17,
+      "track_lin_vel": 1.4385
+    },
+    {
+      "iter": 476,
+      "mean_reward": 74.87,
+      "track_lin_vel": 1.4049
+    },
+    {
+      "iter": 477,
+      "mean_reward": 76.16,
+      "track_lin_vel": 1.459
+    },
+    {
+      "iter": 478,
+      "mean_reward": 75.18,
+      "track_lin_vel": 1.4026
+    },
+    {
+      "iter": 479,
+      "mean_reward": 77.08,
+      "track_lin_vel": 1.456
+    },
+    {
+      "iter": 480,
+      "mean_reward": 73.92,
+      "track_lin_vel": 1.3534
+    },
+    {
+      "iter": 481,
+      "mean_reward": 75.48,
+      "track_lin_vel": 1.4127
+    },
+    {
+      "iter": 482,
+      "mean_reward": 74.97,
+      "track_lin_vel": 1.4096
+    },
+    {
+      "iter": 483,
+      "mean_reward": 73.72,
+      "track_lin_vel": 1.3506
+    },
+    {
+      "iter": 484,
+      "mean_reward": 76.08,
+      "track_lin_vel": 1.4836
+    },
+    {
+      "iter": 485,
+      "mean_reward": 73.44,
+      "track_lin_vel": 1.3913
+    },
+    {
+      "iter": 486,
+      "mean_reward": 75.72,
+      "track_lin_vel": 1.468
+    },
+    {
+      "iter": 487,
+      "mean_reward": 73.76,
+      "track_lin_vel": 1.4252
+    },
+    {
+      "iter": 488,
+      "mean_reward": 73.18,
+      "track_lin_vel": 1.3305
+    },
+    {
+      "iter": 489,
+      "mean_reward": 75.9,
+      "track_lin_vel": 1.4714
+    },
+    {
+      "iter": 490,
+      "mean_reward": 74.01,
+      "track_lin_vel": 1.4207
+    },
+    {
+      "iter": 491,
+      "mean_reward": 75.66,
+      "track_lin_vel": 1.4471
+    },
+    {
+      "iter": 492,
+      "mean_reward": 76.2,
+      "track_lin_vel": 1.4642
+    },
+    {
+      "iter": 493,
+      "mean_reward": 76.15,
+      "track_lin_vel": 1.4025
+    },
+    {
+      "iter": 494,
+      "mean_reward": 74.36,
+      "track_lin_vel": 1.4178
+    },
+    {
+      "iter": 495,
+      "mean_reward": 75.73,
+      "track_lin_vel": 1.4642
+    },
+    {
+      "iter": 496,
+      "mean_reward": 75.47,
+      "track_lin_vel": 1.4462
+    },
+    {
+      "iter": 497,
+      "mean_reward": 76.76,
+      "track_lin_vel": 1.5194
+    },
+    {
+      "iter": 498,
+      "mean_reward": 76.75,
+      "track_lin_vel": 1.4969
+    },
+    {
+      "iter": 499,
+      "mean_reward": 75.45,
+      "track_lin_vel": 1.4685
+    }
+  ]
+}
