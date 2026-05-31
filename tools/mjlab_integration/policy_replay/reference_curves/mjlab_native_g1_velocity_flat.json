@@ -1,0 +1,8016 @@
+{
+  "task": "Mjlab-Velocity-Flat-Unitree-G1",
+  "source": "mjlab native (mujoco_warp)",
+  "commit": "898a700",
+  "num_envs": 4096,
+  "max_iterations": 2000,
+  "machine": "RTX PRO 6000 Blackwell cuda:1",
+  "final": {
+    "iter": 1999,
+    "mean_reward": 63.52
+  },
+  "best_mean_reward": 64.41,
+  "note": "g1 (29-DoF) converges slowly; reaches a meaningful walking reward over 2000 iters. mjlab default cap is 10000.",
+  "curve": [
+    {
+      "iter": 0,
+      "mean_reward": -1.14
+    },
+    {
+      "iter": 1,
+      "mean_reward": -6.31
+    },
+    {
+      "iter": 2,
+      "mean_reward": -8.67
+    },
+    {
+      "iter": 3,
+      "mean_reward": -6.69
+    },
+    {
+      "iter": 4,
+      "mean_reward": -7.28
+    },
+    {
+      "iter": 5,
+      "mean_reward": -6.77
+    },
+    {
+      "iter": 6,
+      "mean_reward": -6.77
+    },
+    {
+      "iter": 7,
+      "mean_reward": -6.87
+    },
+    {
+      "iter": 8,
+      "mean_reward": -6.28
+    },
+    {
+      "iter": 9,
+      "mean_reward": -6.23
+    },
+    {
+      "iter": 10,
+      "mean_reward": -6.09
+    },
+    {
+      "iter": 11,
+      "mean_reward": -6.07
+    },
+    {
+      "iter": 12,
+      "mean_reward": -5.8
+    },
+    {
+      "iter": 13,
+      "mean_reward": -5.4
+    },
+    {
+      "iter": 14,
+      "mean_reward": -5.24
+    },
+    {
+      "iter": 15,
+      "mean_reward": -4.87
+    },
+    {
+      "iter": 16,
+      "mean_reward": -4.65
+    },
+    {
+      "iter": 17,
+      "mean_reward": -4.26
+    },
+    {
+      "iter": 18,
+      "mean_reward": -3.76
+    },
+    {
+      "iter": 19,
+      "mean_reward": -3.47
+    },
+    {
+      "iter": 20,
+      "mean_reward": -3.39
+    },
+    {
+      "iter": 21,
+      "mean_reward": -2.83
+    },
+    {
+      "iter": 22,
+      "mean_reward": -2.59
+    },
+    {
+      "iter": 23,
+      "mean_reward": -2.11
+    },
+    {
+      "iter": 24,
+      "mean_reward": -2.0
+    },
+    {
+      "iter": 25,
+      "mean_reward": -1.56
+    },
+    {
+      "iter": 26,
+      "mean_reward": -1.54
+    },
+    {
+      "iter": 27,
+      "mean_reward": -1.43
+    },
+    {
+      "iter": 28,
+      "mean_reward": -1.32
+    },
+    {
+      "iter": 29,
+      "mean_reward": -1.25
+    },
+    {
+      "iter": 30,
+      "mean_reward": -1.21
+    },
+    {
+      "iter": 31,
+      "mean_reward": -1.17
+    },
+    {
+      "iter": 32,
+      "mean_reward": -1.14
+    },
+    {
+      "iter": 33,
+      "mean_reward": -1.11
+    },
+    {
+      "iter": 34,
+      "mean_reward": -1.09
+    },
+    {
+      "iter": 35,
+      "mean_reward": -1.08
+    },
+    {
+      "iter": 36,
+      "mean_reward": -1.05
+    },
+    {
+      "iter": 37,
+      "mean_reward": -1.03
+    },
+    {
+      "iter": 38,
+      "mean_reward": -1.0
+    },
+    {
+      "iter": 39,
+      "mean_reward": -0.95
+    },
+    {
+      "iter": 40,
+      "mean_reward": -0.92
+    },
+    {
+      "iter": 41,
+      "mean_reward": -0.92
+    },
+    {
+      "iter": 42,
+      "mean_reward": -0.9
+    },
+    {
+      "iter": 43,
+      "mean_reward": -0.87
+    },
+    {
+      "iter": 44,
+      "mean_reward": -0.86
+    },
+    {
+      "iter": 45,
+      "mean_reward": -0.81
+    },
+    {
+      "iter": 46,
+      "mean_reward": -0.81
+    },
+    {
+      "iter": 47,
+      "mean_reward": -0.79
+    },
+    {
+      "iter": 48,
+      "mean_reward": -0.77
+    },
+    {
+      "iter": 49,
+      "mean_reward": -0.76
+    },
+    {
+      "iter": 50,
+      "mean_reward": -0.73
+    },
+    {
+      "iter": 51,
+      "mean_reward": -0.71
+    },
+    {
+      "iter": 52,
+      "mean_reward": -0.69
+    },
+    {
+      "iter": 53,
+      "mean_reward": -0.68
+    },
+    {
+      "iter": 54,
+      "mean_reward": -0.67
+    },
+    {
+      "iter": 55,
+      "mean_reward": -0.65
+    },
+    {
+      "iter": 56,
+      "mean_reward": -0.63
+    },
+    {
+      "iter": 57,
+      "mean_reward": -0.63
+    },
+    {
+      "iter": 58,
+      "mean_reward": -0.61
+    },
+    {
+      "iter": 59,
+      "mean_reward": -0.6
+    },
+    {
+      "iter": 60,
+      "mean_reward": -0.57
+    },
+    {
+      "iter": 61,
+      "mean_reward": -0.56
+    },
+    {
+      "iter": 62,
+      "mean_reward": -0.54
+    },
+    {
+      "iter": 63,
+      "mean_reward": -0.53
+    },
+    {
+      "iter": 64,
+      "mean_reward": -0.5
+    },
+    {
+      "iter": 65,
+      "mean_reward": -0.5
+    },
+    {
+      "iter": 66,
+      "mean_reward": -0.48
+    },
+    {
+      "iter": 67,
+      "mean_reward": -0.48
+    },
+    {
+      "iter": 68,
+      "mean_reward": -0.47
+    },
+    {
+      "iter": 69,
+      "mean_reward": -0.45
+    },
+    {
+      "iter": 70,
+      "mean_reward": -0.45
+    },
+    {
+      "iter": 71,
+      "mean_reward": -0.43
+    },
+    {
+      "iter": 72,
+      "mean_reward": -0.42
+    },
+    {
+      "iter": 73,
+      "mean_reward": -0.4
+    },
+    {
+      "iter": 74,
+      "mean_reward": -0.39
+    },
+    {
+      "iter": 75,
+      "mean_reward": -0.38
+    },
+    {
+      "iter": 76,
+      "mean_reward": -0.37
+    },
+    {
+      "iter": 77,
+      "mean_reward": -0.35
+    },
+    {
+      "iter": 78,
+      "mean_reward": -0.35
+    },
+    {
+      "iter": 79,
+      "mean_reward": -0.34
+    },
+    {
+      "iter": 80,
+      "mean_reward": -0.33
+    },
+    {
+      "iter": 81,
+      "mean_reward": -0.32
+    },
+    {
+      "iter": 82,
+      "mean_reward": -0.32
+    },
+    {
+      "iter": 83,
+      "mean_reward": -0.3
+    },
+    {
+      "iter": 84,
+      "mean_reward": -0.3
+    },
+    {
+      "iter": 85,
+      "mean_reward": -0.27
+    },
+    {
+      "iter": 86,
+      "mean_reward": -0.26
+    },
+    {
+      "iter": 87,
+      "mean_reward": -0.26
+    },
+    {
+      "iter": 88,
+      "mean_reward": -0.26
+    },
+    {
+      "iter": 89,
+      "mean_reward": -0.23
+    },
+    {
+      "iter": 90,
+      "mean_reward": -0.23
+    },
+    {
+      "iter": 91,
+      "mean_reward": -0.23
+    },
+    {
+      "iter": 92,
+      "mean_reward": -0.22
+    },
+    {
+      "iter": 93,
+      "mean_reward": -0.21
+    },
+    {
+      "iter": 94,
+      "mean_reward": -0.2
+    },
+    {
+      "iter": 95,
+      "mean_reward": -0.18
+    },
+    {
+      "iter": 96,
+      "mean_reward": -0.19
+    },
+    {
+      "iter": 97,
+      "mean_reward": -0.15
+    },
+    {
+      "iter": 98,
+      "mean_reward": -0.17
+    },
+    {
+      "iter": 99,
+      "mean_reward": -0.16
+    },
+    {
+      "iter": 100,
+      "mean_reward": -0.14
+    },
+    {
+      "iter": 101,
+      "mean_reward": -0.13
+    },
+    {
+      "iter": 102,
+      "mean_reward": -0.12
+    },
+    {
+      "iter": 103,
+      "mean_reward": -0.13
+    },
+    {
+      "iter": 104,
+      "mean_reward": -0.11
+    },
+    {
+      "iter": 105,
+      "mean_reward": -0.09
+    },
+    {
+      "iter": 106,
+      "mean_reward": -0.08
+    },
+    {
+      "iter": 107,
+      "mean_reward": -0.08
+    },
+    {
+      "iter": 108,
+      "mean_reward": -0.07
+    },
+    {
+      "iter": 109,
+      "mean_reward": -0.08
+    },
+    {
+      "iter": 110,
+      "mean_reward": -0.04
+    },
+    {
+      "iter": 111,
+      "mean_reward": -0.05
+    },
+    {
+      "iter": 112,
+      "mean_reward": -0.04
+    },
+    {
+      "iter": 113,
+      "mean_reward": -0.03
+    },
+    {
+      "iter": 114,
+      "mean_reward": -0.02
+    },
+    {
+      "iter": 115,
+      "mean_reward": -0.02
+    },
+    {
+      "iter": 116,
+      "mean_reward": 0.02
+    },
+    {
+      "iter": 117,
+      "mean_reward": -0.02
+    },
+    {
+      "iter": 118,
+      "mean_reward": 0.02
+    },
+    {
+      "iter": 119,
+      "mean_reward": 0.02
+    },
+    {
+      "iter": 120,
+      "mean_reward": 0.02
+    },
+    {
+      "iter": 121,
+      "mean_reward": 0.03
+    },
+    {
+      "iter": 122,
+      "mean_reward": 0.07
+    },
+    {
+      "iter": 123,
+      "mean_reward": 0.06
+    },
+    {
+      "iter": 124,
+      "mean_reward": 0.07
+    },
+    {
+      "iter": 125,
+      "mean_reward": 0.07
+    },
+    {
+      "iter": 126,
+      "mean_reward": 0.1
+    },
+    {
+      "iter": 127,
+      "mean_reward": 0.13
+    },
+    {
+      "iter": 128,
+      "mean_reward": 0.1
+    },
+    {
+      "iter": 129,
+      "mean_reward": 0.08
+    },
+    {
+      "iter": 130,
+      "mean_reward": 0.1
+    },
+    {
+      "iter": 131,
+      "mean_reward": 0.16
+    },
+    {
+      "iter": 132,
+      "mean_reward": 0.14
+    },
+    {
+      "iter": 133,
+      "mean_reward": 0.14
+    },
+    {
+      "iter": 134,
+      "mean_reward": 0.14
+    },
+    {
+      "iter": 135,
+      "mean_reward": 0.19
+    },
+    {
+      "iter": 136,
+      "mean_reward": 0.19
+    },
+    {
+      "iter": 137,
+      "mean_reward": 0.22
+    },
+    {
+      "iter": 138,
+      "mean_reward": 0.23
+    },
+    {
+      "iter": 139,
+      "mean_reward": 0.27
+    },
+    {
+      "iter": 140,
+      "mean_reward": 0.26
+    },
+    {
+      "iter": 141,
+      "mean_reward": 0.28
+    },
+    {
+      "iter": 142,
+      "mean_reward": 0.34
+    },
+    {
+      "iter": 143,
+      "mean_reward": 0.33
+    },
+    {
+      "iter": 144,
+      "mean_reward": 0.32
+    },
+    {
+      "iter": 145,
+      "mean_reward": 0.39
+    },
+    {
+      "iter": 146,
+      "mean_reward": 0.43
+    },
+    {
+      "iter": 147,
+      "mean_reward": 0.43
+    },
+    {
+      "iter": 148,
+      "mean_reward": 0.26
+    },
+    {
+      "iter": 149,
+      "mean_reward": 0.23
+    },
+    {
+      "iter": 150,
+      "mean_reward": 0.35
+    },
+    {
+      "iter": 151,
+      "mean_reward": 0.37
+    },
+    {
+      "iter": 152,
+      "mean_reward": 0.43
+    },
+    {
+      "iter": 153,
+      "mean_reward": 0.44
+    },
+    {
+      "iter": 154,
+      "mean_reward": 0.47
+    },
+    {
+      "iter": 155,
+      "mean_reward": 0.61
+    },
+    {
+      "iter": 156,
+      "mean_reward": 0.59
+    },
+    {
+      "iter": 157,
+      "mean_reward": 0.54
+    },
+    {
+      "iter": 158,
+      "mean_reward": 0.64
+    },
+    {
+      "iter": 159,
+      "mean_reward": 0.7
+    },
+    {
+      "iter": 160,
+      "mean_reward": 0.65
+    },
+    {
+      "iter": 161,
+      "mean_reward": 0.81
+    },
+    {
+      "iter": 162,
+      "mean_reward": 0.77
+    },
+    {
+      "iter": 163,
+      "mean_reward": 0.73
+    },
+    {
+      "iter": 164,
+      "mean_reward": 0.76
+    },
+    {
+      "iter": 165,
+      "mean_reward": 0.9
+    },
+    {
+      "iter": 166,
+      "mean_reward": 0.8
+    },
+    {
+      "iter": 167,
+      "mean_reward": 0.92
+    },
+    {
+      "iter": 168,
+      "mean_reward": 0.93
+    },
+    {
+      "iter": 169,
+      "mean_reward": 0.86
+    },
+    {
+      "iter": 170,
+      "mean_reward": 1.06
+    },
+    {
+      "iter": 171,
+      "mean_reward": 1.07
+    },
+    {
+      "iter": 172,
+      "mean_reward": 0.99
+    },
+    {
+      "iter": 173,
+      "mean_reward": 1.18
+    },
+    {
+      "iter": 174,
+      "mean_reward": 1.15
+    },
+    {
+      "iter": 175,
+      "mean_reward": 1.03
+    },
+    {
+      "iter": 176,
+      "mean_reward": 1.19
+    },
+    {
+      "iter": 177,
+      "mean_reward": 1.36
+    },
+    {
+      "iter": 178,
+      "mean_reward": 1.16
+    },
+    {
+      "iter": 179,
+      "mean_reward": 1.33
+    },
+    {
+      "iter": 180,
+      "mean_reward": 1.24
+    },
+    {
+      "iter": 181,
+      "mean_reward": 1.44
+    },
+    {
+      "iter": 182,
+      "mean_reward": 1.39
+    },
+    {
+      "iter": 183,
+      "mean_reward": 1.59
+    },
+    {
+      "iter": 184,
+      "mean_reward": 1.34
+    },
+    {
+      "iter": 185,
+      "mean_reward": 1.45
+    },
+    {
+      "iter": 186,
+      "mean_reward": 1.43
+    },
+    {
+      "iter": 187,
+      "mean_reward": 1.38
+    },
+    {
+      "iter": 188,
+      "mean_reward": 1.48
+    },
+    {
+      "iter": 189,
+      "mean_reward": 1.63
+    },
+    {
+      "iter": 190,
+      "mean_reward": 1.5
+    },
+    {
+      "iter": 191,
+      "mean_reward": 1.54
+    },
+    {
+      "iter": 192,
+      "mean_reward": 1.64
+    },
+    {
+      "iter": 193,
+      "mean_reward": 1.67
+    },
+    {
+      "iter": 194,
+      "mean_reward": 1.78
+    },
+    {
+      "iter": 195,
+      "mean_reward": 1.65
+    },
+    {
+      "iter": 196,
+      "mean_reward": 1.43
+    },
+    {
+      "iter": 197,
+      "mean_reward": 1.68
+    },
+    {
+      "iter": 198,
+      "mean_reward": 1.82
+    },
+    {
+      "iter": 199,
+      "mean_reward": 1.93
+    },
+    {
+      "iter": 200,
+      "mean_reward": 1.72
+    },
+    {
+      "iter": 201,
+      "mean_reward": 1.65
+    },
+    {
+      "iter": 202,
+      "mean_reward": 1.95
+    },
+    {
+      "iter": 203,
+      "mean_reward": 1.8
+    },
+    {
+      "iter": 204,
+      "mean_reward": 1.82
+    },
+    {
+      "iter": 205,
+      "mean_reward": 1.82
+    },
+    {
+      "iter": 206,
+      "mean_reward": 1.96
+    },
+    {
+      "iter": 207,
+      "mean_reward": 2.06
+    },
+    {
+      "iter": 208,
+      "mean_reward": 2.06
+    },
+    {
+      "iter": 209,
+      "mean_reward": 2.08
+    },
+    {
+      "iter": 210,
+      "mean_reward": 1.89
+    },
+    {
+      "iter": 211,
+      "mean_reward": 2.11
+    },
+    {
+      "iter": 212,
+      "mean_reward": 2.13
+    },
+    {
+      "iter": 213,
+      "mean_reward": 2.02
+    },
+    {
+      "iter": 214,
+      "mean_reward": 2.16
+    },
+    {
+      "iter": 215,
+      "mean_reward": 2.3
+    },
+    {
+      "iter": 216,
+      "mean_reward": 2.49
+    },
+    {
+      "iter": 217,
+      "mean_reward": 2.2
+    },
+    {
+      "iter": 218,
+      "mean_reward": 2.57
+    },
+    {
+      "iter": 219,
+      "mean_reward": 2.29
+    },
+    {
+      "iter": 220,
+      "mean_reward": 2.22
+    },
+    {
+      "iter": 221,
+      "mean_reward": 2.26
+    },
+    {
+      "iter": 222,
+      "mean_reward": 2.45
+    },
+    {
+      "iter": 223,
+      "mean_reward": 2.39
+    },
+    {
+      "iter": 224,
+      "mean_reward": 2.65
+    },
+    {
+      "iter": 225,
+      "mean_reward": 2.4
+    },
+    {
+      "iter": 226,
+      "mean_reward": 2.5
+    },
+    {
+      "iter": 227,
+      "mean_reward": 2.74
+    },
+    {
+      "iter": 228,
+      "mean_reward": 2.56
+    },
+    {
+      "iter": 229,
+      "mean_reward": 2.54
+    },
+    {
+      "iter": 230,
+      "mean_reward": 3.06
+    },
+    {
+      "iter": 231,
+      "mean_reward": 2.66
+    },
+    {
+      "iter": 232,
+      "mean_reward": 2.91
+    },
+    {
+      "iter": 233,
+      "mean_reward": 2.97
+    },
+    {
+      "iter": 234,
+      "mean_reward": 3.2
+    },
+    {
+      "iter": 235,
+      "mean_reward": 2.87
+    },
+    {
+      "iter": 236,
+      "mean_reward": 2.67
+    },
+    {
+      "iter": 237,
+      "mean_reward": 2.51
+    },
+    {
+      "iter": 238,
+      "mean_reward": 2.73
+    },
+    {
+      "iter": 239,
+      "mean_reward": 3.07
+    },
+    {
+      "iter": 240,
+      "mean_reward": 2.94
+    },
+    {
+      "iter": 241,
+      "mean_reward": 2.8
+    },
+    {
+      "iter": 242,
+      "mean_reward": 2.97
+    },
+    {
+      "iter": 243,
+      "mean_reward": 3.22
+    },
+    {
+      "iter": 244,
+      "mean_reward": 3.21
+    },
+    {
+      "iter": 245,
+      "mean_reward": 2.62
+    },
+    {
+      "iter": 246,
+      "mean_reward": 2.76
+    },
+    {
+      "iter": 247,
+      "mean_reward": 2.78
+    },
+    {
+      "iter": 248,
+      "mean_reward": 3.01
+    },
+    {
+      "iter": 249,
+      "mean_reward": 3.32
+    },
+    {
+      "iter": 250,
+      "mean_reward": 3.05
+    },
+    {
+      "iter": 251,
+      "mean_reward": 2.78
+    },
+    {
+      "iter": 252,
+      "mean_reward": 3.19
+    },
+    {
+      "iter": 253,
+      "mean_reward": 2.88
+    },
+    {
+      "iter": 254,
+      "mean_reward": 2.85
+    },
+    {
+      "iter": 255,
+      "mean_reward": 2.86
+    },
+    {
+      "iter": 256,
+      "mean_reward": 2.87
+    },
+    {
+      "iter": 257,
+      "mean_reward": 2.94
+    },
+    {
+      "iter": 258,
+      "mean_reward": 3.13
+    },
+    {
+      "iter": 259,
+      "mean_reward": 3.36
+    },
+    {
+      "iter": 260,
+      "mean_reward": 3.13
+    },
+    {
+      "iter": 261,
+      "mean_reward": 3.44
+    },
+    {
+      "iter": 262,
+      "mean_reward": 3.22
+    },
+    {
+      "iter": 263,
+      "mean_reward": 3.26
+    },
+    {
+      "iter": 264,
+      "mean_reward": 2.59
+    },
+    {
+      "iter": 265,
+      "mean_reward": 3.09
+    },
+    {
+      "iter": 266,
+      "mean_reward": 3.03
+    },
+    {
+      "iter": 267,
+      "mean_reward": 2.9
+    },
+    {
+      "iter": 268,
+      "mean_reward": 2.79
+    },
+    {
+      "iter": 269,
+      "mean_reward": 3.35
+    },
+    {
+      "iter": 270,
+      "mean_reward": 3.26
+    },
+    {
+      "iter": 271,
+      "mean_reward": 2.9
+    },
+    {
+      "iter": 272,
+      "mean_reward": 2.98
+    },
+    {
+      "iter": 273,
+      "mean_reward": 3.0
+    },
+    {
+      "iter": 274,
+      "mean_reward": 2.68
+    },
+    {
+      "iter": 275,
+      "mean_reward": 3.25
+    },
+    {
+      "iter": 276,
+      "mean_reward": 2.84
+    },
+    {
+      "iter": 277,
+      "mean_reward": 2.64
+    },
+    {
+      "iter": 278,
+      "mean_reward": 3.56
+    },
+    {
+      "iter": 279,
+      "mean_reward": 3.04
+    },
+    {
+      "iter": 280,
+      "mean_reward": 3.02
+    },
+    {
+      "iter": 281,
+      "mean_reward": 3.43
+    },
+    {
+      "iter": 282,
+      "mean_reward": 3.38
+    },
+    {
+      "iter": 283,
+      "mean_reward": 2.82
+    },
+    {
+      "iter": 284,
+      "mean_reward": 2.85
+    },
+    {
+      "iter": 285,
+      "mean_reward": 3.5
+    },
+    {
+      "iter": 286,
+      "mean_reward": 2.95
+    },
+    {
+      "iter": 287,
+      "mean_reward": 3.4
+    },
+    {
+      "iter": 288,
+      "mean_reward": 3.15
+    },
+    {
+      "iter": 289,
+      "mean_reward": 3.56
+    },
+    {
+      "iter": 290,
+      "mean_reward": 2.77
+    },
+    {
+      "iter": 291,
+      "mean_reward": 3.12
+    },
+    {
+      "iter": 292,
+      "mean_reward": 3.08
+    },
+    {
+      "iter": 293,
+      "mean_reward": 3.02
+    },
+    {
+      "iter": 294,
+      "mean_reward": 2.48
+    },
+    {
+      "iter": 295,
+      "mean_reward": 2.92
+    },
+    {
+      "iter": 296,
+      "mean_reward": 3.11
+    },
+    {
+      "iter": 297,
+      "mean_reward": 3.22
+    },
+    {
+      "iter": 298,
+      "mean_reward": 2.98
+    },
+    {
+      "iter": 299,
+      "mean_reward": 2.92
+    },
+    {
+      "iter": 300,
+      "mean_reward": 2.85
+    },
+    {
+      "iter": 301,
+      "mean_reward": 3.1
+    },
+    {
+      "iter": 302,
+      "mean_reward": 2.78
+    },
+    {
+      "iter": 303,
+      "mean_reward": 3.24
+    },
+    {
+      "iter": 304,
+      "mean_reward": 2.89
+    },
+    {
+      "iter": 305,
+      "mean_reward": 2.89
+    },
+    {
+      "iter": 306,
+      "mean_reward": 3.08
+    },
+    {
+      "iter": 307,
+      "mean_reward": 3.2
+    },
+    {
+      "iter": 308,
+      "mean_reward": 3.0
+    },
+    {
+      "iter": 309,
+      "mean_reward": 3.17
+    },
+    {
+      "iter": 310,
+      "mean_reward": 2.98
+    },
+    {
+      "iter": 311,
+      "mean_reward": 3.27
+    },
+    {
+      "iter": 312,
+      "mean_reward": 2.57
+    },
+    {
+      "iter": 313,
+      "mean_reward": 3.03
+    },
+    {
+      "iter": 314,
+      "mean_reward": 3.08
+    },
+    {
+      "iter": 315,
+      "mean_reward": 2.66
+    },
+    {
+      "iter": 316,
+      "mean_reward": 3.19
+    },
+    {
+      "iter": 317,
+      "mean_reward": 2.61
+    },
+    {
+      "iter": 318,
+      "mean_reward": 2.91
+    },
+    {
+      "iter": 319,
+      "mean_reward": 3.01
+    },
+    {
+      "iter": 320,
+      "mean_reward": 2.73
+    },
+    {
+      "iter": 321,
+      "mean_reward": 2.66
+    },
+    {
+      "iter": 322,
+      "mean_reward": 3.48
+    },
+    {
+      "iter": 323,
+      "mean_reward": 2.48
+    },
+    {
+      "iter": 324,
+      "mean_reward": 2.92
+    },
+    {
+      "iter": 325,
+      "mean_reward": 2.78
+    },
+    {
+      "iter": 326,
+      "mean_reward": 2.63
+    },
+    {
+      "iter": 327,
+      "mean_reward": 2.56
+    },
+    {
+      "iter": 328,
+      "mean_reward": 3.23
+    },
+    {
+      "iter": 329,
+      "mean_reward": 3.01
+    },
+    {
+      "iter": 330,
+      "mean_reward": 2.96
+    },
+    {
+      "iter": 331,
+      "mean_reward": 3.37
+    },
+    {
+      "iter": 332,
+      "mean_reward": 2.61
+    },
+    {
+      "iter": 333,
+      "mean_reward": 2.68
+    },
+    {
+      "iter": 334,
+      "mean_reward": 2.65
+    },
+    {
+      "iter": 335,
+      "mean_reward": 2.79
+    },
+    {
+      "iter": 336,
+      "mean_reward": 2.79
+    },
+    {
+      "iter": 337,
+      "mean_reward": 3.46
+    },
+    {
+      "iter": 338,
+      "mean_reward": 3.13
+    },
+    {
+      "iter": 339,
+      "mean_reward": 2.96
+    },
+    {
+      "iter": 340,
+      "mean_reward": 2.56
+    },
+    {
+      "iter": 341,
+      "mean_reward": 3.19
+    },
+    {
+      "iter": 342,
+      "mean_reward": 2.35
+    },
+    {
+      "iter": 343,
+      "mean_reward": 2.6
+    },
+    {
+      "iter": 344,
+      "mean_reward": 3.53
+    },
+    {
+      "iter": 345,
+      "mean_reward": 3.14
+    },
+    {
+      "iter": 346,
+      "mean_reward": 3.37
+    },
+    {
+      "iter": 347,
+      "mean_reward": 3.05
+    },
+    {
+      "iter": 348,
+      "mean_reward": 2.8
+    },
+    {
+      "iter": 349,
+      "mean_reward": 2.6
+    },
+    {
+      "iter": 350,
+      "mean_reward": 3.04
+    },
+    {
+      "iter": 351,
+      "mean_reward": 3.41
+    },
+    {
+      "iter": 352,
+      "mean_reward": 2.9
+    },
+    {
+      "iter": 353,
+      "mean_reward": 3.24
+    },
+    {
+      "iter": 354,
+      "mean_reward": 2.82
+    },
+    {
+      "iter": 355,
+      "mean_reward": 2.75
+    },
+    {
+      "iter": 356,
+      "mean_reward": 3.09
+    },
+    {
+      "iter": 357,
+      "mean_reward": 2.68
+    },
+    {
+      "iter": 358,
+      "mean_reward": 2.88
+    },
+    {
+      "iter": 359,
+      "mean_reward": 2.64
+    },
+    {
+      "iter": 360,
+      "mean_reward": 3.03
+    },
+    {
+      "iter": 361,
+      "mean_reward": 2.86
+    },
+    {
+      "iter": 362,
+      "mean_reward": 2.75
+    },
+    {
+      "iter": 363,
+      "mean_reward": 2.82
+    },
+    {
+      "iter": 364,
+      "mean_reward": 2.3
+    },
+    {
+      "iter": 365,
+      "mean_reward": 3.04
+    },
+    {
+      "iter": 366,
+      "mean_reward": 3.39
+    },
+    {
+      "iter": 367,
+      "mean_reward": 3.31
+    },
+    {
+      "iter": 368,
+      "mean_reward": 2.92
+    },
+    {
+      "iter": 369,
+      "mean_reward": 3.41
+    },
+    {
+      "iter": 370,
+      "mean_reward": 3.19
+    },
+    {
+      "iter": 371,
+      "mean_reward": 3.3
+    },
+    {
+      "iter": 372,
+      "mean_reward": 3.72
+    },
+    {
+      "iter": 373,
+      "mean_reward": 3.09
+    },
+    {
+      "iter": 374,
+      "mean_reward": 2.64
+    },
+    {
+      "iter": 375,
+      "mean_reward": 3.33
+    },
+    {
+      "iter": 376,
+      "mean_reward": 2.67
+    },
+    {
+      "iter": 377,
+      "mean_reward": 3.11
+    },
+    {
+      "iter": 378,
+      "mean_reward": 2.8
+    },
+    {
+      "iter": 379,
+      "mean_reward": 3.54
+    },
+    {
+      "iter": 380,
+      "mean_reward": 3.12
+    },
+    {
+      "iter": 381,
+      "mean_reward": 2.98
+    },
+    {
+      "iter": 382,
+      "mean_reward": 3.42
+    },
+    {
+      "iter": 383,
+      "mean_reward": 3.24
+    },
+    {
+      "iter": 384,
+      "mean_reward": 3.4
+    },
+    {
+      "iter": 385,
+      "mean_reward": 3.27
+    },
+    {
+      "iter": 386,
+      "mean_reward": 2.82
+    },
+    {
+      "iter": 387,
+      "mean_reward": 3.08
+    },
+    {
+      "iter": 388,
+      "mean_reward": 3.07
+    },
+    {
+      "iter": 389,
+      "mean_reward": 2.88
+    },
+    {
+      "iter": 390,
+      "mean_reward": 2.73
+    },
+    {
+      "iter": 391,
+      "mean_reward": 2.86
+    },
+    {
+      "iter": 392,
+      "mean_reward": 3.7
+    },
+    {
+      "iter": 393,
+      "mean_reward": 3.45
+    },
+    {
+      "iter": 394,
+      "mean_reward": 3.08
+    },
+    {
+      "iter": 395,
+      "mean_reward": 2.88
+    },
+    {
+      "iter": 396,
+      "mean_reward": 2.93
+    },
+    {
+      "iter": 397,
+      "mean_reward": 3.46
+    },
+    {
+      "iter": 398,
+      "mean_reward": 2.98
+    },
+    {
+      "iter": 399,
+      "mean_reward": 3.36
+    },
+    {
+      "iter": 400,
+      "mean_reward": 3.25
+    },
+    {
+      "iter": 401,
+      "mean_reward": 3.47
+    },
+    {
+      "iter": 402,
+      "mean_reward": 3.46
+    },
+    {
+      "iter": 403,
+      "mean_reward": 2.99
+    },
+    {
+      "iter": 404,
+      "mean_reward": 3.3
+    },
+    {
+      "iter": 405,
+      "mean_reward": 3.28
+    },
+    {
+      "iter": 406,
+      "mean_reward": 3.96
+    },
+    {
+      "iter": 407,
+      "mean_reward": 3.53
+    },
+    {
+      "iter": 408,
+      "mean_reward": 3.48
+    },
+    {
+      "iter": 409,
+      "mean_reward": 3.39
+    },
+    {
+      "iter": 410,
+      "mean_reward": 4.18
+    },
+    {
+      "iter": 411,
+      "mean_reward": 3.12
+    },
+    {
+      "iter": 412,
+      "mean_reward": 3.09
+    },
+    {
+      "iter": 413,
+      "mean_reward": 3.62
+    },
+    {
+      "iter": 414,
+      "mean_reward": 3.64
+    },
+    {
+      "iter": 415,
+      "mean_reward": 3.53
+    },
+    {
+      "iter": 416,
+      "mean_reward": 2.97
+    },
+    {
+      "iter": 417,
+      "mean_reward": 3.35
+    },
+    {
+      "iter": 418,
+      "mean_reward": 3.4
+    },
+    {
+      "iter": 419,
+      "mean_reward": 3.24
+    },
+    {
+      "iter": 420,
+      "mean_reward": 3.94
+    },
+    {
+      "iter": 421,
+      "mean_reward": 3.46
+    },
+    {
+      "iter": 422,
+      "mean_reward": 3.62
+    },
+    {
+      "iter": 423,
+      "mean_reward": 3.97
+    },
+    {
+      "iter": 424,
+      "mean_reward": 3.3
+    },
+    {
+      "iter": 425,
+      "mean_reward": 3.13
+    },
+    {
+      "iter": 426,
+      "mean_reward": 3.47
+    },
+    {
+      "iter": 427,
+      "mean_reward": 3.96
+    },
+    {
+      "iter": 428,
+      "mean_reward": 3.78
+    },
+    {
+      "iter": 429,
+      "mean_reward": 2.51
+    },
+    {
+      "iter": 430,
+      "mean_reward": 4.48
+    },
+    {
+      "iter": 431,
+      "mean_reward": 4.41
+    },
+    {
+      "iter": 432,
+      "mean_reward": 3.78
+    },
+    {
+      "iter": 433,
+      "mean_reward": 3.75
+    },
+    {
+      "iter": 434,
+      "mean_reward": 3.51
+    },
+    {
+      "iter": 435,
+      "mean_reward": 3.87
+    },
+    {
+      "iter": 436,
+      "mean_reward": 3.21
+    },
+    {
+      "iter": 437,
+      "mean_reward": 3.32
+    },
+    {
+      "iter": 438,
+      "mean_reward": 4.26
+    },
+    {
+      "iter": 439,
+      "mean_reward": 3.72
+    },
+    {
+      "iter": 440,
+      "mean_reward": 4.39
+    },
+    {
+      "iter": 441,
+      "mean_reward": 3.61
+    },
+    {
+      "iter": 442,
+      "mean_reward": 3.35
+    },
+    {
+      "iter": 443,
+      "mean_reward": 4.16
+    },
+    {
+      "iter": 444,
+      "mean_reward": 3.2
+    },
+    {
+      "iter": 445,
+      "mean_reward": 4.17
+    },
+    {
+      "iter": 446,
+      "mean_reward": 3.03
+    },
+    {
+      "iter": 447,
+      "mean_reward": 3.45
+    },
+    {
+      "iter": 448,
+      "mean_reward": 4.09
+    },
+    {
+      "iter": 449,
+      "mean_reward": 3.7
+    },
+    {
+      "iter": 450,
+      "mean_reward": 3.59
+    },
+    {
+      "iter": 451,
+      "mean_reward": 4.85
+    },
+    {
+      "iter": 452,
+      "mean_reward": 3.7
+    },
+    {
+      "iter": 453,
+      "mean_reward": 4.05
+    },
+    {
+      "iter": 454,
+      "mean_reward": 4.46
+    },
+    {
+      "iter": 455,
+      "mean_reward": 4.61
+    },
+    {
+      "iter": 456,
+      "mean_reward": 4.67
+    },
+    {
+      "iter": 457,
+      "mean_reward": 4.78
+    },
+    {
+      "iter": 458,
+      "mean_reward": 4.81
+    },
+    {
+      "iter": 459,
+      "mean_reward": 4.82
+    },
+    {
+      "iter": 460,
+      "mean_reward": 3.97
+    },
+    {
+      "iter": 461,
+      "mean_reward": 4.73
+    },
+    {
+      "iter": 462,
+      "mean_reward": 4.65
+    },
+    {
+      "iter": 463,
+      "mean_reward": 4.14
+    },
+    {
+      "iter": 464,
+      "mean_reward": 5.31
+    },
+    {
+      "iter": 465,
+      "mean_reward": 4.55
+    },
+    {
+      "iter": 466,
+      "mean_reward": 4.84
+    },
+    {
+      "iter": 467,
+      "mean_reward": 5.93
+    },
+    {
+      "iter": 468,
+      "mean_reward": 4.99
+    },
+    {
+      "iter": 469,
+      "mean_reward": 5.04
+    },
+    {
+      "iter": 470,
+      "mean_reward": 5.05
+    },
+    {
+      "iter": 471,
+      "mean_reward": 4.93
+    },
+    {
+      "iter": 472,
+      "mean_reward": 4.83
+    },
+    {
+      "iter": 473,
+      "mean_reward": 4.75
+    },
+    {
+      "iter": 474,
+      "mean_reward": 5.01
+    },
+    {
+      "iter": 475,
+      "mean_reward": 6.03
+    },
+    {
+      "iter": 476,
+      "mean_reward": 6.28
+    },
+    {
+      "iter": 477,
+      "mean_reward": 5.63
+    },
+    {
+      "iter": 478,
+      "mean_reward": 6.07
+    },
+    {
+      "iter": 479,
+      "mean_reward": 6.32
+    },
+    {
+      "iter": 480,
+      "mean_reward": 6.03
+    },
+    {
+      "iter": 481,
+      "mean_reward": 5.8
+    },
+    {
+      "iter": 482,
+      "mean_reward": 5.31
+    },
+    {
+      "iter": 483,
+      "mean_reward": 5.38
+    },
+    {
+      "iter": 484,
+      "mean_reward": 6.44
+    },
+    {
+      "iter": 485,
+      "mean_reward": 6.45
+    },
+    {
+      "iter": 486,
+      "mean_reward": 6.95
+    },
+    {
+      "iter": 487,
+      "mean_reward": 8.14
+    },
+    {
+      "iter": 488,
+      "mean_reward": 7.17
+    },
+    {
+      "iter": 489,
+      "mean_reward": 7.39
+    },
+    {
+      "iter": 490,
+      "mean_reward": 7.05
+    },
+    {
+      "iter": 491,
+      "mean_reward": 7.45
+    },
+    {
+      "iter": 492,
+      "mean_reward": 5.67
+    },
+    {
+      "iter": 493,
+      "mean_reward": 7.26
+    },
+    {
+      "iter": 494,
+      "mean_reward": 7.49
+    },
+    {
+      "iter": 495,
+      "mean_reward": 8.46
+    },
+    {
+      "iter": 496,
+      "mean_reward": 7.1
+    },
+    {
+      "iter": 497,
+      "mean_reward": 7.1
+    },
+    {
+      "iter": 498,
+      "mean_reward": 9.18
+    },
+    {
+      "iter": 499,
+      "mean_reward": 10.34
+    },
+    {
+      "iter": 500,
+      "mean_reward": 9.24
+    },
+    {
+      "iter": 501,
+      "mean_reward": 9.75
+    },
+    {
+      "iter": 502,
+      "mean_reward": 8.92
+    },
+    {
+      "iter": 503,
+      "mean_reward": 9.73
+    },
+    {
+      "iter": 504,
+      "mean_reward": 11.32
+    },
+    {
+      "iter": 505,
+      "mean_reward": 9.3
+    },
+    {
+      "iter": 506,
+      "mean_reward": 10.45
+    },
+    {
+      "iter": 507,
+      "mean_reward": 11.58
+    },
+    {
+      "iter": 508,
+      "mean_reward": 11.04
+    },
+    {
+      "iter": 509,
+      "mean_reward": 13.29
+    },
+    {
+      "iter": 510,
+      "mean_reward": 11.21
+    },
+    {
+      "iter": 511,
+      "mean_reward": 12.33
+    },
+    {
+      "iter": 512,
+      "mean_reward": 12.35
+    },
+    {
+      "iter": 513,
+      "mean_reward": 12.69
+    },
+    {
+      "iter": 514,
+      "mean_reward": 12.5
+    },
+    {
+      "iter": 515,
+      "mean_reward": 13.64
+    },
+    {
+      "iter": 516,
+      "mean_reward": 12.86
+    },
+    {
+      "iter": 517,
+      "mean_reward": 13.83
+    },
+    {
+      "iter": 518,
+      "mean_reward": 15.36
+    },
+    {
+      "iter": 519,
+      "mean_reward": 14.04
+    },
+    {
+      "iter": 520,
+      "mean_reward": 14.8
+    },
+    {
+      "iter": 521,
+      "mean_reward": 14.26
+    },
+    {
+      "iter": 522,
+      "mean_reward": 14.02
+    },
+    {
+      "iter": 523,
+      "mean_reward": 15.37
+    },
+    {
+      "iter": 524,
+      "mean_reward": 16.18
+    },
+    {
+      "iter": 525,
+      "mean_reward": 15.64
+    },
+    {
+      "iter": 526,
+      "mean_reward": 15.09
+    },
+    {
+      "iter": 527,
+      "mean_reward": 15.97
+    },
+    {
+      "iter": 528,
+      "mean_reward": 15.92
+    },
+    {
+      "iter": 529,
+      "mean_reward": 15.67
+    },
+    {
+      "iter": 530,
+      "mean_reward": 16.07
+    },
+    {
+      "iter": 531,
+      "mean_reward": 14.37
+    },
+    {
+      "iter": 532,
+      "mean_reward": 17.13
+    },
+    {
+      "iter": 533,
+      "mean_reward": 15.44
+    },
+    {
+      "iter": 534,
+      "mean_reward": 15.64
+    },
+    {
+      "iter": 535,
+      "mean_reward": 16.74
+    },
+    {
+      "iter": 536,
+      "mean_reward": 17.17
+    },
+    {
+      "iter": 537,
+      "mean_reward": 16.12
+    },
+    {
+      "iter": 538,
+      "mean_reward": 17.66
+    },
+    {
+      "iter": 539,
+      "mean_reward": 17.15
+    },
+    {
+      "iter": 540,
+      "mean_reward": 17.12
+    },
+    {
+      "iter": 541,
+      "mean_reward": 17.91
+    },
+    {
+      "iter": 542,
+      "mean_reward": 18.07
+    },
+    {
+      "iter": 543,
+      "mean_reward": 18.09
+    },
+    {
+      "iter": 544,
+      "mean_reward": 17.51
+    },
+    {
+      "iter": 545,
+      "mean_reward": 18.15
+    },
+    {
+      "iter": 546,
+      "mean_reward": 17.13
+    },
+    {
+      "iter": 547,
+      "mean_reward": 17.26
+    },
+    {
+      "iter": 548,
+      "mean_reward": 17.49
+    },
+    {
+      "iter": 549,
+      "mean_reward": 17.72
+    },
+    {
+      "iter": 550,
+      "mean_reward": 18.3
+    },
+    {
+      "iter": 551,
+      "mean_reward": 19.58
+    },
+    {
+      "iter": 552,
+      "mean_reward": 18.49
+    },
+    {
+      "iter": 553,
+      "mean_reward": 16.78
+    },
+    {
+      "iter": 554,
+      "mean_reward": 17.55
+    },
+    {
+      "iter": 555,
+      "mean_reward": 18.44
+    },
+    {
+      "iter": 556,
+      "mean_reward": 17.66
+    },
+    {
+      "iter": 557,
+      "mean_reward": 18.17
+    },
+    {
+      "iter": 558,
+      "mean_reward": 18.73
+    },
+    {
+      "iter": 559,
+      "mean_reward": 19.99
+    },
+    {
+      "iter": 560,
+      "mean_reward": 19.06
+    },
+    {
+      "iter": 561,
+      "mean_reward": 20.22
+    },
+    {
+      "iter": 562,
+      "mean_reward": 19.45
+    },
+    {
+      "iter": 563,
+      "mean_reward": 19.66
+    },
+    {
+      "iter": 564,
+      "mean_reward": 20.92
+    },
+    {
+      "iter": 565,
+      "mean_reward": 19.47
+    },
+    {
+      "iter": 566,
+      "mean_reward": 19.44
+    },
+    {
+      "iter": 567,
+      "mean_reward": 19.79
+    },
+    {
+      "iter": 568,
+      "mean_reward": 20.23
+    },
+    {
+      "iter": 569,
+      "mean_reward": 20.69
+    },
+    {
+      "iter": 570,
+      "mean_reward": 20.25
+    },
+    {
+      "iter": 571,
+      "mean_reward": 20.28
+    },
+    {
+      "iter": 572,
+      "mean_reward": 19.48
+    },
+    {
+      "iter": 573,
+      "mean_reward": 20.25
+    },
+    {
+      "iter": 574,
+      "mean_reward": 20.63
+    },
+    {
+      "iter": 575,
+      "mean_reward": 21.56
+    },
+    {
+      "iter": 576,
+      "mean_reward": 20.5
+    },
+    {
+      "iter": 577,
+      "mean_reward": 21.38
+    },
+    {
+      "iter": 578,
+      "mean_reward": 20.5
+    },
+    {
+      "iter": 579,
+      "mean_reward": 20.2
+    },
+    {
+      "iter": 580,
+      "mean_reward": 19.72
+    },
+    {
+      "iter": 581,
+      "mean_reward": 19.86
+    },
+    {
+      "iter": 582,
+      "mean_reward": 20.5
+    },
+    {
+      "iter": 583,
+      "mean_reward": 20.03
+    },
+    {
+      "iter": 584,
+      "mean_reward": 21.27
+    },
+    {
+      "iter": 585,
+      "mean_reward": 22.67
+    },
+    {
+      "iter": 586,
+      "mean_reward": 21.42
+    },
+    {
+      "iter": 587,
+      "mean_reward": 21.5
+    },
+    {
+      "iter": 588,
+      "mean_reward": 19.53
+    },
+    {
+      "iter": 589,
+      "mean_reward": 21.7
+    },
+    {
+      "iter": 590,
+      "mean_reward": 20.34
+    },
+    {
+      "iter": 591,
+      "mean_reward": 22.11
+    },
+    {
+      "iter": 592,
+      "mean_reward": 22.31
+    },
+    {
+      "iter": 593,
+      "mean_reward": 21.14
+    },
+    {
+      "iter": 594,
+      "mean_reward": 21.89
+    },
+    {
+      "iter": 595,
+      "mean_reward": 21.9
+    },
+    {
+      "iter": 596,
+      "mean_reward": 21.85
+    },
+    {
+      "iter": 597,
+      "mean_reward": 22.15
+    },
+    {
+      "iter": 598,
+      "mean_reward": 22.65
+    },
+    {
+      "iter": 599,
+      "mean_reward": 22.48
+    },
+    {
+      "iter": 600,
+      "mean_reward": 22.58
+    },
+    {
+      "iter": 601,
+      "mean_reward": 23.25
+    },
+    {
+      "iter": 602,
+      "mean_reward": 22.19
+    },
+    {
+      "iter": 603,
+      "mean_reward": 22.07
+    },
+    {
+      "iter": 604,
+      "mean_reward": 21.85
+    },
+    {
+      "iter": 605,
+      "mean_reward": 22.76
+    },
+    {
+      "iter": 606,
+      "mean_reward": 23.19
+    },
+    {
+      "iter": 607,
+      "mean_reward": 22.86
+    },
+    {
+      "iter": 608,
+      "mean_reward": 22.44
+    },
+    {
+      "iter": 609,
+      "mean_reward": 22.31
+    },
+    {
+      "iter": 610,
+      "mean_reward": 21.9
+    },
+    {
+      "iter": 611,
+      "mean_reward": 23.22
+    },
+    {
+      "iter": 612,
+      "mean_reward": 23.32
+    },
+    {
+      "iter": 613,
+      "mean_reward": 23.0
+    },
+    {
+      "iter": 614,
+      "mean_reward": 23.6
+    },
+    {
+      "iter": 615,
+      "mean_reward": 24.01
+    },
+    {
+      "iter": 616,
+      "mean_reward": 23.66
+    },
+    {
+      "iter": 617,
+      "mean_reward": 23.97
+    },
+    {
+      "iter": 618,
+      "mean_reward": 24.76
+    },
+    {
+      "iter": 619,
+      "mean_reward": 23.68
+    },
+    {
+      "iter": 620,
+      "mean_reward": 23.59
+    },
+    {
+      "iter": 621,
+      "mean_reward": 24.22
+    },
+    {
+      "iter": 622,
+      "mean_reward": 23.56
+    },
+    {
+      "iter": 623,
+      "mean_reward": 24.41
+    },
+    {
+      "iter": 624,
+      "mean_reward": 23.37
+    },
+    {
+      "iter": 625,
+      "mean_reward": 24.23
+    },
+    {
+      "iter": 626,
+      "mean_reward": 23.95
+    },
+    {
+      "iter": 627,
+      "mean_reward": 23.14
+    },
+    {
+      "iter": 628,
+      "mean_reward": 24.56
+    },
+    {
+      "iter": 629,
+      "mean_reward": 23.07
+    },
+    {
+      "iter": 630,
+      "mean_reward": 24.55
+    },
+    {
+      "iter": 631,
+      "mean_reward": 25.88
+    },
+    {
+      "iter": 632,
+      "mean_reward": 25.5
+    },
+    {
+      "iter": 633,
+      "mean_reward": 25.6
+    },
+    {
+      "iter": 634,
+      "mean_reward": 24.83
+    },
+    {
+      "iter": 635,
+      "mean_reward": 25.36
+    },
+    {
+      "iter": 636,
+      "mean_reward": 25.34
+    },
+    {
+      "iter": 637,
+      "mean_reward": 23.85
+    },
+    {
+      "iter": 638,
+      "mean_reward": 24.58
+    },
+    {
+      "iter": 639,
+      "mean_reward": 25.16
+    },
+    {
+      "iter": 640,
+      "mean_reward": 25.37
+    },
+    {
+      "iter": 641,
+      "mean_reward": 25.33
+    },
+    {
+      "iter": 642,
+      "mean_reward": 24.47
+    },
+    {
+      "iter": 643,
+      "mean_reward": 26.69
+    },
+    {
+      "iter": 644,
+      "mean_reward": 24.78
+    },
+    {
+      "iter": 645,
+      "mean_reward": 24.89
+    },
+    {
+      "iter": 646,
+      "mean_reward": 26.78
+    },
+    {
+      "iter": 647,
+      "mean_reward": 24.15
+    },
+    {
+      "iter": 648,
+      "mean_reward": 25.17
+    },
+    {
+      "iter": 649,
+      "mean_reward": 25.89
+    },
+    {
+      "iter": 650,
+      "mean_reward": 25.23
+    },
+    {
+      "iter": 651,
+      "mean_reward": 25.45
+    },
+    {
+      "iter": 652,
+      "mean_reward": 25.88
+    },
+    {
+      "iter": 653,
+      "mean_reward": 25.21
+    },
+    {
+      "iter": 654,
+      "mean_reward": 25.63
+    },
+    {
+      "iter": 655,
+      "mean_reward": 26.27
+    },
+    {
+      "iter": 656,
+      "mean_reward": 27.19
+    },
+    {
+      "iter": 657,
+      "mean_reward": 25.28
+    },
+    {
+      "iter": 658,
+      "mean_reward": 26.18
+    },
+    {
+      "iter": 659,
+      "mean_reward": 25.2
+    },
+    {
+      "iter": 660,
+      "mean_reward": 25.22
+    },
+    {
+      "iter": 661,
+      "mean_reward": 26.94
+    },
+    {
+      "iter": 662,
+      "mean_reward": 26.75
+    },
+    {
+      "iter": 663,
+      "mean_reward": 26.39
+    },
+    {
+      "iter": 664,
+      "mean_reward": 25.26
+    },
+    {
+      "iter": 665,
+      "mean_reward": 28.23
+    },
+    {
+      "iter": 666,
+      "mean_reward": 26.77
+    },
+    {
+      "iter": 667,
+      "mean_reward": 26.39
+    },
+    {
+      "iter": 668,
+      "mean_reward": 27.14
+    },
+    {
+      "iter": 669,
+      "mean_reward": 26.64
+    },
+    {
+      "iter": 670,
+      "mean_reward": 27.33
+    },
+    {
+      "iter": 671,
+      "mean_reward": 26.57
+    },
+    {
+      "iter": 672,
+      "mean_reward": 27.67
+    },
+    {
+      "iter": 673,
+      "mean_reward": 26.6
+    },
+    {
+      "iter": 674,
+      "mean_reward": 28.31
+    },
+    {
+      "iter": 675,
+      "mean_reward": 28.11
+    },
+    {
+      "iter": 676,
+      "mean_reward": 25.59
+    },
+    {
+      "iter": 677,
+      "mean_reward": 26.79
+    },
+    {
+      "iter": 678,
+      "mean_reward": 27.56
+    },
+    {
+      "iter": 679,
+      "mean_reward": 26.94
+    },
+    {
+      "iter": 680,
+      "mean_reward": 28.12
+    },
+    {
+      "iter": 681,
+      "mean_reward": 28.04
+    },
+    {
+      "iter": 682,
+      "mean_reward": 28.66
+    },
+    {
+      "iter": 683,
+      "mean_reward": 28.27
+    },
+    {
+      "iter": 684,
+      "mean_reward": 26.79
+    },
+    {
+      "iter": 685,
+      "mean_reward": 27.35
+    },
+    {
+      "iter": 686,
+      "mean_reward": 28.38
+    },
+    {
+      "iter": 687,
+      "mean_reward": 28.99
+    },
+    {
+      "iter": 688,
+      "mean_reward": 27.65
+    },
+    {
+      "iter": 689,
+      "mean_reward": 26.8
+    },
+    {
+      "iter": 690,
+      "mean_reward": 25.72
+    },
+    {
+      "iter": 691,
+      "mean_reward": 27.39
+    },
+    {
+      "iter": 692,
+      "mean_reward": 28.09
+    },
+    {
+      "iter": 693,
+      "mean_reward": 28.68
+    },
+    {
+      "iter": 694,
+      "mean_reward": 27.26
+    },
+    {
+      "iter": 695,
+      "mean_reward": 28.08
+    },
+    {
+      "iter": 696,
+      "mean_reward": 27.24
+    },
+    {
+      "iter": 697,
+      "mean_reward": 28.35
+    },
+    {
+      "iter": 698,
+      "mean_reward": 29.23
+    },
+    {
+      "iter": 699,
+      "mean_reward": 27.61
+    },
+    {
+      "iter": 700,
+      "mean_reward": 27.03
+    },
+    {
+      "iter": 701,
+      "mean_reward": 27.39
+    },
+    {
+      "iter": 702,
+      "mean_reward": 28.24
+    },
+    {
+      "iter": 703,
+      "mean_reward": 29.44
+    },
+    {
+      "iter": 704,
+      "mean_reward": 28.87
+    },
+    {
+      "iter": 705,
+      "mean_reward": 28.14
+    },
+    {
+      "iter": 706,
+      "mean_reward": 28.26
+    },
+    {
+      "iter": 707,
+      "mean_reward": 28.62
+    },
+    {
+      "iter": 708,
+      "mean_reward": 28.29
+    },
+    {
+      "iter": 709,
+      "mean_reward": 27.8
+    },
+    {
+      "iter": 710,
+      "mean_reward": 27.55
+    },
+    {
+      "iter": 711,
+      "mean_reward": 28.05
+    },
+    {
+      "iter": 712,
+      "mean_reward": 28.08
+    },
+    {
+      "iter": 713,
+      "mean_reward": 28.2
+    },
+    {
+      "iter": 714,
+      "mean_reward": 29.09
+    },
+    {
+      "iter": 715,
+      "mean_reward": 28.86
+    },
+    {
+      "iter": 716,
+      "mean_reward": 29.13
+    },
+    {
+      "iter": 717,
+      "mean_reward": 29.71
+    },
+    {
+      "iter": 718,
+      "mean_reward": 30.38
+    },
+    {
+      "iter": 719,
+      "mean_reward": 29.78
+    },
+    {
+      "iter": 720,
+      "mean_reward": 28.22
+    },
+    {
+      "iter": 721,
+      "mean_reward": 29.23
+    },
+    {
+      "iter": 722,
+      "mean_reward": 29.16
+    },
+    {
+      "iter": 723,
+      "mean_reward": 29.46
+    },
+    {
+      "iter": 724,
+      "mean_reward": 28.96
+    },
+    {
+      "iter": 725,
+      "mean_reward": 28.77
+    },
+    {
+      "iter": 726,
+      "mean_reward": 29.82
+    },
+    {
+      "iter": 727,
+      "mean_reward": 30.02
+    },
+    {
+      "iter": 728,
+      "mean_reward": 29.64
+    },
+    {
+      "iter": 729,
+      "mean_reward": 27.98
+    },
+    {
+      "iter": 730,
+      "mean_reward": 29.47
+    },
+    {
+      "iter": 731,
+      "mean_reward": 30.01
+    },
+    {
+      "iter": 732,
+      "mean_reward": 29.94
+    },
+    {
+      "iter": 733,
+      "mean_reward": 30.16
+    },
+    {
+      "iter": 734,
+      "mean_reward": 31.03
+    },
+    {
+      "iter": 735,
+      "mean_reward": 30.04
+    },
+    {
+      "iter": 736,
+      "mean_reward": 29.27
+    },
+    {
+      "iter": 737,
+      "mean_reward": 30.63
+    },
+    {
+      "iter": 738,
+      "mean_reward": 30.64
+    },
+    {
+      "iter": 739,
+      "mean_reward": 30.66
+    },
+    {
+      "iter": 740,
+      "mean_reward": 30.04
+    },
+    {
+      "iter": 741,
+      "mean_reward": 29.79
+    },
+    {
+      "iter": 742,
+      "mean_reward": 30.59
+    },
+    {
+      "iter": 743,
+      "mean_reward": 30.52
+    },
+    {
+      "iter": 744,
+      "mean_reward": 31.41
+    },
+    {
+      "iter": 745,
+      "mean_reward": 31.54
+    },
+    {
+      "iter": 746,
+      "mean_reward": 30.29
+    },
+    {
+      "iter": 747,
+      "mean_reward": 28.83
+    },
+    {
+      "iter": 748,
+      "mean_reward": 30.35
+    },
+    {
+      "iter": 749,
+      "mean_reward": 31.56
+    },
+    {
+      "iter": 750,
+      "mean_reward": 31.54
+    },
+    {
+      "iter": 751,
+      "mean_reward": 30.89
+    },
+    {
+      "iter": 752,
+      "mean_reward": 29.94
+    },
+    {
+      "iter": 753,
+      "mean_reward": 31.83
+    },
+    {
+      "iter": 754,
+      "mean_reward": 31.08
+    },
+    {
+      "iter": 755,
+      "mean_reward": 30.27
+    },
+    {
+      "iter": 756,
+      "mean_reward": 31.54
+    },
+    {
+      "iter": 757,
+      "mean_reward": 31.3
+    },
+    {
+      "iter": 758,
+      "mean_reward": 32.47
+    },
+    {
+      "iter": 759,
+      "mean_reward": 31.98
+    },
+    {
+      "iter": 760,
+      "mean_reward": 32.23
+    },
+    {
+      "iter": 761,
+      "mean_reward": 31.43
+    },
+    {
+      "iter": 762,
+      "mean_reward": 32.85
+    },
+    {
+      "iter": 763,
+      "mean_reward": 30.09
+    },
+    {
+      "iter": 764,
+      "mean_reward": 31.41
+    },
+    {
+      "iter": 765,
+      "mean_reward": 31.54
+    },
+    {
+      "iter": 766,
+      "mean_reward": 31.85
+    },
+    {
+      "iter": 767,
+      "mean_reward": 31.12
+    },
+    {
+      "iter": 768,
+      "mean_reward": 31.61
+    },
+    {
+      "iter": 769,
+      "mean_reward": 31.58
+    },
+    {
+      "iter": 770,
+      "mean_reward": 32.42
+    },
+    {
+      "iter": 771,
+      "mean_reward": 32.27
+    },
+    {
+      "iter": 772,
+      "mean_reward": 32.48
+    },
+    {
+      "iter": 773,
+      "mean_reward": 32.23
+    },
+    {
+      "iter": 774,
+      "mean_reward": 30.97
+    },
+    {
+      "iter": 775,
+      "mean_reward": 30.06
+    },
+    {
+      "iter": 776,
+      "mean_reward": 32.36
+    },
+    {
+      "iter": 777,
+      "mean_reward": 32.34
+    },
+    {
+      "iter": 778,
+      "mean_reward": 32.19
+    },
+    {
+      "iter": 779,
+      "mean_reward": 31.76
+    },
+    {
+      "iter": 780,
+      "mean_reward": 31.95
+    },
+    {
+      "iter": 781,
+      "mean_reward": 32.53
+    },
+    {
+      "iter": 782,
+      "mean_reward": 33.81
+    },
+    {
+      "iter": 783,
+      "mean_reward": 33.2
+    },
+    {
+      "iter": 784,
+      "mean_reward": 34.09
+    },
+    {
+      "iter": 785,
+      "mean_reward": 32.34
+    },
+    {
+      "iter": 786,
+      "mean_reward": 33.25
+    },
+    {
+      "iter": 787,
+      "mean_reward": 32.97
+    },
+    {
+      "iter": 788,
+      "mean_reward": 33.58
+    },
+    {
+      "iter": 789,
+      "mean_reward": 33.08
+    },
+    {
+      "iter": 790,
+      "mean_reward": 32.9
+    },
+    {
+      "iter": 791,
+      "mean_reward": 34.0
+    },
+    {
+      "iter": 792,
+      "mean_reward": 33.37
+    },
+    {
+      "iter": 793,
+      "mean_reward": 32.63
+    },
+    {
+      "iter": 794,
+      "mean_reward": 33.31
+    },
+    {
+      "iter": 795,
+      "mean_reward": 32.77
+    },
+    {
+      "iter": 796,
+      "mean_reward": 32.69
+    },
+    {
+      "iter": 797,
+      "mean_reward": 35.36
+    },
+    {
+      "iter": 798,
+      "mean_reward": 34.06
+    },
+    {
+      "iter": 799,
+      "mean_reward": 33.48
+    },
+    {
+      "iter": 800,
+      "mean_reward": 34.79
+    },
+    {
+      "iter": 801,
+      "mean_reward": 32.62
+    },
+    {
+      "iter": 802,
+      "mean_reward": 34.92
+    },
+    {
+      "iter": 803,
+      "mean_reward": 32.71
+    },
+    {
+      "iter": 804,
+      "mean_reward": 33.8
+    },
+    {
+      "iter": 805,
+      "mean_reward": 35.08
+    },
+    {
+      "iter": 806,
+      "mean_reward": 33.42
+    },
+    {
+      "iter": 807,
+      "mean_reward": 35.04
+    },
+    {
+      "iter": 808,
+      "mean_reward": 34.1
+    },
+    {
+      "iter": 809,
+      "mean_reward": 34.13
+    },
+    {
+      "iter": 810,
+      "mean_reward": 33.89
+    },
+    {
+      "iter": 811,
+      "mean_reward": 35.72
+    },
+    {
+      "iter": 812,
+      "mean_reward": 34.73
+    },
+    {
+      "iter": 813,
+      "mean_reward": 35.13
+    },
+    {
+      "iter": 814,
+      "mean_reward": 35.77
+    },
+    {
+      "iter": 815,
+      "mean_reward": 34.15
+    },
+    {
+      "iter": 816,
+      "mean_reward": 34.95
+    },
+    {
+      "iter": 817,
+      "mean_reward": 34.66
+    },
+    {
+      "iter": 818,
+      "mean_reward": 34.9
+    },
+    {
+      "iter": 819,
+      "mean_reward": 35.13
+    },
+    {
+      "iter": 820,
+      "mean_reward": 34.56
+    },
+    {
+      "iter": 821,
+      "mean_reward": 35.73
+    },
+    {
+      "iter": 822,
+      "mean_reward": 35.71
+    },
+    {
+      "iter": 823,
+      "mean_reward": 36.06
+    },
+    {
+      "iter": 824,
+      "mean_reward": 35.19
+    },
+    {
+      "iter": 825,
+      "mean_reward": 35.69
+    },
+    {
+      "iter": 826,
+      "mean_reward": 36.18
+    },
+    {
+      "iter": 827,
+      "mean_reward": 35.8
+    },
+    {
+      "iter": 828,
+      "mean_reward": 35.8
+    },
+    {
+      "iter": 829,
+      "mean_reward": 36.65
+    },
+    {
+      "iter": 830,
+      "mean_reward": 35.87
+    },
+    {
+      "iter": 831,
+      "mean_reward": 35.57
+    },
+    {
+      "iter": 832,
+      "mean_reward": 36.07
+    },
+    {
+      "iter": 833,
+      "mean_reward": 36.04
+    },
+    {
+      "iter": 834,
+      "mean_reward": 35.61
+    },
+    {
+      "iter": 835,
+      "mean_reward": 36.87
+    },
+    {
+      "iter": 836,
+      "mean_reward": 36.86
+    },
+    {
+      "iter": 837,
+      "mean_reward": 36.6
+    },
+    {
+      "iter": 838,
+      "mean_reward": 36.35
+    },
+    {
+      "iter": 839,
+      "mean_reward": 36.54
+    },
+    {
+      "iter": 840,
+      "mean_reward": 36.58
+    },
+    {
+      "iter": 841,
+      "mean_reward": 35.9
+    },
+    {
+      "iter": 842,
+      "mean_reward": 36.89
+    },
+    {
+      "iter": 843,
+      "mean_reward": 36.27
+    },
+    {
+      "iter": 844,
+      "mean_reward": 36.3
+    },
+    {
+      "iter": 845,
+      "mean_reward": 37.04
+    },
+    {
+      "iter": 846,
+      "mean_reward": 36.94
+    },
+    {
+      "iter": 847,
+      "mean_reward": 38.02
+    },
+    {
+      "iter": 848,
+      "mean_reward": 36.21
+    },
+    {
+      "iter": 849,
+      "mean_reward": 36.31
+    },
+    {
+      "iter": 850,
+      "mean_reward": 36.34
+    },
+    {
+      "iter": 851,
+      "mean_reward": 37.32
+    },
+    {
+      "iter": 852,
+      "mean_reward": 37.9
+    },
+    {
+      "iter": 853,
+      "mean_reward": 37.05
+    },
+    {
+      "iter": 854,
+      "mean_reward": 36.76
+    },
+    {
+      "iter": 855,
+      "mean_reward": 37.58
+    },
+    {
+      "iter": 856,
+      "mean_reward": 37.12
+    },
+    {
+      "iter": 857,
+      "mean_reward": 37.87
+    },
+    {
+      "iter": 858,
+      "mean_reward": 36.58
+    },
+    {
+      "iter": 859,
+      "mean_reward": 37.14
+    },
+    {
+      "iter": 860,
+      "mean_reward": 37.41
+    },
+    {
+      "iter": 861,
+      "mean_reward": 37.2
+    },
+    {
+      "iter": 862,
+      "mean_reward": 37.24
+    },
+    {
+      "iter": 863,
+      "mean_reward": 38.9
+    },
+    {
+      "iter": 864,
+      "mean_reward": 37.89
+    },
+    {
+      "iter": 865,
+      "mean_reward": 38.95
+    },
+    {
+      "iter": 866,
+      "mean_reward": 38.9
+    },
+    {
+      "iter": 867,
+      "mean_reward": 38.41
+    },
+    {
+      "iter": 868,
+      "mean_reward": 38.76
+    },
+    {
+      "iter": 869,
+      "mean_reward": 39.43
+    },
+    {
+      "iter": 870,
+      "mean_reward": 37.9
+    },
+    {
+      "iter": 871,
+      "mean_reward": 38.56
+    },
+    {
+      "iter": 872,
+      "mean_reward": 38.79
+    },
+    {
+      "iter": 873,
+      "mean_reward": 39.08
+    },
+    {
+      "iter": 874,
+      "mean_reward": 38.43
+    },
+    {
+      "iter": 875,
+      "mean_reward": 38.66
+    },
+    {
+      "iter": 876,
+      "mean_reward": 38.74
+    },
+    {
+      "iter": 877,
+      "mean_reward": 39.04
+    },
+    {
+      "iter": 878,
+      "mean_reward": 39.95
+    },
+    {
+      "iter": 879,
+      "mean_reward": 39.82
+    },
+    {
+      "iter": 880,
+      "mean_reward": 40.27
+    },
+    {
+      "iter": 881,
+      "mean_reward": 39.94
+    },
+    {
+      "iter": 882,
+      "mean_reward": 39.96
+    },
+    {
+      "iter": 883,
+      "mean_reward": 38.7
+    },
+    {
+      "iter": 884,
+      "mean_reward": 40.33
+    },
+    {
+      "iter": 885,
+      "mean_reward": 40.17
+    },
+    {
+      "iter": 886,
+      "mean_reward": 39.88
+    },
+    {
+      "iter": 887,
+      "mean_reward": 40.59
+    },
+    {
+      "iter": 888,
+      "mean_reward": 39.57
+    },
+    {
+      "iter": 889,
+      "mean_reward": 39.24
+    },
+    {
+      "iter": 890,
+      "mean_reward": 39.67
+    },
+    {
+      "iter": 891,
+      "mean_reward": 39.7
+    },
+    {
+      "iter": 892,
+      "mean_reward": 39.91
+    },
+    {
+      "iter": 893,
+      "mean_reward": 40.46
+    },
+    {
+      "iter": 894,
+      "mean_reward": 40.69
+    },
+    {
+      "iter": 895,
+      "mean_reward": 40.27
+    },
+    {
+      "iter": 896,
+      "mean_reward": 39.92
+    },
+    {
+      "iter": 897,
+      "mean_reward": 40.83
+    },
+    {
+      "iter": 898,
+      "mean_reward": 40.88
+    },
+    {
+      "iter": 899,
+      "mean_reward": 40.03
+    },
+    {
+      "iter": 900,
+      "mean_reward": 40.76
+    },
+    {
+      "iter": 901,
+      "mean_reward": 40.06
+    },
+    {
+      "iter": 902,
+      "mean_reward": 40.53
+    },
+    {
+      "iter": 903,
+      "mean_reward": 41.22
+    },
+    {
+      "iter": 904,
+      "mean_reward": 41.76
+    },
+    {
+      "iter": 905,
+      "mean_reward": 40.75
+    },
+    {
+      "iter": 906,
+      "mean_reward": 41.49
+    },
+    {
+      "iter": 907,
+      "mean_reward": 40.76
+    },
+    {
+      "iter": 908,
+      "mean_reward": 41.51
+    },
+    {
+      "iter": 909,
+      "mean_reward": 41.91
+    },
+    {
+      "iter": 910,
+      "mean_reward": 41.6
+    },
+    {
+      "iter": 911,
+      "mean_reward": 42.46
+    },
+    {
+      "iter": 912,
+      "mean_reward": 41.27
+    },
+    {
+      "iter": 913,
+      "mean_reward": 41.9
+    },
+    {
+      "iter": 914,
+      "mean_reward": 40.91
+    },
+    {
+      "iter": 915,
+      "mean_reward": 42.28
+    },
+    {
+      "iter": 916,
+      "mean_reward": 41.89
+    },
+    {
+      "iter": 917,
+      "mean_reward": 41.82
+    },
+    {
+      "iter": 918,
+      "mean_reward": 41.99
+    },
+    {
+      "iter": 919,
+      "mean_reward": 42.14
+    },
+    {
+      "iter": 920,
+      "mean_reward": 42.25
+    },
+    {
+      "iter": 921,
+      "mean_reward": 42.86
+    },
+    {
+      "iter": 922,
+      "mean_reward": 42.4
+    },
+    {
+      "iter": 923,
+      "mean_reward": 41.69
+    },
+    {
+      "iter": 924,
+      "mean_reward": 42.47
+    },
+    {
+      "iter": 925,
+      "mean_reward": 43.09
+    },
+    {
+      "iter": 926,
+      "mean_reward": 43.74
+    },
+    {
+      "iter": 927,
+      "mean_reward": 42.71
+    },
+    {
+      "iter": 928,
+      "mean_reward": 43.43
+    },
+    {
+      "iter": 929,
+      "mean_reward": 43.67
+    },
+    {
+      "iter": 930,
+      "mean_reward": 43.06
+    },
+    {
+      "iter": 931,
+      "mean_reward": 42.51
+    },
+    {
+      "iter": 932,
+      "mean_reward": 42.23
+    },
+    {
+      "iter": 933,
+      "mean_reward": 42.88
+    },
+    {
+      "iter": 934,
+      "mean_reward": 43.93
+    },
+    {
+      "iter": 935,
+      "mean_reward": 43.24
+    },
+    {
+      "iter": 936,
+      "mean_reward": 43.81
+    },
+    {
+      "iter": 937,
+      "mean_reward": 42.75
+    },
+    {
+      "iter": 938,
+      "mean_reward": 42.65
+    },
+    {
+      "iter": 939,
+      "mean_reward": 43.72
+    },
+    {
+      "iter": 940,
+      "mean_reward": 44.5
+    },
+    {
+      "iter": 941,
+      "mean_reward": 43.38
+    },
+    {
+      "iter": 942,
+      "mean_reward": 43.7
+    },
+    {
+      "iter": 943,
+      "mean_reward": 44.19
+    },
+    {
+      "iter": 944,
+      "mean_reward": 43.3
+    },
+    {
+      "iter": 945,
+      "mean_reward": 44.97
+    },
+    {
+      "iter": 946,
+      "mean_reward": 44.61
+    },
+    {
+      "iter": 947,
+      "mean_reward": 44.29
+    },
+    {
+      "iter": 948,
+      "mean_reward": 44.33
+    },
+    {
+      "iter": 949,
+      "mean_reward": 44.72
+    },
+    {
+      "iter": 950,
+      "mean_reward": 44.11
+    },
+    {
+      "iter": 951,
+      "mean_reward": 44.15
+    },
+    {
+      "iter": 952,
+      "mean_reward": 44.77
+    },
+    {
+      "iter": 953,
+      "mean_reward": 43.96
+    },
+    {
+      "iter": 954,
+      "mean_reward": 44.8
+    },
+    {
+      "iter": 955,
+      "mean_reward": 43.52
+    },
+    {
+      "iter": 956,
+      "mean_reward": 44.41
+    },
+    {
+      "iter": 957,
+      "mean_reward": 45.45
+    },
+    {
+      "iter": 958,
+      "mean_reward": 45.43
+    },
+    {
+      "iter": 959,
+      "mean_reward": 45.17
+    },
+    {
+      "iter": 960,
+      "mean_reward": 44.87
+    },
+    {
+      "iter": 961,
+      "mean_reward": 45.39
+    },
+    {
+      "iter": 962,
+      "mean_reward": 43.83
+    },
+    {
+      "iter": 963,
+      "mean_reward": 44.16
+    },
+    {
+      "iter": 964,
+      "mean_reward": 44.77
+    },
+    {
+      "iter": 965,
+      "mean_reward": 44.66
+    },
+    {
+      "iter": 966,
+      "mean_reward": 45.63
+    },
+    {
+      "iter": 967,
+      "mean_reward": 45.52
+    },
+    {
+      "iter": 968,
+      "mean_reward": 44.84
+    },
+    {
+      "iter": 969,
+      "mean_reward": 44.53
+    },
+    {
+      "iter": 970,
+      "mean_reward": 45.1
+    },
+    {
+      "iter": 971,
+      "mean_reward": 45.27
+    },
+    {
+      "iter": 972,
+      "mean_reward": 45.97
+    },
+    {
+      "iter": 973,
+      "mean_reward": 45.67
+    },
+    {
+      "iter": 974,
+      "mean_reward": 45.9
+    },
+    {
+      "iter": 975,
+      "mean_reward": 46.4
+    },
+    {
+      "iter": 976,
+      "mean_reward": 46.39
+    },
+    {
+      "iter": 977,
+      "mean_reward": 44.82
+    },
+    {
+      "iter": 978,
+      "mean_reward": 46.22
+    },
+    {
+      "iter": 979,
+      "mean_reward": 45.85
+    },
+    {
+      "iter": 980,
+      "mean_reward": 45.03
+    },
+    {
+      "iter": 981,
+      "mean_reward": 45.31
+    },
+    {
+      "iter": 982,
+      "mean_reward": 45.87
+    },
+    {
+      "iter": 983,
+      "mean_reward": 46.38
+    },
+    {
+      "iter": 984,
+      "mean_reward": 46.89
+    },
+    {
+      "iter": 985,
+      "mean_reward": 46.63
+    },
+    {
+      "iter": 986,
+      "mean_reward": 46.34
+    },
+    {
+      "iter": 987,
+      "mean_reward": 45.84
+    },
+    {
+      "iter": 988,
+      "mean_reward": 46.79
+    },
+    {
+      "iter": 989,
+      "mean_reward": 46.51
+    },
+    {
+      "iter": 990,
+      "mean_reward": 46.63
+    },
+    {
+      "iter": 991,
+      "mean_reward": 47.0
+    },
+    {
+      "iter": 992,
+      "mean_reward": 47.64
+    },
+    {
+      "iter": 993,
+      "mean_reward": 47.57
+    },
+    {
+      "iter": 994,
+      "mean_reward": 47.31
+    },
+    {
+      "iter": 995,
+      "mean_reward": 47.11
+    },
+    {
+      "iter": 996,
+      "mean_reward": 46.96
+    },
+    {
+      "iter": 997,
+      "mean_reward": 47.47
+    },
+    {
+      "iter": 998,
+      "mean_reward": 46.76
+    },
+    {
+      "iter": 999,
+      "mean_reward": 46.69
+    },
+    {
+      "iter": 1000,
+      "mean_reward": 47.49
+    },
+    {
+      "iter": 1001,
+      "mean_reward": 45.87
+    },
+    {
+      "iter": 1002,
+      "mean_reward": 47.64
+    },
+    {
+      "iter": 1003,
+      "mean_reward": 47.46
+    },
+    {
+      "iter": 1004,
+      "mean_reward": 47.85
+    },
+    {
+      "iter": 1005,
+      "mean_reward": 47.29
+    },
+    {
+      "iter": 1006,
+      "mean_reward": 47.64
+    },
+    {
+      "iter": 1007,
+      "mean_reward": 47.17
+    },
+    {
+      "iter": 1008,
+      "mean_reward": 47.75
+    },
+    {
+      "iter": 1009,
+      "mean_reward": 47.9
+    },
+    {
+      "iter": 1010,
+      "mean_reward": 47.66
+    },
+    {
+      "iter": 1011,
+      "mean_reward": 48.19
+    },
+    {
+      "iter": 1012,
+      "mean_reward": 48.19
+    },
+    {
+      "iter": 1013,
+      "mean_reward": 47.28
+    },
+    {
+      "iter": 1014,
+      "mean_reward": 47.73
+    },
+    {
+      "iter": 1015,
+      "mean_reward": 47.05
+    },
+    {
+      "iter": 1016,
+      "mean_reward": 49.16
+    },
+    {
+      "iter": 1017,
+      "mean_reward": 49.64
+    },
+    {
+      "iter": 1018,
+      "mean_reward": 49.05
+    },
+    {
+      "iter": 1019,
+      "mean_reward": 48.83
+    },
+    {
+      "iter": 1020,
+      "mean_reward": 48.64
+    },
+    {
+      "iter": 1021,
+      "mean_reward": 48.11
+    },
+    {
+      "iter": 1022,
+      "mean_reward": 48.8
+    },
+    {
+      "iter": 1023,
+      "mean_reward": 49.2
+    },
+    {
+      "iter": 1024,
+      "mean_reward": 48.24
+    },
+    {
+      "iter": 1025,
+      "mean_reward": 47.66
+    },
+    {
+      "iter": 1026,
+      "mean_reward": 49.82
+    },
+    {
+      "iter": 1027,
+      "mean_reward": 49.58
+    },
+    {
+      "iter": 1028,
+      "mean_reward": 48.88
+    },
+    {
+      "iter": 1029,
+      "mean_reward": 49.95
+    },
+    {
+      "iter": 1030,
+      "mean_reward": 48.94
+    },
+    {
+      "iter": 1031,
+      "mean_reward": 49.43
+    },
+    {
+      "iter": 1032,
+      "mean_reward": 49.19
+    },
+    {
+      "iter": 1033,
+      "mean_reward": 49.56
+    },
+    {
+      "iter": 1034,
+      "mean_reward": 48.75
+    },
+    {
+      "iter": 1035,
+      "mean_reward": 49.61
+    },
+    {
+      "iter": 1036,
+      "mean_reward": 49.5
+    },
+    {
+      "iter": 1037,
+      "mean_reward": 49.82
+    },
+    {
+      "iter": 1038,
+      "mean_reward": 49.59
+    },
+    {
+      "iter": 1039,
+      "mean_reward": 49.84
+    },
+    {
+      "iter": 1040,
+      "mean_reward": 49.22
+    },
+    {
+      "iter": 1041,
+      "mean_reward": 50.0
+    },
+    {
+      "iter": 1042,
+      "mean_reward": 50.13
+    },
+    {
+      "iter": 1043,
+      "mean_reward": 49.52
+    },
+    {
+      "iter": 1044,
+      "mean_reward": 48.73
+    },
+    {
+      "iter": 1045,
+      "mean_reward": 49.48
+    },
+    {
+      "iter": 1046,
+      "mean_reward": 50.06
+    },
+    {
+      "iter": 1047,
+      "mean_reward": 50.13
+    },
+    {
+      "iter": 1048,
+      "mean_reward": 50.86
+    },
+    {
+      "iter": 1049,
+      "mean_reward": 50.56
+    },
+    {
+      "iter": 1050,
+      "mean_reward": 50.36
+    },
+    {
+      "iter": 1051,
+      "mean_reward": 49.59
+    },
+    {
+      "iter": 1052,
+      "mean_reward": 49.0
+    },
+    {
+      "iter": 1053,
+      "mean_reward": 50.41
+    },
+    {
+      "iter": 1054,
+      "mean_reward": 50.51
+    },
+    {
+      "iter": 1055,
+      "mean_reward": 51.05
+    },
+    {
+      "iter": 1056,
+      "mean_reward": 50.51
+    },
+    {
+      "iter": 1057,
+      "mean_reward": 50.65
+    },
+    {
+      "iter": 1058,
+      "mean_reward": 50.94
+    },
+    {
+      "iter": 1059,
+      "mean_reward": 50.9
+    },
+    {
+      "iter": 1060,
+      "mean_reward": 51.28
+    },
+    {
+      "iter": 1061,
+      "mean_reward": 49.89
+    },
+    {
+      "iter": 1062,
+      "mean_reward": 51.09
+    },
+    {
+      "iter": 1063,
+      "mean_reward": 51.07
+    },
+    {
+      "iter": 1064,
+      "mean_reward": 51.37
+    },
+    {
+      "iter": 1065,
+      "mean_reward": 51.38
+    },
+    {
+      "iter": 1066,
+      "mean_reward": 51.65
+    },
+    {
+      "iter": 1067,
+      "mean_reward": 50.88
+    },
+    {
+      "iter": 1068,
+      "mean_reward": 51.37
+    },
+    {
+      "iter": 1069,
+      "mean_reward": 51.51
+    },
+    {
+      "iter": 1070,
+      "mean_reward": 50.86
+    },
+    {
+      "iter": 1071,
+      "mean_reward": 51.87
+    },
+    {
+      "iter": 1072,
+      "mean_reward": 51.56
+    },
+    {
+      "iter": 1073,
+      "mean_reward": 51.52
+    },
+    {
+      "iter": 1074,
+      "mean_reward": 51.2
+    },
+    {
+      "iter": 1075,
+      "mean_reward": 50.99
+    },
+    {
+      "iter": 1076,
+      "mean_reward": 50.81
+    },
+    {
+      "iter": 1077,
+      "mean_reward": 51.79
+    },
+    {
+      "iter": 1078,
+      "mean_reward": 51.25
+    },
+    {
+      "iter": 1079,
+      "mean_reward": 51.44
+    },
+    {
+      "iter": 1080,
+      "mean_reward": 51.3
+    },
+    {
+      "iter": 1081,
+      "mean_reward": 50.93
+    },
+    {
+      "iter": 1082,
+      "mean_reward": 52.21
+    },
+    {
+      "iter": 1083,
+      "mean_reward": 52.04
+    },
+    {
+      "iter": 1084,
+      "mean_reward": 50.79
+    },
+    {
+      "iter": 1085,
+      "mean_reward": 52.46
+    },
+    {
+      "iter": 1086,
+      "mean_reward": 52.21
+    },
+    {
+      "iter": 1087,
+      "mean_reward": 51.5
+    },
+    {
+      "iter": 1088,
+      "mean_reward": 51.97
+    },
+    {
+      "iter": 1089,
+      "mean_reward": 52.77
+    },
+    {
+      "iter": 1090,
+      "mean_reward": 51.94
+    },
+    {
+      "iter": 1091,
+      "mean_reward": 52.68
+    },
+    {
+      "iter": 1092,
+      "mean_reward": 52.86
+    },
+    {
+      "iter": 1093,
+      "mean_reward": 51.54
+    },
+    {
+      "iter": 1094,
+      "mean_reward": 51.4
+    },
+    {
+      "iter": 1095,
+      "mean_reward": 51.65
+    },
+    {
+      "iter": 1096,
+      "mean_reward": 52.45
+    },
+    {
+      "iter": 1097,
+      "mean_reward": 51.38
+    },
+    {
+      "iter": 1098,
+      "mean_reward": 52.49
+    },
+    {
+      "iter": 1099,
+      "mean_reward": 53.05
+    },
+    {
+      "iter": 1100,
+      "mean_reward": 52.0
+    },
+    {
+      "iter": 1101,
+      "mean_reward": 52.35
+    },
+    {
+      "iter": 1102,
+      "mean_reward": 53.06
+    },
+    {
+      "iter": 1103,
+      "mean_reward": 52.58
+    },
+    {
+      "iter": 1104,
+      "mean_reward": 51.73
+    },
+    {
+      "iter": 1105,
+      "mean_reward": 51.71
+    },
+    {
+      "iter": 1106,
+      "mean_reward": 52.56
+    },
+    {
+      "iter": 1107,
+      "mean_reward": 52.04
+    },
+    {
+      "iter": 1108,
+      "mean_reward": 52.73
+    },
+    {
+      "iter": 1109,
+      "mean_reward": 53.22
+    },
+    {
+      "iter": 1110,
+      "mean_reward": 53.27
+    },
+    {
+      "iter": 1111,
+      "mean_reward": 53.59
+    },
+    {
+      "iter": 1112,
+      "mean_reward": 53.29
+    },
+    {
+      "iter": 1113,
+      "mean_reward": 52.68
+    },
+    {
+      "iter": 1114,
+      "mean_reward": 53.31
+    },
+    {
+      "iter": 1115,
+      "mean_reward": 53.05
+    },
+    {
+      "iter": 1116,
+      "mean_reward": 53.65
+    },
+    {
+      "iter": 1117,
+      "mean_reward": 52.18
+    },
+    {
+      "iter": 1118,
+      "mean_reward": 53.57
+    },
+    {
+      "iter": 1119,
+      "mean_reward": 53.21
+    },
+    {
+      "iter": 1120,
+      "mean_reward": 53.32
+    },
+    {
+      "iter": 1121,
+      "mean_reward": 53.32
+    },
+    {
+      "iter": 1122,
+      "mean_reward": 53.0
+    },
+    {
+      "iter": 1123,
+      "mean_reward": 52.8
+    },
+    {
+      "iter": 1124,
+      "mean_reward": 53.89
+    },
+    {
+      "iter": 1125,
+      "mean_reward": 53.63
+    },
+    {
+      "iter": 1126,
+      "mean_reward": 53.32
+    },
+    {
+      "iter": 1127,
+      "mean_reward": 51.53
+    },
+    {
+      "iter": 1128,
+      "mean_reward": 53.78
+    },
+    {
+      "iter": 1129,
+      "mean_reward": 54.26
+    },
+    {
+      "iter": 1130,
+      "mean_reward": 53.22
+    },
+    {
+      "iter": 1131,
+      "mean_reward": 53.42
+    },
+    {
+      "iter": 1132,
+      "mean_reward": 52.67
+    },
+    {
+      "iter": 1133,
+      "mean_reward": 53.16
+    },
+    {
+      "iter": 1134,
+      "mean_reward": 53.61
+    },
+    {
+      "iter": 1135,
+      "mean_reward": 54.08
+    },
+    {
+      "iter": 1136,
+      "mean_reward": 54.59
+    },
+    {
+      "iter": 1137,
+      "mean_reward": 53.82
+    },
+    {
+      "iter": 1138,
+      "mean_reward": 53.62
+    },
+    {
+      "iter": 1139,
+      "mean_reward": 53.3
+    },
+    {
+      "iter": 1140,
+      "mean_reward": 53.97
+    },
+    {
+      "iter": 1141,
+      "mean_reward": 53.77
+    },
+    {
+      "iter": 1142,
+      "mean_reward": 54.56
+    },
+    {
+      "iter": 1143,
+      "mean_reward": 54.0
+    },
+    {
+      "iter": 1144,
+      "mean_reward": 53.3
+    },
+    {
+      "iter": 1145,
+      "mean_reward": 54.23
+    },
+    {
+      "iter": 1146,
+      "mean_reward": 54.11
+    },
+    {
+      "iter": 1147,
+      "mean_reward": 54.23
+    },
+    {
+      "iter": 1148,
+      "mean_reward": 53.53
+    },
+    {
+      "iter": 1149,
+      "mean_reward": 54.26
+    },
+    {
+      "iter": 1150,
+      "mean_reward": 54.73
+    },
+    {
+      "iter": 1151,
+      "mean_reward": 53.95
+    },
+    {
+      "iter": 1152,
+      "mean_reward": 54.74
+    },
+    {
+      "iter": 1153,
+      "mean_reward": 52.77
+    },
+    {
+      "iter": 1154,
+      "mean_reward": 54.82
+    },
+    {
+      "iter": 1155,
+      "mean_reward": 54.15
+    },
+    {
+      "iter": 1156,
+      "mean_reward": 54.99
+    },
+    {
+      "iter": 1157,
+      "mean_reward": 55.12
+    },
+    {
+      "iter": 1158,
+      "mean_reward": 54.0
+    },
+    {
+      "iter": 1159,
+      "mean_reward": 55.07
+    },
+    {
+      "iter": 1160,
+      "mean_reward": 55.03
+    },
+    {
+      "iter": 1161,
+      "mean_reward": 54.93
+    },
+    {
+      "iter": 1162,
+      "mean_reward": 54.63
+    },
+    {
+      "iter": 1163,
+      "mean_reward": 54.22
+    },
+    {
+      "iter": 1164,
+      "mean_reward": 54.33
+    },
+    {
+      "iter": 1165,
+      "mean_reward": 55.57
+    },
+    {
+      "iter": 1166,
+      "mean_reward": 55.08
+    },
+    {
+      "iter": 1167,
+      "mean_reward": 54.94
+    },
+    {
+      "iter": 1168,
+      "mean_reward": 55.43
+    },
+    {
+      "iter": 1169,
+      "mean_reward": 55.19
+    },
+    {
+      "iter": 1170,
+      "mean_reward": 54.25
+    },
+    {
+      "iter": 1171,
+      "mean_reward": 54.84
+    },
+    {
+      "iter": 1172,
+      "mean_reward": 54.85
+    },
+    {
+      "iter": 1173,
+      "mean_reward": 53.99
+    },
+    {
+      "iter": 1174,
+      "mean_reward": 55.89
+    },
+    {
+      "iter": 1175,
+      "mean_reward": 54.84
+    },
+    {
+      "iter": 1176,
+      "mean_reward": 54.86
+    },
+    {
+      "iter": 1177,
+      "mean_reward": 55.9
+    },
+    {
+      "iter": 1178,
+      "mean_reward": 56.12
+    },
+    {
+      "iter": 1179,
+      "mean_reward": 54.98
+    },
+    {
+      "iter": 1180,
+      "mean_reward": 54.81
+    },
+    {
+      "iter": 1181,
+      "mean_reward": 55.23
+    },
+    {
+      "iter": 1182,
+      "mean_reward": 54.57
+    },
+    {
+      "iter": 1183,
+      "mean_reward": 55.33
+    },
+    {
+      "iter": 1184,
+      "mean_reward": 55.92
+    },
+    {
+      "iter": 1185,
+      "mean_reward": 55.31
+    },
+    {
+      "iter": 1186,
+      "mean_reward": 55.82
+    },
+    {
+      "iter": 1187,
+      "mean_reward": 55.02
+    },
+    {
+      "iter": 1188,
+      "mean_reward": 55.06
+    },
+    {
+      "iter": 1189,
+      "mean_reward": 55.53
+    },
+    {
+      "iter": 1190,
+      "mean_reward": 55.04
+    },
+    {
+      "iter": 1191,
+      "mean_reward": 55.99
+    },
+    {
+      "iter": 1192,
+      "mean_reward": 55.36
+    },
+    {
+      "iter": 1193,
+      "mean_reward": 55.09
+    },
+    {
+      "iter": 1194,
+      "mean_reward": 55.81
+    },
+    {
+      "iter": 1195,
+      "mean_reward": 55.93
+    },
+    {
+      "iter": 1196,
+      "mean_reward": 56.39
+    },
+    {
+      "iter": 1197,
+      "mean_reward": 55.25
+    },
+    {
+      "iter": 1198,
+      "mean_reward": 55.56
+    },
+    {
+      "iter": 1199,
+      "mean_reward": 55.41
+    },
+    {
+      "iter": 1200,
+      "mean_reward": 55.31
+    },
+    {
+      "iter": 1201,
+      "mean_reward": 56.12
+    },
+    {
+      "iter": 1202,
+      "mean_reward": 56.02
+    },
+    {
+      "iter": 1203,
+      "mean_reward": 56.32
+    },
+    {
+      "iter": 1204,
+      "mean_reward": 55.33
+    },
+    {
+      "iter": 1205,
+      "mean_reward": 56.06
+    },
+    {
+      "iter": 1206,
+      "mean_reward": 55.75
+    },
+    {
+      "iter": 1207,
+      "mean_reward": 55.25
+    },
+    {
+      "iter": 1208,
+      "mean_reward": 56.39
+    },
+    {
+      "iter": 1209,
+      "mean_reward": 55.54
+    },
+    {
+      "iter": 1210,
+      "mean_reward": 55.39
+    },
+    {
+      "iter": 1211,
+      "mean_reward": 56.54
+    },
+    {
+      "iter": 1212,
+      "mean_reward": 56.12
+    },
+    {
+      "iter": 1213,
+      "mean_reward": 56.06
+    },
+    {
+      "iter": 1214,
+      "mean_reward": 55.11
+    },
+    {
+      "iter": 1215,
+      "mean_reward": 56.09
+    },
+    {
+      "iter": 1216,
+      "mean_reward": 55.87
+    },
+    {
+      "iter": 1217,
+      "mean_reward": 55.96
+    },
+    {
+      "iter": 1218,
+      "mean_reward": 55.94
+    },
+    {
+      "iter": 1219,
+      "mean_reward": 56.88
+    },
+    {
+      "iter": 1220,
+      "mean_reward": 56.31
+    },
+    {
+      "iter": 1221,
+      "mean_reward": 56.9
+    },
+    {
+      "iter": 1222,
+      "mean_reward": 55.93
+    },
+    {
+      "iter": 1223,
+      "mean_reward": 56.43
+    },
+    {
+      "iter": 1224,
+      "mean_reward": 56.06
+    },
+    {
+      "iter": 1225,
+      "mean_reward": 56.94
+    },
+    {
+      "iter": 1226,
+      "mean_reward": 56.45
+    },
+    {
+      "iter": 1227,
+      "mean_reward": 56.34
+    },
+    {
+      "iter": 1228,
+      "mean_reward": 56.34
+    },
+    {
+      "iter": 1229,
+      "mean_reward": 56.5
+    },
+    {
+      "iter": 1230,
+      "mean_reward": 56.47
+    },
+    {
+      "iter": 1231,
+      "mean_reward": 56.82
+    },
+    {
+      "iter": 1232,
+      "mean_reward": 56.36
+    },
+    {
+      "iter": 1233,
+      "mean_reward": 57.77
+    },
+    {
+      "iter": 1234,
+      "mean_reward": 55.9
+    },
+    {
+      "iter": 1235,
+      "mean_reward": 56.3
+    },
+    {
+      "iter": 1236,
+      "mean_reward": 56.99
+    },
+    {
+      "iter": 1237,
+      "mean_reward": 57.2
+    },
+    {
+      "iter": 1238,
+      "mean_reward": 56.63
+    },
+    {
+      "iter": 1239,
+      "mean_reward": 56.94
+    },
+    {
+      "iter": 1240,
+      "mean_reward": 55.83
+    },
+    {
+      "iter": 1241,
+      "mean_reward": 57.34
+    },
+    {
+      "iter": 1242,
+      "mean_reward": 56.7
+    },
+    {
+      "iter": 1243,
+      "mean_reward": 56.35
+    },
+    {
+      "iter": 1244,
+      "mean_reward": 57.47
+    },
+    {
+      "iter": 1245,
+      "mean_reward": 57.71
+    },
+    {
+      "iter": 1246,
+      "mean_reward": 57.33
+    },
+    {
+      "iter": 1247,
+      "mean_reward": 57.34
+    },
+    {
+      "iter": 1248,
+      "mean_reward": 56.8
+    },
+    {
+      "iter": 1249,
+      "mean_reward": 56.54
+    },
+    {
+      "iter": 1250,
+      "mean_reward": 57.36
+    },
+    {
+      "iter": 1251,
+      "mean_reward": 56.18
+    },
+    {
+      "iter": 1252,
+      "mean_reward": 56.4
+    },
+    {
+      "iter": 1253,
+      "mean_reward": 56.99
+    },
+    {
+      "iter": 1254,
+      "mean_reward": 56.63
+    },
+    {
+      "iter": 1255,
+      "mean_reward": 57.21
+    },
+    {
+      "iter": 1256,
+      "mean_reward": 57.07
+    },
+    {
+      "iter": 1257,
+      "mean_reward": 57.69
+    },
+    {
+      "iter": 1258,
+      "mean_reward": 57.66
+    },
+    {
+      "iter": 1259,
+      "mean_reward": 57.43
+    },
+    {
+      "iter": 1260,
+      "mean_reward": 57.45
+    },
+    {
+      "iter": 1261,
+      "mean_reward": 57.85
+    },
+    {
+      "iter": 1262,
+      "mean_reward": 57.38
+    },
+    {
+      "iter": 1263,
+      "mean_reward": 57.11
+    },
+    {
+      "iter": 1264,
+      "mean_reward": 57.21
+    },
+    {
+      "iter": 1265,
+      "mean_reward": 56.76
+    },
+    {
+      "iter": 1266,
+      "mean_reward": 56.8
+    },
+    {
+      "iter": 1267,
+      "mean_reward": 56.9
+    },
+    {
+      "iter": 1268,
+      "mean_reward": 57.27
+    },
+    {
+      "iter": 1269,
+      "mean_reward": 57.34
+    },
+    {
+      "iter": 1270,
+      "mean_reward": 57.62
+    },
+    {
+      "iter": 1271,
+      "mean_reward": 56.93
+    },
+    {
+      "iter": 1272,
+      "mean_reward": 57.37
+    },
+    {
+      "iter": 1273,
+      "mean_reward": 57.03
+    },
+    {
+      "iter": 1274,
+      "mean_reward": 57.34
+    },
+    {
+      "iter": 1275,
+      "mean_reward": 58.1
+    },
+    {
+      "iter": 1276,
+      "mean_reward": 57.3
+    },
+    {
+      "iter": 1277,
+      "mean_reward": 57.85
+    },
+    {
+      "iter": 1278,
+      "mean_reward": 58.12
+    },
+    {
+      "iter": 1279,
+      "mean_reward": 57.4
+    },
+    {
+      "iter": 1280,
+      "mean_reward": 58.06
+    },
+    {
+      "iter": 1281,
+      "mean_reward": 57.95
+    },
+    {
+      "iter": 1282,
+      "mean_reward": 56.9
+    },
+    {
+      "iter": 1283,
+      "mean_reward": 58.24
+    },
+    {
+      "iter": 1284,
+      "mean_reward": 58.18
+    },
+    {
+      "iter": 1285,
+      "mean_reward": 58.13
+    },
+    {
+      "iter": 1286,
+      "mean_reward": 58.22
+    },
+    {
+      "iter": 1287,
+      "mean_reward": 58.2
+    },
+    {
+      "iter": 1288,
+      "mean_reward": 58.46
+    },
+    {
+      "iter": 1289,
+      "mean_reward": 58.34
+    },
+    {
+      "iter": 1290,
+      "mean_reward": 58.37
+    },
+    {
+      "iter": 1291,
+      "mean_reward": 58.41
+    },
+    {
+      "iter": 1292,
+      "mean_reward": 57.85
+    },
+    {
+      "iter": 1293,
+      "mean_reward": 58.16
+    },
+    {
+      "iter": 1294,
+      "mean_reward": 57.05
+    },
+    {
+      "iter": 1295,
+      "mean_reward": 58.01
+    },
+    {
+      "iter": 1296,
+      "mean_reward": 58.69
+    },
+    {
+      "iter": 1297,
+      "mean_reward": 58.49
+    },
+    {
+      "iter": 1298,
+      "mean_reward": 57.37
+    },
+    {
+      "iter": 1299,
+      "mean_reward": 58.24
+    },
+    {
+      "iter": 1300,
+      "mean_reward": 59.41
+    },
+    {
+      "iter": 1301,
+      "mean_reward": 57.67
+    },
+    {
+      "iter": 1302,
+      "mean_reward": 57.91
+    },
+    {
+      "iter": 1303,
+      "mean_reward": 58.53
+    },
+    {
+      "iter": 1304,
+      "mean_reward": 58.62
+    },
+    {
+      "iter": 1305,
+      "mean_reward": 58.64
+    },
+    {
+      "iter": 1306,
+      "mean_reward": 58.49
+    },
+    {
+      "iter": 1307,
+      "mean_reward": 58.67
+    },
+    {
+      "iter": 1308,
+      "mean_reward": 57.92
+    },
+    {
+      "iter": 1309,
+      "mean_reward": 58.12
+    },
+    {
+      "iter": 1310,
+      "mean_reward": 58.15
+    },
+    {
+      "iter": 1311,
+      "mean_reward": 57.81
+    },
+    {
+      "iter": 1312,
+      "mean_reward": 58.29
+    },
+    {
+      "iter": 1313,
+      "mean_reward": 58.44
+    },
+    {
+      "iter": 1314,
+      "mean_reward": 59.44
+    },
+    {
+      "iter": 1315,
+      "mean_reward": 58.12
+    },
+    {
+      "iter": 1316,
+      "mean_reward": 58.52
+    },
+    {
+      "iter": 1317,
+      "mean_reward": 58.29
+    },
+    {
+      "iter": 1318,
+      "mean_reward": 58.48
+    },
+    {
+      "iter": 1319,
+      "mean_reward": 58.36
+    },
+    {
+      "iter": 1320,
+      "mean_reward": 58.69
+    },
+    {
+      "iter": 1321,
+      "mean_reward": 59.3
+    },
+    {
+      "iter": 1322,
+      "mean_reward": 59.02
+    },
+    {
+      "iter": 1323,
+      "mean_reward": 58.85
+    },
+    {
+      "iter": 1324,
+      "mean_reward": 59.12
+    },
+    {
+      "iter": 1325,
+      "mean_reward": 59.05
+    },
+    {
+      "iter": 1326,
+      "mean_reward": 58.82
+    },
+    {
+      "iter": 1327,
+      "mean_reward": 59.52
+    },
+    {
+      "iter": 1328,
+      "mean_reward": 58.71
+    },
+    {
+      "iter": 1329,
+      "mean_reward": 59.1
+    },
+    {
+      "iter": 1330,
+      "mean_reward": 58.75
+    },
+    {
+      "iter": 1331,
+      "mean_reward": 59.19
+    },
+    {
+      "iter": 1332,
+      "mean_reward": 59.23
+    },
+    {
+      "iter": 1333,
+      "mean_reward": 58.22
+    },
+    {
+      "iter": 1334,
+      "mean_reward": 58.81
+    },
+    {
+      "iter": 1335,
+      "mean_reward": 59.27
+    },
+    {
+      "iter": 1336,
+      "mean_reward": 59.73
+    },
+    {
+      "iter": 1337,
+      "mean_reward": 58.92
+    },
+    {
+      "iter": 1338,
+      "mean_reward": 59.44
+    },
+    {
+      "iter": 1339,
+      "mean_reward": 59.51
+    },
+    {
+      "iter": 1340,
+      "mean_reward": 59.43
+    },
+    {
+      "iter": 1341,
+      "mean_reward": 59.07
+    },
+    {
+      "iter": 1342,
+      "mean_reward": 58.93
+    },
+    {
+      "iter": 1343,
+      "mean_reward": 58.58
+    },
+    {
+      "iter": 1344,
+      "mean_reward": 59.12
+    },
+    {
+      "iter": 1345,
+      "mean_reward": 59.1
+    },
+    {
+      "iter": 1346,
+      "mean_reward": 59.43
+    },
+    {
+      "iter": 1347,
+      "mean_reward": 58.95
+    },
+    {
+      "iter": 1348,
+      "mean_reward": 59.37
+    },
+    {
+      "iter": 1349,
+      "mean_reward": 59.48
+    },
+    {
+      "iter": 1350,
+      "mean_reward": 59.06
+    },
+    {
+      "iter": 1351,
+      "mean_reward": 59.17
+    },
+    {
+      "iter": 1352,
+      "mean_reward": 59.64
+    },
+    {
+      "iter": 1353,
+      "mean_reward": 59.67
+    },
+    {
+      "iter": 1354,
+      "mean_reward": 58.85
+    },
+    {
+      "iter": 1355,
+      "mean_reward": 59.67
+    },
+    {
+      "iter": 1356,
+      "mean_reward": 59.03
+    },
+    {
+      "iter": 1357,
+      "mean_reward": 59.99
+    },
+    {
+      "iter": 1358,
+      "mean_reward": 59.37
+    },
+    {
+      "iter": 1359,
+      "mean_reward": 59.51
+    },
+    {
+      "iter": 1360,
+      "mean_reward": 59.64
+    },
+    {
+      "iter": 1361,
+      "mean_reward": 58.94
+    },
+    {
+      "iter": 1362,
+      "mean_reward": 59.8
+    },
+    {
+      "iter": 1363,
+      "mean_reward": 58.99
+    },
+    {
+      "iter": 1364,
+      "mean_reward": 60.16
+    },
+    {
+      "iter": 1365,
+      "mean_reward": 59.73
+    },
+    {
+      "iter": 1366,
+      "mean_reward": 59.68
+    },
+    {
+      "iter": 1367,
+      "mean_reward": 60.19
+    },
+    {
+      "iter": 1368,
+      "mean_reward": 60.11
+    },
+    {
+      "iter": 1369,
+      "mean_reward": 58.65
+    },
+    {
+      "iter": 1370,
+      "mean_reward": 58.98
+    },
+    {
+      "iter": 1371,
+      "mean_reward": 59.9
+    },
+    {
+      "iter": 1372,
+      "mean_reward": 59.99
+    },
+    {
+      "iter": 1373,
+      "mean_reward": 60.56
+    },
+    {
+      "iter": 1374,
+      "mean_reward": 59.3
+    },
+    {
+      "iter": 1375,
+      "mean_reward": 58.77
+    },
+    {
+      "iter": 1376,
+      "mean_reward": 59.98
+    },
+    {
+      "iter": 1377,
+      "mean_reward": 58.96
+    },
+    {
+      "iter": 1378,
+      "mean_reward": 60.17
+    },
+    {
+      "iter": 1379,
+      "mean_reward": 60.32
+    },
+    {
+      "iter": 1380,
+      "mean_reward": 60.21
+    },
+    {
+      "iter": 1381,
+      "mean_reward": 60.69
+    },
+    {
+      "iter": 1382,
+      "mean_reward": 60.31
+    },
+    {
+      "iter": 1383,
+      "mean_reward": 59.07
+    },
+    {
+      "iter": 1384,
+      "mean_reward": 59.43
+    },
+    {
+      "iter": 1385,
+      "mean_reward": 60.12
+    },
+    {
+      "iter": 1386,
+      "mean_reward": 60.21
+    },
+    {
+      "iter": 1387,
+      "mean_reward": 58.83
+    },
+    {
+      "iter": 1388,
+      "mean_reward": 60.35
+    },
+    {
+      "iter": 1389,
+      "mean_reward": 60.13
+    },
+    {
+      "iter": 1390,
+      "mean_reward": 59.96
+    },
+    {
+      "iter": 1391,
+      "mean_reward": 60.2
+    },
+    {
+      "iter": 1392,
+      "mean_reward": 59.14
+    },
+    {
+      "iter": 1393,
+      "mean_reward": 60.14
+    },
+    {
+      "iter": 1394,
+      "mean_reward": 60.01
+    },
+    {
+      "iter": 1395,
+      "mean_reward": 59.71
+    },
+    {
+      "iter": 1396,
+      "mean_reward": 59.45
+    },
+    {
+      "iter": 1397,
+      "mean_reward": 60.12
+    },
+    {
+      "iter": 1398,
+      "mean_reward": 60.51
+    },
+    {
+      "iter": 1399,
+      "mean_reward": 60.3
+    },
+    {
+      "iter": 1400,
+      "mean_reward": 60.11
+    },
+    {
+      "iter": 1401,
+      "mean_reward": 60.33
+    },
+    {
+      "iter": 1402,
+      "mean_reward": 60.04
+    },
+    {
+      "iter": 1403,
+      "mean_reward": 59.51
+    },
+    {
+      "iter": 1404,
+      "mean_reward": 59.94
+    },
+    {
+      "iter": 1405,
+      "mean_reward": 60.14
+    },
+    {
+      "iter": 1406,
+      "mean_reward": 59.96
+    },
+    {
+      "iter": 1407,
+      "mean_reward": 59.22
+    },
+    {
+      "iter": 1408,
+      "mean_reward": 60.33
+    },
+    {
+      "iter": 1409,
+      "mean_reward": 60.47
+    },
+    {
+      "iter": 1410,
+      "mean_reward": 60.31
+    },
+    {
+      "iter": 1411,
+      "mean_reward": 59.99
+    },
+    {
+      "iter": 1412,
+      "mean_reward": 58.97
+    },
+    {
+      "iter": 1413,
+      "mean_reward": 59.42
+    },
+    {
+      "iter": 1414,
+      "mean_reward": 59.95
+    },
+    {
+      "iter": 1415,
+      "mean_reward": 58.96
+    },
+    {
+      "iter": 1416,
+      "mean_reward": 60.79
+    },
+    {
+      "iter": 1417,
+      "mean_reward": 60.3
+    },
+    {
+      "iter": 1418,
+      "mean_reward": 59.36
+    },
+    {
+      "iter": 1419,
+      "mean_reward": 59.97
+    },
+    {
+      "iter": 1420,
+      "mean_reward": 60.01
+    },
+    {
+      "iter": 1421,
+      "mean_reward": 60.48
+    },
+    {
+      "iter": 1422,
+      "mean_reward": 60.14
+    },
+    {
+      "iter": 1423,
+      "mean_reward": 60.32
+    },
+    {
+      "iter": 1424,
+      "mean_reward": 60.35
+    },
+    {
+      "iter": 1425,
+      "mean_reward": 60.3
+    },
+    {
+      "iter": 1426,
+      "mean_reward": 60.8
+    },
+    {
+      "iter": 1427,
+      "mean_reward": 60.29
+    },
+    {
+      "iter": 1428,
+      "mean_reward": 59.78
+    },
+    {
+      "iter": 1429,
+      "mean_reward": 59.4
+    },
+    {
+      "iter": 1430,
+      "mean_reward": 60.22
+    },
+    {
+      "iter": 1431,
+      "mean_reward": 60.45
+    },
+    {
+      "iter": 1432,
+      "mean_reward": 60.89
+    },
+    {
+      "iter": 1433,
+      "mean_reward": 60.69
+    },
+    {
+      "iter": 1434,
+      "mean_reward": 60.96
+    },
+    {
+      "iter": 1435,
+      "mean_reward": 60.18
+    },
+    {
+      "iter": 1436,
+      "mean_reward": 60.95
+    },
+    {
+      "iter": 1437,
+      "mean_reward": 59.42
+    },
+    {
+      "iter": 1438,
+      "mean_reward": 60.93
+    },
+    {
+      "iter": 1439,
+      "mean_reward": 59.95
+    },
+    {
+      "iter": 1440,
+      "mean_reward": 60.62
+    },
+    {
+      "iter": 1441,
+      "mean_reward": 59.69
+    },
+    {
+      "iter": 1442,
+      "mean_reward": 61.23
+    },
+    {
+      "iter": 1443,
+      "mean_reward": 60.49
+    },
+    {
+      "iter": 1444,
+      "mean_reward": 61.03
+    },
+    {
+      "iter": 1445,
+      "mean_reward": 60.18
+    },
+    {
+      "iter": 1446,
+      "mean_reward": 60.67
+    },
+    {
+      "iter": 1447,
+      "mean_reward": 60.17
+    },
+    {
+      "iter": 1448,
+      "mean_reward": 59.67
+    },
+    {
+      "iter": 1449,
+      "mean_reward": 60.35
+    },
+    {
+      "iter": 1450,
+      "mean_reward": 60.97
+    },
+    {
+      "iter": 1451,
+      "mean_reward": 59.31
+    },
+    {
+      "iter": 1452,
+      "mean_reward": 60.2
+    },
+    {
+      "iter": 1453,
+      "mean_reward": 60.72
+    },
+    {
+      "iter": 1454,
+      "mean_reward": 60.07
+    },
+    {
+      "iter": 1455,
+      "mean_reward": 59.91
+    },
+    {
+      "iter": 1456,
+      "mean_reward": 60.64
+    },
+    {
+      "iter": 1457,
+      "mean_reward": 60.3
+    },
+    {
+      "iter": 1458,
+      "mean_reward": 60.87
+    },
+    {
+      "iter": 1459,
+      "mean_reward": 60.5
+    },
+    {
+      "iter": 1460,
+      "mean_reward": 59.62
+    },
+    {
+      "iter": 1461,
+      "mean_reward": 60.52
+    },
+    {
+      "iter": 1462,
+      "mean_reward": 60.37
+    },
+    {
+      "iter": 1463,
+      "mean_reward": 61.02
+    },
+    {
+      "iter": 1464,
+      "mean_reward": 61.23
+    },
+    {
+      "iter": 1465,
+      "mean_reward": 60.77
+    },
+    {
+      "iter": 1466,
+      "mean_reward": 60.08
+    },
+    {
+      "iter": 1467,
+      "mean_reward": 59.91
+    },
+    {
+      "iter": 1468,
+      "mean_reward": 60.64
+    },
+    {
+      "iter": 1469,
+      "mean_reward": 60.51
+    },
+    {
+      "iter": 1470,
+      "mean_reward": 61.45
+    },
+    {
+      "iter": 1471,
+      "mean_reward": 61.44
+    },
+    {
+      "iter": 1472,
+      "mean_reward": 60.51
+    },
+    {
+      "iter": 1473,
+      "mean_reward": 60.72
+    },
+    {
+      "iter": 1474,
+      "mean_reward": 60.57
+    },
+    {
+      "iter": 1475,
+      "mean_reward": 60.93
+    },
+    {
+      "iter": 1476,
+      "mean_reward": 60.93
+    },
+    {
+      "iter": 1477,
+      "mean_reward": 61.12
+    },
+    {
+      "iter": 1478,
+      "mean_reward": 61.01
+    },
+    {
+      "iter": 1479,
+      "mean_reward": 60.81
+    },
+    {
+      "iter": 1480,
+      "mean_reward": 60.8
+    },
+    {
+      "iter": 1481,
+      "mean_reward": 61.23
+    },
+    {
+      "iter": 1482,
+      "mean_reward": 60.89
+    },
+    {
+      "iter": 1483,
+      "mean_reward": 60.97
+    },
+    {
+      "iter": 1484,
+      "mean_reward": 61.54
+    },
+    {
+      "iter": 1485,
+      "mean_reward": 60.96
+    },
+    {
+      "iter": 1486,
+      "mean_reward": 61.39
+    },
+    {
+      "iter": 1487,
+      "mean_reward": 61.8
+    },
+    {
+      "iter": 1488,
+      "mean_reward": 61.33
+    },
+    {
+      "iter": 1489,
+      "mean_reward": 61.97
+    },
+    {
+      "iter": 1490,
+      "mean_reward": 61.37
+    },
+    {
+      "iter": 1491,
+      "mean_reward": 61.41
+    },
+    {
+      "iter": 1492,
+      "mean_reward": 61.65
+    },
+    {
+      "iter": 1493,
+      "mean_reward": 61.61
+    },
+    {
+      "iter": 1494,
+      "mean_reward": 60.66
+    },
+    {
+      "iter": 1495,
+      "mean_reward": 61.72
+    },
+    {
+      "iter": 1496,
+      "mean_reward": 61.18
+    },
+    {
+      "iter": 1497,
+      "mean_reward": 60.93
+    },
+    {
+      "iter": 1498,
+      "mean_reward": 61.57
+    },
+    {
+      "iter": 1499,
+      "mean_reward": 61.91
+    },
+    {
+      "iter": 1500,
+      "mean_reward": 61.65
+    },
+    {
+      "iter": 1501,
+      "mean_reward": 61.37
+    },
+    {
+      "iter": 1502,
+      "mean_reward": 61.83
+    },
+    {
+      "iter": 1503,
+      "mean_reward": 61.34
+    },
+    {
+      "iter": 1504,
+      "mean_reward": 61.24
+    },
+    {
+      "iter": 1505,
+      "mean_reward": 60.76
+    },
+    {
+      "iter": 1506,
+      "mean_reward": 61.76
+    },
+    {
+      "iter": 1507,
+      "mean_reward": 60.67
+    },
+    {
+      "iter": 1508,
+      "mean_reward": 60.87
+    },
+    {
+      "iter": 1509,
+      "mean_reward": 60.9
+    },
+    {
+      "iter": 1510,
+      "mean_reward": 61.95
+    },
+    {
+      "iter": 1511,
+      "mean_reward": 61.43
+    },
+    {
+      "iter": 1512,
+      "mean_reward": 62.38
+    },
+    {
+      "iter": 1513,
+      "mean_reward": 61.97
+    },
+    {
+      "iter": 1514,
+      "mean_reward": 62.12
+    },
+    {
+      "iter": 1515,
+      "mean_reward": 61.67
+    },
+    {
+      "iter": 1516,
+      "mean_reward": 61.72
+    },
+    {
+      "iter": 1517,
+      "mean_reward": 61.62
+    },
+    {
+      "iter": 1518,
+      "mean_reward": 62.3
+    },
+    {
+      "iter": 1519,
+      "mean_reward": 61.92
+    },
+    {
+      "iter": 1520,
+      "mean_reward": 61.54
+    },
+    {
+      "iter": 1521,
+      "mean_reward": 61.57
+    },
+    {
+      "iter": 1522,
+      "mean_reward": 61.2
+    },
+    {
+      "iter": 1523,
+      "mean_reward": 61.78
+    },
+    {
+      "iter": 1524,
+      "mean_reward": 60.63
+    },
+    {
+      "iter": 1525,
+      "mean_reward": 61.44
+    },
+    {
+      "iter": 1526,
+      "mean_reward": 61.79
+    },
+    {
+      "iter": 1527,
+      "mean_reward": 61.59
+    },
+    {
+      "iter": 1528,
+      "mean_reward": 62.06
+    },
+    {
+      "iter": 1529,
+      "mean_reward": 62.59
+    },
+    {
+      "iter": 1530,
+      "mean_reward": 61.49
+    },
+    {
+      "iter": 1531,
+      "mean_reward": 61.84
+    },
+    {
+      "iter": 1532,
+      "mean_reward": 61.93
+    },
+    {
+      "iter": 1533,
+      "mean_reward": 62.24
+    },
+    {
+      "iter": 1534,
+      "mean_reward": 62.03
+    },
+    {
+      "iter": 1535,
+      "mean_reward": 61.52
+    },
+    {
+      "iter": 1536,
+      "mean_reward": 61.83
+    },
+    {
+      "iter": 1537,
+      "mean_reward": 60.43
+    },
+    {
+      "iter": 1538,
+      "mean_reward": 61.82
+    },
+    {
+      "iter": 1539,
+      "mean_reward": 62.59
+    },
+    {
+      "iter": 1540,
+      "mean_reward": 60.79
+    },
+    {
+      "iter": 1541,
+      "mean_reward": 61.99
+    },
+    {
+      "iter": 1542,
+      "mean_reward": 61.04
+    },
+    {
+      "iter": 1543,
+      "mean_reward": 61.66
+    },
+    {
+      "iter": 1544,
+      "mean_reward": 62.13
+    },
+    {
+      "iter": 1545,
+      "mean_reward": 61.04
+    },
+    {
+      "iter": 1546,
+      "mean_reward": 61.78
+    },
+    {
+      "iter": 1547,
+      "mean_reward": 61.95
+    },
+    {
+      "iter": 1548,
+      "mean_reward": 62.25
+    },
+    {
+      "iter": 1549,
+      "mean_reward": 61.4
+    },
+    {
+      "iter": 1550,
+      "mean_reward": 62.58
+    },
+    {
+      "iter": 1551,
+      "mean_reward": 61.92
+    },
+    {
+      "iter": 1552,
+      "mean_reward": 62.14
+    },
+    {
+      "iter": 1553,
+      "mean_reward": 61.98
+    },
+    {
+      "iter": 1554,
+      "mean_reward": 61.42
+    },
+    {
+      "iter": 1555,
+      "mean_reward": 62.25
+    },
+    {
+      "iter": 1556,
+      "mean_reward": 61.91
+    },
+    {
+      "iter": 1557,
+      "mean_reward": 61.8
+    },
+    {
+      "iter": 1558,
+      "mean_reward": 62.29
+    },
+    {
+      "iter": 1559,
+      "mean_reward": 61.23
+    },
+    {
+      "iter": 1560,
+      "mean_reward": 62.3
+    },
+    {
+      "iter": 1561,
+      "mean_reward": 62.07
+    },
+    {
+      "iter": 1562,
+      "mean_reward": 61.52
+    },
+    {
+      "iter": 1563,
+      "mean_reward": 61.41
+    },
+    {
+      "iter": 1564,
+      "mean_reward": 61.4
+    },
+    {
+      "iter": 1565,
+      "mean_reward": 62.28
+    },
+    {
+      "iter": 1566,
+      "mean_reward": 62.25
+    },
+    {
+      "iter": 1567,
+      "mean_reward": 62.31
+    },
+    {
+      "iter": 1568,
+      "mean_reward": 61.36
+    },
+    {
+      "iter": 1569,
+      "mean_reward": 61.14
+    },
+    {
+      "iter": 1570,
+      "mean_reward": 61.15
+    },
+    {
+      "iter": 1571,
+      "mean_reward": 62.93
+    },
+    {
+      "iter": 1572,
+      "mean_reward": 62.77
+    },
+    {
+      "iter": 1573,
+      "mean_reward": 62.4
+    },
+    {
+      "iter": 1574,
+      "mean_reward": 62.08
+    },
+    {
+      "iter": 1575,
+      "mean_reward": 61.86
+    },
+    {
+      "iter": 1576,
+      "mean_reward": 62.03
+    },
+    {
+      "iter": 1577,
+      "mean_reward": 62.13
+    },
+    {
+      "iter": 1578,
+      "mean_reward": 61.89
+    },
+    {
+      "iter": 1579,
+      "mean_reward": 61.93
+    },
+    {
+      "iter": 1580,
+      "mean_reward": 61.88
+    },
+    {
+      "iter": 1581,
+      "mean_reward": 61.86
+    },
+    {
+      "iter": 1582,
+      "mean_reward": 62.08
+    },
+    {
+      "iter": 1583,
+      "mean_reward": 62.1
+    },
+    {
+      "iter": 1584,
+      "mean_reward": 62.53
+    },
+    {
+      "iter": 1585,
+      "mean_reward": 62.73
+    },
+    {
+      "iter": 1586,
+      "mean_reward": 62.23
+    },
+    {
+      "iter": 1587,
+      "mean_reward": 62.53
+    },
+    {
+      "iter": 1588,
+      "mean_reward": 61.86
+    },
+    {
+      "iter": 1589,
+      "mean_reward": 62.03
+    },
+    {
+      "iter": 1590,
+      "mean_reward": 61.93
+    },
+    {
+      "iter": 1591,
+      "mean_reward": 61.94
+    },
+    {
+      "iter": 1592,
+      "mean_reward": 62.29
+    },
+    {
+      "iter": 1593,
+      "mean_reward": 61.71
+    },
+    {
+      "iter": 1594,
+      "mean_reward": 61.97
+    },
+    {
+      "iter": 1595,
+      "mean_reward": 62.64
+    },
+    {
+      "iter": 1596,
+      "mean_reward": 62.31
+    },
+    {
+      "iter": 1597,
+      "mean_reward": 62.22
+    },
+    {
+      "iter": 1598,
+      "mean_reward": 61.99
+    },
+    {
+      "iter": 1599,
+      "mean_reward": 61.59
+    },
+    {
+      "iter": 1600,
+      "mean_reward": 62.64
+    },
+    {
+      "iter": 1601,
+      "mean_reward": 61.89
+    },
+    {
+      "iter": 1602,
+      "mean_reward": 61.76
+    },
+    {
+      "iter": 1603,
+      "mean_reward": 62.38
+    },
+    {
+      "iter": 1604,
+      "mean_reward": 62.92
+    },
+    {
+      "iter": 1605,
+      "mean_reward": 62.43
+    },
+    {
+      "iter": 1606,
+      "mean_reward": 62.14
+    },
+    {
+      "iter": 1607,
+      "mean_reward": 61.6
+    },
+    {
+      "iter": 1608,
+      "mean_reward": 62.56
+    },
+    {
+      "iter": 1609,
+      "mean_reward": 63.34
+    },
+    {
+      "iter": 1610,
+      "mean_reward": 61.54
+    },
+    {
+      "iter": 1611,
+      "mean_reward": 62.0
+    },
+    {
+      "iter": 1612,
+      "mean_reward": 62.53
+    },
+    {
+      "iter": 1613,
+      "mean_reward": 62.17
+    },
+    {
+      "iter": 1614,
+      "mean_reward": 62.24
+    },
+    {
+      "iter": 1615,
+      "mean_reward": 62.99
+    },
+    {
+      "iter": 1616,
+      "mean_reward": 62.68
+    },
+    {
+      "iter": 1617,
+      "mean_reward": 62.86
+    },
+    {
+      "iter": 1618,
+      "mean_reward": 62.87
+    },
+    {
+      "iter": 1619,
+      "mean_reward": 61.97
+    },
+    {
+      "iter": 1620,
+      "mean_reward": 61.35
+    },
+    {
+      "iter": 1621,
+      "mean_reward": 62.48
+    },
+    {
+      "iter": 1622,
+      "mean_reward": 62.73
+    },
+    {
+      "iter": 1623,
+      "mean_reward": 61.78
+    },
+    {
+      "iter": 1624,
+      "mean_reward": 62.69
+    },
+    {
+      "iter": 1625,
+      "mean_reward": 62.94
+    },
+    {
+      "iter": 1626,
+      "mean_reward": 61.73
+    },
+    {
+      "iter": 1627,
+      "mean_reward": 62.7
+    },
+    {
+      "iter": 1628,
+      "mean_reward": 61.91
+    },
+    {
+      "iter": 1629,
+      "mean_reward": 61.73
+    },
+    {
+      "iter": 1630,
+      "mean_reward": 62.39
+    },
+    {
+      "iter": 1631,
+      "mean_reward": 62.87
+    },
+    {
+      "iter": 1632,
+      "mean_reward": 61.82
+    },
+    {
+      "iter": 1633,
+      "mean_reward": 63.13
+    },
+    {
+      "iter": 1634,
+      "mean_reward": 62.58
+    },
+    {
+      "iter": 1635,
+      "mean_reward": 62.29
+    },
+    {
+      "iter": 1636,
+      "mean_reward": 63.48
+    },
+    {
+      "iter": 1637,
+      "mean_reward": 62.77
+    },
+    {
+      "iter": 1638,
+      "mean_reward": 62.46
+    },
+    {
+      "iter": 1639,
+      "mean_reward": 62.73
+    },
+    {
+      "iter": 1640,
+      "mean_reward": 62.34
+    },
+    {
+      "iter": 1641,
+      "mean_reward": 62.64
+    },
+    {
+      "iter": 1642,
+      "mean_reward": 62.4
+    },
+    {
+      "iter": 1643,
+      "mean_reward": 62.24
+    },
+    {
+      "iter": 1644,
+      "mean_reward": 62.34
+    },
+    {
+      "iter": 1645,
+      "mean_reward": 62.21
+    },
+    {
+      "iter": 1646,
+      "mean_reward": 63.12
+    },
+    {
+      "iter": 1647,
+      "mean_reward": 61.7
+    },
+    {
+      "iter": 1648,
+      "mean_reward": 62.0
+    },
+    {
+      "iter": 1649,
+      "mean_reward": 62.16
+    },
+    {
+      "iter": 1650,
+      "mean_reward": 61.85
+    },
+    {
+      "iter": 1651,
+      "mean_reward": 62.55
+    },
+    {
+      "iter": 1652,
+      "mean_reward": 62.91
+    },
+    {
+      "iter": 1653,
+      "mean_reward": 62.79
+    },
+    {
+      "iter": 1654,
+      "mean_reward": 62.74
+    },
+    {
+      "iter": 1655,
+      "mean_reward": 62.45
+    },
+    {
+      "iter": 1656,
+      "mean_reward": 62.84
+    },
+    {
+      "iter": 1657,
+      "mean_reward": 62.47
+    },
+    {
+      "iter": 1658,
+      "mean_reward": 61.76
+    },
+    {
+      "iter": 1659,
+      "mean_reward": 61.49
+    },
+    {
+      "iter": 1660,
+      "mean_reward": 63.1
+    },
+    {
+      "iter": 1661,
+      "mean_reward": 62.31
+    },
+    {
+      "iter": 1662,
+      "mean_reward": 62.15
+    },
+    {
+      "iter": 1663,
+      "mean_reward": 61.96
+    },
+    {
+      "iter": 1664,
+      "mean_reward": 62.72
+    },
+    {
+      "iter": 1665,
+      "mean_reward": 62.38
+    },
+    {
+      "iter": 1666,
+      "mean_reward": 62.21
+    },
+    {
+      "iter": 1667,
+      "mean_reward": 63.17
+    },
+    {
+      "iter": 1668,
+      "mean_reward": 62.41
+    },
+    {
+      "iter": 1669,
+      "mean_reward": 62.66
+    },
+    {
+      "iter": 1670,
+      "mean_reward": 62.16
+    },
+    {
+      "iter": 1671,
+      "mean_reward": 62.15
+    },
+    {
+      "iter": 1672,
+      "mean_reward": 63.07
+    },
+    {
+      "iter": 1673,
+      "mean_reward": 62.04
+    },
+    {
+      "iter": 1674,
+      "mean_reward": 62.98
+    },
+    {
+      "iter": 1675,
+      "mean_reward": 62.48
+    },
+    {
+      "iter": 1676,
+      "mean_reward": 63.08
+    },
+    {
+      "iter": 1677,
+      "mean_reward": 63.01
+    },
+    {
+      "iter": 1678,
+      "mean_reward": 63.04
+    },
+    {
+      "iter": 1679,
+      "mean_reward": 62.85
+    },
+    {
+      "iter": 1680,
+      "mean_reward": 62.94
+    },
+    {
+      "iter": 1681,
+      "mean_reward": 62.94
+    },
+    {
+      "iter": 1682,
+      "mean_reward": 62.6
+    },
+    {
+      "iter": 1683,
+      "mean_reward": 62.44
+    },
+    {
+      "iter": 1684,
+      "mean_reward": 62.59
+    },
+    {
+      "iter": 1685,
+      "mean_reward": 62.85
+    },
+    {
+      "iter": 1686,
+      "mean_reward": 62.57
+    },
+    {
+      "iter": 1687,
+      "mean_reward": 63.18
+    },
+    {
+      "iter": 1688,
+      "mean_reward": 62.54
+    },
+    {
+      "iter": 1689,
+      "mean_reward": 63.16
+    },
+    {
+      "iter": 1690,
+      "mean_reward": 62.12
+    },
+    {
+      "iter": 1691,
+      "mean_reward": 62.66
+    },
+    {
+      "iter": 1692,
+      "mean_reward": 62.71
+    },
+    {
+      "iter": 1693,
+      "mean_reward": 62.85
+    },
+    {
+      "iter": 1694,
+      "mean_reward": 62.4
+    },
+    {
+      "iter": 1695,
+      "mean_reward": 62.79
+    },
+    {
+      "iter": 1696,
+      "mean_reward": 62.1
+    },
+    {
+      "iter": 1697,
+      "mean_reward": 61.76
+    },
+    {
+      "iter": 1698,
+      "mean_reward": 62.29
+    },
+    {
+      "iter": 1699,
+      "mean_reward": 62.21
+    },
+    {
+      "iter": 1700,
+      "mean_reward": 63.07
+    },
+    {
+      "iter": 1701,
+      "mean_reward": 62.98
+    },
+    {
+      "iter": 1702,
+      "mean_reward": 62.14
+    },
+    {
+      "iter": 1703,
+      "mean_reward": 62.92
+    },
+    {
+      "iter": 1704,
+      "mean_reward": 62.75
+    },
+    {
+      "iter": 1705,
+      "mean_reward": 62.96
+    },
+    {
+      "iter": 1706,
+      "mean_reward": 62.85
+    },
+    {
+      "iter": 1707,
+      "mean_reward": 62.57
+    },
+    {
+      "iter": 1708,
+      "mean_reward": 62.65
+    },
+    {
+      "iter": 1709,
+      "mean_reward": 63.04
+    },
+    {
+      "iter": 1710,
+      "mean_reward": 62.39
+    },
+    {
+      "iter": 1711,
+      "mean_reward": 61.81
+    },
+    {
+      "iter": 1712,
+      "mean_reward": 62.04
+    },
+    {
+      "iter": 1713,
+      "mean_reward": 63.06
+    },
+    {
+      "iter": 1714,
+      "mean_reward": 62.61
+    },
+    {
+      "iter": 1715,
+      "mean_reward": 62.36
+    },
+    {
+      "iter": 1716,
+      "mean_reward": 62.12
+    },
+    {
+      "iter": 1717,
+      "mean_reward": 62.34
+    },
+    {
+      "iter": 1718,
+      "mean_reward": 62.71
+    },
+    {
+      "iter": 1719,
+      "mean_reward": 63.01
+    },
+    {
+      "iter": 1720,
+      "mean_reward": 62.74
+    },
+    {
+      "iter": 1721,
+      "mean_reward": 62.48
+    },
+    {
+      "iter": 1722,
+      "mean_reward": 63.34
+    },
+    {
+      "iter": 1723,
+      "mean_reward": 62.6
+    },
+    {
+      "iter": 1724,
+      "mean_reward": 63.4
+    },
+    {
+      "iter": 1725,
+      "mean_reward": 62.76
+    },
+    {
+      "iter": 1726,
+      "mean_reward": 62.97
+    },
+    {
+      "iter": 1727,
+      "mean_reward": 62.43
+    },
+    {
+      "iter": 1728,
+      "mean_reward": 62.16
+    },
+    {
+      "iter": 1729,
+      "mean_reward": 62.42
+    },
+    {
+      "iter": 1730,
+      "mean_reward": 62.04
+    },
+    {
+      "iter": 1731,
+      "mean_reward": 62.95
+    },
+    {
+      "iter": 1732,
+      "mean_reward": 62.44
+    },
+    {
+      "iter": 1733,
+      "mean_reward": 62.83
+    },
+    {
+      "iter": 1734,
+      "mean_reward": 62.81
+    },
+    {
+      "iter": 1735,
+      "mean_reward": 62.14
+    },
+    {
+      "iter": 1736,
+      "mean_reward": 62.88
+    },
+    {
+      "iter": 1737,
+      "mean_reward": 61.96
+    },
+    {
+      "iter": 1738,
+      "mean_reward": 62.58
+    },
+    {
+      "iter": 1739,
+      "mean_reward": 61.87
+    },
+    {
+      "iter": 1740,
+      "mean_reward": 62.05
+    },
+    {
+      "iter": 1741,
+      "mean_reward": 62.87
+    },
+    {
+      "iter": 1742,
+      "mean_reward": 61.95
+    },
+    {
+      "iter": 1743,
+      "mean_reward": 62.98
+    },
+    {
+      "iter": 1744,
+      "mean_reward": 61.89
+    },
+    {
+      "iter": 1745,
+      "mean_reward": 62.71
+    },
+    {
+      "iter": 1746,
+      "mean_reward": 62.4
+    },
+    {
+      "iter": 1747,
+      "mean_reward": 63.02
+    },
+    {
+      "iter": 1748,
+      "mean_reward": 62.16
+    },
+    {
+      "iter": 1749,
+      "mean_reward": 62.74
+    },
+    {
+      "iter": 1750,
+      "mean_reward": 63.51
+    },
+    {
+      "iter": 1751,
+      "mean_reward": 62.84
+    },
+    {
+      "iter": 1752,
+      "mean_reward": 63.19
+    },
+    {
+      "iter": 1753,
+      "mean_reward": 63.24
+    },
+    {
+      "iter": 1754,
+      "mean_reward": 62.66
+    },
+    {
+      "iter": 1755,
+      "mean_reward": 62.68
+    },
+    {
+      "iter": 1756,
+      "mean_reward": 62.75
+    },
+    {
+      "iter": 1757,
+      "mean_reward": 62.57
+    },
+    {
+      "iter": 1758,
+      "mean_reward": 62.91
+    },
+    {
+      "iter": 1759,
+      "mean_reward": 63.64
+    },
+    {
+      "iter": 1760,
+      "mean_reward": 63.02
+    },
+    {
+      "iter": 1761,
+      "mean_reward": 62.81
+    },
+    {
+      "iter": 1762,
+      "mean_reward": 62.78
+    },
+    {
+      "iter": 1763,
+      "mean_reward": 62.61
+    },
+    {
+      "iter": 1764,
+      "mean_reward": 62.69
+    },
+    {
+      "iter": 1765,
+      "mean_reward": 62.91
+    },
+    {
+      "iter": 1766,
+      "mean_reward": 62.18
+    },
+    {
+      "iter": 1767,
+      "mean_reward": 63.67
+    },
+    {
+      "iter": 1768,
+      "mean_reward": 63.29
+    },
+    {
+      "iter": 1769,
+      "mean_reward": 62.89
+    },
+    {
+      "iter": 1770,
+      "mean_reward": 63.29
+    },
+    {
+      "iter": 1771,
+      "mean_reward": 62.33
+    },
+    {
+      "iter": 1772,
+      "mean_reward": 61.81
+    },
+    {
+      "iter": 1773,
+      "mean_reward": 62.68
+    },
+    {
+      "iter": 1774,
+      "mean_reward": 62.54
+    },
+    {
+      "iter": 1775,
+      "mean_reward": 63.19
+    },
+    {
+      "iter": 1776,
+      "mean_reward": 61.88
+    },
+    {
+      "iter": 1777,
+      "mean_reward": 62.33
+    },
+    {
+      "iter": 1778,
+      "mean_reward": 62.21
+    },
+    {
+      "iter": 1779,
+      "mean_reward": 63.33
+    },
+    {
+      "iter": 1780,
+      "mean_reward": 62.21
+    },
+    {
+      "iter": 1781,
+      "mean_reward": 63.03
+    },
+    {
+      "iter": 1782,
+      "mean_reward": 63.32
+    },
+    {
+      "iter": 1783,
+      "mean_reward": 62.76
+    },
+    {
+      "iter": 1784,
+      "mean_reward": 63.35
+    },
+    {
+      "iter": 1785,
+      "mean_reward": 63.07
+    },
+    {
+      "iter": 1786,
+      "mean_reward": 63.32
+    },
+    {
+      "iter": 1787,
+      "mean_reward": 63.18
+    },
+    {
+      "iter": 1788,
+      "mean_reward": 63.32
+    },
+    {
+      "iter": 1789,
+      "mean_reward": 63.01
+    },
+    {
+      "iter": 1790,
+      "mean_reward": 62.26
+    },
+    {
+      "iter": 1791,
+      "mean_reward": 61.97
+    },
+    {
+      "iter": 1792,
+      "mean_reward": 62.86
+    },
+    {
+      "iter": 1793,
+      "mean_reward": 63.34
+    },
+    {
+      "iter": 1794,
+      "mean_reward": 63.25
+    },
+    {
+      "iter": 1795,
+      "mean_reward": 63.47
+    },
+    {
+      "iter": 1796,
+      "mean_reward": 62.18
+    },
+    {
+      "iter": 1797,
+      "mean_reward": 63.23
+    },
+    {
+      "iter": 1798,
+      "mean_reward": 63.34
+    },
+    {
+      "iter": 1799,
+      "mean_reward": 63.29
+    },
+    {
+      "iter": 1800,
+      "mean_reward": 63.61
+    },
+    {
+      "iter": 1801,
+      "mean_reward": 62.66
+    },
+    {
+      "iter": 1802,
+      "mean_reward": 62.49
+    },
+    {
+      "iter": 1803,
+      "mean_reward": 63.62
+    },
+    {
+      "iter": 1804,
+      "mean_reward": 63.28
+    },
+    {
+      "iter": 1805,
+      "mean_reward": 62.88
+    },
+    {
+      "iter": 1806,
+      "mean_reward": 62.99
+    },
+    {
+      "iter": 1807,
+      "mean_reward": 63.39
+    },
+    {
+      "iter": 1808,
+      "mean_reward": 62.59
+    },
+    {
+      "iter": 1809,
+      "mean_reward": 62.88
+    },
+    {
+      "iter": 1810,
+      "mean_reward": 62.67
+    },
+    {
+      "iter": 1811,
+      "mean_reward": 62.11
+    },
+    {
+      "iter": 1812,
+      "mean_reward": 63.09
+    },
+    {
+      "iter": 1813,
+      "mean_reward": 62.79
+    },
+    {
+      "iter": 1814,
+      "mean_reward": 62.3
+    },
+    {
+      "iter": 1815,
+      "mean_reward": 63.25
+    },
+    {
+      "iter": 1816,
+      "mean_reward": 63.65
+    },
+    {
+      "iter": 1817,
+      "mean_reward": 63.13
+    },
+    {
+      "iter": 1818,
+      "mean_reward": 62.56
+    },
+    {
+      "iter": 1819,
+      "mean_reward": 62.29
+    },
+    {
+      "iter": 1820,
+      "mean_reward": 63.24
+    },
+    {
+      "iter": 1821,
+      "mean_reward": 63.4
+    },
+    {
+      "iter": 1822,
+      "mean_reward": 62.94
+    },
+    {
+      "iter": 1823,
+      "mean_reward": 63.96
+    },
+    {
+      "iter": 1824,
+      "mean_reward": 63.5
+    },
+    {
+      "iter": 1825,
+      "mean_reward": 62.33
+    },
+    {
+      "iter": 1826,
+      "mean_reward": 63.92
+    },
+    {
+      "iter": 1827,
+      "mean_reward": 63.35
+    },
+    {
+      "iter": 1828,
+      "mean_reward": 62.46
+    },
+    {
+      "iter": 1829,
+      "mean_reward": 62.93
+    },
+    {
+      "iter": 1830,
+      "mean_reward": 63.37
+    },
+    {
+      "iter": 1831,
+      "mean_reward": 62.86
+    },
+    {
+      "iter": 1832,
+      "mean_reward": 63.4
+    },
+    {
+      "iter": 1833,
+      "mean_reward": 62.96
+    },
+    {
+      "iter": 1834,
+      "mean_reward": 63.66
+    },
+    {
+      "iter": 1835,
+      "mean_reward": 63.41
+    },
+    {
+      "iter": 1836,
+      "mean_reward": 63.06
+    },
+    {
+      "iter": 1837,
+      "mean_reward": 62.79
+    },
+    {
+      "iter": 1838,
+      "mean_reward": 62.47
+    },
+    {
+      "iter": 1839,
+      "mean_reward": 63.04
+    },
+    {
+      "iter": 1840,
+      "mean_reward": 62.87
+    },
+    {
+      "iter": 1841,
+      "mean_reward": 63.17
+    },
+    {
+      "iter": 1842,
+      "mean_reward": 62.33
+    },
+    {
+      "iter": 1843,
+      "mean_reward": 62.86
+    },
+    {
+      "iter": 1844,
+      "mean_reward": 62.96
+    },
+    {
+      "iter": 1845,
+      "mean_reward": 62.67
+    },
+    {
+      "iter": 1846,
+      "mean_reward": 63.16
+    },
+    {
+      "iter": 1847,
+      "mean_reward": 63.65
+    },
+    {
+      "iter": 1848,
+      "mean_reward": 63.09
+    },
+    {
+      "iter": 1849,
+      "mean_reward": 62.08
+    },
+    {
+      "iter": 1850,
+      "mean_reward": 62.69
+    },
+    {
+      "iter": 1851,
+      "mean_reward": 62.59
+    },
+    {
+      "iter": 1852,
+      "mean_reward": 63.56
+    },
+    {
+      "iter": 1853,
+      "mean_reward": 63.23
+    },
+    {
+      "iter": 1854,
+      "mean_reward": 62.14
+    },
+    {
+      "iter": 1855,
+      "mean_reward": 62.36
+    },
+    {
+      "iter": 1856,
+      "mean_reward": 62.59
+    },
+    {
+      "iter": 1857,
+      "mean_reward": 63.98
+    },
+    {
+      "iter": 1858,
+      "mean_reward": 61.82
+    },
+    {
+      "iter": 1859,
+      "mean_reward": 63.41
+    },
+    {
+      "iter": 1860,
+      "mean_reward": 63.62
+    },
+    {
+      "iter": 1861,
+      "mean_reward": 62.33
+    },
+    {
+      "iter": 1862,
+      "mean_reward": 62.74
+    },
+    {
+      "iter": 1863,
+      "mean_reward": 63.27
+    },
+    {
+      "iter": 1864,
+      "mean_reward": 62.83
+    },
+    {
+      "iter": 1865,
+      "mean_reward": 62.93
+    },
+    {
+      "iter": 1866,
+      "mean_reward": 63.26
+    },
+    {
+      "iter": 1867,
+      "mean_reward": 63.0
+    },
+    {
+      "iter": 1868,
+      "mean_reward": 63.09
+    },
+    {
+      "iter": 1869,
+      "mean_reward": 62.81
+    },
+    {
+      "iter": 1870,
+      "mean_reward": 63.11
+    },
+    {
+      "iter": 1871,
+      "mean_reward": 61.99
+    },
+    {
+      "iter": 1872,
+      "mean_reward": 62.85
+    },
+    {
+      "iter": 1873,
+      "mean_reward": 62.91
+    },
+    {
+      "iter": 1874,
+      "mean_reward": 61.72
+    },
+    {
+      "iter": 1875,
+      "mean_reward": 61.51
+    },
+    {
+      "iter": 1876,
+      "mean_reward": 63.3
+    },
+    {
+      "iter": 1877,
+      "mean_reward": 60.9
+    },
+    {
+      "iter": 1878,
+      "mean_reward": 62.27
+    },
+    {
+      "iter": 1879,
+      "mean_reward": 62.62
+    },
+    {
+      "iter": 1880,
+      "mean_reward": 63.11
+    },
+    {
+      "iter": 1881,
+      "mean_reward": 62.6
+    },
+    {
+      "iter": 1882,
+      "mean_reward": 62.44
+    },
+    {
+      "iter": 1883,
+      "mean_reward": 62.7
+    },
+    {
+      "iter": 1884,
+      "mean_reward": 62.64
+    },
+    {
+      "iter": 1885,
+      "mean_reward": 62.4
+    },
+    {
+      "iter": 1886,
+      "mean_reward": 63.47
+    },
+    {
+      "iter": 1887,
+      "mean_reward": 62.43
+    },
+    {
+      "iter": 1888,
+      "mean_reward": 62.28
+    },
+    {
+      "iter": 1889,
+      "mean_reward": 62.03
+    },
+    {
+      "iter": 1890,
+      "mean_reward": 62.79
+    },
+    {
+      "iter": 1891,
+      "mean_reward": 62.93
+    },
+    {
+      "iter": 1892,
+      "mean_reward": 62.89
+    },
+    {
+      "iter": 1893,
+      "mean_reward": 62.54
+    },
+    {
+      "iter": 1894,
+      "mean_reward": 62.75
+    },
+    {
+      "iter": 1895,
+      "mean_reward": 62.71
+    },
+    {
+      "iter": 1896,
+      "mean_reward": 62.54
+    },
+    {
+      "iter": 1897,
+      "mean_reward": 62.21
+    },
+    {
+      "iter": 1898,
+      "mean_reward": 62.09
+    },
+    {
+      "iter": 1899,
+      "mean_reward": 62.6
+    },
+    {
+      "iter": 1900,
+      "mean_reward": 62.8
+    },
+    {
+      "iter": 1901,
+      "mean_reward": 62.67
+    },
+    {
+      "iter": 1902,
+      "mean_reward": 62.81
+    },
+    {
+      "iter": 1903,
+      "mean_reward": 62.35
+    },
+    {
+      "iter": 1904,
+      "mean_reward": 62.42
+    },
+    {
+      "iter": 1905,
+      "mean_reward": 62.87
+    },
+    {
+      "iter": 1906,
+      "mean_reward": 63.01
+    },
+    {
+      "iter": 1907,
+      "mean_reward": 62.77
+    },
+    {
+      "iter": 1908,
+      "mean_reward": 61.49
+    },
+    {
+      "iter": 1909,
+      "mean_reward": 62.81
+    },
+    {
+      "iter": 1910,
+      "mean_reward": 62.55
+    },
+    {
+      "iter": 1911,
+      "mean_reward": 61.81
+    },
+    {
+      "iter": 1912,
+      "mean_reward": 62.84
+    },
+    {
+      "iter": 1913,
+      "mean_reward": 62.62
+    },
+    {
+      "iter": 1914,
+      "mean_reward": 61.76
+    },
+    {
+      "iter": 1915,
+      "mean_reward": 61.1
+    },
+    {
+      "iter": 1916,
+      "mean_reward": 62.86
+    },
+    {
+      "iter": 1917,
+      "mean_reward": 62.69
+    },
+    {
+      "iter": 1918,
+      "mean_reward": 62.89
+    },
+    {
+      "iter": 1919,
+      "mean_reward": 62.84
+    },
+    {
+      "iter": 1920,
+      "mean_reward": 62.04
+    },
+    {
+      "iter": 1921,
+      "mean_reward": 62.6
+    },
+    {
+      "iter": 1922,
+      "mean_reward": 62.57
+    },
+    {
+      "iter": 1923,
+      "mean_reward": 62.88
+    },
+    {
+      "iter": 1924,
+      "mean_reward": 62.55
+    },
+    {
+      "iter": 1925,
+      "mean_reward": 62.58
+    },
+    {
+      "iter": 1926,
+      "mean_reward": 62.65
+    },
+    {
+      "iter": 1927,
+      "mean_reward": 62.85
+    },
+    {
+      "iter": 1928,
+      "mean_reward": 62.7
+    },
+    {
+      "iter": 1929,
+      "mean_reward": 62.04
+    },
+    {
+      "iter": 1930,
+      "mean_reward": 62.63
+    },
+    {
+      "iter": 1931,
+      "mean_reward": 62.97
+    },
+    {
+      "iter": 1932,
+      "mean_reward": 62.75
+    },
+    {
+      "iter": 1933,
+      "mean_reward": 62.78
+    },
+    {
+      "iter": 1934,
+      "mean_reward": 63.04
+    },
+    {
+      "iter": 1935,
+      "mean_reward": 63.01
+    },
+    {
+      "iter": 1936,
+      "mean_reward": 62.84
+    },
+    {
+      "iter": 1937,
+      "mean_reward": 63.13
+    },
+    {
+      "iter": 1938,
+      "mean_reward": 62.98
+    },
+    {
+      "iter": 1939,
+      "mean_reward": 62.6
+    },
+    {
+      "iter": 1940,
+      "mean_reward": 64.03
+    },
+    {
+      "iter": 1941,
+      "mean_reward": 62.92
+    },
+    {
+      "iter": 1942,
+      "mean_reward": 62.88
+    },
+    {
+      "iter": 1943,
+      "mean_reward": 63.22
+    },
+    {
+      "iter": 1944,
+      "mean_reward": 63.21
+    },
+    {
+      "iter": 1945,
+      "mean_reward": 63.42
+    },
+    {
+      "iter": 1946,
+      "mean_reward": 63.24
+    },
+    {
+      "iter": 1947,
+      "mean_reward": 62.95
+    },
+    {
+      "iter": 1948,
+      "mean_reward": 63.58
+    },
+    {
+      "iter": 1949,
+      "mean_reward": 63.23
+    },
+    {
+      "iter": 1950,
+      "mean_reward": 63.64
+    },
+    {
+      "iter": 1951,
+      "mean_reward": 63.1
+    },
+    {
+      "iter": 1952,
+      "mean_reward": 63.33
+    },
+    {
+      "iter": 1953,
+      "mean_reward": 63.37
+    },
+    {
+      "iter": 1954,
+      "mean_reward": 63.44
+    },
+    {
+      "iter": 1955,
+      "mean_reward": 62.91
+    },
+    {
+      "iter": 1956,
+      "mean_reward": 63.26
+    },
+    {
+      "iter": 1957,
+      "mean_reward": 63.07
+    },
+    {
+      "iter": 1958,
+      "mean_reward": 63.84
+    },
+    {
+      "iter": 1959,
+      "mean_reward": 63.67
+    },
+    {
+      "iter": 1960,
+      "mean_reward": 63.43
+    },
+    {
+      "iter": 1961,
+      "mean_reward": 63.76
+    },
+    {
+      "iter": 1962,
+      "mean_reward": 62.95
+    },
+    {
+      "iter": 1963,
+      "mean_reward": 63.39
+    },
+    {
+      "iter": 1964,
+      "mean_reward": 63.23
+    },
+    {
+      "iter": 1965,
+      "mean_reward": 63.79
+    },
+    {
+      "iter": 1966,
+      "mean_reward": 63.86
+    },
+    {
+      "iter": 1967,
+      "mean_reward": 62.64
+    },
+    {
+      "iter": 1968,
+      "mean_reward": 63.45
+    },
+    {
+      "iter": 1969,
+      "mean_reward": 63.49
+    },
+    {
+      "iter": 1970,
+      "mean_reward": 64.35
+    },
+    {
+      "iter": 1971,
+      "mean_reward": 63.31
+    },
+    {
+      "iter": 1972,
+      "mean_reward": 63.4
+    },
+    {
+      "iter": 1973,
+      "mean_reward": 63.09
+    },
+    {
+      "iter": 1974,
+      "mean_reward": 63.32
+    },
+    {
+      "iter": 1975,
+      "mean_reward": 63.7
+    },
+    {
+      "iter": 1976,
+      "mean_reward": 63.53
+    },
+    {
+      "iter": 1977,
+      "mean_reward": 64.41
+    },
+    {
+      "iter": 1978,
+      "mean_reward": 63.21
+    },
+    {
+      "iter": 1979,
+      "mean_reward": 63.37
+    },
+    {
+      "iter": 1980,
+      "mean_reward": 63.28
+    },
+    {
+      "iter": 1981,
+      "mean_reward": 63.58
+    },
+    {
+      "iter": 1982,
+      "mean_reward": 63.85
+    },
+    {
+      "iter": 1983,
+      "mean_reward": 63.62
+    },
+    {
+      "iter": 1984,
+      "mean_reward": 63.98
+    },
+    {
+      "iter": 1985,
+      "mean_reward": 63.37
+    },
+    {
+      "iter": 1986,
+      "mean_reward": 63.95
+    },
+    {
+      "iter": 1987,
+      "mean_reward": 64.19
+    },
+    {
+      "iter": 1988,
+      "mean_reward": 64.14
+    },
+    {
+      "iter": 1989,
+      "mean_reward": 64.11
+    },
+    {
+      "iter": 1990,
+      "mean_reward": 64.4
+    },
+    {
+      "iter": 1991,
+      "mean_reward": 63.48
+    },
+    {
+      "iter": 1992,
+      "mean_reward": 64.39
+    },
+    {
+      "iter": 1993,
+      "mean_reward": 63.72
+    },
+    {
+      "iter": 1994,
+      "mean_reward": 63.85
+    },
+    {
+      "iter": 1995,
+      "mean_reward": 63.17
+    },
+    {
+      "iter": 1996,
+      "mean_reward": 64.06
+    },
+    {
+      "iter": 1997,
+      "mean_reward": 63.8
+    },
+    {
+      "iter": 1998,
+      "mean_reward": 64.09
+    },
+    {
+      "iter": 1999,
+      "mean_reward": 63.52
+    }
+  ]
+}
