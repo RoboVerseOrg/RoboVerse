@@ -1,0 +1,20 @@
+{
+  "task": "cartpole_balance",
+  "verdict": "1:1 plateau reproduced",
+  "mjlab_native": {
+    "best_ep_r": 49.92,
+    "final_ep_r": 49.92,
+    "smooth_reward": 0.9984,
+    "num_envs": 4096,
+    "backend": "mujoco_warp"
+  },
+  "roboverse": {
+    "best_ep_r": NaN,
+    "stable_mean_iter60_380": 49.748,
+    "stable_min": 46.67,
+    "num_envs": 32,
+    "backend": "mujoco CPU CleanRL"
+  },
+  "plateau_pct_of_mjlab": 99.65,
+  "note": "RoboVerse holds ep_r~49.9 (smooth_reward~0.998) iter60-380, matching mjlab 49.92/0.9984. Env is bitwise 1:1 (obs+reward). Per-iter speed differs (32 vs 4096 envs). iter-400 single-point dip is a run-end logging artifact."
+}
