@@ -195,11 +195,13 @@ def _replay_one(bridge: dict, args) -> dict:
     # RoboVerse render can be composited frame-for-frame with native_render.py output.
     if getattr(args, "observer_cam", False):
         # Matched side-by-side camera: identical pos/look_at/fovy to native_render's
-        # roll=0 world-up camera, so the two videos composite frame-for-frame.
-        # fovy 55deg on a 512^2 sensor -> focal_length/horizontal_aperture below.
+        # roll=0 world-up camera, so the two videos composite frame-for-frame. fovy
+        # -> focal_length for a 512^2 sensor (horizontal_aperture 20.955 = 35mm).
+        fovy = float(getattr(args, "fovy", 55.0))
+        focal = 20.955 / (2.0 * np.tan(np.deg2rad(fovy) / 2.0))
         camera = PinholeCameraCfg(
-            name="main_camera", pos=[0.0, 0.6, 1.35], look_at=[0.0, -0.3, 0.78],
-            width=512, height=512, focal_length=20.0, horizontal_aperture=20.955, data_types=["rgb"],
+            name="main_camera", pos=list(args.cam_pos), look_at=list(args.cam_lookat),
+            width=512, height=512, focal_length=focal, horizontal_aperture=20.955, data_types=["rgb"],
         )  # fmt: skip
     else:
         camera = PinholeCameraCfg(
@@ -365,6 +367,9 @@ def main(argv: list[str] | None = None) -> int:
         "--observer-cam", action="store_true", help="render from RoboTwin's observer pose (for side-by-side)"
     )
     ap.add_argument("--rt", action="store_true", help="ray-traced render (matches RoboTwin's RT shader)")
+    ap.add_argument("--cam-pos", type=float, nargs=3, default=[0.0, 0.6, 1.35], help="--observer-cam position")
+    ap.add_argument("--cam-lookat", type=float, nargs=3, default=[0.0, -0.3, 0.78], help="--observer-cam look-at")
+    ap.add_argument("--fovy", type=float, default=55.0, help="--observer-cam vertical FOV (deg)")
     ap.add_argument("--robotwin-dir", default=os.path.expanduser("~/projects/robotwin"))
     ap.add_argument("--out", default="outputs/robotwin_coverage/object_parity.json")
     args = ap.parse_args(argv)

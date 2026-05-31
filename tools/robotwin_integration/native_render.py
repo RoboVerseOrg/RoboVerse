@@ -43,6 +43,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--task-config", default="demo_clean")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--save-freq", type=int, default=15)
+    ap.add_argument(
+        "--replay-bridge",
+        default=None,
+        help="drive the env from this bridge pkl (exact 1:1 episode) instead of play_once",
+    )
     ap.add_argument("--cam-pos", type=float, nargs=3, default=[0.0, 0.6, 1.35])
     ap.add_argument("--cam-lookat", type=float, nargs=3, default=[0.0, -0.3, 0.78])
     ap.add_argument("--fovy", type=float, default=55.0)
@@ -106,17 +111,60 @@ def main(argv: list[str] | None = None) -> int:
             print(f"camera grab failed: {type(e).__name__}: {e}")
         return d
 
-    env.get_obs = hooked
-    env.save_freq = args.save_freq
-    env.save_data = True  # so _take_picture (which calls get_obs) fires every save_freq steps
+    def render_frame():
+        env.scene.update_render()
+        cam.take_picture()
+        rgb = cam.get_picture("Color")
+        frames.append((np.clip(np.asarray(rgb)[..., :3], 0, 1) * 255).astype(np.uint8))
 
-    try:
-        env.play_once()
-        ok = bool(getattr(env, "plan_success", False)) and bool(env.check_success())
-    except Exception as e:
-        print(f"play_once error: {type(e).__name__}: {e}")
-        ok = False
-    print(f"[{args.task} seed {args.seed}] success={ok} observer_frames={len(frames)}")
+    if args.replay_bridge:
+        # Drive the native env from the SAME bridge trajectory the RoboVerse replay
+        # uses (teleport robot arm qpos + object poses/joints per frame), instead of
+        # re-planning via play_once -> the two videos are the *identical* episode,
+        # frame-for-frame, so any remaining difference is purely the render engine.
+        import pickle
+
+        br = pickle.load(open(args.replay_bridge, "rb"))
+        real = br.get("real_vectors") or br["vectors"]
+        otraj = br.get("object_traj", {})
+        ojoint = br.get("object_joint_traj", {})
+        rob = env.robot.left_entity
+        act = [j.get_name() for j in rob.get_active_joints()]
+        lidx = [act.index(n) for n in env.robot.left_arm_joints_name]
+        ridx = [act.index(n) for n in env.robot.right_arm_joints_name]
+        actors = {a.get_name(): a for a in env.scene.get_all_actors()}
+        arts = {a.get_name(): a for a in env.scene.get_all_articulations() if a.get_name() != rob.get_name()}
+        for t in range(len(real)):
+            q = np.asarray(rob.get_qpos(), dtype=float).copy()
+            for i, ix in enumerate(lidx):
+                q[ix] = real[t][i]
+            for i, ix in enumerate(ridx):
+                q[ix] = real[t][7 + i]
+            rob.set_qpos(q)
+            for name, tr in otraj.items():
+                p = tr[min(t, len(tr) - 1)]
+                pose = sapien.Pose(p[:3], p[3:7])
+                if name in actors:
+                    actors[name].set_pose(pose)
+                elif name in arts:
+                    arts[name].set_root_pose(pose)
+                    if name in ojoint:
+                        jt = ojoint[name]
+                        arts[name].set_qpos(np.asarray(jt[min(t, len(jt) - 1)], dtype=float))
+            render_frame()
+        ok = True
+        print(f"[{args.task}] bridge-replay rendered {len(frames)} frames (exact trajectory)")
+    else:
+        env.get_obs = hooked
+        env.save_freq = args.save_freq
+        env.save_data = True  # so _take_picture (which calls get_obs) fires every save_freq steps
+        try:
+            env.play_once()
+            ok = bool(getattr(env, "plan_success", False)) and bool(env.check_success())
+        except Exception as e:
+            print(f"play_once error: {type(e).__name__}: {e}")
+            ok = False
+        print(f"[{args.task} seed {args.seed}] success={ok} observer_frames={len(frames)}")
     env.close_env()
 
     if not frames:
