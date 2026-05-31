@@ -87,7 +87,7 @@ class _MjlabCartpoleTrainBase(BaseTaskEnv):
     _vel_range: float = 0.01
 
     def __init__(self, scenario=None, device=None):
-        super().__init__(scenario=scenario, device=device)
+        super().__init__(scenario=scenario or self.scenario, device=device)
         # mjlab cartpole cfg: SimulationCfg(mujoco=MujocoCfg(disableflags=("contact",)))
         # SimParamCfg has no equivalent option, so we patch mj_model.opt directly
         # after handler launch. Without this, the cartpole slider has subtle
