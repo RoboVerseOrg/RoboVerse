@@ -1,0 +1,538 @@
+diff --git a/metasim/sim/newton/newton.py b/metasim/sim/newton/newton.py
+index 764529e..f39bad8 100644
+--- a/metasim/sim/newton/newton.py
++++ b/metasim/sim/newton/newton.py
+@@ -19,9 +19,9 @@ import numpy as np
+ import scipy.spatial.transform as tr
+ import warp as wp
+ from newton import Contacts
++from newton import JointType  # newton 1.2.0: JointType moved to top-level (newton._src.sim.joints removed)
+ from newton._src.sim.articulation import eval_fk
+-from newton._src.sim.joints import JointType
+-from newton.sensors import SensorContact, SensorTiledCamera, populate_contacts
++from newton.sensors import SensorContact, SensorTiledCamera  # newton 1.2.0: populate_contacts removed; use SolverMuJoCo.update_contacts
+ from newton.solvers import SolverMuJoCo
+ from newton.viewer import ViewerGL
+ 
+@@ -122,6 +122,11 @@ class NewtonHandler(BaseSimHandler):
+         self._contacts: Contacts | None = None
+         self._contact_sensor: SensorContact | None = None
+ 
++        # mjlab-sensor support caches (per-env per-body net contact force /
++        # subtree fields read from the MuJoCo-Warp data).
++        self._mjw_body_names_cache: list[str] | None = None
++        self._mjw_geom_bodyid: torch.Tensor | None = None
++
+         # Caches for efficient lookups
+         self._joint_name_to_id: dict[str, dict[str, int]] = {}
+         self._body_name_to_id: dict[str, dict[str, int]] = {}
+@@ -204,10 +209,14 @@ class NewtonHandler(BaseSimHandler):
+ 
+         # Initialize Contacts object for contact force queries
+         nconmax = self._resolve_contact_capacity(sim_params.nconmax)
++        # newton 1.2.0: Contacts.force is None unless explicitly requested. Both
++        # SolverMuJoCo.update_contacts (writes net force per contact) and
++        # SensorContact.update (reads contacts.force) require it allocated.
+         self._contacts = Contacts(
+             rigid_contact_max=nconmax,
+             soft_contact_max=0,
+             device=self._device,
++            requested_attributes={"force"},
+         )
+         self._ensure_contact_buffers()
+ 
+@@ -353,7 +362,7 @@ class NewtonHandler(BaseSimHandler):
+                 if not foot_tokens:
+                     continue
+                 for body_id in self._get_body_indices(env_id, robot.name):
+-                    body_name = self._model.body_key[body_id]
++                    body_name = self._body_name(body_id)
+                     if not any(token in body_name for token in foot_tokens):
+                         continue
+                     for shape_idx in self._model.body_shapes.get(body_id, []):
+@@ -383,8 +392,9 @@ class NewtonHandler(BaseSimHandler):
+ 
+         # dt is set during solver.step()
+ 
+-        # Add ground plane (global, shared across all worlds)
+-        builder.current_world = -1
++        # Add ground plane (global, shared across all worlds).
++        # newton 1.2.0: ModelBuilder.current_world is read-only and already defaults to -1
++        # (the global/shared world), so no explicit assignment is needed before per-world adds.
+         self._shape_color_overrides = {}
+         ground_shape_cfg = self._get_ground_shape_cfg(builder)
+         ground_shape_idx = builder.add_ground_plane(cfg=ground_shape_cfg)
+@@ -441,18 +451,36 @@ class NewtonHandler(BaseSimHandler):
+             log.error(f"Robot {robot.name} has no URDF path defined")
+             raise ValueError(f"Robot {robot.name} requires urdf_path for Newton")
+ 
+-        # Parse URDF into builder
+-        ret = builder.add_urdf(
+-            urdf_path,
+-            xform=wp.transform(
+-                wp.vec3(*robot.default_position),
+-                wp.quat(*self._wxyz_to_xyzw(robot.default_orientation)),
+-            ),
+-            floating=not robot.fix_base_link,
+-            enable_self_collisions=robot.enabled_self_collisions,
+-            ignore_inertial_definitions=False,
+-            collapse_fixed_joints=getattr(robot, "collapse_fixed_joints", False),
++        xform = wp.transform(
++            wp.vec3(*robot.default_position),
++            wp.quat(*self._wxyz_to_xyzw(robot.default_orientation)),
+         )
++        floating = not robot.fix_base_link
++        collapse_fixed_joints = getattr(robot, "collapse_fixed_joints", False)
++
++        # mjlab robots ship MuJoCo MJCF (<mujoco> root), not URDF. Route those to
++        # ModelBuilder.add_mjcf (newton 1.2.0) and reserve add_urdf for real URDFs.
++        if self._is_mjcf(urdf_path):
++            # floating=None lets the MJCF itself define the base joint (free/slide/fixed),
++            # matching how mujoco_warp/mjlab load the same file -> 1:1 physics. Passing an
++            # explicit floating flag would override and e.g. fix a sliding cart base.
++            builder.add_mjcf(
++                urdf_path,
++                xform=xform,
++                floating=None,
++                enable_self_collisions=robot.enabled_self_collisions,
++                ignore_inertial_definitions=False,
++                collapse_fixed_joints=collapse_fixed_joints,
++            )
++        else:
++            builder.add_urdf(
++                urdf_path,
++                xform=xform,
++                floating=floating,
++                enable_self_collisions=robot.enabled_self_collisions,
++                ignore_inertial_definitions=False,
++                collapse_fixed_joints=collapse_fixed_joints,
++            )
+ 
+     def _normalize_color(self, color) -> np.ndarray | None:
+         """Normalize color list/tuple to RGBA float array in [0, 1]."""
+@@ -476,7 +504,7 @@ class NewtonHandler(BaseSimHandler):
+                 wp.vec3(*obj.default_position),
+                 wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
+             )
+-            body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, key=obj.name)
++            body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, label=obj.name)
+             shape_idx = builder.add_shape_box(
+                 body=body,
+                 xform=xform if body == -1 else None,
+@@ -494,7 +522,7 @@ class NewtonHandler(BaseSimHandler):
+                 wp.vec3(*obj.default_position),
+                 wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
+             )
+-            body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, key=obj.name)
++            body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, label=obj.name)
+             shape_idx = builder.add_shape_sphere(
+                 body=body,
+                 xform=xform if body == -1 else None,
+@@ -510,7 +538,7 @@ class NewtonHandler(BaseSimHandler):
+                 wp.vec3(*obj.default_position),
+                 wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
+             )
+-            body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, key=obj.name)
++            body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, label=obj.name)
+             shape_idx = builder.add_shape_capsule(
+                 body=body,
+                 xform=xform if body == -1 else None,
+@@ -551,6 +579,33 @@ class NewtonHandler(BaseSimHandler):
+                     collapse_fixed_joints=getattr(obj, "collapse_fixed_joints", False),
+                 )
+ 
++    @staticmethod
++    def _leaf_name(label: str) -> str:
++        """Return the leaf segment of a newton 1.2.0 hierarchical label ("a/b/c" -> "c")."""
++        return label.rsplit("/", 1)[-1] if label else label
++
++    def _body_name(self, idx: int) -> str:
++        """Short body name for a model body index (newton 1.2.0: body_label is hierarchical)."""
++        return self._leaf_name(self._model.body_label[idx])
++
++    def _joint_name(self, idx: int) -> str:
++        """Short joint name for a model joint index (newton 1.2.0: joint_label is hierarchical)."""
++        return self._leaf_name(self._model.joint_label[idx])
++
++    @staticmethod
++    def _is_mjcf(path: str | None) -> bool:
++        """Return True if the asset file is a MuJoCo MJCF (``<mujoco>`` root element)."""
++        if not path:
++            return False
++        try:
++            p = Path(path)
++            if not p.exists():
++                return False
++            root = ET.parse(p).getroot()
++            return root.tag == "mujoco"
++        except Exception:
++            return False
++
+     def _sanitize_urdf(self, urdf_path: str | None) -> str | None:
+         """Patch URDF mesh paths into backend-readable absolute paths.
+ 
+@@ -561,6 +616,11 @@ class NewtonHandler(BaseSimHandler):
+         if urdf_path is None:
+             return None
+ 
++        # MJCF assets are handled by add_mjcf and must keep their original location
++        # (relative mesh/asset references); the URDF mesh-path rewriting below does not apply.
++        if self._is_mjcf(urdf_path):
++            return urdf_path
++
+         try:
+             src = Path(urdf_path)
+             if not src.exists():
+@@ -632,12 +692,15 @@ class NewtonHandler(BaseSimHandler):
+         self._root_qd_offsets: torch.Tensor | None = None
+ 
+         # DEBUG: Print all body names
+-        # print(f"DEBUG: Model Body Names: {self._model.body_key}") # Commented out to be safe, I'll rely on add_urdf return checks
++        # print(f"DEBUG: Model Body Names: {self._model.body_label}") # Commented out to be safe, I'll rely on add_urdf return checks
+ 
+         self._body_parent_joint = {}  # body_idx -> joint_idx
+ 
+-        # Access model data on CPU for building caches
+-        body_keys = self._model.body_key
++        # Access model data on CPU for building caches.
++        # newton 1.2.0: Model.body_key/joint_key were renamed to body_label/joint_label and
++        # are now hierarchical paths ("robot/worldbody/.../name"). Use the leaf segment so
++        # name matching keeps working with the short names used by tasks/mjlab.
++        body_keys = [self._leaf_name(k) for k in self._model.body_label]
+         body_worlds = self._model.body_world.numpy()
+ 
+         for i, key in enumerate(body_keys):
+@@ -645,7 +708,7 @@ class NewtonHandler(BaseSimHandler):
+             if world != -1:
+                 self._body_name_cache[world][key] = i
+ 
+-        joint_keys = self._model.joint_key
++        joint_keys = [self._leaf_name(k) for k in self._model.joint_label]
+         joint_worlds = self._model.joint_world.numpy()
+         joint_parents = self._model.joint_parent.numpy()
+         joint_children = self._model.joint_child.numpy()
+@@ -676,7 +739,7 @@ class NewtonHandler(BaseSimHandler):
+             for obj in (*self.robots, *self.objects):
+                 joint_map = {}
+                 for joint_idx in self._get_joint_indices(env_id, obj.name):
+-                    joint_name = self._model.joint_key[joint_idx]
++                    joint_name = self._joint_name(joint_idx)
+                     if joint_name not in joint_map:
+                         joint_map[joint_name] = joint_idx
+                 if joint_map:
+@@ -722,7 +785,7 @@ class NewtonHandler(BaseSimHandler):
+ 
+                 body_ids = self._get_body_indices(env_id, name)
+                 if body_ids:
+-                    body_names = [self._model.body_key[idx] for idx in body_ids]
++                    body_names = [self._body_name(idx) for idx in body_ids]
+                     sorted_pairs = sorted(zip(body_names, body_ids), key=lambda pair: pair[0])
+                     sorted_body_ids = [idx for _, idx in sorted_pairs]
+                 else:
+@@ -889,6 +952,18 @@ class NewtonHandler(BaseSimHandler):
+         joint_target_vel = self._model.joint_target_vel.numpy()
+         joint_q = self._model.joint_q.numpy()
+ 
++        # SolverMuJoCo only synthesizes a MuJoCo actuator for a DOF when its
++        # joint_target_mode is non-NONE. ``add_mjcf`` infers the mode from the
++        # raw MJCF gains (which are 0 -> NONE) and never sees the per-actuator
++        # stiffness/damping that RobotCfg.actuators provides here. Without this
++        # the model is built with nu=0 actuators: the PD targets are written but
++        # nothing reads them and the robot collapses under gravity. Set the mode
++        # to match the gains/control_type so the solver installs position PD (or
++        # effort) actuators (mirrors newton.JointTargetMode.from_gains).
++        joint_target_mode = (
++            self._model.joint_target_mode.numpy() if self._model.joint_target_mode is not None else None
++        )
++
+         updated = False
+ 
+         for env_id in range(self.num_envs):
+@@ -912,6 +987,9 @@ class NewtonHandler(BaseSimHandler):
+ 
+                     if is_effort:
+                         # Effort-controlled joints should not have internal PD drives.
++                        # Keep mode NONE (no synthesized MuJoCo actuator): effort is
++                        # injected through Control.joint_f -> qfrc_applied directly, so
++                        # adding an EFFORT actuator here would double-count the torque.
+                         joint_target_ke[qd_start:qd_end] = 0.0
+                         joint_target_kd[qd_start:qd_end] = 0.0
+                         updated = True
+@@ -922,6 +1000,19 @@ class NewtonHandler(BaseSimHandler):
+                         if actuator.damping is not None:
+                             joint_target_kd[qd_start:qd_end] = actuator.damping
+                             updated = True
++                        # Install a position-PD actuator (gainprm=[kp],
++                        # biasprm=[0,-kp,-kd]) so the SolverMuJoCo synthesizes the
++                        # servo that reads joint_target_pos. POSITION (not
++                        # POSITION_VELOCITY) keeps kd in the same actuator, matching
++                        # mjlab's <position> actuator formulation 1:1.
++                        if joint_target_mode is not None:
++                            ke = joint_target_ke[qd_start]
++                            kd = joint_target_kd[qd_start]
++                            if ke != 0.0:
++                                joint_target_mode[qd_start:qd_end] = int(newton.JointTargetMode.POSITION)
++                            elif kd != 0.0:
++                                joint_target_mode[qd_start:qd_end] = int(newton.JointTargetMode.VELOCITY)
++                            updated = True
+                     if actuator.armature is not None:
+                         joint_armature[qd_start:qd_end] = actuator.armature
+                         updated = True
+@@ -953,6 +1044,8 @@ class NewtonHandler(BaseSimHandler):
+             self._model.joint_velocity_limit.assign(joint_velocity_limit)
+             self._model.joint_target_pos.assign(joint_target_pos)
+             self._model.joint_target_vel.assign(joint_target_vel)
++            if joint_target_mode is not None:
++                self._model.joint_target_mode.assign(joint_target_mode)
+ 
+     def _get_body_indices(self, env_id: int, obj_name: str) -> list[int]:
+         """Return body indices (root first) for an object in a given env."""
+@@ -1009,7 +1102,7 @@ class NewtonHandler(BaseSimHandler):
+         if self._model is None:
+             return joint_map
+         for joint_idx in self._get_joint_indices(env_id, obj_name):
+-            joint_name = self._model.joint_key[joint_idx]
++            joint_name = self._joint_name(joint_idx)
+             if joint_name not in joint_map:
+                 joint_map[joint_name] = joint_idx
+         self._obj_joint_name_cache[env_id][obj_name] = joint_map
+@@ -1027,7 +1120,7 @@ class NewtonHandler(BaseSimHandler):
+             qd_start = self._joint_qd_starts[joint_idx]
+             qd_end = self._joint_qd_starts[joint_idx + 1]
+             if qd_end - qd_start == 1:
+-                names.append(self._model.joint_key[joint_idx])
++                names.append(self._joint_name(joint_idx))
+         return names
+ 
+     @staticmethod
+@@ -1314,9 +1407,12 @@ class NewtonHandler(BaseSimHandler):
+                 dt=dt,
+             )
+ 
+-            # Populate contacts with force data from solver (for contact force queries)
++            # Populate contacts with force data from solver (for contact force queries).
++            # newton 1.2.0: populate_contacts() was removed; SolverMuJoCo exposes
++            # update_contacts(contacts, state) which fills the Contacts buffers from the
++            # MuJoCo-Warp solve (mjw_data) via _convert_mjw_contacts_to_newton_kernel.
+             if self._contacts is not None:
+-                populate_contacts(self._contacts, self._solver)
++                self._solver.update_contacts(self._contacts, self._state_0)
+ 
+             # Swap state buffers
+             self._state_0, self._state_1 = self._state_1, self._state_0
+@@ -1485,7 +1581,7 @@ class NewtonHandler(BaseSimHandler):
+ 
+                 body_ids = self._get_body_indices(env_id, robot_name)
+                 if body_ids:
+-                    body_names = [self._model.body_key[idx] for idx in body_ids]
++                    body_names = [self._body_name(idx) for idx in body_ids]
+                     sorted_pairs = sorted(zip(body_names, body_ids), key=lambda pair: pair[0])
+                     sorted_body_ids = [idx for _, idx in sorted_pairs]
+                 else:
+@@ -1534,7 +1630,7 @@ class NewtonHandler(BaseSimHandler):
+                 body_ids = self._get_body_indices(env_id, obj_name)
+                 if body_q is not None:
+                     if body_ids:
+-                        body_names = [self._model.body_key[idx] for idx in body_ids]
++                        body_names = [self._body_name(idx) for idx in body_ids]
+                         sorted_pairs = sorted(zip(body_names, body_ids), key=lambda pair: pair[0])
+                         sorted_body_ids = [idx for _, idx in sorted_pairs]
+                     else:
+@@ -2207,7 +2303,7 @@ class NewtonHandler(BaseSimHandler):
+             return []
+ 
+         # Include the root link to align with other simulators (IsaacGym/MuJoCo).
+-        names = [self._model.body_key[idx] for idx in body_ids]
++        names = [self._body_name(idx) for idx in body_ids]
+         if sort:
+             names.sort()
+         return names
+@@ -2230,7 +2326,7 @@ class NewtonHandler(BaseSimHandler):
+             return []
+ 
+         # Get body names and their indices
+-        body_names_with_indices = [(self._model.body_key[idx], idx) for idx in body_ids]
++        body_names_with_indices = [(self._body_name(idx), idx) for idx in body_ids]
+ 
+         # Sort by body name and return the indices
+         sorted_pairs = sorted(body_names_with_indices, key=lambda x: x[0])
+@@ -2258,16 +2354,15 @@ class NewtonHandler(BaseSimHandler):
+             log.warning(f"No bodies found for robot {robot_name}")
+             return
+ 
+-        # Get body names for pattern matching
+-        body_names = [self._model.body_key[idx] for idx in body_ids]
+-
+-        # Create contact sensor for these bodies
++        # Pass body indices directly: newton 1.2.0 SensorContact accepts list[int] body
++        # indices for sensing_obj_bodies. This avoids matching against the model's
++        # hierarchical body_label strings (string patterns would need full labels).
+         self._contact_sensor = SensorContact(
+             self._model,
+-            sensing_obj_bodies=body_names,
+-            include_total=True,
++            sensing_obj_bodies=[int(i) for i in body_ids],
++            measure_total=True,  # newton 1.2.0: renamed from include_total
+         )
+-        log.info(f"Initialized Newton contact sensor for {robot_name} with {len(body_names)} bodies")
++        log.info(f"Initialized Newton contact sensor for {robot_name} with {len(body_ids)} bodies")
+ 
+     def _resolve_contact_capacity(self, fallback: int | None) -> int:
+         if self._solver is None:
+@@ -2313,25 +2408,142 @@ class NewtonHandler(BaseSimHandler):
+ 
+         self._ensure_contact_buffers()
+ 
+-        # Evaluate contact sensor with current contacts
+-        self._contact_sensor.eval(self._contacts)
+-
+-        # Get net force from sensor
+-        net_force = self._contact_sensor.get_total_force()
++        # newton 1.2.0: SensorContact.eval(contacts) -> update(state, contacts), and
++        # get_total_force() -> the `total_force` attribute (wp.array of vec3, shape
++        # (num_sensing_objs,)) populated when the sensor is built with measure_total=True.
++        self._contact_sensor.update(self._state_0, self._contacts)
+ 
+-        # Convert warp array to torch tensor
+-        # net_force shape is (num_sensing_objs, num_counterparts) with each element being vec3
+-        # Since we used include_total=True, the first column is the total force
+-        net_force_np = net_force.numpy()
++        total_force = self._contact_sensor.total_force
++        if total_force is None:
++            return torch.zeros((0, 3), device=self.device)
+ 
+-        # Reshape to (num_bodies, 3) - take the total force (first column)
+-        if net_force_np.shape[1] > 0:
+-            forces = torch.tensor(net_force_np[:, 0, :], dtype=torch.float32, device=self.device)
+-        else:
+-            forces = torch.zeros((net_force_np.shape[0], 3), device=self.device)
++        # total_force is a warp array of vec3 -> (num_sensing_objs, 3)
++        net_force_np = total_force.numpy().reshape(-1, 3)
++        forces = torch.tensor(net_force_np, dtype=torch.float32, device=self.device)
+ 
+         return forces
+ 
++    # ------------------------------------------------------------------
++    # mjlab sensor support: per-env per-body net contact force + subtree fields
++    #
++    # These expose the batched (num_envs, ...) MuJoCo-Warp state that the
++    # RoboVerse mjlab sensor ports (ContactSensor / BuiltinSensor) need on the
++    # Newton GPU path. Without them the foot-contact + subtree-angmom sensors
++    # silently returned zeros (the calls raised AttributeError, swallowed by the
++    # env's post-physics sensor-update try/except), killing the gait-shaping
++    # rewards (feet_swing_height / feet_slip / soft_landing / feet_air_time).
++    # ------------------------------------------------------------------
++
++    def _mjw_body_names(self) -> list[str]:
++        """Leaf body names of the MuJoCo-Warp model (one per mjw body, worldbody first)."""
++        if getattr(self, "_mjw_body_names_cache", None) is not None:
++            return self._mjw_body_names_cache
++        mjm = getattr(self._solver, "mj_model", None) if self._solver is not None else None
++        if mjm is None:
++            self._mjw_body_names_cache = []
++            return self._mjw_body_names_cache
++        names = [self._leaf_name(mjm.body(i).name) for i in range(mjm.nbody)]
++        self._mjw_body_names_cache = names
++        return names
++
++    def get_net_contact_forces_by_body(self) -> tuple[torch.Tensor, list[str]]:
++        """Return per-env per-body net contact force in world frame.
++
++        Reads the MuJoCo-Warp active-contact arrays + constraint forces
++        (``mjw_data.contact`` + ``mjw_data.efc.force``) and accumulates the
++        world-frame contact force onto each body, per environment. This mirrors
++        the net-force a MuJoCo ``mj_contactForce`` sum would produce for each
++        body and is the value mjlab's ContactSensor (reduce="netforce") reads.
++
++        Returns:
++            forces: ``(num_envs, nbody, 3)`` world-frame net contact force,
++                indexed by the MuJoCo-Warp body order (worldbody at column 0).
++            names: leaf body names matching the columns of ``forces``.
++        """
++        names = self._mjw_body_names()
++        device = self.device
++        if self._solver is None or not names:
++            return torch.zeros((self.num_envs, len(names), 3), device=device), names
++
++        mjw = getattr(self._solver, "mjw_data", None)
++        mjm = getattr(self._solver, "mj_model", None)
++        if mjw is None or mjm is None:
++            return torch.zeros((self.num_envs, len(names), 3), device=device), names
++
++        nbody = len(names)
++        out = torch.zeros((self.num_envs, nbody, 3), device=device)
++
++        nacon_arr = getattr(mjw, "nacon", None)
++        if nacon_arr is None:
++            return out, names
++        nacon = int(wp.to_torch(nacon_arr).item()) if hasattr(nacon_arr, "__len__") else int(nacon_arr)
++        if nacon <= 0:
++            return out, names
++
++        con = mjw.contact
++        geom = wp.to_torch(con.geom)[:nacon].long()  # (nacon, 2)
++        worldid = wp.to_torch(con.worldid)[:nacon].long()  # (nacon,)
++        frame = wp.to_torch(con.frame)[:nacon].float()  # (nacon, 3, 3); row 0 = normal
++        efc_address = wp.to_torch(con.efc_address)[:nacon].long()  # (nacon, condim)
++        dim = wp.to_torch(con.dim)[:nacon].long()  # (nacon,)
++        efc_force = wp.to_torch(mjw.efc.force).float()  # (num_envs, nefc)
++
++        if getattr(self, "_mjw_geom_bodyid", None) is None:
++            self._mjw_geom_bodyid = torch.as_tensor(np.asarray(mjm.geom_bodyid), device=device, dtype=torch.long)
++        geom_bodyid = self._mjw_geom_bodyid
++
++        # Mask out-of-range worlds (Newton may pad contacts).
++        valid_world = (worldid >= 0) & (worldid < self.num_envs)
++        if not bool(valid_world.any()):
++            return out, names
++
++        condim = efc_address.shape[1]
++        # World-frame contact force = sum_k efc_force[world, addr_k] * frame_row_k.
++        fvec = torch.zeros((nacon, 3), device=device)
++        for k in range(condim):
++            addr = efc_address[:, k]
++            ok = valid_world & (addr >= 0) & (k < dim)
++            if not bool(ok.any()):
++                continue
++            fmag = torch.zeros(nacon, device=device)
++            fmag[ok] = efc_force[worldid[ok], addr[ok]]
++            fvec = fvec + fmag.unsqueeze(-1) * frame[:, k, :]
++
++        b1 = geom_bodyid[geom[:, 0]]
++        b2 = geom_bodyid[geom[:, 1]]
++        w = worldid.clamp(min=0)
++        # Scatter-add onto both bodies of each contact (Newton's 3rd-law pair).
++        m = valid_world
++        flat = w * nbody
++        out_flat = out.view(self.num_envs * nbody, 3)
++        out_flat.index_add_(0, (flat + b1)[m], fvec[m])
++        out_flat.index_add_(0, (flat + b2)[m], -fvec[m])
++        return out, names
++
++    def get_subtree_field(self, field: str) -> tuple[torch.Tensor, list[str]]:
++        """Return a batched MuJoCo-Warp ``subtree_*`` field as ``(num_envs, nbody, 3)``.
++
++        Supports ``subtree_angmom`` / ``subtree_linvel`` / ``subtree_com`` —
++        the fields mjlab's BuiltinSensor reads (e.g. ``robot/root_angmom`` →
++        whole-body angular momentum about the trunk subtree COM).
++
++        Returns:
++            vals: ``(num_envs, nbody, 3)`` field value per body.
++            names: leaf body names matching the columns of ``vals``.
++        """
++        names = self._mjw_body_names()
++        device = self.device
++        if self._solver is None or not names:
++            return torch.zeros((self.num_envs, len(names), 3), device=device), names
++        mjw = getattr(self._solver, "mjw_data", None)
++        if mjw is None:
++            return torch.zeros((self.num_envs, len(names), 3), device=device), names
++        arr = getattr(mjw, field, None)
++        if arr is None:
++            return torch.zeros((self.num_envs, len(names), 3), device=device), names
++        vals = wp.to_torch(arr).float().to(device)  # (num_envs, nbody, 3)
++        return vals, names
++
+     def close(self) -> None:
+         """Clean up Newton resources."""
+         log.info("Closing Newton handler")
