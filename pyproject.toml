@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "metasim"
-version = "0.1.17"
+version = "0.2.0"
 description = "MetaSim: A unified simulation framework for robotics"
 requires-python = ">=3.8"
 license = { file = "LICENSE" }
