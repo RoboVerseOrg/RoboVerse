@@ -708,9 +708,16 @@ def joint_velocity_hinge_penalty(
 
 
 def _quat_error_magnitude(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
-    """Angle between two unit quaternions (wxyz). Shape preserves leading dims."""
-    dot = (q1 * q2).sum(dim=-1).abs().clamp(-1.0, 1.0)
-    return 2.0 * torch.acos(dot)
+    """Angle between two unit quaternions (wxyz). Shape preserves leading dims.
+
+    Native parity: mjlab ``quat_error_magnitude`` uses the box-minus log map
+    ``||log(q1 * q2^-1)||`` (math.py:685-697), NOT ``2*acos(|dot|)``. The two
+    agree near zero error but diverge for large angles, so we port the exact
+    box-minus formula for float-eps reward parity.
+    """
+    from ._math import quat_error_magnitude_wxyz
+
+    return quat_error_magnitude_wxyz(q1, q2)
 
 
 def _get_motion_command(env, command_name: str):

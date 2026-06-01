@@ -779,14 +779,16 @@ class _G1TrackingRewardsCfg(_G1RewardsCfg):
     (mjlab tracking_env_cfg.rewards).
     """
 
+    # Weights + stds mirror mjlab tracking_env_cfg.rewards
+    # (mjlab/tasks/tracking/tracking_env_cfg.py:209-239).
     track_anchor_pos = RewTerm(
         func=rew.motion_global_anchor_position_error_exp,
-        weight=1.0,
+        weight=0.5,
         params={"command_name": "motion", "std": 0.3},
     )
     track_anchor_orient = RewTerm(
         func=rew.motion_global_anchor_orientation_error_exp,
-        weight=1.0,
+        weight=0.5,
         params={"command_name": "motion", "std": 0.4},
     )
     track_body_pos = RewTerm(
@@ -796,18 +798,18 @@ class _G1TrackingRewardsCfg(_G1RewardsCfg):
     )
     track_body_orient = RewTerm(
         func=rew.motion_relative_body_orientation_error_exp,
-        weight=0.5,
+        weight=1.0,
         params={"command_name": "motion", "std": 0.4},
     )
     track_body_lin_vel = RewTerm(
         func=rew.motion_global_body_linear_velocity_error_exp,
-        weight=0.5,
+        weight=1.0,
         params={"command_name": "motion", "std": 1.0},
     )
     track_body_ang_vel = RewTerm(
         func=rew.motion_global_body_angular_velocity_error_exp,
-        weight=0.5,
-        params={"command_name": "motion", "std": 1.0},
+        weight=1.0,
+        params={"command_name": "motion", "std": 3.14},
     )
 
 

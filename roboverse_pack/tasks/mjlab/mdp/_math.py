@@ -263,3 +263,101 @@ def body_ang_vel_w(env, env_states, asset_name: str, body_name: str) -> torch.Te
             return rs.body_state[:, col, 10:13]
     _, _, ang_w = get_base_state(env, env_states, asset_name)
     return ang_w
+
+
+# ---------------------------------------------------------------------------
+# wxyz quaternion utilities — verbatim ports of mjlab/utils/lab_api/math.py.
+#
+# The tracking MotionCommand + motion_*_error_exp rewards operate on (w, x, y,
+# z) quaternions and must match native bit-for-bit. These mirror the native
+# functions exactly (same operation order) so anchor/relative-body orientation
+# and quat_error_magnitude reproduce native at float-eps. wxyz order, NOT the
+# xyzw order used by the velocity helpers above.
+# ---------------------------------------------------------------------------
+
+
+def normalize_wxyz(x: torch.Tensor, eps: float = 1e-9) -> torch.Tensor:
+    """Normalize a tensor to unit length (native ``math.normalize``)."""
+    return x / x.norm(p=2, dim=-1).clamp(min=eps, max=None).unsqueeze(-1)
+
+
+def quat_conjugate_wxyz(q: torch.Tensor) -> torch.Tensor:
+    """Conjugate of a (w, x, y, z) quaternion (native ``quat_conjugate``)."""
+    shape = q.shape
+    q = q.reshape(-1, 4)
+    return torch.cat((q[..., 0:1], -q[..., 1:]), dim=-1).view(shape)
+
+
+def quat_inv_wxyz(q: torch.Tensor, eps: float = 1e-9) -> torch.Tensor:
+    """Inverse of a (w, x, y, z) quaternion (native ``quat_inv``)."""
+    return quat_conjugate_wxyz(q) / q.pow(2).sum(dim=-1, keepdim=True).clamp(min=eps)
+
+
+def quat_mul_wxyz(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
+    """Hamilton product of two (w, x, y, z) quaternions (native ``quat_mul``)."""
+    if q1.shape != q2.shape:
+        raise ValueError(f"Quaternion shape mismatch: {q1.shape} != {q2.shape}.")
+    shape = q1.shape
+    q1 = q1.reshape(-1, 4)
+    q2 = q2.reshape(-1, 4)
+    w1, x1, y1, z1 = q1[:, 0], q1[:, 1], q1[:, 2], q1[:, 3]
+    w2, x2, y2, z2 = q2[:, 0], q2[:, 1], q2[:, 2], q2[:, 3]
+    ww = (z1 + x1) * (x2 + y2)
+    yy = (w1 - y1) * (w2 + z2)
+    zz = (w1 + y1) * (w2 - z2)
+    xx = ww + yy + zz
+    qq = 0.5 * (xx + (z1 - x1) * (x2 - y2))
+    w = qq - ww + (z1 - y1) * (y2 - z2)
+    x = qq - xx + (x1 + w1) * (x2 + w2)
+    y = qq - yy + (w1 - x1) * (y2 + z2)
+    z = qq - zz + (z1 + y1) * (w2 - x2)
+    return torch.stack([w, x, y, z], dim=-1).view(shape)
+
+
+def quat_apply_wxyz(quat: torch.Tensor, vec: torch.Tensor) -> torch.Tensor:
+    """Rotate ``vec`` by a (w, x, y, z) quaternion (native ``quat_apply``)."""
+    shape = vec.shape
+    quat = quat.reshape(-1, 4)
+    vec = vec.reshape(-1, 3)
+    xyz = quat[:, 1:]
+    t = xyz.cross(vec, dim=-1) * 2
+    return (vec + quat[:, 0:1] * t + xyz.cross(t, dim=-1)).view(shape)
+
+
+def yaw_quat_wxyz(quat: torch.Tensor) -> torch.Tensor:
+    """Extract the yaw component of a (w, x, y, z) quaternion (native ``yaw_quat``)."""
+    shape = quat.shape
+    quat_yaw = quat.reshape(-1, 4).clone()
+    qw = quat_yaw[:, 0]
+    qx = quat_yaw[:, 1]
+    qy = quat_yaw[:, 2]
+    qz = quat_yaw[:, 3]
+    yaw = torch.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz))
+    quat_yaw = torch.zeros_like(quat_yaw)
+    quat_yaw[:, 3] = torch.sin(yaw / 2)
+    quat_yaw[:, 0] = torch.cos(yaw / 2)
+    quat_yaw = normalize_wxyz(quat_yaw)
+    return quat_yaw.view(shape)
+
+
+def axis_angle_from_quat_wxyz(quat: torch.Tensor, eps: float = 1.0e-6) -> torch.Tensor:
+    """Axis-angle vector of a (w, x, y, z) quaternion (native ``axis_angle_from_quat``)."""
+    quat = quat * (1.0 - 2.0 * (quat[..., 0:1] < 0.0))
+    mag = torch.linalg.norm(quat[..., 1:], dim=-1)
+    half_angle = torch.atan2(mag, quat[..., 0])
+    angle = 2.0 * half_angle
+    sin_half_angles_over_angles = torch.where(
+        angle.abs() > eps, torch.sin(half_angle) / angle, 0.5 - angle * angle / 48
+    )
+    return quat[..., 1:4] / sin_half_angles_over_angles.unsqueeze(-1)
+
+
+def quat_box_minus_wxyz(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
+    """Box-minus (log of ``q1 * q2^-1``) for wxyz quats (native ``quat_box_minus``)."""
+    quat_diff = quat_mul_wxyz(q1, quat_conjugate_wxyz(q2))
+    return axis_angle_from_quat_wxyz(quat_diff)
+
+
+def quat_error_magnitude_wxyz(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
+    """Angular error between two wxyz quaternions (native ``quat_error_magnitude``)."""
+    return torch.norm(quat_box_minus_wxyz(q1, q2), dim=-1)

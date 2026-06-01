@@ -672,15 +672,27 @@ class MotionCommandManager:
         bids = self._mujoco_body_ids
         pos = np.asarray(data.xpos[bids], dtype=np.float32)  # (B, 3)
         quat = np.asarray(data.xquat[bids], dtype=np.float32)  # (B, 4) wxyz
-        # Linear/angular velocity in world frame via mj_objectVelocity.
-        lin_arr = np.zeros((B, 6), dtype=np.float64)
+        # Body-link world velocity, EXACTLY matching mjlab's
+        # ``EntityData.body_link_vel_w`` (entity/data.py:292-298): MuJoCo ``cvel``
+        # is [ang(3), lin(3)] expressed at the entity ROOT's ``subtree_com``;
+        # translate it to each body's link-frame origin (``xpos``) via
+        #   lin_w = lin_c - ang_c × (subtree_com_root - xpos).
+        # (``mj_objectVelocity`` translates to a different reference point, which
+        # left body_lin_vel off by ω×r ≈ 3.9e-2 vs native — body_ang_vel was
+        # unaffected since angular velocity is reference-point independent.)
+        cvel = np.asarray(data.cvel, dtype=np.float64)  # (nbody, 6) [ang, lin]
+        subtree_com = np.asarray(data.subtree_com, dtype=np.float64)  # (nbody, 3)
+        body_rootid = np.asarray(mp.body_rootid)  # (nbody,) kinematic-tree root per body
+        ang_arr = np.zeros((B, 3), dtype=np.float32)
+        lin_arr = np.zeros((B, 3), dtype=np.float32)
         for i, bid in enumerate(bids):
-            v = np.zeros(6, dtype=np.float64)
-            mujoco.mj_objectVelocity(mp, data.ptr, mujoco.mjtObj.mjOBJ_BODY, int(bid), v, 0)
-            lin_arr[i] = v
-        # mj_objectVelocity returns [ang(3), lin(3)] when flg_local=0.
-        ang = torch.tensor(lin_arr[:, :3], dtype=torch.float32, device=device)
-        lin = torch.tensor(lin_arr[:, 3:], dtype=torch.float32, device=device)
+            ang_c = cvel[bid, 0:3]
+            lin_c = cvel[bid, 3:6]
+            offset = subtree_com[int(body_rootid[bid])] - pos[i]
+            ang_arr[i] = ang_c
+            lin_arr[i] = lin_c - np.cross(ang_c, offset)
+        ang = torch.tensor(ang_arr, dtype=torch.float32, device=device)
+        lin = torch.tensor(lin_arr, dtype=torch.float32, device=device)
         pos_t = torch.tensor(pos, device=device)
         quat_t = torch.tensor(quat, device=device)
         # Broadcast to (N, B, *).
@@ -764,23 +776,45 @@ class MotionCommandManager:
         """Return the target anchor body's world-frame orientation."""
         return self.body_quat_w[:, self._anchor_idx]
 
+    def _relative_body_poses(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute (body_pos_relative_w, body_quat_relative_w) like native.
+
+        Native parity (mjlab commands.py:377-405,
+        ``MotionCommand.update_relative_body_poses``): the target motion is
+        re-anchored to the robot's current anchor body. The horizontal
+        translation comes from the robot anchor position, the height stays at
+        the target anchor height, and a *yaw-only* delta rotation
+        (``yaw_quat(robot_anchor_quat * anchor_quat^-1)``) is applied to every
+        target body's position (relative to the target anchor) and orientation.
+        """
+        from ._math import quat_apply_wxyz, quat_inv_wxyz, quat_mul_wxyz, yaw_quat_wxyz
+
+        B = len(self.cfg.body_names)
+        body_pos = self.body_pos_w  # (N, B, 3)
+        body_quat = self.body_quat_w  # (N, B, 4)
+        anchor_pos = self.anchor_pos_w[:, None, :].repeat(1, B, 1)  # (N, B, 3)
+        anchor_quat = self.anchor_quat_w[:, None, :].repeat(1, B, 1)  # (N, B, 4)
+        robot_anchor_pos = self.robot_anchor_pos_w[:, None, :].repeat(1, B, 1)
+        robot_anchor_quat = self.robot_anchor_quat_w[:, None, :].repeat(1, B, 1)
+
+        delta_pos_w = robot_anchor_pos.clone()
+        delta_pos_w[..., 2] = anchor_pos[..., 2]
+        delta_ori_w = yaw_quat_wxyz(
+            quat_mul_wxyz(robot_anchor_quat, quat_inv_wxyz(anchor_quat))
+        )
+
+        body_quat_relative_w = quat_mul_wxyz(delta_ori_w, body_quat)
+        body_pos_relative_w = delta_pos_w + quat_apply_wxyz(
+            delta_ori_w, body_pos - anchor_pos
+        )
+        return body_pos_relative_w, body_quat_relative_w
+
     @property
     def body_pos_relative_w(self) -> torch.Tensor:
-        """Return target body positions aligned to the robot anchor.
-
-        Mjlab parity: the target anchor is aligned to the robot anchor so
-        the motion is replayed at the current robot location.
-        """
-        target = self.body_pos_w
-        target_anchor = target[:, self._anchor_idx : self._anchor_idx + 1]
-        robot_anchor = self.robot_anchor_pos_w.unsqueeze(1)
-        return target - target_anchor + robot_anchor
+        """Return target body positions re-anchored to the robot anchor (native parity)."""
+        return self._relative_body_poses()[0]
 
     @property
     def body_quat_relative_w(self) -> torch.Tensor:
-        """Return target body orientations relative to the robot anchor."""
-        # Approximation: hand back the target quaternions unchanged. mjlab
-        # rotates each body's quat by the anchor delta; for parity we'd
-        # need quat composition utilities. Defer this refinement until a
-        # motion file exists to fit the data against.
-        return self.body_quat_w
+        """Return target body orientations re-anchored to the robot anchor (native parity)."""
+        return self._relative_body_poses()[1]

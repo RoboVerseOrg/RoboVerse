@@ -306,7 +306,7 @@ class _YamRewardsCfg:
             "object_name": "cube",
             "reaching_std": 0.2,
             "bringing_std": 0.3,
-            "site_name": "tcp_site",
+            "site_name": "grasp_site",
         },
     )
     lift_precise = RewTerm(
