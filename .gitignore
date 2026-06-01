@@ -136,3 +136,4 @@ tools/publish_report*.sh
 CLAUDE.local.md
 ENVIRONMENTS.local.md
 datasets/
+.robosuite_bundle/
