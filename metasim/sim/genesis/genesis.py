@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -109,12 +110,18 @@ class GenesisHandler(BaseSimHandler):
 
     def launch(self) -> None:
         super().launch()
-        gs.init(backend=gs.gpu)  # TODO: add option for cpu
+        # Backend selection: METASIM_GENESIS_BACKEND env var ("cpu" | "gpu", default gpu)
+        # falls back to gs.cpu when CUDA isn't available so headless CI doesn't crash.
+        backend_env = os.environ.get("METASIM_GENESIS_BACKEND", "gpu").lower()
+        if backend_env == "cpu" or not torch.cuda.is_available():
+            gs.init(backend=gs.cpu)
+        else:
+            gs.init(backend=gs.gpu)
         self.scene_inst = gs.Scene(
             sim_options=gs.options.SimOptions(
                 dt=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1 / 100,
-                substeps=1,
-            ),  # TODO: substeps > 1 doesn't work
+                substeps=1,  # substeps > 1 unstable upstream — track upstream genesis bug before raising
+            ),
             vis_options=gs.options.VisOptions(n_rendered_envs=self.scenario.num_envs),
             viewer_options=gs.options.ViewerOptions(
                 camera_pos=(3.5, 0.0, 2.5),

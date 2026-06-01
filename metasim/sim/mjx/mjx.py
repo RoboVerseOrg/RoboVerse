@@ -159,7 +159,10 @@ class MJXHandler(BaseSimHandler):
         objects: dict[str, ObjectState] = {}
 
         # --------------------------- ROBOT ---------------------------------------
-        r_cfg = self._scenario.robots[0]  # FIXME support multiple robots
+        # Single-robot only: _attach_robot / _build_joint_name_map both consume
+        # scenario.robots[0] specifically. To support multi-robot, all three
+        # need extending together (asset attach + id caches + this loop).
+        r_cfg = self._scenario.robots[0]
         prefix = f"{r_cfg.name}/"
 
         # body IDs ---------------------------------------------------------------
