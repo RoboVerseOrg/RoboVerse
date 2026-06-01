@@ -200,6 +200,18 @@ def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: b
     env = pt._make_robotwin_env(
         task_name=task, task_config=task_config, seed=seed, is_test=True, data_type=data_type, render_freq=0,
     )  # fmt: skip
+    if rgb:
+        # setup_demo enables the RT shader + OIDN denoiser; the DP eval renders the
+        # head_camera every step, and OIDN deadlocks headless on a long episode
+        # ("OIDN Error: invalid handle") -- that's what hung whole evals. Drop the
+        # denoiser (RT geometry still renders) -- same fix as native_render/collect,
+        # and it matches the demos (collected with OIDN off) for train/eval parity.
+        try:
+            import sapien
+
+            sapien.render.set_ray_tracing_denoiser("none")
+        except Exception:
+            pass
     try:
         policy.reset()
     except (TimeoutError, OSError) as e:
