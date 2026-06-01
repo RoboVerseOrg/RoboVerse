@@ -519,6 +519,12 @@ class _G1TaskBase(ManagerBasedRVEnv):
         # G1 sensors. ContactSensor works on both backends (Newton per-env
         # contact reader); TerrainHeightSensor + BuiltinSensor stay MuJoCo-only.
         _G1_FEET_BODIES = ("left_ankle_roll_link", "right_ankle_roll_link")
+        # Foot site offset in the ankle_roll_link frame (g1.xml:
+        # <site name="*_foot" pos="0.04 0 -0.037">). mjlab's foot_height_scan +
+        # feet_slip read the foot SITE; on Newton we reconstruct the site world
+        # pose from the ankle_roll body pose + this offset.
+        _G1_FOOT_SITE_OFFSET = (0.04, 0.0, -0.037)
+        _G1_FEET_SITE_OFFSETS = tuple(_G1_FOOT_SITE_OFFSET for _ in _G1_FEET_BODIES)
         self._mjlab_sensors["feet_ground_contact"] = ContactSensor(
             self,
             ContactSensorCfg(
@@ -528,6 +534,7 @@ class _G1TaskBase(ManagerBasedRVEnv):
                 fields=("found", "force"),
                 track_air_time=True,
                 history_length=4,
+                site_offsets=_G1_FEET_SITE_OFFSETS,
             ),
         )
         self._mjlab_sensors["foot_height_scan"] = TerrainHeightSensor(
@@ -538,6 +545,7 @@ class _G1TaskBase(ManagerBasedRVEnv):
                 max_distance=1.0,
                 geom_groups=(0,),
                 target_height=0.0,
+                site_offsets=_G1_FEET_SITE_OFFSETS,
             ),
         )
         # BuiltinSensor (subtree_angmom) works on both backends (Newton reads

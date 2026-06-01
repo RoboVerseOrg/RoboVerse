@@ -34,6 +34,8 @@ from typing import Literal
 import numpy as np
 import torch
 
+from ._math import quat_apply_xyzw
+
 
 @dataclass
 class ContactSensorCfg:
@@ -62,6 +64,12 @@ class ContactSensorCfg:
     subtree (robot-internal self-collisions). Mirrors mjlab's
     subtree-vs-subtree ``ContactMatch`` (e.g. g1 ``self_collision``); excludes
     foot-ground and any contact with an external body."""
+    site_offsets: tuple[tuple[float, float, float], ...] = ()
+    """Per-primary foot-site offset (x, y, z) in the primary body's local frame.
+
+    Used only on the Newton path by ``feet_slip`` so the slip velocity is taken
+    at the foot SITE (``v_body + ω × R·off``) rather than the calf body origin,
+    matching mjlab's ``site_lin_vel_w``. One entry per ``primary_bodies``."""
 
 
 @dataclass
@@ -428,6 +436,15 @@ class TerrainHeightSensorCfg:
     target_height: float = 0.0
     """Subtract this from raw ray distance before returning. mjlab sets it
     to the foot's resting height so the value is zero at standstill."""
+    site_offsets: tuple[tuple[float, float, float], ...] = ()
+    """Per-primary site offset (x, y, z) in the *primary body's* local frame.
+
+    mjlab's foot_height_scan raycasts from a foot SITE that sits at the bottom
+    of the calf (go1: ``pos="0 0 -0.213"``), not the calf body origin. On the
+    Newton path (no ``mj_ray``) the foot height on flat ground is the site's
+    world-z; we obtain it as ``body_pos + R(body_quat) @ site_offset``. When a
+    primary has no offset (empty / all-zero) we fall back to the body origin z
+    (legacy behaviour). One entry per ``primary_bodies`` (or empty for none)."""
 
 
 @dataclass
@@ -505,7 +522,13 @@ class TerrainHeightSensor:
         self._heights[ids] = 0.0
 
     def _update_newton(self, dt: float | None = None) -> None:
-        """Flat-terrain foot height = foot body z (ground at z=0). No ray-cast."""
+        """Flat-terrain foot height = foot SITE world-z (ground at z=0). No ray-cast.
+
+        mjlab raycasts from a foot site offset below the calf body; on flat
+        ground that equals the site's world-z. We reconstruct it from the calf
+        body pose in the TensorState (``body_pos + R(body_quat) @ site_offset``),
+        falling back to the body origin z when no offset is configured.
+        """
         st = self.env.handler.get_states(mode="tensor")
         robots = getattr(st, "robots", None) or {}
         rname = self.env.scenario.robots[0].name if self.env.scenario.robots else next(iter(robots), None)
@@ -522,11 +545,23 @@ class TerrainHeightSensor:
                 )
                 cols.append(col)
             self._newton_body_cols = cols
+        offsets = self.cfg.site_offsets
         for p, col in enumerate(self._newton_body_cols):
-            if 0 <= col < rs.body_state.shape[1]:
-                self._heights[:, p] = rs.body_state[:, col, 2] - self.cfg.target_height
-            else:
+            if not (0 <= col < rs.body_state.shape[1]):
                 self._heights[:, p] = 0.0
+                continue
+            body_z = rs.body_state[:, col, 2]
+            off = offsets[p] if p < len(offsets) else None
+            if off is not None and any(o != 0.0 for o in off):
+                # body_state quat is wxyz at [3:7]; rotate the local site offset
+                # into world and add to the body world-z.
+                quat_wxyz = rs.body_state[:, col, 3:7]
+                quat_xyzw = torch.cat([quat_wxyz[:, 1:4], quat_wxyz[:, 0:1]], dim=-1)
+                off_t = torch.tensor(off, device=self.device, dtype=torch.float32).expand(quat_xyzw.shape[0], -1)
+                site_z = body_z + quat_apply_xyzw(quat_xyzw, off_t)[:, 2]
+                self._heights[:, p] = site_z - self.cfg.target_height
+            else:
+                self._heights[:, p] = body_z - self.cfg.target_height
 
     def update(self, dt: float | None = None) -> None:
         """Ray-cast each primary downward and cache the height above terrain."""

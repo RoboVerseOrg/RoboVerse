@@ -31,6 +31,7 @@ Subclass responsibilities
 from __future__ import annotations
 
 import math
+import warnings
 from copy import deepcopy
 from dataclasses import asdict, fields, is_dataclass
 from typing import Any, Sequence
@@ -471,11 +472,25 @@ class ManagerBasedRVEnv(RLTaskEnv):
                 pass  # Tolerate misbehaving managers; logged elsewhere.
 
         # Sensors update — must happen post-physics, before reward + obs.
-        for sensor in self._mjlab_sensors.values():
+        # NB: do NOT silently swallow every error here — a sensor that raises
+        # (e.g. a missing handler method) would otherwise leave its buffers
+        # stale at zero, silently killing every reward that reads it (this is
+        # exactly how the foot-contact rewards died on the Newton path). Surface
+        # the failure once per sensor so the regression is visible, but keep the
+        # rollout alive.
+        for name, sensor in self._mjlab_sensors.items():
             try:
                 sensor.update(self.step_dt)
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                key = f"_sensor_update_failed_{name}"
+                if not getattr(self, key, False):
+                    setattr(self, key, True)
+                    warnings.warn(
+                        f"sensor '{name}'.update() raised {exc!r}; its reward terms "
+                        "will read stale/zero values until fixed.",
+                        RuntimeWarning,
+                        stacklevel=2,
+                    )
 
         env_states = self.handler.get_states(mode="tensor")
 

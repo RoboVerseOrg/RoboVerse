@@ -948,7 +948,9 @@ def feet_clearance(
     if site_names:
         foot_vel = _foot_xy_speed_via_sites(env, site_names)
     else:
-        foot_vel = _foot_xy_speed_via_bodies(env, h_sensor.cfg.primary_bodies)
+        foot_vel = _foot_xy_speed_via_bodies(
+            env, h_sensor.cfg.primary_bodies, getattr(h_sensor.cfg, "site_offsets", ())
+        )
     cost = (delta * foot_vel).sum(dim=1)
     if command_name is not None:
         cmd = _read_command(env, command_name)
@@ -1074,18 +1076,29 @@ def feet_slip(
     foot_speed = _foot_xy_speed_via_sites(env, getattr(asset_cfg, "site_names", ()) or ())
     if foot_speed.shape[1] == 0:
         # Fallback: use primary bodies of the contact sensor.
-        foot_speed = _foot_xy_speed_via_bodies(env, sensor.cfg.primary_bodies)
+        foot_speed = _foot_xy_speed_via_bodies(
+            env, sensor.cfg.primary_bodies, getattr(sensor.cfg, "site_offsets", ())
+        )
     vel_sq = foot_speed**2
     cost = torch.sum(vel_sq * in_contact, dim=1) * active
     return cost
 
 
-def _foot_xy_speed_via_bodies(env, body_names: tuple[str, ...]) -> torch.Tensor:
-    """Per-body xy-speed (linear-vel norm in xy)."""
+def _foot_xy_speed_via_bodies(env, body_names: tuple[str, ...], site_offsets: tuple = ()) -> torch.Tensor:
+    """Per-body xy-speed (linear-vel norm in xy).
+
+    On the Newton path, when ``site_offsets`` is given (one local-frame offset
+    per body), the velocity is taken at the foot SITE — ``v_body + ω × (R @
+    off)`` — matching mjlab's ``site_lin_vel_w`` instead of the calf body
+    origin. This matters during swing where the rotating calf gives the site a
+    very different xy velocity from the body origin.
+    """
     if not body_names:
         return torch.zeros((env.num_envs, len(body_names)), device=env.device)
     if not hasattr(env.handler, "physics"):
         # Newton path: foot xy linear speed from get_states body velocities.
+        from ._math import quat_apply_xyzw
+
         st = env.handler.get_states(mode="tensor")
         robots = getattr(st, "robots", None) or {}
         rname = env.scenario.robots[0].name if env.scenario.robots else next(iter(robots), None)
@@ -1097,8 +1110,20 @@ def _foot_xy_speed_via_bodies(env, body_names: tuple[str, ...]) -> torch.Tensor:
         out = torch.zeros((env.num_envs, P), device=env.device)
         for j, pat in enumerate(body_names):
             col = next((k for k, n in enumerate(names) if n == pat or n.endswith("_" + pat) or n.endswith(pat)), -1)
-            if 0 <= col < rs.body_state.shape[1]:
-                out[:, j] = torch.norm(rs.body_state[:, col, 7:9], dim=-1)
+            if not (0 <= col < rs.body_state.shape[1]):
+                continue
+            lin = rs.body_state[:, col, 7:10]  # body-origin world linear vel
+            off = site_offsets[j] if j < len(site_offsets) else None
+            if off is not None and any(o != 0.0 for o in off):
+                quat_wxyz = rs.body_state[:, col, 3:7]
+                quat_xyzw = torch.cat([quat_wxyz[:, 1:4], quat_wxyz[:, 0:1]], dim=-1)
+                ang = rs.body_state[:, col, 10:13]  # world ang vel
+                off_t = torch.tensor(off, device=env.device, dtype=torch.float32).expand(quat_xyzw.shape[0], -1)
+                r_w = quat_apply_xyzw(quat_xyzw, off_t)  # offset in world frame
+                site_vel = lin + torch.cross(ang, r_w, dim=-1)
+                out[:, j] = torch.norm(site_vel[:, :2], dim=-1)
+            else:
+                out[:, j] = torch.norm(lin[:, :2], dim=-1)
         return out
     import mujoco
 

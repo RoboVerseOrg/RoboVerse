@@ -616,6 +616,11 @@ class _Go1TaskBase(ManagerBasedRVEnv):
         # collision geoms. ContactSensor's primary_body walks the subtree, so a
         # contact on ``FR_foot_collision`` correctly attributes to ``FR_calf``.
         _GO1_FEET_BODIES = ("FR_calf", "FL_calf", "RR_calf", "RL_calf")
+        # Foot site offset in the calf body frame (go1.xml: <site pos="0 0 -0.213">).
+        # mjlab's foot_height_scan + feet_slip read the foot SITE, not the calf
+        # body origin; on Newton we reconstruct the site world pose from this.
+        _GO1_FOOT_SITE_OFFSET = (0.0, 0.0, -0.213)
+        _GO1_FEET_SITE_OFFSETS = tuple(_GO1_FOOT_SITE_OFFSET for _ in _GO1_FEET_BODIES)
         # ContactSensor works on BOTH backends now (Newton reads per-env contact
         # via mujoco_warp); register it unconditionally so feet_air_time /
         # soft_landing / feet_slip fire on the GPU path too.
@@ -628,6 +633,7 @@ class _Go1TaskBase(ManagerBasedRVEnv):
                 fields=("found", "force"),
                 track_air_time=True,
                 history_length=4,
+                site_offsets=_GO1_FEET_SITE_OFFSETS,
             ),
         )
         # TerrainHeightSensor works on both backends now (Newton uses foot body
@@ -640,6 +646,7 @@ class _Go1TaskBase(ManagerBasedRVEnv):
                 max_distance=1.0,
                 geom_groups=(0,),
                 target_height=0.0,
+                site_offsets=_GO1_FEET_SITE_OFFSETS,
             ),
         )
         # BuiltinSensor (subtree_angmom) works on both backends now (Newton reads
