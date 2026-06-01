@@ -64,7 +64,8 @@ class NativeRobosuiteEnv:
     XY_RANGE = 0.03
 
     def __init__(self, bundle_dir: str | Path | None = None, seed: int = 0):
-        model_path = Path(bundle_dir or (_BUNDLE_ROOT / self.ENV_NAME.lower())) / f"{self.ENV_NAME.lower()}.xml"
+        bundle = Path(bundle_dir or (_BUNDLE_ROOT / self.ENV_NAME.lower()))
+        model_path = bundle / f"{bundle.name}.xml"  # vendored model is named after the bundle dir
         if not model_path.exists():
             raise FileNotFoundError(
                 f"vendored bundle missing: {model_path}. Run (robosuite installed):\n"
@@ -275,50 +276,74 @@ class NativeDoorEnv(NativeRobosuiteEnv):
         return [np.array([self.d.qpos[self._hinge_adr]])]
 
 
-class NativePickPlaceCanEnv(NativeRobosuiteEnv):
-    ENV_NAME = "PickPlaceCan"
-    PLACE_OBJECTS = [("Can_main", "Can_joint0", 0.86)]
-    horizon = 400
-    # robosuite PickPlace bins (captured): bin2_pos + bin_size; can -> bin_id 3
+class NativePickPlaceEnv(NativeRobosuiteEnv):
+    """PickPlace base — success = target object in its bin (robosuite not_in_bin)."""
+
+    ENV_NAME = "PickPlace"
+    BUNDLE = "PickPlace"  # all variants share the 4-object model
+    TARGET = "Can"  # Milk/Bread/Cereal/Can
+    BIN_ID = 3  # milk:0 bread:1 cereal:2 can:3
+    horizon = 500
     _BIN2 = np.array([0.1, 0.28, 0.8])
     _BIN_SIZE = np.array([0.39, 0.49, 0.82])
 
+    def __init__(self, bundle_dir=None, seed=0):
+        super().__init__(bundle_dir or (_BUNDLE_ROOT / self.BUNDLE.lower()), seed)
+
     def _setup_task(self):
-        self._can = self._bid("Can_main")
+        self._obj = self._bid(f"{self.TARGET}_main")
 
     def _in_bin(self, pos) -> bool:
-        bin_id = 3
-        bx = self._BIN2[0] + (self._BIN_SIZE[0] / 2 if bin_id in (1, 3) else -self._BIN_SIZE[0] / 2) - self._BIN_SIZE[0] / 4
-        # follow robosuite not_in_bin bounds exactly
-        bin_x_low, bin_y_low = self._BIN2[0], self._BIN2[1]
-        if bin_id in (0, 2):
-            bin_x_low -= self._BIN_SIZE[0] / 2
-        if bin_id < 2:
-            bin_y_low -= self._BIN_SIZE[1] / 2
-        bin_x_high = bin_x_low + self._BIN_SIZE[0] / 2
-        bin_y_high = bin_y_low + self._BIN_SIZE[1] / 2
+        bx, by = self._BIN2[0], self._BIN2[1]
+        if self.BIN_ID in (0, 2):
+            bx -= self._BIN_SIZE[0] / 2
+        if self.BIN_ID < 2:
+            by -= self._BIN_SIZE[1] / 2
         return bool(
-            bin_x_low < pos[0] < bin_x_high
-            and bin_y_low < pos[1] < bin_y_high
+            bx < pos[0] < bx + self._BIN_SIZE[0] / 2
+            and by < pos[1] < by + self._BIN_SIZE[1] / 2
             and self._BIN2[2] < pos[2] < self._BIN2[2] + 0.1
         )
 
     def _check_success(self) -> bool:
-        return self._in_bin(self._body_pos(self._can))
+        return self._in_bin(self._body_pos(self._obj))
 
     def _object_obs(self):
-        can = self._body_pos(self._can)
-        return [can, self.d.xquat[self._can].copy(), can - self._eef_pos()]
+        o = self._body_pos(self._obj)
+        return [o, self.d.xquat[self._obj].copy(), o - self._eef_pos()]
 
 
-class NativeNutAssemblySquareEnv(NativeRobosuiteEnv):
+class NativePickPlaceCanEnv(NativePickPlaceEnv):
+    ENV_NAME, TARGET, BIN_ID = "PickPlaceCan", "Can", 3
+
+
+class NativePickPlaceMilkEnv(NativePickPlaceEnv):
+    ENV_NAME, TARGET, BIN_ID = "PickPlaceMilk", "Milk", 0
+
+
+class NativePickPlaceBreadEnv(NativePickPlaceEnv):
+    ENV_NAME, TARGET, BIN_ID = "PickPlaceBread", "Bread", 1
+
+
+class NativePickPlaceCerealEnv(NativePickPlaceEnv):
+    ENV_NAME, TARGET, BIN_ID = "PickPlaceCereal", "Cereal", 2
+
+
+class NativeNutAssemblyEnv(NativeRobosuiteEnv):
+    """NutAssembly base — success = target nut on its peg (robosuite on_peg + reach)."""
+
     ENV_NAME = "NutAssemblySquare"
-    PLACE_OBJECTS = [("SquareNut_main", "SquareNut_joint0", 0.86)]
-    horizon = 400
+    BUNDLE = "NutAssembly"  # square/round share the 2-nut model
+    NUT = "SquareNut"
+    PEG = "peg1"  # square->peg1, round->peg2
+    horizon = 500
+
+    def __init__(self, bundle_dir=None, seed=0):
+        super().__init__(bundle_dir or (_BUNDLE_ROOT / self.BUNDLE.lower()), seed)
 
     def _setup_task(self):
-        self._nut = self._bid("SquareNut_main")
-        self._peg = self._bid("peg1")
+        self._nut = self._bid(f"{self.NUT}_main")
+        self._peg = self._bid(self.PEG)
 
     def _on_peg(self, obj_pos) -> bool:
         peg = self._body_pos(self._peg)
@@ -338,10 +363,22 @@ class NativeNutAssemblySquareEnv(NativeRobosuiteEnv):
         return [nut, self.d.xquat[self._nut].copy(), nut - self._eef_pos()]
 
 
+class NativeNutAssemblySquareEnv(NativeNutAssemblyEnv):
+    ENV_NAME, NUT, PEG = "NutAssemblySquare", "SquareNut", "peg1"
+
+
+class NativeNutAssemblyRoundEnv(NativeNutAssemblyEnv):
+    ENV_NAME, NUT, PEG = "NutAssemblyRound", "RoundNut", "peg2"
+
+
 NATIVE_ENVS = {
     "Lift": NativeLiftEnv,
     "Stack": NativeStackEnv,
     "Door": NativeDoorEnv,
     "PickPlaceCan": NativePickPlaceCanEnv,
+    "PickPlaceMilk": NativePickPlaceMilkEnv,
+    "PickPlaceBread": NativePickPlaceBreadEnv,
+    "PickPlaceCereal": NativePickPlaceCerealEnv,
     "NutAssemblySquare": NativeNutAssemblySquareEnv,
+    "NutAssemblyRound": NativeNutAssemblyRoundEnv,
 }

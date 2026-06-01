@@ -25,11 +25,15 @@ os.environ.setdefault("MUJOCO_GL", "egl")
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
 
-def vendor(env_name: str, out_dir: Path) -> Path:
-    from .inventory import get
-    from .robosuite_rollout import make_robosuite_env
+def vendor(env_name: str, out_dir: Path, robot: str = "Panda") -> Path:
+    import robosuite
+    from robosuite.controllers import load_composite_controller_config
 
-    env = make_robosuite_env(get(env_name))
+    cfg = load_composite_controller_config(controller="BASIC", robot=robot)
+    env = robosuite.make(
+        env_name, robots=robot, controller_configs=cfg, has_renderer=False,
+        has_offscreen_renderer=False, use_camera_obs=False, control_freq=20, horizon=200, ignore_done=True,
+    )
     env.reset()
     xml = env.model.get_xml()
     env.close()
