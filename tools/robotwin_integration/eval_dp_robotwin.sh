@@ -21,6 +21,7 @@ num_eval=20
 start_seed=100
 port=5599
 gpu=0
+per_ep_timeout=420   # kill a hung episode after this many seconds (a full 400-step fail is ~6min)
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -30,6 +31,7 @@ while [[ $# -gt 0 ]]; do
     --start-seed) start_seed="$2"; shift 2;;
     --port) port="$2"; shift 2;;
     --gpu) gpu="$2"; shift 2;;
+    --per-ep-timeout) per_ep_timeout="$2"; shift 2;;
     *) echo "unknown arg: $1"; exit 1;;
   esac
 done
@@ -56,8 +58,27 @@ for i in $(seq 1 60); do
 done
 
 echo "=== [3/3] closed-loop eval: ${num_eval} episodes from seed ${start_seed} ==="
-MUJOCO_GL=egl SAPIEN_HEADLESS=1 $ROBOTWIN_PY tools/robotwin_integration/eval_robotwin_policy.py \
-  --task "$task" --policy dp --server "127.0.0.1:${port}" \
-  --num-eval "$num_eval" --start-seed "$start_seed" 2>&1 | grep -aviE "OIDN Error|svulkan|^\[20" | grep -aE "RESULT|SUCCESS|FAIL|connected|Error"
+# Run ONE episode per timeout-wrapped client against the persistent server. RoboTwin's
+# sapien sim/render can intermittently HANG inside take_action/get_obs (not a socket
+# stall, so the client-side socket timeout can't catch it) -- a per-episode process
+# timeout kills a hung episode, counts it FAIL, and the sweep continues. The server
+# (model) stays loaded across episodes; only the lightweight robotwin client restarts.
+succ=0
+for i in $(seq 0 $((num_eval - 1))); do
+  seed=$((start_seed + i))
+  out=$(timeout "${per_ep_timeout}" env MUJOCO_GL=egl SAPIEN_HEADLESS=1 $ROBOTWIN_PY \
+    tools/robotwin_integration/eval_robotwin_policy.py \
+    --task "$task" --policy dp --server "127.0.0.1:${port}" \
+    --num-eval 1 --start-seed "$seed" 2>&1 | grep -aE "seed ${seed}\] (SUCCESS|FAIL)" | grep -av "step:")
+  if echo "$out" | grep -qa "SUCCESS"; then
+    succ=$((succ + 1)); echo "[seed $seed] SUCCESS"
+  elif echo "$out" | grep -qa "FAIL"; then
+    echo "[seed $seed] FAIL"
+  else
+    echo "[seed $seed] FAIL (timeout/hang after ${per_ep_timeout}s)"
+  fi
+done
+rate=$(awk "BEGIN{printf \"%.1f\", ${succ}/${num_eval}*100}")
+echo "RESULT ${task} | policy=dp | success ${succ}/${num_eval} = ${rate}%"
 
 echo "=== done (server will be torn down) ==="
