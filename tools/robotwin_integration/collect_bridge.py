@@ -116,6 +116,40 @@ def _patch_capture_real_state(env) -> None:
 _INFRA_ACTORS = {"ground", "wall", "table", "table_wall"}
 
 
+def resolve_urdf_instance_dir(objects_root: str, modelname: str, modelid):
+    """Resolve the EXACT URDF instance dir RoboTwin's create_sapien_urdf_obj uses.
+
+    This must match RoboTwin 1:1, because modelid (random per episode) selects which
+    physical object is loaded. RoboTwin builds the candidate list as the subdirs of
+    ``<objects_root>/<modelname>`` that are directories, EXCLUDING ``visual`` (a
+    shared mesh dir, not an instance), sorted by their numeric name, then indexes by
+    modelid (falling back to a dir whose name equals modelid). Including ``visual``
+    (it sorts to index 0) shifts every instance -> "same category, wrong object".
+    We additionally require ``mobility.urdf`` to be present, which is what makes a
+    subdir a real URDF instance. Returns ``<objects_root>/<modelname>`` if modelid is
+    None or unresolved.
+    """
+    base = os.path.join(objects_root, modelname)
+    if modelid is None:
+        return base
+    subs = sorted(
+        (
+            d
+            for d in os.listdir(base)
+            if d != "visual"
+            and os.path.isdir(os.path.join(base, d))
+            and os.path.exists(os.path.join(base, d, "mobility.urdf"))
+        ),
+        key=lambda s: int("".join(ch for ch in s if ch.isdigit()) or 0),
+    )
+    if modelid < len(subs):
+        return os.path.join(base, subs[modelid])
+    for d in subs:  # fall back to matching the dir name to the id
+        if d.isdigit() and int(d) == modelid:
+            return os.path.join(base, d)
+    return base
+
+
 def _install_mesh_hook(pt) -> dict:
     """Record the exact mesh file RoboTwin loads for each named actor.
 
@@ -232,29 +266,8 @@ def _install_mesh_hook(pt) -> dict:
     # ``modelname``; modelid selects the instance subdir (sorted by number) and the
     # scale lives in that subdir's model_data.json -- replicate RoboTwin's resolution.
     def _resolve_modeldir(modelname, modelid):
-        # MUST match RoboTwin's create_sapien_urdf_obj exactly: it builds the
-        # instance list as the subdirs EXCLUDING "visual" (and non-instance entries),
-        # sorted by their numeric name, then indexes by modelid. Including "visual"
-        # (which sorts to 0) shifts every instance -> "same category, wrong object".
-        base = _os.path.join("assets", "objects", modelname)
-        if modelid is None:
-            return base
-        subs = sorted(
-            (
-                d
-                for d in _os.listdir(base)
-                if d != "visual"
-                and _os.path.isdir(_os.path.join(base, d))
-                and _os.path.exists(_os.path.join(base, d, "mobility.urdf"))
-            ),
-            key=lambda s: int("".join(ch for ch in s if ch.isdigit()) or 0),
-        )
-        if modelid < len(subs):
-            return _os.path.join(base, subs[modelid])
-        for d in subs:  # fall back to matching the dir name to the id
-            if d.isdigit() and int(d) == modelid:
-                return _os.path.join(base, d)
-        return base
+        # Tasks run with cwd = the RoboTwin checkout, so assets live at ./assets/objects.
+        return resolve_urdf_instance_dir(_os.path.join("assets", "objects"), modelname, modelid)
 
     def _record_urdf(modelname, modelid, scale):
         try:
