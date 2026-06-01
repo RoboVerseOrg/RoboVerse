@@ -102,36 +102,39 @@ LIBERO_CONFIG_PATH=$HOME/.libero_plus MUJOCO_GL=egl \
   --base <task> --suite libero_object --episodes 8
 ```
 
-## Side-by-side: native LIBERO vs MetaSim
+## Side-by-side: native LIBERO-plus vs MetaSim
 
-Beyond "passthrough == native by construction", we load each task's own combined
-MJCF (Franka + objects + arena + camera) into **MetaSim's MuJoCo handler** and
-reproduce the demo — proving the MetaSim backend simulates the LIBERO scene 1:1.
+We load each task's own combined MJCF (Franka + objects + arena + camera) into
+**MetaSim's MuJoCo handler** and re-render every state of a demo rollout —
+proving the MetaSim backend reproduces the *perturbed* LIBERO-plus scene 1:1.
+In each clip, **left = native LIBERO-plus `agentview`, right = MetaSim render**;
+both are upright and the demo arm motion is identical.
 
-In each frame, **left = native LIBERO `agentview_rgb`, right = MetaSim render**.
+Generated with `scripts/gen_libero_sidebyside.py` (current code, real demo
+motion). Each video autoplays on roboverse.wiki; the poster frame below always
+shows the side-by-side even before playback.
 
-**Stage 1 — kinematics** (per-frame `set_states`, geometry/pose 1:1):
+**Background-texture perturbation** (`libero_object … _table_5`) — MetaSim
+reproduces the swapped scene texture; per-frame native-vs-MetaSim pixel
+**MAE = 0.24 / 255** (sub-pixel — renderer config only; state is exact):
 
-![Stage 1 side-by-side: native LIBERO (left) vs MetaSim (right)](../../_static/integrations/libero/sidebyside_kinematic_frame.png)
-
-<video controls width="640" preload="metadata" poster="../../_static/integrations/libero/sidebyside_kinematic_frame.png">
-  <source src="../../_static/integrations/libero/sidebyside_kinematic_spatial_task0.mp4" type="video/mp4">
+<video autoplay loop muted playsinline width="100%" style="max-width:768px" poster="/roboverse/_static/integrations/libero/sb_liberoplus_texture_poster.png">
+  <source src="/roboverse/_static/integrations/libero/sb_liberoplus_texture.mp4" type="video/mp4">
 </video>
 
-▶ [play / download the kinematic side-by-side video](../../_static/integrations/libero/sidebyside_kinematic_spatial_task0.mp4)
+![texture side-by-side: native LIBERO-plus (left) vs MetaSim (right)](../../_static/integrations/libero/sb_liberoplus_texture_poster.png)
 
-**Stage 2 — dynamics** (MetaSim's engine steps under the captured ctrl):
+**Camera-viewpoint perturbation** (`libero_object … _view_…`) — MetaSim
+reproduces the shifted camera; per-frame **MAE = 0.14 / 255**:
 
-![Stage 2 side-by-side: native LIBERO (left) vs MetaSim engine (right)](../../_static/integrations/libero/sidebyside_dynamics_frame.png)
-
-<video controls width="640" preload="metadata" poster="../../_static/integrations/libero/sidebyside_dynamics_frame.png">
-  <source src="../../_static/integrations/libero/sidebyside_dynamics_spatial_task0.mp4" type="video/mp4">
+<video autoplay loop muted playsinline width="100%" style="max-width:768px" poster="/roboverse/_static/integrations/libero/sb_liberoplus_camera_poster.png">
+  <source src="/roboverse/_static/integrations/libero/sb_liberoplus_camera.mp4" type="video/mp4">
 </video>
 
-▶ [play / download the dynamics side-by-side video](../../_static/integrations/libero/sidebyside_dynamics_spatial_task0.mp4) Per-frame
-`max|qpos − recorded| = 0.0` (exact); the MetaSim engine step matches reference
-MuJoCo to `max|Δ| = 1.6e-4` (float accumulation). Residual pixel MAE ≈ 2.5–5/255
-is renderer config (lighting / anti-aliasing), not physics.
+![camera side-by-side: native LIBERO-plus (left) vs MetaSim (right)](../../_static/integrations/libero/sb_liberoplus_camera_poster.png)
+
+Per-frame `max|qpos − recorded| = 0.0` (state exact); the MetaSim engine step
+matches reference MuJoCo to `max|Δ| = 1.6e-4` (`migrate_liberoplus_metasim`).
 
 ### Demo-replay parity (all 5 suites)
 
