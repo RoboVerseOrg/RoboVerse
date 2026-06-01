@@ -135,3 +135,4 @@ tools/publish_report*.sh
 # local-only: personal agent rules (commit identity, push habits, private infra) and env override
 CLAUDE.local.md
 ENVIRONMENTS.local.md
+datasets/
