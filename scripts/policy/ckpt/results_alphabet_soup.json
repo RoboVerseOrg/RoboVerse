@@ -1,0 +1,27 @@
+{
+  "policy": "ChunkedBCPolicy (resnet18 x2 + proprio, action-chunk 16)",
+  "baseline_family": "behavior cloning (roboverse_learn IL family)",
+  "train": {
+    "env": "roboverse (torch 2.7.0+cu128, sm_120 GPU)",
+    "demos": "third_party/libero_datasets/libero_object/pick_up_the_alphabet_soup_and_place_it_in_the_basket_demo.hdf5",
+    "n_demos": 50,
+    "samples": 7808,
+    "epochs": 100,
+    "final_L1": 0.0112
+  },
+  "eval": {
+    "env": "liberoplus (torch 2.4.1 CPU; sm_120 unusable under 2.4.1)",
+    "mode": "closed-loop through LIBERO-plus passthrough",
+    "episodes_per_variant": 8,
+    "max_steps": 200,
+    "exec_horizon": 8,
+    "success": {
+      "clean": 1.0,
+      "light": 0.0,
+      "sensor-noise": 0.75,
+      "camera": 0.5
+    },
+    "passthrough_eq_native_state_max_abs_delta": 0.0
+  },
+  "takeaway": "Real neural policy trained on clean demos reaches 100% on the clean task and degrades under LIBERO-plus perturbations (lighting 0%, camera 50%, noise 75%) -- the robustness signal the benchmark measures. Eval is bitwise identical through the passthrough vs native (Δ=0)."
+}
