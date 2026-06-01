@@ -62,6 +62,8 @@ from .mdp.sensors import (
     BuiltinSensorCfg,
     ContactSensor,
     ContactSensorCfg,
+    TerrainGridScanSensor,
+    TerrainGridScanSensorCfg,
     TerrainHeightSensor,
     TerrainHeightSensorCfg,
 )
@@ -194,7 +196,12 @@ class _G1ObsCfg:
 
     @configclass
     class ActorCfg:
-        base_lin_vel = ObsTerm(func=obs.base_lin_vel, params={"asset_cfg": _G1_TRUNK})
+        # mjlab reads base_lin_vel from the `imu_lin_vel` velocimeter at the g1
+        # `imu_in_pelvis` site (offset from pelvis in g1.xml); match with omega x r.
+        base_lin_vel = ObsTerm(
+            func=obs.base_lin_vel,
+            params={"asset_cfg": _G1_TRUNK, "imu_offset": (0.04525, 0.0, -0.08339)},
+        )
         base_ang_vel = ObsTerm(func=obs.base_ang_vel, params={"asset_cfg": _G1_TRUNK})
         projected_gravity = ObsTerm(func=obs.projected_gravity, params={"asset_cfg": _G1_TRUNK})
         joint_pos = ObsTerm(
@@ -204,6 +211,34 @@ class _G1ObsCfg:
         joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _G1_JOINTS})
         last_action = ObsTerm(func=obs.last_action)
         command = ObsTerm(func=obs.generated_commands, params={"command_name": "twist"})
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        pass
+
+    actor = ActorCfg()
+    critic = CriticCfg()
+
+
+@configclass
+class _G1RoughObsCfg(_G1ObsCfg):
+    """Rough-terrain obs = flat obs + mjlab ``height_scan`` (terrain grid scan).
+
+    Adds the 187-ray trunk grid scan (1.6x1.0 @ res 0.1) as the LAST actor term,
+    matching mjlab's rough obs (flat deletes height_scan, rough keeps it). Read
+    from the ``terrain_scan`` :class:`TerrainGridScanSensor` on the pelvis.
+    """
+
+    @configclass
+    class ActorCfg(_G1ObsCfg.ActorCfg):
+        # mjlab scales height_scan by 1/terrain_scan.max_distance (=1/5.0); see
+        # velocity_env_cfg.py:108. Kept deterministic (no Unoise) to match this
+        # file's parity-first convention (mjlab enable_corruption=False).
+        height_scan = ObsTerm(
+            func=obs.height_scan,
+            params={"sensor_name": "terrain_scan", "num_rays": 187},
+            scale=1.0 / 5.0,
+        )
 
     @configclass
     class CriticCfg(ActorCfg):
@@ -387,7 +422,25 @@ class _G1CurriculumCfg:
     )
 
 
-def _g1_scenario() -> ScenarioCfg:
+def _g1_rough_ground():
+    """Continuous random-noise rough terrain (mjlab-like) via scenario.ground.
+
+    Same continuous-noise approach as go1 (zero-slope ``SlopeCfg`` + ``random``
+    → ``random_uniform_terrain``); ``vertical_scale=0.005`` so the ±0.05 m noise
+    doesn't discretize to 0.
+    """
+    from metasim.scenario.grounds import GroundCfg, SlopeCfg
+
+    g = GroundCfg(width=12.0, length=12.0, vertical_scale=0.005)
+    for key in g.elements:
+        g.elements[key].clear()
+    g.elements["slope"].append(
+        SlopeCfg(origin=[0.0, 0.0], size=[12.0, 12.0], slope=0.0, random=True, platform_size=0.5)
+    )
+    return g
+
+
+def _g1_scenario(rough: bool = False) -> ScenarioCfg:
     # Smaller dt + larger decimation for 29-DOF humanoid stability under explicit Euler
     patched_xml = patch_mjcf_with_pd_actuators(mjlab_asset(_G1_XML), G1_KP)
     return ScenarioCfg(
@@ -407,7 +460,8 @@ def _g1_scenario() -> ScenarioCfg:
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=True,
+        ground=_g1_rough_ground() if rough else None,
+        add_default_ground=not rough,
     )
 
 
@@ -430,9 +484,13 @@ class _G1TaskBase(ManagerBasedRVEnv):
     """Shared scaffold for all G1 velocity variants (flat / rough)."""
 
     scenario = _g1_scenario()
+    # Subclasses override these: rough adds the height_scan obs + terrain_scan sensor.
+    _obs_cfg_cls: type = _G1ObsCfg
+    _use_terrain_scan: bool = False
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:
         cfg = VelocityFlatG1EnvCfg()
+        cfg.observations = self._obs_cfg_cls()  # rough swaps in the height_scan obs group
         sim = getattr(scenario, "simulator", None) if scenario else None
         if scenario is not None and sim == "mujoco":
             scenario.robots = []
@@ -481,6 +539,14 @@ class _G1TaskBase(ManagerBasedRVEnv):
                 target_height=0.0,
             ),
         )
+        # Rough terrain: trunk(pelvis)-centered grid scan feeding height_scan obs.
+        if self._use_terrain_scan:
+            self._mjlab_sensors["terrain_scan"] = TerrainGridScanSensor(
+                self,
+                TerrainGridScanSensorCfg(
+                    name="terrain_scan", base_body="pelvis", size=(1.6, 1.0), resolution=0.1, max_distance=5.0
+                ),
+            )
         # BuiltinSensor (subtree_angmom) works on both backends (Newton reads
         # mujoco_warp's batched subtree_angmom). Completes 6/6 sensor rewards.
         self._mjlab_sensors["robot/root_angmom"] = BuiltinSensor(
@@ -574,7 +640,18 @@ class VelocityFlatG1Task(_G1TaskBase):
 
 @register_task("mjlab.velocity_rough_g1_v2")
 class VelocityRoughG1Task(_G1TaskBase):
-    """Same scaffold as flat. Rough terrain wiring deferred (needs height-field MJCF)."""
+    """G1 velocity on rough terrain.
+
+    Adds mjlab's ``height_scan`` terrain obs (187-ray pelvis grid via
+    :class:`TerrainGridScanSensor`) the flat task omits → obs structurally 1:1
+    with mjlab's rough input. Heightfield terrain injection into the scene MJCF
+    is the remaining step for full numerical rough 1:1 (currently flat → uniform
+    scan).
+    """
+
+    scenario = _g1_scenario(rough=True)
+    _obs_cfg_cls = _G1RoughObsCfg
+    _use_terrain_scan = True
 
 
 # Bodies tracked by mjlab tracking_flat_g1 — the G1 humanoid's principal
@@ -636,10 +713,49 @@ class _G1TrackingRewardsCfg(_G1RewardsCfg):
 
 
 @configclass
+class _G1TrackingObsCfg:
+    """mjlab tracking_env_cfg actor obs, term-for-term in mjlab's order.
+
+    motion_anchor_pos_b(3) + motion_anchor_ori_b(6) + base_lin_vel(3) +
+    base_ang_vel(3) + joint_pos(29) + joint_vel(29) + actions(29) = 102D.
+    (mjlab also lists a ``command``=generated_commands(motion) term, but for
+    this MotionCommandManager that obs is 0-D — dropped to avoid an
+    assemble-time vs runtime width mismatch; the obs vector is identical.)
+    The critic adds robot_body_pos_b(33) + robot_body_ori_b(66), matching
+    mjlab's privileged critic group.
+    """
+
+    @configclass
+    class ActorCfg:
+        motion_anchor_pos_b = ObsTerm(func=obs.motion_anchor_pos_b, params={"command_name": "motion"})
+        motion_anchor_ori_b = ObsTerm(func=obs.motion_anchor_ori_b, params={"command_name": "motion"})
+        base_lin_vel = ObsTerm(
+            func=obs.base_lin_vel,
+            params={"asset_cfg": _G1_TRUNK, "imu_offset": (0.04525, 0.0, -0.08339)},
+        )
+        base_ang_vel = ObsTerm(func=obs.base_ang_vel, params={"asset_cfg": _G1_TRUNK})
+        joint_pos = ObsTerm(
+            func=obs.joint_pos_rel,
+            params={"asset_cfg": _G1_JOINTS, "default": _G1_DEFAULT_POSE_NP.tolist()},
+        )
+        joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _G1_JOINTS})
+        last_action = ObsTerm(func=obs.last_action)
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        robot_body_pos_b = ObsTerm(func=obs.robot_body_pos_b, params={"command_name": "motion", "num_bodies": 11})
+        robot_body_ori_b = ObsTerm(func=obs.robot_body_ori_b, params={"command_name": "motion", "num_bodies": 11})
+
+    actor = ActorCfg()
+    critic = CriticCfg()
+
+
+@configclass
 class TrackingFlatG1EnvCfg(VelocityFlatG1EnvCfg):
     """Tracking-flat-G1 cfg = velocity cfg with rewards swapped to tracking."""
 
     rewards = _G1TrackingRewardsCfg()
+    observations = _G1TrackingObsCfg()
 
 
 class _G1TrackingTaskBase(_G1TaskBase):
@@ -661,6 +777,7 @@ class _G1TrackingTaskBase(_G1TaskBase):
 
     motion_file: str | None = None  # subclass / cfg can override
     cfg: TrackingFlatG1EnvCfg
+    _obs_cfg_cls = _G1TrackingObsCfg  # mjlab tracking obs (motion anchors + base + joints)
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:
         super().__init__(scenario=scenario, device=device)

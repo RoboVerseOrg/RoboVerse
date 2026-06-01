@@ -32,11 +32,19 @@ class CfgTerm:
 class ObsTerm(CfgTerm):
     """Configuration for an observation term.
 
-    ``noise_range`` adds uniform noise in ``[lo, hi]`` to the term output
-    after computation. ``None`` disables noise.
+    The post-processing pipeline mirrors mjlab's ObservationManager exactly:
+    ``compute -> noise -> clip -> scale``.
+
+    ``noise_range`` adds uniform noise in ``[lo, hi]`` to the term output;
+    ``None`` disables noise. ``clip`` clamps to ``(min, max)`` after noise.
+    ``scale`` multiplies the (noised, clipped) output — e.g. mjlab scales the
+    terrain ``height_scan`` by ``1 / max_distance``. All default to no-op so
+    existing terms are unchanged.
     """
 
     noise_range: tuple[float, float] | None = None
+    clip: tuple[float, float] | None = None
+    scale: float | None = None
 
 
 @configclass

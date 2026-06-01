@@ -557,6 +557,141 @@ class TerrainHeightSensor:
 
 
 # ---------------------------------------------------------------------------
+# TerrainGridScanSensor — base-centered grid of downward rays (mjlab terrain_scan).
+# mjlab's velocity ROUGH obs feeds the policy a `height_scan`: a GridPattern
+# RayCastSensor attached to the trunk casts a 2D grid of downward rays and
+# returns ``frame_z - hit_z`` per ray (= ray distance to terrain from trunk z).
+# The flat task deletes this term; only rough keeps it. RoboVerse had no grid
+# scanner, so the rough policy was blind to terrain. This adds it without
+# touching the per-body TerrainHeightSensor above.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TerrainGridScanSensorCfg:
+    """Config for a base-centered grid downward ray-cast sensor (mjlab terrain_scan)."""
+
+    name: str = "terrain_scan"
+    base_body: str = "trunk"
+    """Body the grid frame is attached to (rays follow its xy + yaw)."""
+    size: tuple[float, float] = (1.6, 1.0)
+    """Grid size (x, y) in meters. mjlab go1/g1 default (1.6, 1.0)."""
+    resolution: float = 0.1
+    """Spacing between rays in meters → (size/res + 1) rays per axis."""
+    max_distance: float = 10.0
+    geom_groups: tuple[int, ...] = (0,)
+    offset: float = 0.0
+    """Constant subtracted from each height (mjlab obs ``offset``)."""
+
+
+@dataclass
+class TerrainGridScanData:
+    """Output of the grid scan sensor (per-ray height above terrain)."""
+
+    heights: torch.Tensor | None = None  # (N, num_rays)
+    num_rays: int = 0
+
+
+class TerrainGridScanSensor:
+    """Base-centered grid of downward rays. RoboVerse port of mjlab's terrain_scan.
+
+    Ray layout matches mjlab ``GridPatternCfg.generate_rays`` exactly: ``x`` =
+    ``arange(-sx/2, sx/2 + res/2, res)``, ``y`` likewise, ``meshgrid(x, y,
+    indexing="xy")`` flattened (frame-major) — so the obs vector is 1:1 with
+    mjlab's. Heights are ``frame_z - hit_z`` (trunk z minus terrain z under each
+    grid point); over flat ground every ray reads the trunk height. The grid
+    rotates with the trunk's **yaw** only (standard for height scanners; avoids
+    the scan tilting under roll/pitch). MuJoCo path uses ``mj_ray``; the Newton
+    path falls back to a uniform trunk-z scan (flat terrain), mirroring
+    :class:`TerrainHeightSensor`.
+    """
+
+    def __init__(self, env, cfg: TerrainGridScanSensorCfg):
+        self.env = env
+        self.cfg = cfg
+        self.device = env.device
+        # Precompute local grid offsets (matches mjlab GridPatternCfg).
+        sx, sy = cfg.size
+        res = cfg.resolution
+        x = torch.arange(-sx / 2, sx / 2 + res * 0.5, res, dtype=torch.float32)
+        y = torch.arange(-sy / 2, sy / 2 + res * 0.5, res, dtype=torch.float32)
+        gx, gy = torch.meshgrid(x, y, indexing="xy")
+        self._local_xy = torch.stack([gx.flatten(), gy.flatten()], dim=-1).numpy().astype(np.float64)  # (R, 2)
+        self._R = self._local_xy.shape[0]
+        self._heights = torch.zeros((env.num_envs, self._R), device=self.device, dtype=torch.float32)
+        self._newton = not hasattr(env.handler, "physics")
+        if self._newton:
+            self._newton_body_col: int | None = None
+            return
+        import mujoco
+
+        mp = env.handler.physics.model
+        mp = mp.ptr if hasattr(mp, "ptr") else mp
+        self._bid = mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_BODY, cfg.base_body)
+
+    @property
+    def data(self) -> TerrainGridScanData:
+        """Return the current grid-scan reading."""
+        return TerrainGridScanData(heights=self._heights, num_rays=self._R)
+
+    @property
+    def num_rays(self) -> int:
+        """Number of rays in the grid (= obs dim of the height_scan term)."""
+        return self._R
+
+    def reset(self, env_ids: torch.Tensor | None = None) -> None:
+        """Zero the cached scan for the given envs."""
+        if env_ids is None or env_ids.numel() == 0:
+            return
+        self._heights[env_ids.long().to(self.device)] = 0.0
+
+    def _update_newton(self) -> None:
+        st = self.env.handler.get_states(mode="tensor")
+        robots = getattr(st, "robots", None) or {}
+        rname = self.env.scenario.robots[0].name if self.env.scenario.robots else next(iter(robots), None)
+        rs = robots.get(rname) if rname is not None else None
+        if rs is None or rs.root_state is None:
+            return
+        # Flat terrain (ground z=0): every ray reads the trunk z.
+        base_z = rs.root_state[:, 2:3]  # (N,1)
+        self._heights.copy_((base_z - self.cfg.offset).expand(-1, self._R))
+
+    def update(self, dt: float | None = None) -> None:
+        """Ray-cast the grid downward from the trunk frame; cache heights."""
+        if self._newton:
+            self._update_newton()
+            return
+        import mujoco
+
+        data = self.env.handler.physics.data
+        mp = self.env.handler.physics.model
+        mp = mp.ptr if hasattr(mp, "ptr") else mp
+        if self._bid < 0:
+            return
+        base_pos = np.asarray(data.xpos[self._bid], dtype=np.float64)
+        xmat = np.asarray(data.xmat[self._bid], dtype=np.float64).reshape(3, 3)
+        yaw = float(np.arctan2(xmat[1, 0], xmat[0, 0]))
+        c, s = np.cos(yaw), np.sin(yaw)
+        # Rotate local grid xy by trunk yaw → world xy offsets.
+        ox = c * self._local_xy[:, 0] - s * self._local_xy[:, 1]
+        oy = s * self._local_xy[:, 0] + c * self._local_xy[:, 1]
+        direction = np.array([0.0, 0.0, -1.0], dtype=np.float64)
+        geomgroup = np.zeros(6, dtype=np.uint8)
+        for g in self.cfg.geom_groups:
+            if 0 <= g < 6:
+                geomgroup[g] = 1
+        geomid_out = np.zeros(1, dtype=np.int32)
+        out = np.empty(self._R, dtype=np.float32)
+        for r in range(self._R):
+            origin = np.array([base_pos[0] + ox[r], base_pos[1] + oy[r], base_pos[2]], dtype=np.float64)
+            dist = mujoco.mj_ray(mp, data.ptr, origin, direction, geomgroup, 1, -1, geomid_out)
+            # height = frame_z - hit_z = dist (origin is at trunk z). Miss → max_distance.
+            h = float(dist) if (0.0 <= dist <= self.cfg.max_distance) else self.cfg.max_distance
+            out[r] = h - self.cfg.offset
+        self._heights[0].copy_(torch.from_numpy(out))
+
+
+# ---------------------------------------------------------------------------
 # BuiltinSensor — wraps a single mjData field by name.
 # ---------------------------------------------------------------------------
 

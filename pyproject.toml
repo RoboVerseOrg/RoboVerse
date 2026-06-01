@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "roboverse-py"
-version = "0.1.17"
+version = "1.0.0b0"
 description = "RoboVerse content, learning, and examples built on MetaSim"
 requires-python = ">=3.8"
 license = { file = "LICENSE" }

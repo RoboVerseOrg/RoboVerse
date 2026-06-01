@@ -11,6 +11,13 @@ from __future__ import annotations
 import torch
 
 from ._math import base_ang_vel_b, base_lin_vel_b, projected_gravity_b
+from .rewards import (
+    _mujoco_body_pos_w,
+    _mujoco_site_pos_w,
+    _newton_object_pos_w,
+    _newton_robot_ee_pos_w,
+    _read_command_tensor,
+)
 from .scene_entity import (
     SceneEntityCfg,
     entity_joint_pos,
@@ -29,9 +36,26 @@ from .scene_entity import (
 # ---------------------------------------------------------------------------
 
 
-def base_lin_vel(env, env_states, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Body-frame base linear velocity. mjlab ``builtin_sensor(imu_lin_vel)``."""
-    return base_lin_vel_b(env, env_states, asset_cfg.name)
+def base_lin_vel(env, env_states, asset_cfg: SceneEntityCfg, imu_offset=None) -> torch.Tensor:
+    """Body-frame base linear velocity. mjlab ``builtin_sensor(imu_lin_vel)``.
+
+    mjlab's ``base_lin_vel`` obs term reads the ``imu_lin_vel`` velocimeter,
+    which measures the linear velocity at the IMU **site** -- offset
+    ``imu_offset`` (in body frame) from the base body origin -- not at the
+    origin itself. A velocimeter on a rigid body therefore reports
+    ``v_base_b + omega_b x r_imu``. When ``imu_offset`` is given we add that
+    ``omega x r`` term so the observation matches the sensor 1:1; when it is
+    ``None`` we return the plain body-origin velocity (back-compat for tasks
+    with no offset IMU). NOTE: the velocity-tracking *reward* uses the true
+    body velocity (mjlab ``root_link_lin_vel_b``), so this offset must stay in
+    the observation path only and never leak into the reward.
+    """
+    v_b = base_lin_vel_b(env, env_states, asset_cfg.name)
+    if imu_offset is None:
+        return v_b
+    w_b = base_ang_vel_b(env, env_states, asset_cfg.name)
+    r = torch.tensor(imu_offset, device=v_b.device, dtype=v_b.dtype).expand_as(v_b)
+    return v_b + torch.linalg.cross(w_b, r, dim=-1)
 
 
 def base_ang_vel(env, env_states, asset_cfg: SceneEntityCfg) -> torch.Tensor:
@@ -57,6 +81,150 @@ def generated_commands(env, env_states, *, command_name: str) -> torch.Tensor:
     if not isinstance(cur, torch.Tensor):
         return torch.zeros(env.num_envs, 3, device=env.device)
     return cur
+
+
+def ee_to_object_distance(env, env_states, *, object_name: str, site_name: str = "tcp_site") -> torch.Tensor:
+    """Distance vector ``object - end_effector``. mjlab ``ee_to_object_distance``.
+
+    mjlab returns the vector in the robot *base* frame
+    (``quat_apply(quat_inv(base_quat), obj_w - ee_w)``). The yam lift task is a
+    **fixed-base** arm mounted at identity orientation, so the base frame equals
+    the world frame and we return the world-frame vector directly (1:1). Reuses
+    the same world-position readers as the lift rewards, so mujoco and Newton
+    paths stay consistent. Shape ``(num_envs, 3)``.
+    """
+    if not hasattr(env.handler, "physics"):  # Newton path (per-env tensors)
+        ee = _newton_robot_ee_pos_w(env, site_name if site_name and site_name != "tcp_site" else None)
+        obj = _newton_object_pos_w(env, object_name)
+        if ee is None or obj is None:
+            return torch.zeros(env.num_envs, 3, device=env.device)
+        return (obj - ee).to(env.device, torch.float32)
+    ee = _mujoco_site_pos_w(env, site_name)
+    obj = _mujoco_body_pos_w(env, object_name)
+    if ee is None or obj is None:
+        return torch.zeros(env.num_envs, 3, device=env.device)
+    vec = torch.as_tensor(obj - ee, device=env.device, dtype=torch.float32)
+    return vec.unsqueeze(0).expand(env.num_envs, -1)
+
+
+def object_to_goal_distance(env, env_states, *, object_name: str, command_name: str) -> torch.Tensor:
+    """Distance vector ``goal - object``. mjlab ``object_to_goal_distance``.
+
+    Goal is the ``LiftingCommand`` target read via
+    ``command_managers[command_name].current()[:, :3]``. World frame == base
+    frame for the fixed-base yam (see :func:`ee_to_object_distance`). Shape
+    ``(num_envs, 3)``.
+    """
+    cmd = _read_command_tensor(env, command_name)
+    if cmd is None or cmd.shape[-1] < 3:
+        return torch.zeros(env.num_envs, 3, device=env.device)
+    if not hasattr(env.handler, "physics"):  # Newton path
+        obj = _newton_object_pos_w(env, object_name)
+        if obj is None:
+            return torch.zeros(env.num_envs, 3, device=env.device)
+        target = cmd[:, :3].to(obj.device, torch.float32)
+        return (target - obj).to(env.device, torch.float32)
+    obj = _mujoco_body_pos_w(env, object_name)
+    if obj is None:
+        return torch.zeros(env.num_envs, 3, device=env.device)
+    obj_t = torch.as_tensor(obj, device=env.device, dtype=torch.float32)
+    target = cmd[0, :3].to(env.device, torch.float32)
+    return (target - obj_t).unsqueeze(0).expand(env.num_envs, -1)
+
+
+def height_scan(env, env_states, *, sensor_name: str = "terrain_scan", num_rays: int = 187) -> torch.Tensor:
+    """Terrain height scan. mjlab velocity-rough ``height_scan``.
+
+    Reads a :class:`~..sensors.TerrainGridScanSensor` registered on
+    ``env._mjlab_sensors[sensor_name]`` → ``(N, num_rays)`` (frame_z - hit_z per
+    grid ray). Returns a ``(N, num_rays)`` zero tensor when the sensor isn't
+    registered yet — important because the obs manager assembles the obs space
+    *before* the task registers its ``_mjlab_sensors`` (sensors are set after
+    ``super().__init__``), so the term must report its final width immediately
+    or the obs dim would lock to the wrong size. ``num_rays`` must match the
+    sensor's grid (go1/g1 default 1.6x1.0 @ res 0.1 → 187).
+    """
+    sensors = getattr(env, "_mjlab_sensors", {})
+    sensor = sensors.get(sensor_name)
+    if sensor is None or sensor.data.heights is None:
+        return torch.zeros(env.num_envs, num_rays, device=env.device)
+    return sensor.data.heights
+
+
+def _motion_cmd(env, command_name: str):
+    """Resolve the MotionCommand(Manager) or return None."""
+    return getattr(env, "command_managers", {}).get(command_name)
+
+
+def motion_anchor_pos_b(env, env_states, *, command_name: str = "motion") -> torch.Tensor:
+    """Motion anchor position error in the robot anchor frame. mjlab ``motion_anchor_pos_b``."""
+    from metasim.utils.math import subtract_frame_transforms
+
+    cmd = _motion_cmd(env, command_name)
+    if cmd is None:
+        return torch.zeros(env.num_envs, 3, device=env.device)
+    pos, _ = subtract_frame_transforms(
+        cmd.robot_anchor_pos_w, cmd.robot_anchor_quat_w, cmd.anchor_pos_w, cmd.anchor_quat_w
+    )
+    return pos.view(env.num_envs, -1)
+
+
+def motion_anchor_ori_b(env, env_states, *, command_name: str = "motion") -> torch.Tensor:
+    """Motion anchor orientation (6D) in the robot anchor frame. mjlab ``motion_anchor_ori_b``."""
+    from metasim.utils.math import matrix_from_quat, subtract_frame_transforms
+
+    cmd = _motion_cmd(env, command_name)
+    if cmd is None:
+        return torch.zeros(env.num_envs, 6, device=env.device)
+    _, ori = subtract_frame_transforms(
+        cmd.robot_anchor_pos_w, cmd.robot_anchor_quat_w, cmd.anchor_pos_w, cmd.anchor_quat_w
+    )
+    mat = matrix_from_quat(ori)
+    return mat[..., :2].reshape(mat.shape[0], -1)
+
+
+def robot_body_pos_b(env, env_states, *, command_name: str = "motion", num_bodies: int = 11) -> torch.Tensor:
+    """Tracked-body positions in the robot anchor frame. mjlab ``robot_body_pos_b``.
+
+    ``num_bodies`` sets the fallback width (the motion command is registered
+    after the obs manager assembles, so the term must report its final width
+    immediately): num_bodies*3.
+    """
+    from metasim.utils.math import subtract_frame_transforms
+
+    cmd = _motion_cmd(env, command_name)
+    if cmd is None:
+        return torch.zeros(env.num_envs, num_bodies * 3, device=env.device)
+    nb = len(cmd.cfg.body_names)
+    pos_b, _ = subtract_frame_transforms(
+        cmd.robot_anchor_pos_w[:, None, :].repeat(1, nb, 1),
+        cmd.robot_anchor_quat_w[:, None, :].repeat(1, nb, 1),
+        cmd.robot_body_pos_w,
+        cmd.robot_body_quat_w,
+    )
+    return pos_b.reshape(env.num_envs, -1)
+
+
+def robot_body_ori_b(env, env_states, *, command_name: str = "motion", num_bodies: int = 11) -> torch.Tensor:
+    """Tracked-body orientations (6D each) in the robot anchor frame. mjlab ``robot_body_ori_b``.
+
+    ``num_bodies`` sets the fallback width (num_bodies*6) — see
+    :func:`robot_body_pos_b`.
+    """
+    from metasim.utils.math import matrix_from_quat, subtract_frame_transforms
+
+    cmd = _motion_cmd(env, command_name)
+    if cmd is None:
+        return torch.zeros(env.num_envs, num_bodies * 6, device=env.device)
+    nb = len(cmd.cfg.body_names)
+    _, ori_b = subtract_frame_transforms(
+        cmd.robot_anchor_pos_w[:, None, :].repeat(1, nb, 1),
+        cmd.robot_anchor_quat_w[:, None, :].repeat(1, nb, 1),
+        cmd.robot_body_pos_w,
+        cmd.robot_body_quat_w,
+    )
+    mat = matrix_from_quat(ori_b)
+    return mat[..., :2].reshape(mat.shape[0], -1)
 
 
 def joint_pos_rel(env, env_states, asset_cfg: SceneEntityCfg, default=None) -> torch.Tensor:
