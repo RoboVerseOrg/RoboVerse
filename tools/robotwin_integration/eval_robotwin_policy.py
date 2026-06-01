@@ -89,7 +89,7 @@ class DPPolicy(Policy):
     builds never share a process.
     """
 
-    def __init__(self, server: str, camera: str = "head_camera"):
+    def __init__(self, server: str, camera: str = "head_camera", timeout: float = 120.0):
         import socket as _socket
 
         host, _, port = server.partition(":")
@@ -97,6 +97,10 @@ class DPPolicy(Policy):
         self.camera = camera
         self._sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
         self._sock.connect(self._addr)
+        # A single DP inference is ~seconds; a >2min wait means the server hung
+        # (a CUDA/render stall we saw deadlock a whole eval). Time out so the episode
+        # fails gracefully instead of blocking the sweep forever.
+        self._sock.settimeout(timeout)
         self._cache: list = []
         info = self._rpc({"cmd": "ping"})
         self.n_action_steps = int(info.get("n_action_steps", 1))
@@ -196,7 +200,12 @@ def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: b
     env = pt._make_robotwin_env(
         task_name=task, task_config=task_config, seed=seed, is_test=True, data_type=data_type, render_freq=0,
     )  # fmt: skip
-    policy.reset()
+    try:
+        policy.reset()
+    except (TimeoutError, OSError) as e:
+        print(f"[{task} seed {seed}] policy.reset timeout/IO ({type(e).__name__}); marking FAIL")
+        env.close_env()
+        return False, 0
     try:
         # Use RoboTwin's real per-task budget (env.step_lim is only set under
         # eval_mode, which we avoid to keep seen textures); fall back to the table.
@@ -214,7 +223,13 @@ def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: b
                 )
             except Exception:
                 pass
-            action = policy.predict(obs)
+            try:
+                action = policy.predict(obs)
+            except (TimeoutError, OSError) as e:
+                # Server stalled (CUDA/render hang) -> abandon this episode as a fail
+                # rather than deadlock the whole sweep. socket.timeout is an OSError.
+                print(f"[{task} seed {seed}] policy timeout/IO ({type(e).__name__}: {e}); marking FAIL")
+                break
             if action is None:
                 break
             env.take_action(np.asarray(action, dtype=float), action_type="qpos")
