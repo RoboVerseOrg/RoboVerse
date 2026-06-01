@@ -896,6 +896,12 @@ class _G1TrackingTaskBase(_G1TaskBase):
                 anchor_body_name=_G1_TRACKING_ANCHOR_BODY,
                 body_names=_G1_TRACKING_BODY_NAMES,
                 motion_file=self.motion_file,
+                # mjlab tracking never time-resamples the motion phase mid-clip
+                # (tracking_env_cfg.py uses resampling_time_range=(1e9, 1e9));
+                # it only wraps to a fresh start when the clip ends. A finite
+                # range here would teleport the reference to a random frame
+                # mid-rollout while the robot stays put, desyncing the dance.
+                resampling_time_range=(1.0e9, 1.0e9),
             ),
         )
 
