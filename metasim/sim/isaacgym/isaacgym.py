@@ -29,9 +29,10 @@ from metasim.scenario.objects import (
     _FileBasedMixin,
 )
 
-# FIXME: fix this
-# from metasim.scenario.randomization import FrictionRandomCfg, MassRandomCfg
-# NOTE domain randomization for robots
+# Domain randomization for IsaacGym is wired through the new randomization
+# package (metasim.randomization.{camera,light,material,object,scene}_randomizer);
+# the legacy metasim.scenario.randomization import was removed when that
+# subsystem moved.
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
 from metasim.types import Action, CompatActionInput, DictEnvState

@@ -176,7 +176,8 @@ class RobotState:
     """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
     body_names: list[str] | None = None
     """Body names. ``None`` when the backend does not expose per-body state
-    (currently pybullet — populates ``body_state=None`` as a TODO)."""
+    (pybullet and genesis currently — per-link wiring would need parity work
+    on which links are exposed)."""
     body_state: BodyStateTensor | None = None
     """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is
     ``(num_envs, num_bodies, 13)``. ``None`` mirrors ``ObjectState`` for
@@ -258,16 +259,17 @@ class CameraState:
         This is experimental and subject to change.
     """
 
-    ## Camera parameters
-    pos: CameraPosTensor | None = None  # TODO: remove N
+    ## Camera parameters — Optional because not every backend populates them
+    ## (e.g. pybullet only sets pos/intrinsics, sapien2 omits intrinsics on first frame).
+    pos: CameraPosTensor | None = None
     """Position of the camera. Shape is (num_envs, 3)."""
-    quat_world: CameraQuatTensor | None = None  # TODO: remove N
+    quat_world: CameraQuatTensor | None = None
     """Quaternion ``(w, x, y, z)`` of the camera, following the world frame convention. Shape is (num_envs, 4).
 
     Note:
         World frame convention follows the camera aligned with forward axis +X and up axis +Z.
     """
-    intrinsics: CameraIntrinsicsTensor | None = None  # TODO: remove N
+    intrinsics: CameraIntrinsicsTensor | None = None
     """Intrinsics matrix of the camera. Shape is (num_envs, 3, 3)."""
 
     def __post_init__(self) -> None:
