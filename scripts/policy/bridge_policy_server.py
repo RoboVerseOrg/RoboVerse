@@ -22,6 +22,7 @@ Run:
 from __future__ import annotations
 
 import argparse
+import os
 import pickle
 import socket
 import struct
@@ -222,7 +223,13 @@ if __name__ == "__main__":
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--port", type=int, default=5555)
     ap.add_argument("--quant", choices=["none", "8bit", "4bit"], default="none")
-    ap.add_argument("--repo", default="/home/ghr/projects/robotwin/policy/openvla-oft")
+    ap.add_argument(
+        "--repo",
+        default=os.environ.get("OPENVLA_OFT_REPO", ""),
+        help="path to a local openvla-oft checkout (or set $OPENVLA_OFT_REPO)",
+    )
     ARGS = ap.parse_args()
+    if not ARGS.repo:
+        raise SystemExit("--repo (or $OPENVLA_OFT_REPO) must point to a local openvla-oft checkout")
     sys.path.insert(0, ARGS.repo)
     raise SystemExit(main())

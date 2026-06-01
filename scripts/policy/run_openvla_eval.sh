@@ -8,8 +8,9 @@
 #   setsid nohup bash scripts/policy/run_openvla_eval.sh > .../launcher.log 2>&1 < /dev/null &
 set -u
 
-RVLIB=/home/ghr/projects/RoboVerse/RoboVerse-libero
-OVREPO=/home/ghr/projects/robotwin/policy/openvla-oft
+# Local-dev launcher: override these for your machine (or export before running).
+RVLIB=${RVLIB:-$(cd "$(dirname "$0")/../.." && pwd)}
+OVREPO=${OPENVLA_OFT_REPO:-/path/to/openvla-oft}
 CKPT=$RVLIB/third_party/ckpt/openvla-oft-libero-plus
 SRV_LOG=$RVLIB/third_party/ckpt/bf16_server.log
 RES_LOG=$RVLIB/third_party/ckpt/openvla_eval_result.log
