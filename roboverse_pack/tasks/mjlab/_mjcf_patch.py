@@ -18,10 +18,159 @@ Usage:
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import tempfile
 
 import mujoco
+
+# Path to the committed exact mjlab actuator spec (per-joint kp/kd/armature/
+# ctrlrange/forcerange/frictionloss + integrator/timestep/solver-iterations),
+# dumped 1:1 from mjlab's COMPILED g1/go1 models. See
+# ``patch_mjcf_with_exact_spec`` below for how it is applied.
+_ACTUATOR_SPEC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_mjlab_actuator_spec.json")
+
+# mjlab ``MujocoCfg.integrator`` values map to MuJoCo's ``mjtIntegrator`` enum.
+# The spec JSON stores the raw enum int (g1/go1 use ``implicitfast`` == 3).
+_INTEGRATOR_BY_INT = {
+    0: mujoco.mjtIntegrator.mjINT_EULER,
+    1: mujoco.mjtIntegrator.mjINT_RK4,
+    2: mujoco.mjtIntegrator.mjINT_IMPLICIT,
+    3: mujoco.mjtIntegrator.mjINT_IMPLICITFAST,
+}
+
+
+def _load_actuator_spec(robot: str) -> dict:
+    """Load the committed per-joint actuator spec for ``g1`` or ``go1``."""
+    with open(_ACTUATOR_SPEC_PATH) as f:
+        spec = json.load(f)
+    if robot not in spec:
+        raise KeyError(f"_mjlab_actuator_spec.json has no entry for robot '{robot}' (have {list(spec)})")
+    return spec[robot]
+
+
+def patch_mjcf_with_exact_spec(
+    mjcf_path: str,
+    robot: str,
+    *,
+    cache: bool = True,
+) -> str:
+    """Apply mjlab's EXACT compiled actuator/dynamics spec to an MJCF.
+
+    This reproduces, on the raw asset_zoo MJCF, the per-joint actuator + joint
+    dynamics that mjlab's :class:`BuiltinPositionActuatorCfg` pipeline bakes into
+    the COMPILED model (verified bitwise against ``Entity(...).spec.compile()``).
+    For every actuated joint named in ``_mjlab_actuator_spec.json`` it:
+
+    * adds a single ``<position>`` actuator with ``gainprm=[kp]`` and
+      ``biasprm=[0, -kp, -kd]`` (mjlab's PD-as-native-MuJoCo formulation, so the
+      ``implicitfast`` integrator folds kp/kd into the velocity update and stays
+      stable at the stiff leg gains — kp up to ~99 — that the policy needs);
+    * sets ``forcelimited=True`` + ``forcerange=[-F, F]`` (the motor effort
+      limit) and an informational ``ctrlrange`` but leaves ``ctrllimited=False``
+      and ``inheritrange=0`` — mjlab deliberately does NOT clamp the position
+      setpoint to the joint range, so the policy can command targets beyond the
+      kinematic limit (``create_position_actuator`` in mjlab/utils/spec.py);
+    * overrides the joint's ``armature`` and ``frictionloss`` (armature is part
+      of mjlab's dynamics AND what lets ``implicitfast`` stay stable at high kp).
+
+    Solver options (integrator/timestep/iterations/ls_iterations + the velocity
+    env's solver=newton, cone=pyramidal, impratio=1.0) are taken from the spec /
+    mjlab's ``MujocoCfg`` so the MuJoCo backend matches mjlab's native rollout.
+
+    Args:
+        mjcf_path: Path to the source asset_zoo MJCF (e.g. ``g1.xml``).
+        robot: ``"g1"`` or ``"go1"`` — selects the spec block.
+        cache: Reuse a previously-patched XML keyed on inputs + spec mtime.
+
+    Returns:
+        Absolute path to the patched MJCF.
+    """
+    spec_mtime = os.path.getmtime(_ACTUATOR_SPEC_PATH)
+    key = hashlib.md5(f"exact|{mjcf_path}|{robot}|{spec_mtime}".encode()).hexdigest()[:12]
+    out_path = os.path.join(tempfile.gettempdir(), f"mjlab_exact_{robot}_{key}.xml")
+    if cache and os.path.exists(out_path):
+        return out_path
+
+    rspec = _load_actuator_spec(robot)
+    joints_spec: dict[str, dict] = rspec["joints"]
+
+    mspec = mujoco.MjSpec.from_file(mjcf_path)
+    # Patched XML lives in /tmp; re-anchor meshdir so MetaSim's loader (which
+    # reads the patched file from /tmp) still finds the mesh assets.
+    orig_dir = os.path.dirname(os.path.abspath(mjcf_path))
+    mspec.meshdir = os.path.join(orig_dir, mspec.meshdir) if mspec.meshdir else orig_dir
+
+    # mjlab velocity-env solver options (MujocoCfg + the velocity_env_cfg sim
+    # block): implicitfast / newton / pyramidal-cone / impratio=1 + the spec's
+    # timestep + (ls_)iterations. gravity stays the MuJoCo default (-9.81).
+    mspec.option.integrator = _INTEGRATOR_BY_INT[int(rspec["integrator"])]
+    mspec.option.timestep = float(rspec["timestep"])
+    mspec.option.iterations = int(rspec["iterations"])
+    mspec.option.ls_iterations = int(rspec["ls_iterations"])
+    mspec.option.solver = mujoco.mjtSolver.mjSOL_NEWTON
+    mspec.option.cone = mujoco.mjtCone.mjCONE_PYRAMIDAL
+    mspec.option.impratio = 1.0
+
+    # Override per-joint dynamics (armature + frictionloss). mjlab applies these
+    # via ``apply_target_overrides`` on the joint, NOT on the actuator.
+    for joint in mspec.joints:
+        js = joints_spec.get(joint.name)
+        if js is None:
+            continue
+        joint.armature = float(js["armature"])
+        joint.frictionloss = float(js["frictionloss"])
+
+    # Override per-geom collision params to mjlab's compiled CollisionCfg values
+    # (condim / priority / solref / solimp / friction / contype / conaffinity).
+    # This matters for contact-driven locomotion: mjlab gives the feet condim=6
+    # (go1) / condim=3 (g1) with priority + a specific friction cone and a
+    # stiffer solref; the raw asset_zoo MJCFs leave the default condim=3,
+    # solref=(0.02,1), so without this the quadruped's feet roll/slip and the
+    # robot drifts forward relative to mjlab. Geom names match the compiled
+    # model exactly (``*_collision``).
+    collisions_spec: dict[str, dict] = rspec.get("collisions", {})
+    for geom in mspec.geoms:
+        gs = collisions_spec.get(geom.name)
+        if gs is None:
+            continue
+        geom.condim = int(gs["condim"])
+        geom.priority = int(gs["priority"])
+        geom.contype = int(gs["contype"])
+        geom.conaffinity = int(gs["conaffinity"])
+        geom.solref[:] = list(gs["solref"])
+        geom.solimp[:] = list(gs["solimp"])
+        fr = list(gs["friction"])
+        geom.friction[: len(fr)] = fr
+
+    # One <position> actuator per actuated joint, in the spec's joint order.
+    for jname, js in joints_spec.items():
+        kp = float(js["kp"])
+        kd = float(js["kd"])
+        force = float(js["forcerange"][1])
+        ctrl_lo, ctrl_hi = float(js["ctrlrange"][0]), float(js["ctrlrange"][1])
+
+        act = mspec.add_actuator()
+        act.name = jname
+        act.target = jname
+        act.trntype = mujoco.mjtTrn.mjTRN_JOINT
+        act.dyntype = mujoco.mjtDyn.mjDYN_NONE
+        act.gaintype = mujoco.mjtGain.mjGAIN_FIXED
+        act.biastype = mujoco.mjtBias.mjBIAS_AFFINE
+        act.gainprm = [kp, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        act.biasprm = [0, -kp, -kd, 0, 0, 0, 0, 0, 0, 0]
+        # mjlab leaves the position setpoint UNCLAMPED (policy may target beyond
+        # joint range); effort is bounded by forcerange instead.
+        act.inheritrange = 0.0
+        act.ctrllimited = False
+        act.ctrlrange = [ctrl_lo, ctrl_hi]  # informational only (ctrllimited=False)
+        act.forcelimited = True
+        act.forcerange = [-force, force]
+
+    mspec.compile()  # validate before writing
+    with open(out_path, "w") as f:
+        f.write(mspec.to_xml())
+    return out_path
 
 
 def patch_mjcf_with_pd_actuators(

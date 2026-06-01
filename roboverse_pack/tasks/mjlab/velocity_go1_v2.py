@@ -48,7 +48,7 @@ from roboverse_learn.managers import (
 )
 
 from ._locator import mjlab_asset
-from ._mjcf_patch import GO1_KP, patch_mjcf_with_pd_actuators
+from ._mjcf_patch import patch_mjcf_with_exact_spec
 from .mdp import (
     SceneEntityCfg,
 )
@@ -150,6 +150,25 @@ _GO1_DEFAULT_POSE_NP = _np.array(
     dtype=_np.float64,
 )
 
+# Per-joint action scale = 0.25 * effort_limit / stiffness (mjlab go1_constants.py
+# GO1_ACTION_SCALE). hip+thigh share the 6:1-gear actuator (effort 23.7, kp ≈ 15.9
+# -> 0.3728); calf is the 9:1-gear actuator (effort 35.55, kp ≈ 35.8 -> 0.2485).
+# These exact values are verified against mjlab's resolved scale dict.
+_GO1_ACTION_SCALE: dict[str, float] = {
+    "FR_hip_joint": 0.372753,
+    "FR_thigh_joint": 0.372753,
+    "FR_calf_joint": 0.248502,
+    "FL_hip_joint": 0.372753,
+    "FL_thigh_joint": 0.372753,
+    "FL_calf_joint": 0.248502,
+    "RR_hip_joint": 0.372753,
+    "RR_thigh_joint": 0.372753,
+    "RR_calf_joint": 0.248502,
+    "RL_hip_joint": 0.372753,
+    "RL_thigh_joint": 0.372753,
+    "RL_calf_joint": 0.248502,
+}
+
 
 # ---------------------------------------------------------------------------
 # task-local term funcs (rewards / events specific to this minimal scaffold)
@@ -171,7 +190,7 @@ def reset_go1_default_pose(
     env,
     env_ids: torch.Tensor,
     *,
-    base_height: float = 0.45,  # Drop from a safe height above ground; feet settle naturally
+    base_height: float = 0.278,  # mjlab INIT_STATE pelvis z (go1_constants.py)
     joint_noise: float = 0.05,
 ) -> None:
     """Drop the robot at a quadruped-friendly stance with small joint noise."""
@@ -493,18 +512,18 @@ class _Go1CurriculumCfg:
 
 
 def _go1_scenario() -> ScenarioCfg:
-    # Patch the MJCF at load time to add 12 <position> actuators with mjlab PD gains.
-    # Also force smaller dt (0.002 = MuJoCo's default) since the patched
-    # XML's stiff PD (kp ≈ 16-36) is numerically unstable under explicit
-    # Euler at dt=0.005. mjlab itself uses a semi-implicit integrator + larger
-    # dt; matching that requires MetaSim-side integrator config we don't have
-    # in scenario yet, so we just use a smaller step.
-    patched_xml = patch_mjcf_with_pd_actuators(mjlab_asset(_GO1_XML), GO1_KP)
+    # Apply mjlab's EXACT compiled go1 actuator/dynamics spec (per-joint kp/kd/
+    # armature/forcerange + integrator=implicitfast, dt=0.005, iters=10/ls=20).
+    # implicitfast + the per-joint armature keep the stiff PD stable at dt=0.005,
+    # matching mjlab native (no need for the old dt=0.002 explicit-Euler hack).
+    patched_xml = patch_mjcf_with_exact_spec(mjlab_asset(_GO1_XML), "go1")
     return ScenarioCfg(
         scene=SceneCfg(mjcf_path=patched_xml),
         robots=[],
-        sim_params=SimParamCfg(dt=0.002),
-        decimation=10,  # 10 × 2ms = 20ms control_dt = 50 Hz, matching mjlab
+        # mjlab parity: dt=0.005, decimation=4 (5ms × 4 = 20ms = 50Hz). Solver
+        # options come from the patched MJCF's <option> block.
+        sim_params=SimParamCfg(dt=0.005),
+        decimation=4,
         simulator="mujoco",
         num_envs=1,
         headless=True,
@@ -515,7 +534,7 @@ def _go1_scenario() -> ScenarioCfg:
 class VelocityFlatGo1EnvCfg(ManagerBasedRVEnvCfg):
     """Manager-based env config for Go1 velocity tracking on flat ground."""
 
-    decimation = 10  # matches scenario.decimation; step_dt = sim_dt x decimation = 0.02s = 50Hz
+    decimation = 4  # matches scenario.decimation; step_dt = sim_dt x decimation = 0.02s = 50Hz
     max_episode_length_s = 20.0
     is_finite_horizon = False
     observation_group_names = ("actor", "critic")
@@ -553,14 +572,14 @@ class _Go1TaskBase(ManagerBasedRVEnv):
             # runtime). Without actuators (mj nu=0) the Newton SolverMuJoCo
             # applies ZERO position-control torque -> go1 free-falls. The mujoco
             # scene path patches PD actuators in; the Newton RobotCfg path must
-            # do the same. Point the go1 robot at an actuator-patched MJCF so
-            # nu=12 and the PD (kp=GO1_KP) actually holds the stance.
+            # do the same. Point the go1 robot at an exact-spec-patched MJCF so
+            # nu=12 and mjlab's per-joint PD actually holds the stance.
             for r in scenario.robots:
                 mjcf = getattr(r, "mjcf_path", None)
                 if getattr(r, "name", None) == "go1" and mjcf:
                     src = mjcf if os.path.isabs(mjcf) else os.path.abspath(mjcf)
                     try:
-                        r.mjcf_path = patch_mjcf_with_pd_actuators(src, GO1_KP)
+                        r.mjcf_path = patch_mjcf_with_exact_spec(src, "go1")
                     except Exception as e:
                         import warnings
 
@@ -651,28 +670,19 @@ class _Go1TaskBase(ManagerBasedRVEnv):
             )
 
         # mjlab parity: ActionManager (declarative scale/offset for joint pos action).
-        # Mirrors mjlab/tasks/velocity/velocity_env_cfg.py:165 — scale=0.5,
-        # use_default_offset=True (offset = robot's default standing pose).
-        _go1_defaults = {
-            "FR_hip_joint": 0.0,
-            "FR_thigh_joint": 0.9,
-            "FR_calf_joint": -1.8,
-            "FL_hip_joint": 0.0,
-            "FL_thigh_joint": 0.9,
-            "FL_calf_joint": -1.8,
-            "RR_hip_joint": 0.0,
-            "RR_thigh_joint": 0.9,
-            "RR_calf_joint": -1.8,
-            "RL_hip_joint": 0.0,
-            "RL_thigh_joint": 0.9,
-            "RL_calf_joint": -1.8,
-        }
+        # mjlab go1 (config/go1/env_cfgs.py) overrides the velocity-env default
+        # scale=0.5 with the PER-JOINT GO1_ACTION_SCALE (0.25*effort/stiffness):
+        # hip/thigh=0.3728, calf=0.2485. use_default_offset=True -> offset is the
+        # go1 default standing pose (INIT_STATE keyframe): thigh=0.9, calf=-1.8,
+        # FR/RR hip=+0.1, FL/RL hip=-0.1.
+        _go1_scale = {n: float(_GO1_ACTION_SCALE[n]) for n in _GO1_JOINTS.joint_names}
+        _go1_defaults = {n: float(v) for n, v in zip(_GO1_JOINTS.joint_names, _GO1_DEFAULT_POSE_NP.tolist())}
         self.action_manager = JointPositionActionManager(
             self,
             JointPositionActionCfg(
                 entity_name="go1",
                 actuator_names=_GO1_JOINTS.joint_names,
-                scale=0.5,
+                scale=_go1_scale,
                 use_default_offset=True,
             ),
             joint_names=_GO1_JOINTS.joint_names,
@@ -728,6 +738,24 @@ class _Go1TaskBase(ManagerBasedRVEnv):
         self._actuated_qpos_ids = np.asarray(actuated, dtype=np.int64)
         return self._actuated_qpos_ids
 
+    _ctrl_ids_for_joints: np.ndarray | None = None
+
+    def _resolve_ctrl_indices(self) -> np.ndarray:
+        """MuJoCo ctrl (actuator) index for each joint in ``_GO1_JOINTS``.
+
+        The exact-spec patch emits actuators grouped by actuator type (hip/thigh
+        first, then calf), NOT joint order, so ``data.ctrl`` is permuted relative
+        to the policy's joint order. Map each target to its actuator slot.
+        """
+        if self._ctrl_ids_for_joints is not None:
+            return self._ctrl_ids_for_joints
+        m = self.handler.physics.model
+        mp = m.ptr if hasattr(m, "ptr") else m
+        ids = [mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_ACTUATOR, jn) for jn in _GO1_JOINTS.joint_names]
+        assert all(i >= 0 for i in ids), "go1 exact-spec patch missing a per-joint actuator"
+        self._ctrl_ids_for_joints = np.asarray(ids, dtype=np.int64)
+        return self._ctrl_ids_for_joints
+
     def _apply_action(self, processed_action: torch.Tensor) -> None:
         """Write action via mjlab-parity ActionManager processing.
 
@@ -751,7 +779,10 @@ class _Go1TaskBase(ManagerBasedRVEnv):
             self.handler.set_dof_targets(target[..., self._cfg_to_sorted])
             return
         target_np = target.detach().cpu().numpy().reshape(-1)
-        self.handler.physics.data.ctrl[:12] = target_np
+        # target_np[i] is the setpoint for joint _GO1_JOINTS[i]; route each to
+        # its actuator's ctrl slot (actuator order != joint order under the
+        # exact-spec patch).
+        self.handler.physics.data.ctrl[self._resolve_ctrl_indices()] = target_np
 
 
 @register_task("mjlab.velocity_flat_go1_v2")

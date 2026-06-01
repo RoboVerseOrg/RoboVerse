@@ -411,6 +411,734 @@
         ],
         "frictionloss": 0.0
       }
+    },
+    "collisions": {
+      "pelvis_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_hip_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_thigh_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_shin_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_linkage_brace_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_foot1_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_foot2_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_foot3_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_foot4_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_foot5_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_foot6_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_foot7_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_hip_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_thigh_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_shin_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_linkage_brace_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_foot1_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_foot2_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_foot3_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_foot4_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_foot5_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_foot6_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_foot7_collision": {
+        "condim": 3,
+        "priority": 1,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          0.6,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "torso_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "head_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_shoulder_yaw_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_elbow_yaw_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_wrist_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "left_hand_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_shoulder_yaw_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_elbow_yaw_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_wrist_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "right_hand_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.02,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      }
     }
   },
   "go1": {
@@ -586,6 +1314,668 @@
           35.55
         ],
         "frictionloss": 0.0
+      }
+    },
+    "collisions": {
+      "trunk_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "head_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FR_hip_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FR_thigh_collision1": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FR_thigh_collision2": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FR_thigh_collision3": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FR_calf_collision1": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FR_calf_collision2": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FR_foot_collision": {
+        "condim": 6,
+        "priority": 1,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0005
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FL_hip_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FL_thigh_collision1": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FL_thigh_collision2": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FL_thigh_collision3": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FL_calf_collision1": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FL_calf_collision2": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "FL_foot_collision": {
+        "condim": 6,
+        "priority": 1,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0005
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RR_hip_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RR_thigh_collision1": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RR_thigh_collision2": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RR_thigh_collision3": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RR_calf_collision1": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RR_calf_collision2": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RR_foot_collision": {
+        "condim": 6,
+        "priority": 1,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0005
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RL_hip_collision": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RL_thigh_collision1": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RL_thigh_collision2": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RL_thigh_collision3": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RL_calf_collision1": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RL_calf_collision2": {
+        "condim": 1,
+        "priority": 0,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ],
+        "contype": 1,
+        "conaffinity": 1
+      },
+      "RL_foot_collision": {
+        "condim": 6,
+        "priority": 1,
+        "solref": [
+          0.01,
+          1.0
+        ],
+        "solimp": [
+          0.9,
+          0.95,
+          0.001,
+          0.5,
+          2.0
+        ],
+        "friction": [
+          1.0,
+          0.005,
+          0.0005
+        ],
+        "contype": 1,
+        "conaffinity": 1
       }
     }
   }

@@ -36,7 +36,7 @@ from roboverse_learn.managers import (
 )
 
 from ._locator import mjlab_asset
-from ._mjcf_patch import G1_KP, patch_mjcf_with_pd_actuators
+from ._mjcf_patch import patch_mjcf_with_exact_spec
 from .mdp import (
     SceneEntityCfg,
 )
@@ -437,19 +437,17 @@ class _G1CurriculumCfg:
 
 
 def _g1_scenario() -> ScenarioCfg:
-    # Smaller dt + larger decimation for 29-DOF humanoid stability under explicit Euler
-    patched_xml = patch_mjcf_with_pd_actuators(mjlab_asset(_G1_XML), G1_KP)
+    # Apply mjlab's EXACT compiled g1 actuator/dynamics spec (per-joint kp/kd/
+    # armature/forcerange + integrator=implicitfast, dt=0.005, iters=10/ls=20).
+    # The leg gains (kp up to ~99) are stable because implicitfast folds kp/kd
+    # into the velocity update and the per-joint armature is set.
+    patched_xml = patch_mjcf_with_exact_spec(mjlab_asset(_G1_XML), "g1")
     return ScenarioCfg(
         scene=SceneCfg(mjcf_path=patched_xml),
         robots=[],
-        # mjlab parity:
-        #   dt=0.005, decimation=4 (matches mjlab native; 5ms substep × 4 = 20ms control = 50Hz)
-        # NOTE: the mujoco backend gets its solver iterations (100/50) from the MJCF
-        # patched in `patch_mjcf_with_pd_actuators`, so no solver knobs are needed here.
-        # TODO(newton-path): mjlab's SolverMuJoCo uses iterations=10, ls_iterations=20 for
-        # stable stiff PD on the 29-DOF humanoid. The current metasim SimParamCfg no longer
-        # exposes `newton_mujoco_iterations`/`newton_mujoco_ls_iterations`; restore solver-iter
-        # control on the Newton path (via MJCF option or a SimParamCfg field) before training G1.
+        # mjlab parity: dt=0.005, decimation=4 (5ms substep × 4 = 20ms = 50Hz).
+        # The solver options (implicitfast / newton / iters=10 / ls=20) come from
+        # the patched MJCF's <option> block (set in patch_mjcf_with_exact_spec).
         sim_params=SimParamCfg(dt=0.005),
         decimation=4,
         simulator="mujoco",
@@ -618,6 +616,26 @@ class _G1TaskBase(ManagerBasedRVEnv):
         self._actuated_qvel_ids = np.asarray(ids, dtype=np.int64)
         return self._actuated_qvel_ids
 
+    _ctrl_ids_for_joints: np.ndarray | None = None
+
+    def _resolve_ctrl_indices(self) -> np.ndarray:
+        """MuJoCo ctrl (actuator) index for each joint in ``_G1_ALL_JOINT_NAMES``.
+
+        The exact-spec patch emits actuators in the spec JSON's (actuator-type
+        grouped) order, NOT joint order, so ``data.ctrl`` is permuted relative to
+        the policy's joint order. This returns, for joint ``_G1_ALL_JOINT_NAMES[i]``,
+        the actuator id whose target is that joint, so ``ctrl[ids] = target``
+        writes each PD setpoint to the right actuator.
+        """
+        if self._ctrl_ids_for_joints is not None:
+            return self._ctrl_ids_for_joints
+        m = self.handler.physics.model
+        mp = m.ptr if hasattr(m, "ptr") else m
+        ids = [mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_ACTUATOR, jname) for jname in _G1_ALL_JOINT_NAMES]
+        assert all(i >= 0 for i in ids), "g1 exact-spec patch missing a per-joint actuator"
+        self._ctrl_ids_for_joints = np.asarray(ids, dtype=np.int64)
+        return self._ctrl_ids_for_joints
+
     _ACTION_CLIP: float = 100.0  # generous, action scale handled per-joint below
 
     @property
@@ -655,8 +673,12 @@ class _G1TaskBase(ManagerBasedRVEnv):
         action_np = processed_action.detach().cpu().numpy().reshape(-1)
         action_np = np.clip(action_np, -self._ACTION_CLIP, self._ACTION_CLIP)
         scale_np = scale.detach().cpu().numpy()
+        # target[i] is the PD setpoint for joint _G1_ALL_JOINT_NAMES[i] (mjlab:
+        # default_joint_pos + raw*scale). Route each to its actuator's ctrl slot
+        # (actuator order != joint order under the exact-spec patch).
         target = _G1_DEFAULT_POSE_NP + scale_np * action_np
-        self.handler.physics.data.ctrl[:29] = target
+        ctrl_ids = self._resolve_ctrl_indices()
+        self.handler.physics.data.ctrl[ctrl_ids] = target
 
 
 @register_task("mjlab.velocity_flat_g1_v2")
