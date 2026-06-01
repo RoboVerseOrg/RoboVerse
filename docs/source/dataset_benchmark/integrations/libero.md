@@ -108,13 +108,25 @@ Beyond "passthrough == native by construction", we load each task's own combined
 MJCF (Franka + objects + arena + camera) into **MetaSim's MuJoCo handler** and
 reproduce the demo — proving the MetaSim backend simulates the LIBERO scene 1:1.
 
-**Stage 1 — kinematics** (per-frame `set_states`, geometry/pose 1:1):
+```{note}
+The videos play on the built docs site (roboverse.wiki). On GitHub's markdown
+viewer, inline `<video>` of a repo-relative file does not play — use the
+download links, or build the docs locally (`cd docs && make html`).
+```
 
-<video controls width="640" src="../../_static/integrations/libero/sidebyside_kinematic_spatial_task0.mp4"></video>
+**Stage 1 — kinematics** (per-frame `set_states`, geometry/pose 1:1) —
+[download](../../_static/integrations/libero/sidebyside_kinematic_spatial_task0.mp4):
 
-**Stage 2 — dynamics** (MetaSim's engine steps under the captured ctrl):
+<video controls width="640" preload="metadata">
+  <source src="../../_static/integrations/libero/sidebyside_kinematic_spatial_task0.mp4" type="video/mp4">
+</video>
 
-<video controls width="640" src="../../_static/integrations/libero/sidebyside_dynamics_spatial_task0.mp4"></video>
+**Stage 2 — dynamics** (MetaSim's engine steps under the captured ctrl) —
+[download](../../_static/integrations/libero/sidebyside_dynamics_spatial_task0.mp4):
+
+<video controls width="640" preload="metadata">
+  <source src="../../_static/integrations/libero/sidebyside_dynamics_spatial_task0.mp4" type="video/mp4">
+</video>
 
 Left = native LIBERO `agentview_rgb`, right = MetaSim render. Per-frame
 `max|qpos − recorded| = 0.0` (exact); the MetaSim engine step matches reference
