@@ -111,27 +111,21 @@ In each clip, **left = native LIBERO-plus `agentview`, right = MetaSim render**;
 both are upright and the demo arm motion is identical.
 
 Generated with `scripts/gen_libero_sidebyside.py` (current code, real demo
-motion). Each video autoplays on roboverse.wiki; the poster frame below always
-shows the side-by-side even before playback.
+motion). The animated GIFs below play inline everywhere; the full-quality mp4 is
+linked next to each.
 
 **Background-texture perturbation** (`libero_object … _table_5`) — MetaSim
 reproduces the swapped scene texture; per-frame native-vs-MetaSim pixel
-**MAE = 0.24 / 255** (sub-pixel — renderer config only; state is exact):
+**MAE = 0.24 / 255** (sub-pixel — renderer config only; state is exact).
+[full-quality mp4](../../_static/integrations/libero/sb_liberoplus_texture.mp4)
 
-<video autoplay loop muted playsinline width="100%" style="max-width:768px" poster="/roboverse/_static/integrations/libero/sb_liberoplus_texture_poster.png">
-  <source src="/roboverse/_static/integrations/libero/sb_liberoplus_texture.mp4" type="video/mp4">
-</video>
-
-![texture side-by-side: native LIBERO-plus (left) vs MetaSim (right)](../../_static/integrations/libero/sb_liberoplus_texture_poster.png)
+![texture side-by-side: native LIBERO-plus (left) vs MetaSim (right)](../../_static/integrations/libero/sb_liberoplus_texture.gif)
 
 **Camera-viewpoint perturbation** (`libero_object … _view_…`) — MetaSim
-reproduces the shifted camera; per-frame **MAE = 0.14 / 255**:
+reproduces the shifted camera; per-frame **MAE = 0.16 / 255**.
+[full-quality mp4](../../_static/integrations/libero/sb_liberoplus_camera.mp4)
 
-<video autoplay loop muted playsinline width="100%" style="max-width:768px" poster="/roboverse/_static/integrations/libero/sb_liberoplus_camera_poster.png">
-  <source src="/roboverse/_static/integrations/libero/sb_liberoplus_camera.mp4" type="video/mp4">
-</video>
-
-![camera side-by-side: native LIBERO-plus (left) vs MetaSim (right)](../../_static/integrations/libero/sb_liberoplus_camera_poster.png)
+![camera side-by-side: native LIBERO-plus (left) vs MetaSim (right)](../../_static/integrations/libero/sb_liberoplus_camera.gif)
 
 Per-frame `max|qpos − recorded| = 0.0` (state exact); the MetaSim engine step
 matches reference MuJoCo to `max|Δ| = 1.6e-4` (`migrate_liberoplus_metasim`).

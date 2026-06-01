@@ -43,13 +43,15 @@ def run(suite, base, variant, frames, sz, out):
         actions = np.asarray(h["data"]["demo_0"]["actions"])[:frames]
         init_state = np.asarray(h["data"]["demo_0"]["states"])[0]
 
-    # native LIBERO rollout: replay demo actions, capture agentview + flat states
+    # native LIBERO rollout: replay demo actions, capture agentview + flat states.
+    # The raw robosuite agentview_image is OpenGL bottom-up; openvla's get_libero_image
+    # rotates it 180 deg ([::-1, ::-1]) for the display/training-correct view.
     env = pt.make_liberoplus_env(suite, tid, camera_heights=sz, camera_widths=sz, seed=0)
     model_xml = env.env.sim.model.get_xml()
     obs = env.set_init_state(init_state)
     native, states = [], []
     for a in actions:
-        native.append(_u8(np.asarray(obs["agentview_image"])))
+        native.append(_u8(np.asarray(obs["agentview_image"])[::-1, ::-1]))  # right-side-up
         states.append(np.asarray(env.env.sim.get_state().flatten()))
         obs, *_ = env.step(a.tolist())
     env.close()
@@ -62,14 +64,13 @@ def run(suite, base, variant, frames, sz, out):
         set_flat_state(handler, st)
         meta.append(_u8(render_cam(handler, cam, width=sz, height=sz, visual_only=True)))
 
-    # auto-detect vertical flip between the two renderers (match orientation)
-    d0 = np.abs(native[0].astype(int) - meta[0].astype(int)).mean()
-    d0f = np.abs(native[0].astype(int) - meta[0][::-1].astype(int)).mean()
-    if d0f < d0:
-        meta = [m[::-1] for m in meta]
-        print(f"flipped MetaSim panel (MAE {d0:.1f} -> {d0f:.1f})")
+    # orient the MetaSim panel to match the (correctly-oriented) native panel:
+    # search the 4 axis flips and pick the one with lowest MAE on frame 0.
+    transforms = {"id": lambda x: x, "v": lambda x: x[::-1], "h": lambda x: x[:, ::-1], "vh": lambda x: x[::-1, ::-1]}
+    best = min(transforms, key=lambda k: np.abs(native[0].astype(int) - transforms[k](meta[0]).astype(int)).mean())
+    meta = [transforms[best](m) for m in meta]
     mae = float(np.mean([np.abs(n.astype(int) - m.astype(int)).mean() for n, m in zip(native, meta)]))
-    print(f"per-frame native-vs-MetaSim pixel MAE = {mae:.2f}/255 (renderer config; state is exact)")
+    print(f"MetaSim orientation match = '{best}'; per-frame native-vs-MetaSim pixel MAE = {mae:.2f}/255")
 
     sbs = [np.concatenate([n, m], axis=1) for n, m in zip(native, meta)]
     os.makedirs(os.path.dirname(out), exist_ok=True)
@@ -83,9 +84,18 @@ def run(suite, base, variant, frames, sz, out):
         quality=6,
         output_params=["-pix_fmt", "yuv420p", "-movflags", "+faststart"],
     )
-    poster = sbs[int(len(sbs) * 0.6)]
-    imageio.imwrite(f"{out}_poster.png", poster)
-    print(f"wrote {out}.mp4 ({os.path.getsize(out + '.mp4') // 1024} KB) + {out}_poster.png")
+    imageio.imwrite(f"{out}_poster.png", sbs[int(len(sbs) * 0.6)])
+    # optimized GIF — plays inline everywhere incl. GitHub; an always-visible
+    # fallback (the mp4 is the quality version). Shrink frames+palette until <480KB.
+    for stride, res, psize in [(3, 3, 96), (4, 3, 64), (4, 4, 64), (5, 4, 48), (6, 4, 32)]:
+        gif = [s[::res, ::res] for s in sbs[::stride]]
+        imageio.mimsave(f"{out}.gif", gif, fps=8, loop=0, palettesize=psize, subrectangles=True)
+        if os.path.getsize(f"{out}.gif") < 480 * 1024:
+            break
+    print(
+        f"wrote {out}.mp4 ({os.path.getsize(out + '.mp4') // 1024} KB) + "
+        f"{out}.gif ({os.path.getsize(out + '.gif') // 1024} KB) + poster"
+    )
     return 0
 
 
