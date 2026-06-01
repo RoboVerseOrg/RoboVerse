@@ -137,20 +137,30 @@ def state_replay_check(xml: str, states: np.ndarray) -> dict:
     return {"n_states": int(states.shape[0]), "fk_body_xpos_max_abs_diff": max_xpos}
 
 
-def action_replay(xml: str, states: np.ndarray, actions: np.ndarray, env_name: str = "Lift") -> dict:
-    """Step recorded actions in robosuite; replay captured torques on the handler."""
+def action_replay(states: np.ndarray, actions: np.ndarray, env_name: str = "Lift") -> dict:
+    """Replay the benchmark's recorded ACTIONS and reproduce them on the handler.
+
+    We rebuild a *fresh* robosuite 1.5.2 env (so its model has the current site
+    layout — the dataset's v1.4.1 MJCF would break 1.5.2 env code), transplant the
+    demo's initial flattened state (qpos/qvel match: same joint order, nq=16 for
+    Lift), then step the recorded high-level actions through the OSC controller,
+    capturing per-substep torques. Those torques are replayed on MetaSim's
+    handler (loaded from the *1.5.2* compiled MJCF). robosuite and MetaSim match
+    bit-for-bit, so the arm follows the recorded benchmark actions identically.
+    """
+    from .inventory import get
     from .robosuite_rollout import make_robosuite_env
 
-    ref = make_robosuite_env(__import__("tools.robosuite_integration.inventory", fromlist=["get"]).get(env_name))
+    ref = make_robosuite_env(get(env_name))
     ref.reset()
-    ref.reset_from_xml_string(xml)
     rm, rd = ref.sim.model._model, ref.sim.data._data
     nq, nv = rm.nq, rm.nv
-    body_pos, body_quat = rm.body_pos.copy(), rm.body_quat.copy()
 
-    # set demo initial state
+    # transplant the demo's initial state into the fresh 1.5.2 env
     ref.sim.set_state_from_flattened(states[0])
     ref.sim.forward()
+    xml = ref.model.get_xml()  # 1.5.2 compiled MJCF for the handler
+    body_pos, body_quat = rm.body_pos.copy(), rm.body_quat.copy()
     qpos0, qvel0 = rd.qpos.copy(), rd.qvel.copy()
 
     substep: list[np.ndarray] = []
@@ -195,6 +205,7 @@ def action_replay(xml: str, states: np.ndarray, actions: np.ndarray, env_name: s
         "_ms_qpos": ms_qpos,
         "_body_pos": body_pos,
         "_body_quat": body_quat,
+        "_xml": xml,
     }
 
 
@@ -234,7 +245,7 @@ def main() -> None:
         rec = {"demo": dm, "n_states": sr["n_states"], "fk_body_xpos_max_abs_diff": sr["fk_body_xpos_max_abs_diff"]}
         ar = None
         if args.action:
-            ar = action_replay(xml, states, actions, env_name=args.env_name)
+            ar = action_replay(states, actions, env_name=args.env_name)
             ar_max = max(ar_max, ar["action_replay_qpos_max_abs_diff"])
             ar_bitwise_all = ar_bitwise_all and ar["action_replay_bitwise"]
             n_success += int(ar["action_replay_success"])
@@ -264,8 +275,8 @@ def main() -> None:
                 label_b="MetaSim MujocoHandler (1:1)",
             )
             if ar is not None:
-                mdl_a = mujoco.MjModel.from_xml_string(xml)
-                mdl_b = mujoco.MjModel.from_xml_string(xml)
+                mdl_a = mujoco.MjModel.from_xml_string(ar["_xml"])
+                mdl_b = mujoco.MjModel.from_xml_string(ar["_xml"])
                 for m in (mdl_a, mdl_b):
                     m.body_pos[:] = ar["_body_pos"]
                     m.body_quat[:] = ar["_body_quat"]
@@ -273,8 +284,8 @@ def main() -> None:
                     render_qpos_sequence(mdl_a, ar["_ref_qpos"], camera="agentview"),
                     render_qpos_sequence(mdl_b, ar["_ms_qpos"], camera="agentview"),
                     str(args.out / f"{dm}_action_replay.mp4"),
-                    label_a="robosuite (steps actions)",
-                    label_b="MetaSim handler (replays ctrl)",
+                    label_a="robosuite follows benchmark actions",
+                    label_b="MetaSim handler (1:1)",
                 )
             rendered += 1
 
