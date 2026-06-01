@@ -81,9 +81,11 @@ class MujocoOSCPose:
         self._in_t = (self.input_max + self.input_min) / 2.0
         self.torque_limits = torque_limits
 
-        self.goal_pos = None
-        self.goal_ori = None
         self._update()
+        # robosuite initializes the orientation goal to the current EE orientation
+        # (reset_goal); pos goal starts at current EE pos.
+        self.goal_pos = self.ee_pos.copy()
+        self.goal_ori = self.ee_ori_mat.copy()
         self.initial_joint = np.array(initial_joint) if initial_joint is not None else self.joint_pos.copy()
 
     # --- sim-data access (the only sim-specific part) -------------------------
@@ -116,10 +118,15 @@ class MujocoOSCPose:
 
     # --- robosuite-identical control logic ------------------------------------
     def set_goal(self, action):
+        import math
+
         self._update()
         scaled = self._scale_action(np.asarray(action, dtype=float))
-        # default ori control vector when not actively controlling (matches robosuite)
-        self.goal_ori = set_goal_orientation(scaled[3:], self.ee_ori_mat, set_ori=None)
+        # IMPORTANT (matches robosuite): only update the orientation goal when the
+        # ori delta is non-zero, otherwise keep the previous (sticky) goal_ori.
+        # Always update the position goal.
+        if sum(0.0 if math.isclose(e, 0.0) else 1.0 for e in scaled[3:]) > 0.0:
+            self.goal_ori = set_goal_orientation(scaled[3:], self.ee_ori_mat, set_ori=None)
         self.goal_pos = set_goal_position(scaled[:3], self.ee_pos, set_pos=None)
 
     def run_controller(self):
