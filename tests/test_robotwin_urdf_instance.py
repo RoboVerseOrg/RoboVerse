@@ -81,6 +81,33 @@ def test_modelid_none_returns_base(tmp_path):
 
 
 @pytest.mark.general
+def test_disambiguate_keeps_every_duplicate():
+    """Duplicate-named objects get unique keys (name, name#1, ...) in order."""
+    cb = _load_collect_bridge()
+    counts = {}
+    # two 001_bottle + one unique table, in creation order.
+    keys = [cb._disambiguate(n, counts) for n in ["001_bottle", "001_bottle", "table"]]
+    assert keys == ["001_bottle", "001_bottle#1", "table"]
+    # a third bottle continues the sequence; independent names start fresh.
+    assert cb._disambiguate("001_bottle", counts) == "001_bottle#2"
+    assert cb._disambiguate("002_bowl", counts) == "002_bowl"
+
+
+@pytest.mark.general
+def test_disambiguate_order_matches_independent_counters():
+    """Two independent passes (pose capture vs mesh hook) agree per-name."""
+    cb = _load_collect_bridge()
+    # pose-capture pass over get_all_actors order (incl. infra, unique names).
+    pose_counts = {}
+    pose_keys = [cb._disambiguate(n, pose_counts) for n in ["ground", "table", "001_bottle", "001_bottle"]]
+    # mesh-hook pass over create order (only the two mesh objects).
+    hook_counts = {}
+    hook_keys = [cb._disambiguate(n, hook_counts) for n in ["001_bottle", "001_bottle"]]
+    # the bottle keys line up across both passes despite different surrounding actors.
+    assert pose_keys[2:] == hook_keys == ["001_bottle", "001_bottle#1"]
+
+
+@pytest.mark.general
 def test_out_of_range_modelid_matches_by_name(tmp_path):
     """RoboTwin's fallback: if modelid >= len, match a dir whose name == modelid."""
     cb = _load_collect_bridge()

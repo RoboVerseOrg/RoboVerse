@@ -71,8 +71,13 @@ _URDF_TMPL = """<?xml version="1.0"?>
 
 
 def _safe(name: str) -> str:
-    """RoboVerse object name from a RoboTwin actor name (no leading digit)."""
-    return "obj_" + name.replace("-", "_")
+    """RoboVerse object name from a RoboTwin actor name (no leading digit).
+
+    The bridge disambiguates duplicate-named objects as ``name#1`` etc.; map the
+    ``#`` (and ``-``) to ``_`` so the result is a valid cfg/file name while staying
+    unique per instance (e.g. two 001_bottle -> obj_001_bottle, obj_001_bottle_1).
+    """
+    return "obj_" + name.replace("-", "_").replace("#", "_")
 
 
 def _glb_to_urdf(visual_abs: str, scale, out_dir: str, name: str) -> str:

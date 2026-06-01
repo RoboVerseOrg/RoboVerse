@@ -84,15 +84,19 @@ def _patch_capture_real_state(env) -> None:
             poses = {}
             qpos = {}
             jnames = {}
+            counts: dict = {}  # disambiguate duplicate actor names (e.g. two 001_bottle)
             for actor in scene.get_all_actors():
                 p = actor.get_pose()
-                poses[actor.get_name()] = np.asarray([*p.p, *p.q], dtype=float)  # [x,y,z, qw,qx,qy,qz]
+                key = _disambiguate(actor.get_name(), counts)
+                poses[key] = np.asarray([*p.p, *p.q], dtype=float)  # [x,y,z, qw,qx,qy,qz]
             for art in scene.get_all_articulations():
                 name = art.get_name()
                 if name in robot_arts:
                     continue
+                key = _disambiguate(name, counts)
                 p = art.get_root_pose() if hasattr(art, "get_root_pose") else art.get_pose()
-                poses[name] = np.asarray([*p.p, *p.q], dtype=float)
+                poses[key] = np.asarray([*p.p, *p.q], dtype=float)
+                name = key  # keep qpos/jnames keyed consistently with poses
                 # Articulation joint qpos (+ names for ordering) -> replay opening
                 # doors/lids/drawers 1:1.
                 try:
@@ -114,6 +118,21 @@ def _patch_capture_real_state(env) -> None:
 
 # Infrastructure actors (not manipulated targets) we never need a mesh for.
 _INFRA_ACTORS = {"ground", "wall", "table", "table_wall"}
+
+
+def _disambiguate(name: str, counts: dict) -> str:
+    """Unique key for ``name``, suffixing duplicates as ``name#1``, ``name#2``, ...
+
+    RoboTwin tasks may create several actors with the SAME name (e.g.
+    pick_dual_bottles makes two ``001_bottle``); keying captured poses/meshes by raw
+    name silently drops all but one ("missing object"). Counting by occurrence order
+    keeps every instance, and because SAPIEN preserves actor creation order, the k-th
+    same-named actor in ``get_all_actors()`` lines up with the k-th create_actor call
+    the mesh hook saw -> pose and mesh disambiguation agree.
+    """
+    n = counts.get(name, 0)
+    counts[name] = n + 1
+    return name if n == 0 else f"{name}#{n}"
 
 
 def resolve_urdf_instance_dir(objects_root: str, modelname: str, modelid):
@@ -171,6 +190,13 @@ def _install_mesh_hook(pt) -> dict:
     if rt not in _sys.path:
         _sys.path.insert(0, rt)
     sink: dict = {}
+    # Per-instance capture so duplicate-named objects (two 001_bottle, three blocks,
+    # two 002_bowl) are each kept under disambiguated keys (name, name#1, ...) that
+    # line up with the disambiguated per-frame poses. ``_pending`` buffers the mesh a
+    # create_actor resolves (collision then visual fire before the actor commits);
+    # ``counts`` is the shared occurrence counter matching the pose-capture order.
+    _pending: dict = {}
+    counts: dict = {}
     try:
         # ``envs.utils`` re-exports ``create_actor`` (the function), shadowing the
         # submodule attribute, so ``import envs.utils.create_actor as cau`` binds
@@ -200,13 +226,24 @@ def _install_mesh_hook(pt) -> dict:
             # (render) mesh for a faithful replay, but keep whatever we got otherwise.
             rel = _os.path.relpath(str(f), rt)
             is_visual = f"{_os.sep}visual{_os.sep}" in str(f)
-            if name not in sink or is_visual:
-                sink[name] = {"visual": rel, "scale": scale, "model_id": model_id}
+            # Buffer this actor's mesh in _pending; the create_actor/rand_create_actor
+            # wrapper commits it to a disambiguated sink key when the actor is built.
+            if name not in _pending or is_visual:
+                _pending[name] = {"visual": rel, "scale": scale, "model_id": model_id, "type": "mesh"}
         except Exception:
             pass
         return f
 
     cau.get_glb_or_obj_file = hooked
+
+    def _commit_actor(modelname, is_static):
+        # Move the buffered mesh for this actor to a unique sink key, in creation
+        # order, so the k-th same-named actor lines up with the k-th captured mesh.
+        mesh = _pending.pop(modelname, None)
+        if mesh is None:
+            return
+        mesh["is_static"] = bool(is_static)
+        sink[_disambiguate(modelname, counts)] = mesh
 
     # Also capture create_box primitives (target markers / blocks) so the replay
     # uses their real half-size + color instead of a generic red proxy cube.
@@ -217,7 +254,7 @@ def _install_mesh_hook(pt) -> dict:
             try:
                 if name:
                     hs = [float(x) for x in half_size] if hasattr(half_size, "__iter__") else [float(half_size)] * 3
-                    sink[name] = {
+                    sink[_disambiguate(name, counts)] = {
                         "type": "box",
                         "half_size": hs,
                         "color": [float(c) for c in color] if color is not None else None,
@@ -247,8 +284,7 @@ def _install_mesh_hook(pt) -> dict:
             r = orig_ca(scene, pose, modelname, *a, **k)
             try:
                 is_static = k.get("is_static", a[2] if len(a) >= 3 else False)
-                if modelname in sink:
-                    sink[modelname]["is_static"] = bool(is_static)
+                _commit_actor(modelname, is_static)
             except Exception:
                 pass
             return r
@@ -257,6 +293,29 @@ def _install_mesh_hook(pt) -> dict:
         eu = _sys.modules.get("envs.utils")
         if eu is not None and hasattr(eu, "create_actor"):
             eu.create_actor = hooked_ca
+
+    # rand_create_actor(modelname, ...) calls create_actor via its OWN binding (so the
+    # cau.create_actor hook above is bypassed for it) -- wrap it so the per-instance
+    # commit still fires for the many tasks that randomly place mesh objects.
+    try:
+        rca = importlib.import_module("envs.utils.rand_create_actor")
+    except Exception:
+        rca = None
+    if rca is not None and hasattr(rca, "rand_create_actor"):
+        orig_rca = rca.rand_create_actor
+
+        def hooked_rca(scene, modelname, *a, **k):
+            r = orig_rca(scene, modelname, *a, **k)
+            try:
+                _commit_actor(modelname, k.get("is_static", False))
+            except Exception:
+                pass
+            return r
+
+        rca.rand_create_actor = hooked_rca
+        eu = _sys.modules.get("envs.utils")
+        if eu is not None and hasattr(eu, "rand_create_actor"):
+            eu.rand_create_actor = hooked_rca
 
     # Capture URDF/articulation objects (pot/cabinet/laptop/microwave/...) at their
     # EXACT instance + scale. These load via create_sapien_urdf_obj, NOT through the
@@ -276,7 +335,7 @@ def _install_mesh_hook(pt) -> dict:
             jf = _os.path.join(modeldir, "model_data.json")
             if _os.path.exists(jf):
                 eff_scale = _json.load(open(jf)).get("scale", scale)
-            sink[modelname] = {
+            sink[_disambiguate(modelname, counts)] = {
                 "urdf": _os.path.join(modeldir, "mobility.urdf"),
                 "scale": eff_scale,
                 "modelid": modelid,
@@ -288,11 +347,7 @@ def _install_mesh_hook(pt) -> dict:
     # Tasks call ``rand_create_sapien_urdf_obj(modelname, modelid, ...)`` (which
     # internally calls create_sapien_urdf_obj via rand_create_actor's OWN binding,
     # so patching create_actor alone is bypassed). Wrap the rand entry point in its
-    # module + the envs.utils re-export.
-    try:
-        rca = importlib.import_module("envs.utils.rand_create_actor")
-    except Exception:
-        rca = None
+    # module + the envs.utils re-export (rca imported above for rand_create_actor).
     if rca is not None and hasattr(rca, "rand_create_sapien_urdf_obj"):
         orig_rurdf = rca.rand_create_sapien_urdf_obj
 
@@ -336,10 +391,12 @@ def _capture_objects(env) -> dict:
         actors = list(env.scene.get_all_actors())
     except Exception:
         actors = []
+    counts: dict = {}  # disambiguate duplicate names, matching the per-frame capture
     for actor in actors:
         try:
             pose = actor.get_pose()
-            objs[actor.get_name()] = {"pos": list(map(float, pose.p)), "rot": list(map(float, pose.q))}
+            key = _disambiguate(actor.get_name(), counts)
+            objs[key] = {"pos": list(map(float, pose.p)), "rot": list(map(float, pose.q))}
         except Exception:
             continue
     try:
@@ -351,7 +408,7 @@ def _capture_objects(env) -> dict:
             if art.get_name() in robot_arts:
                 continue
             pose = art.get_root_pose() if hasattr(art, "get_root_pose") else art.get_pose()
-            objs[art.get_name()] = {
+            objs[_disambiguate(art.get_name(), counts)] = {
                 "pos": list(map(float, pose.p)),
                 "rot": list(map(float, pose.q)),
                 "articulation": True,
