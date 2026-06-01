@@ -150,6 +150,7 @@ Scenes <dataset_benchmark/dataset/scenes>
 Benchmark Overview <dataset_benchmark/benchmark/overview>
 Benchmark Results <dataset_benchmark/benchmark/results>
 Benchmark Usage <dataset_benchmark/benchmark/usage>
+LIBERO + LIBERO-plus Integration <dataset_benchmark/integrations/libero>
 ManiSkill Integration <dataset_benchmark/integrations/maniskill>
 mjlab Integration <dataset_benchmark/integrations/mjlab>
 RoboTwin Integration <dataset_benchmark/integrations/robotwin>
