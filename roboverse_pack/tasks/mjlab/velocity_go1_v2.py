@@ -193,10 +193,37 @@ def reset_go1_default_pose(
     base_height: float = 0.278,  # mjlab INIT_STATE pelvis z (go1_constants.py)
     joint_noise: float = 0.05,
 ) -> None:
-    """Drop the robot at a quadruped-friendly stance with small joint noise."""
+    """Drop the robot at a quadruped-friendly stance with small joint noise.
+
+    Newton path: apply mjlab's per-env reset randomization (``reset_base`` +
+    ``reset_robot_joints`` from velocity_env_cfg) via ``handler.set_states`` so
+    the 4096 parallel envs do NOT all start in the identical default state.
+    The mjlab ground-truth ranges (velocity_env_cfg.events, NOT overridden by
+    the go1 config) are: base pose x/y=±0.5, z offset (0.01,0.05), yaw=±π;
+    base velocity = {} (zero); joint pos/vel offset = (0,0). The full yaw
+    spread is the dominant exploration driver. The MuJoCo branch below is
+    unchanged (single-env scene-MJCF path).
+    """
     if not hasattr(env.handler, "physics"):
-        # Newton path: rely on handler default init state. Match-bit per-env
-        # randomization needs batched qpos write — deferred.
+        from .mdp.events import reset_robot_to_default_newton
+
+        reset_robot_to_default_newton(
+            env,
+            env_ids,
+            asset_cfg=_GO1_JOINTS,
+            default_pose=_GO1_DEFAULT_POSE,
+            base_height=base_height,
+            # mjlab velocity_env_cfg reset_base pose_range (go1 cfg does not override).
+            pose_range={
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "z": (0.01, 0.05),
+                "yaw": (-3.14, 3.14),
+            },
+            base_velocity_range={},  # mjlab reset_base velocity_range = {} (zero).
+            joint_position_range=(0.0, 0.0),  # mjlab reset_robot_joints position_range.
+            joint_velocity_range=(0.0, 0.0),  # mjlab reset_robot_joints velocity_range.
+        )
         return
     physics = env.handler.physics
     rng = np.random.default_rng()

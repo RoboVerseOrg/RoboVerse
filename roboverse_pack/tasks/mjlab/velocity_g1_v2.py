@@ -175,9 +175,35 @@ def reset_g1_default_pose(
     base_height: float = 0.76,  # mjlab KNEES_BENT_KEYFRAME pelvis z
     joint_noise: float = 0.05,
 ) -> None:
-    """Drop the G1 in a near-default standing pose."""
+    """Drop the G1 in a near-default standing pose.
+
+    Newton path: apply mjlab's per-env reset randomization (``reset_base`` +
+    ``reset_robot_joints`` from velocity_env_cfg, NOT overridden by the g1 config)
+    via ``handler.set_states`` so the parallel envs do not all start identical.
+    mjlab ranges: base pose x/y=±0.5, z offset (0.01,0.05), yaw=±π; base velocity
+    = {} (zero); joint pos/vel offset = (0,0). The MuJoCo branch below is
+    unchanged (single-env scene-MJCF path).
+    """
     if not hasattr(env.handler, "physics"):
-        return  # Newton path: handler default init state
+        from .mdp.events import reset_robot_to_default_newton
+
+        reset_robot_to_default_newton(
+            env,
+            env_ids,
+            asset_cfg=_G1_JOINTS,
+            default_pose=torch.from_numpy(_G1_DEFAULT_POSE_NP.astype(np.float32)),
+            base_height=base_height,
+            pose_range={
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "z": (0.01, 0.05),
+                "yaw": (-3.14, 3.14),
+            },
+            base_velocity_range={},
+            joint_position_range=(0.0, 0.0),
+            joint_velocity_range=(0.0, 0.0),
+        )
+        return
     physics = env.handler.physics
     rng = np.random.default_rng()
     with physics.reset_context():
