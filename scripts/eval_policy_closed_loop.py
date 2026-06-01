@@ -262,7 +262,15 @@ def run_mjlab(robot: str, ckpt: str, steps: int, cmd: tuple[float, float, float]
             cmd_mgr.time_left[:] = 1e9
 
     sd = base.sim.data
-    z_log, vx_log = [float(sd.qpos[0, 2].item())], [float(sd.qvel[0, 0].item())]
+    robot = base.scene["robot"]
+
+    def _body_vx() -> float:
+        # BODY-frame forward velocity (matches the RoboVerse side, which logs
+        # root_link_lin_vel_b). Logging world-frame qvel[0] here would be a
+        # frame mismatch — if the gait drifts in heading, world-x << body-x.
+        return float(robot.data.root_link_lin_vel_b[0, 0].item())
+
+    z_log, vx_log = [float(sd.qpos[0, 2].item())], [_body_vx()]
     obs = env.get_observations()
     pin()
     for _ in range(steps):
@@ -272,7 +280,7 @@ def run_mjlab(robot: str, ckpt: str, steps: int, cmd: tuple[float, float, float]
         obs = env.step(actions)[0]
         pin()
         z_log.append(float(sd.qpos[0, 2].item()))
-        vx_log.append(float(sd.qvel[0, 0].item()))
+        vx_log.append(_body_vx())
     env.close()
     return np.array(z_log), np.array(vx_log)
 
