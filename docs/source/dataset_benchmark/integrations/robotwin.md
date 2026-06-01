@@ -15,6 +15,26 @@ SAPIEN API.
   directly comparable success rate. See [Policy reproduction](#policy-reproduction-same-experience-as-robotwin).
   The data path runs through the *unmodified* `data2zarr_dp.py`; the eval rolls
   the policy through RoboTwin's own `take_action` interface.
+- **Object fidelity is exact, suite-wide**: the bridge records each manipulated
+  object's *real* RoboTwin asset so the replay loads the same mesh/URDF — and it
+  gets the exact instance, not just the category. For mesh objects it captures the
+  `model_id`; for URDF objects (pot/cabinet/laptop/microwave) it hooks
+  `rand_create_sapien_urdf_obj` to record the precise instance directory (RoboTwin
+  picks a random `modelid` per episode, *excluding* the `visual/` dir) plus the
+  `model_data.json` scale. Objects created multiple times under the same name
+  (e.g. two `001_bottle`, three blocks, three bottles in `put_bottles_dustbin`) are
+  disambiguated per-instance by creation order, so every object is kept — a
+  name-keyed capture silently dropped all but one. A full re-collection found
+  **13 of 50 tasks** create same-named duplicates; all now replay every object.
+- **Rendering is 1:1 in geometry, with a documented engine residual**: the
+  side-by-side (`sidebyside.py`) puts the native RoboTwin render next to the
+  RoboVerse replay from an identical camera and the same bridge trajectory. Robot
+  pose, object instances/positions/motion, table, and ground match frame-for-frame.
+  Both render ray-traced with matched settings (32 samples, path depth 8); the only
+  residual is a background colour tint, because the two SAPIEN builds
+  (RoboTwin's 3.0.0b1 vs MetaSim's) use different *default* RT environment maps and
+  neither sets one explicitly. This is an engine-build difference, not a
+  reproduction error.
 - **All 50 tasks collect successfully (breadth)**: a full sweep
   (`tools/robotwin_integration/coverage_sweep.py`) ran every registered
   RoboTwin task through the native code path + data bridge — **50/50**
@@ -95,7 +115,16 @@ expert demos, train an imitation policy, evaluate it closed-loop — using
 RoboVerse's own imitation-learning stack (`roboverse_learn/il`), the same
 three-step `collect → train → eval` flow a RoboTwin user runs. The trained
 policy is evaluated **closed-loop in the native RoboTwin environment** (via the
-passthrough), so its success rate is directly comparable to RoboTwin's expert.
+passthrough), so its success rate is directly comparable to RoboTwin's own
+learned-policy baseline (not the ~100% scripted expert planner).
+
+A worked result on `beat_block_hammer`: a Diffusion Policy trained on **100**
+RoboTwin demos with RoboTwin-matched hyperparameters (`n_action_steps=6`) reaches
+**9/20 = 45%** closed-loop under RoboTwin's own 400-step budget — successful
+episodes trigger `check_success` early, so the policy is genuinely completing the
+task, not replaying. (A 40-demo / 300-epoch run overfits to 15%; the data volume
+and matched hyperparameters are what close the gap.) The policy is stochastic
+(DDPM sampling), so the rate has run-to-run variance.
 
 ```bash
 # 1. COLLECT — expert demos with head-camera RGB (robotwin env).
