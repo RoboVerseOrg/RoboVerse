@@ -153,6 +153,33 @@ def test_quat_from_euler_xyz_90deg():
 
 
 @pytest.mark.general
+def test_euler_xyz_from_quat_returns_signed_angles():
+    """Regression test: euler_xyz_from_quat must return signed angles in [-π, π].
+
+    Older revisions of this function applied ``% (2 * π)`` to roll/pitch/yaw,
+    which folded the negative half into [π, 2π). That broke any code
+    thresholding ``|angle| < tol`` because a tiny negative angle showed up
+    as ``~2π``. Two call sites (checkers.py, humanoid_robot_util.py)
+    carried manual ``> π → -2π`` fix-ups that are now no-ops.
+    """
+    import math
+
+    # quaternion for small negative yaw (~-0.1 rad)
+    yaw_in = -0.1
+    quat = torch.tensor([[math.cos(yaw_in / 2), 0.0, 0.0, math.sin(yaw_in / 2)]])
+    _, _, yaw_out = euler_xyz_from_quat(quat)
+    assert -math.pi <= yaw_out.item() <= math.pi
+    assert abs(yaw_out.item() - yaw_in) < 1e-4
+
+    # quaternion for small negative pitch (~-0.1 rad)
+    pitch_in = -0.1
+    quat = torch.tensor([[math.cos(pitch_in / 2), 0.0, math.sin(pitch_in / 2), 0.0]])
+    _, pitch_out, _ = euler_xyz_from_quat(quat)
+    assert -math.pi / 2 <= pitch_out.item() <= math.pi / 2
+    assert abs(pitch_out.item() - pitch_in) < 1e-4
+
+
+@pytest.mark.general
 def test_euler_xyz_from_quat_roundtrip():
     """Test that Euler->Quat->Euler roundtrips correctly."""
     # Test with angles in safe range (avoiding gimbal lock)
@@ -163,15 +190,12 @@ def test_euler_xyz_from_quat_roundtrip():
     quat = quat_from_euler_xyz(roll_in, pitch_in, yaw_in)
     roll_out, pitch_out, yaw_out = euler_xyz_from_quat(quat)
 
-    # Note: euler_xyz_from_quat returns angles in [0, 2π), so we need to wrap
-    # the input angles to the same range for comparison
-    roll_in_wrapped = roll_in % (2 * math.pi)
-    pitch_in_wrapped = pitch_in % (2 * math.pi)
-    yaw_in_wrapped = yaw_in % (2 * math.pi)
-
-    assert torch.allclose(roll_out, roll_in_wrapped, atol=1e-3)
-    assert torch.allclose(pitch_out, pitch_in_wrapped, atol=1e-3)
-    assert torch.allclose(yaw_out, yaw_in_wrapped, atol=1e-3)
+    # euler_xyz_from_quat returns signed angles: roll/yaw ∈ [-π, π] (atan2),
+    # pitch ∈ [-π/2, π/2] (asin). Inputs above are already in those ranges,
+    # so a direct allclose is what we want — no `% 2π` wrap needed.
+    assert torch.allclose(roll_out, roll_in, atol=1e-3)
+    assert torch.allclose(pitch_out, pitch_in, atol=1e-3)
+    assert torch.allclose(yaw_out, yaw_in, atol=1e-3)
 
 
 @pytest.mark.general

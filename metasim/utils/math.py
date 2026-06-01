@@ -445,7 +445,13 @@ def euler_xyz_from_quat(quat: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor,
     cos_yaw = 1 - 2 * (q_y * q_y + q_z * q_z)
     yaw = torch.atan2(sin_yaw, cos_yaw)
 
-    return roll % (2 * torch.pi), pitch % (2 * torch.pi), yaw % (2 * torch.pi)  # TODO: why not wrap_to_pi here ?
+    # Roll/yaw come from atan2 ∈ [-π, π]; pitch from asin ∈ [-π/2, π/2] — all
+    # already signed and bounded. Older revisions of this function applied
+    # `% (2 * π)` here, which folded the negative half into [π, 2π) and broke
+    # any code thresholding |angle| against a small value (e.g.
+    # ``checkers.py`` and ``humanoid_robot_util.py`` had to manually
+    # subtract 2π after calling — that fix-up is now a no-op).
+    return roll, pitch, yaw
 
 
 @torch.jit.script
