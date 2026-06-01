@@ -48,7 +48,13 @@ from loguru import logger as log
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.cameras import PinholeCameraCfg
-from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, RigidObjCfg
+from metasim.scenario.objects import (
+    ArticulationObjCfg,
+    PrimitiveCubeCfg,
+    PrimitiveCylinderCfg,
+    PrimitiveSphereCfg,
+    RigidObjCfg,
+)
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.utils.demo_util import get_traj
@@ -233,6 +239,18 @@ def _replay_one(bridge: dict, args) -> dict:
                     name=rv, size=tuple(2 * float(h) for h in hs), color=[float(c) for c in col[:3]], physics=phys
                 )
             )
+        elif mesh and mesh.get("type") == "sphere":
+            # create_sphere primitive (e.g. dump_bin_bigbin's garbage balls).
+            col = mesh.get("color") or [0.5, 0.5, 0.5]
+            objects.append(
+                PrimitiveSphereCfg(name=rv, radius=float(mesh.get("radius", 0.02)), color=[float(c) for c in col[:3]], physics=phys)
+            )  # fmt: skip
+        elif mesh and mesh.get("type") == "cylinder":
+            # create_cylinder primitive.
+            col = mesh.get("color") or [0.5, 0.5, 0.5]
+            objects.append(
+                PrimitiveCylinderCfg(name=rv, radius=float(mesh.get("radius", 0.02)), height=float(mesh.get("height", 0.04)), color=[float(c) for c in col[:3]], physics=phys)
+            )  # fmt: skip
         else:
             objects.append(PrimitiveCubeCfg(name=rv, size=(0.05, 0.05, 0.05), color=[0.8, 0.2, 0.2], physics=phys))
     # Static scene proxies matching RoboTwin's create_table_and_wall EXACTLY so the

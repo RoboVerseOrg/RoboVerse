@@ -273,6 +273,64 @@ def _install_mesh_hook(pt) -> dict:
         if eu is not None and hasattr(eu, "create_box"):
             eu.create_box = hooked_box
 
+    # Capture the OTHER primitive creators too -- create_sphere (dump_bin garbage),
+    # create_cylinder, create_visual_box (stamp_seal). Without these the objects have
+    # a recorded pose but no shape, so the replay drops them = "missing objects".
+    def _patch(fnname, record):
+        if not hasattr(cau, fnname):
+            return
+        orig = getattr(cau, fnname)
+
+        def wrapped(scene, pose, *a, **k):
+            try:
+                name = k.get("name", "")
+                if name:
+                    sink[_disambiguate(name, counts)] = record(a, k)
+            except Exception:
+                pass
+            return orig(scene, pose, *a, **k)
+
+        setattr(cau, fnname, wrapped)
+        eu = _sys.modules.get("envs.utils")
+        if eu is not None and hasattr(eu, fnname):
+            setattr(eu, fnname, wrapped)
+
+    def _sphere_rec(a, k):
+        radius = k.get("radius", a[0] if a else 0.02)
+        color = k.get("color", a[1] if len(a) >= 2 else None)
+        return {
+            "type": "sphere",
+            "radius": float(radius),
+            "color": [float(c) for c in color] if color is not None else None,
+            "is_static": bool(k.get("is_static", False)),
+        }
+
+    def _cylinder_rec(a, k):
+        radius = k.get("radius", a[0] if a else 0.02)
+        half_length = k.get("half_length", a[1] if len(a) >= 2 else 0.02)
+        color = k.get("color", a[2] if len(a) >= 3 else None)
+        return {
+            "type": "cylinder",
+            "radius": float(radius),
+            "height": float(half_length) * 2.0,
+            "color": [float(c) for c in color] if color is not None else None,
+        }
+
+    def _vbox_rec(a, k):
+        hs = k.get("half_size", a[0] if a else [0.02, 0.02, 0.02])
+        color = k.get("color", a[1] if len(a) >= 2 else None)
+        hs = [float(x) for x in hs] if hasattr(hs, "__iter__") else [float(hs)] * 3
+        return {
+            "type": "box",
+            "half_size": hs,
+            "color": [float(c) for c in color] if color is not None else None,
+            "is_static": True,
+        }
+
+    _patch("create_sphere", _sphere_rec)
+    _patch("create_cylinder", _cylinder_rec)
+    _patch("create_visual_box", _vbox_rec)
+
     # Capture create_actor's is_static flag (e.g. baskets/scales loaded static) so
     # the replay can match RoboTwin's static/dynamic choice exactly rather than
     # inferring it from whether the object moved. create_actor signature:
