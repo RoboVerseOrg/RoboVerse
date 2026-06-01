@@ -96,6 +96,123 @@ def _handler_for(xml: str):
     return h
 
 
+def render_state_replay_with_success(env_name: str, states: np.ndarray, out_path: str, camera: str = "frontview"):
+    """Render a demo's state-replay on both stacks with an objective per-frame
+    success flag (robosuite's own ``_check_success`` evaluated at each state).
+
+    Left = robosuite (rendered from its sim), right = MetaSim handler. The green
+    "TASK COMPLETE" banner appears the moment the task succeeds — so the video
+    proves completion, not just motion.
+    """
+    from .inventory import get
+    from .render import side_by_side
+    from .robosuite_rollout import make_robosuite_env
+
+    env = make_robosuite_env(get(env_name), render=True, camera=camera)
+    env.reset()
+    rm = env.sim.model._model
+    nq = rm.nq
+    xml = env.model.get_xml()
+    handler = _handler_for(xml)
+    hm, hd = handler.physics.model.ptr, handler.physics.data.ptr
+    hrenderer = mujoco.Renderer(hm, height=480, width=480)
+    hcam = camera if any(
+        mujoco.mj_id2name(hm, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(hm.ncam)
+    ) else 0
+    # show visual meshes (group 1/2), hide collision geoms (group 0) so the
+    # handler render matches robosuite's visual appearance — same qpos, same look.
+    scene_opt = mujoco.MjvOption()
+    scene_opt.geomgroup[0] = 0
+    for g in range(1, 6):
+        scene_opt.geomgroup[g] = 1
+    for g in range(6):
+        scene_opt.sitegroup[g] = 0
+
+    ref_frames, ms_frames, success_flags = [], [], []
+    for s in states:
+        env.sim.set_state_from_flattened(s)
+        env.sim.forward()
+        ref_frames.append(env.sim.render(camera_name=camera, width=480, height=480)[::-1])
+        succ = bool(env._check_success())
+        success_flags.append(succ)
+        hd.qpos[:] = s[1 : 1 + nq]
+        hd.qvel[:] = s[1 + nq :]
+        mujoco.mj_forward(hm, hd)
+        hrenderer.update_scene(hd, camera=hcam, scene_option=scene_opt)
+        ms_frames.append(hrenderer.render().copy())
+    hrenderer.close()
+    env.close()
+    side_by_side(
+        ref_frames,
+        ms_frames,
+        out_path,
+        label_a="robosuite benchmark demo",
+        label_b="MetaSim MujocoHandler (1:1)",
+        status=success_flags,
+    )
+    return success_flags
+
+
+def render_qpos_replay_with_success(
+    env_name: str,
+    xml: str,
+    ref_qpos: np.ndarray,
+    ms_qpos: np.ndarray,
+    out_path: str,
+    *,
+    body_pos=None,
+    body_quat=None,
+    camera: str = "agentview",
+):
+    """Render two qpos sequences (robosuite-side, handler-side) with visual meshes
+    and an objective per-frame success banner. Used for action-replay videos."""
+    from .inventory import get
+    from .render import side_by_side
+    from .robosuite_rollout import make_robosuite_env
+
+    env = make_robosuite_env(get(env_name), render=True, camera=camera)
+    env.reset()
+    nq = env.sim.model._model.nq
+    handler = _handler_for(xml)
+    hm, hd = handler.physics.model.ptr, handler.physics.data.ptr
+    if body_pos is not None:
+        hm.body_pos[:] = body_pos
+        hm.body_quat[:] = body_quat
+    hr = mujoco.Renderer(hm, height=480, width=480)
+    hcam = camera if any(
+        mujoco.mj_id2name(hm, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(hm.ncam)
+    ) else 0
+    opt = mujoco.MjvOption()
+    opt.geomgroup[0] = 0
+    for g in range(1, 6):
+        opt.geomgroup[g] = 1
+    for g in range(6):
+        opt.sitegroup[g] = 0
+
+    ref_frames, ms_frames, flags = [], [], []
+    for rq, mq in zip(ref_qpos, ms_qpos):
+        env.sim.data.qpos[:nq] = rq[:nq]
+        env.sim.data.qvel[:] = 0
+        env.sim.forward()
+        ref_frames.append(env.sim.render(camera_name=camera, width=480, height=480)[::-1])
+        flags.append(bool(env._check_success()))
+        hd.qpos[:nq] = mq[:nq]
+        hd.qvel[:] = 0
+        mujoco.mj_forward(hm, hd)
+        hr.update_scene(hd, camera=hcam, scene_option=opt)
+        ms_frames.append(hr.render().copy())
+    hr.close()
+    env.close()
+    side_by_side(
+        ref_frames,
+        ms_frames,
+        out_path,
+        label_a="robosuite follows benchmark actions",
+        label_b="MetaSim handler (1:1)",
+        status=flags,
+    )
+
+
 def _handler_state_frames(xml: str, qpos_seq: np.ndarray, camera: str = "agentview") -> list:
     """Render a qpos sequence using MetaSim's handler-loaded model (not raw mujoco)."""
     handler = _handler_for(xml)
@@ -257,35 +374,20 @@ def main() -> None:
         per_demo.append(rec)
 
         if rendered < args.render:
-            from .render import render_qpos_sequence, side_by_side
-
-            raw = mujoco.MjModel.from_xml_string(xml)
-            nq = raw.nq
-            demo_qpos = states[:, 1 : 1 + nq]
-            mdl_state = mujoco.MjModel.from_xml_string(xml)
-            # render the demo on raw-mujoco (robosuite's model) and on the handler,
-            # both set to the recorded states -> identical real-task motion.
-            ms_frames = _handler_state_frames(xml, demo_qpos)
-            ref_frames = render_qpos_sequence(mdl_state, demo_qpos, camera="agentview")
-            side_by_side(
-                ref_frames,
-                ms_frames,
-                str(args.out / f"{dm}_state_replay.mp4"),
-                label_a="robosuite benchmark demo",
-                label_b="MetaSim MujocoHandler (1:1)",
-            )
+            # state-replay: visual-mesh render of both stacks + objective per-frame
+            # success banner (the demo is a successful human trajectory).
+            render_state_replay_with_success(args.env_name, states, str(args.out / f"{dm}_state_replay.mp4"))
             if ar is not None:
-                mdl_a = mujoco.MjModel.from_xml_string(ar["_xml"])
-                mdl_b = mujoco.MjModel.from_xml_string(ar["_xml"])
-                for m in (mdl_a, mdl_b):
-                    m.body_pos[:] = ar["_body_pos"]
-                    m.body_quat[:] = ar["_body_quat"]
-                side_by_side(
-                    render_qpos_sequence(mdl_a, ar["_ref_qpos"], camera="agentview"),
-                    render_qpos_sequence(mdl_b, ar["_ms_qpos"], camera="agentview"),
+                # action-replay: arm follows the recorded benchmark actions; same
+                # visual + success banner; left robosuite, right MetaSim handler.
+                render_qpos_replay_with_success(
+                    args.env_name,
+                    ar["_xml"],
+                    ar["_ref_qpos"],
+                    ar["_ms_qpos"],
                     str(args.out / f"{dm}_action_replay.mp4"),
-                    label_a="robosuite follows benchmark actions",
-                    label_b="MetaSim handler (1:1)",
+                    body_pos=ar["_body_pos"],
+                    body_quat=ar["_body_quat"],
                 )
             rendered += 1
 
