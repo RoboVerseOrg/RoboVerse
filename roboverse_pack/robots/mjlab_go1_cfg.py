@@ -63,11 +63,19 @@ class MjlabGo1Cfg(RobotCfg):
     enabled_gravity: bool = True
     enabled_self_collisions: bool = True
 
+    # EXACT mjlab compiled actuator spec (from _mjlab_actuator_spec.json, dumped
+    # from mjlab's compiled go1 MjModel). The Newton backend applies stiffness→
+    # joint_target_ke, damping→joint_target_kd, ARMATURE→joint_armature,
+    # effort_limit_sim→joint_effort_limit. The armature was previously unset on
+    # the RobotCfg → Newton ran without mjlab's reflected inertia, so a trained
+    # walker collapsed on the Newton path (and training learned a degenerate
+    # gait). hip/thigh use the 5020-class actuator, calf the 7520_14-class.
     actuators: dict[str, BaseActuatorCfg] = {
         name: BaseActuatorCfg(
-            stiffness=15.9 if "calf" not in name else 35.8,
-            damping=1.0 if "calf" not in name else 2.3,
-            effort_limit_sim=23.7 if "calf" not in name else 35.55,
+            stiffness=35.7643 if "calf" in name else 15.8952,
+            damping=2.2768 if "calf" in name else 1.0119,
+            armature=0.00906 if "calf" in name else 0.00403,
+            effort_limit_sim=35.55 if "calf" in name else 23.7,
             velocity_limit=20.0,
         )
         for name in _GO1_JOINTS
