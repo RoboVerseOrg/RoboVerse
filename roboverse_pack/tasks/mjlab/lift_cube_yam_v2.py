@@ -459,12 +459,22 @@ class _YamTaskBase(ManagerBasedRVEnv):
         """PD joint-position target. Sim-aware mujoco vs newton."""
         if not hasattr(self.handler, "physics"):
             clipped = torch.clamp(processed_action, -3.0, 3.0)
-            # Newton yam loads with 8 joints (6 arm + 2 gripper); pad 0 for gripper.
-            joint_pos = self.handler.get_states(mode="tensor").robots["yam"].joint_pos
-            full_width = joint_pos.shape[-1]
+            target = self._ACTION_SCALE * clipped  # (N, num_actions) = 7 (6 arm + gripper)
+            # Newton yam loads with 8 joints (6 arm + 2 gripper) in sorted name
+            # order; map each action channel to its joint column by name. The
+            # action layout is _YAM_ACTION_JOINT_NAMES (6 arm + left_finger); the
+            # right_finger is the equality-coupled mimic, so drive it from the
+            # same left_finger channel (polycoef "0 -1": right = -left).
+            rkey = next(iter(self.handler.get_states(mode="tensor").robots.keys()))
+            jorder = self.handler._get_joint_names(rkey, sort=True)
             n_envs = processed_action.shape[0]
-            targets = torch.zeros(n_envs, full_width, device=processed_action.device, dtype=processed_action.dtype)
-            targets[:, :6] = self._ACTION_SCALE * clipped
+            targets = torch.zeros(n_envs, len(jorder), device=processed_action.device, dtype=processed_action.dtype)
+            for a, jname in enumerate(_YAM_ACTION_JOINT_NAMES):
+                if a >= target.shape[-1] or jname not in jorder:
+                    continue
+                targets[:, jorder.index(jname)] = target[:, a]
+                if jname == "left_finger" and "right_finger" in jorder:
+                    targets[:, jorder.index("right_finger")] = -target[:, a]
             self.handler.set_dof_targets(targets)
             return
         action_np = processed_action.detach().cpu().numpy().reshape(-1)

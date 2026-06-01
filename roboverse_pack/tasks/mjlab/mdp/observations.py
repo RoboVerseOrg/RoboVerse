@@ -198,14 +198,91 @@ def motion_anchor_ori_b(env, env_states, *, command_name: str) -> torch.Tensor:
 # ---------------------------------------------------------------------------
 
 
+_SITE_OFFSET_CACHE: dict = {}
+
+
+def _newton_body_state(env, body_name: str):
+    """Return ``(pos(N,3), quat_wxyz(N,4))`` of a robot body from the TensorState.
+
+    Newton path for the YAM manipulation obs (no MuJoCo ``physics`` handle):
+    read the body's world pose from the robot ``body_state`` (sorted body
+    axis). Returns ``None`` if the body can't be found.
+    """
+    ts = env.handler.get_states(mode="tensor")
+    robots = getattr(ts, "robots", None) or {}
+    if not robots:
+        return None
+    rname = env.scenario.robots[0].name if getattr(env.scenario, "robots", None) else next(iter(robots))
+    rs = robots.get(rname) or robots.get(next(iter(robots)))
+    if rs is None or getattr(rs, "body_state", None) is None:
+        return None
+    names = rs.body_names
+    idx = next(
+        (i for i, n in enumerate(names) if n == body_name or n.split("/")[-1] == body_name or n.endswith(body_name)),
+        None,
+    )
+    if idx is None:
+        return None
+    pos = rs.body_state[:, idx, 0:3]
+    quat_wxyz = rs.body_state[:, idx, 3:7]
+    return pos, quat_wxyz
+
+
+def _site_offset_from_mjcf(env, site_name: str):
+    """Return ``(parent_body_name, pos(3,), quat_wxyz(4,))`` for an MJCF site.
+
+    Reads the site's parent body and local transform once from the robot MJCF
+    (cached per ``mjcf_path``). Returns ``None`` if unresolvable.
+    """
+    import numpy as np
+
+    robots = getattr(env.scenario, "robots", None) or []
+    mjcf_path = getattr(robots[0], "mjcf_path", None) if robots else None
+    if mjcf_path is None:
+        return None
+    key = (mjcf_path, site_name)
+    if key in _SITE_OFFSET_CACHE:
+        return _SITE_OFFSET_CACHE[key]
+    out = None
+    try:
+        import mujoco
+
+        m = mujoco.MjModel.from_xml_path(mjcf_path)
+        sid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, site_name)
+        if sid >= 0:
+            bid = int(m.site_bodyid[sid])
+            bname = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, bid)
+            pos = np.asarray(m.site_pos[sid], dtype=np.float32)
+            quat = np.asarray(m.site_quat[sid], dtype=np.float32)  # wxyz
+            out = (bname, pos, quat)
+    except Exception:
+        out = None
+    _SITE_OFFSET_CACHE[key] = out
+    return out
+
+
 def _site_pos_w(env, *, site_name: str) -> torch.Tensor:
     """World-frame position of a named MuJoCo site. Shape ``(num_envs, 3)``.
 
-    Scene-MJCF path (YAM lift_cube): the robot loads as the scene rather
-    than a registered RobotCfg entity, so read the site directly from
-    ``physics.data.site_xpos`` (mirrors ``robot.data.site_pos_w`` on the
-    mjlab side, which for the YAM ``grasp_site`` is the same world point).
+    Scene-MJCF (mujoco) path: read the site directly from
+    ``physics.data.site_xpos``. Newton path: compose the parent body's world
+    pose (from the TensorState ``body_state``) with the site's local offset
+    read from the robot MJCF — ``site_pos_w = body_pos_w + R(body_quat) ·
+    site_local_pos`` (mirrors ``robot.data.site_pos_w``).
     """
+    from ._math import quat_apply_wxyz
+
+    if not hasattr(env.handler, "physics"):
+        off = _site_offset_from_mjcf(env, site_name)
+        if off is not None:
+            bname, local_pos, _ = off
+            bs = _newton_body_state(env, bname)
+            if bs is not None:
+                body_pos, body_quat = bs
+                lp = torch.as_tensor(local_pos, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
+                return body_pos + quat_apply_wxyz(body_quat, lp)
+        return torch.zeros(env.num_envs, 3, device=env.device)
+
     import mujoco
     import numpy as np
 
@@ -217,10 +294,23 @@ def _site_pos_w(env, *, site_name: str) -> torch.Tensor:
 
 
 def _body_pos_w(env, *, body_name: str) -> torch.Tensor:
-    """World-frame position of a named MuJoCo body. Shape ``(num_envs, 3)``.
+    """World-frame position of a named MuJoCo body or scene object. Shape ``(N, 3)``.
 
-    Mirrors mjlab ``obj.data.root_link_pos_w`` for the free-floating cube.
+    Mirrors mjlab ``obj.data.root_link_pos_w`` for the free-floating cube. On
+    the Newton path the cube/table are scene *objects*: read them from the
+    TensorState ``objects`` (root_state[:, :3]); robot bodies fall back to the
+    robot ``body_state``.
     """
+    if not hasattr(env.handler, "physics"):
+        ts = env.handler.get_states(mode="tensor")
+        objs = getattr(ts, "objects", None) or {}
+        if body_name in objs:
+            return objs[body_name].root_state[:, 0:3]
+        bs = _newton_body_state(env, body_name)
+        if bs is not None:
+            return bs[0]
+        return torch.zeros(env.num_envs, 3, device=env.device)
+
     import mujoco
     import numpy as np
 
@@ -236,9 +326,17 @@ def _base_quat_xyzw(env, *, body_name: str) -> torch.Tensor:
 
     mjlab rotates the ee/cube/goal deltas into the robot base frame via
     ``quat_inv(robot.data.root_link_quat_w)``. For the fixed-base YAM the
-    base (``arm`` body) is at identity, but read it from ``data.xquat``
-    (wxyz) and convert to xyzw so this stays correct for any base pose.
+    base (``arm`` body) is at identity. Read it from MuJoCo ``data.xquat`` on
+    the mujoco path, or the robot ``body_state`` (wxyz) on Newton; convert to
+    xyzw.
     """
+    if not hasattr(env.handler, "physics"):
+        bs = _newton_body_state(env, body_name)
+        if bs is not None:
+            q_wxyz = bs[1]
+            return torch.cat([q_wxyz[:, 1:4], q_wxyz[:, 0:1]], dim=-1)
+        return torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=env.device).expand(env.num_envs, -1)
+
     import mujoco
     import numpy as np
 

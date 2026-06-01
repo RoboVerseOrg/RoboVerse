@@ -156,17 +156,79 @@ def base_ang_vel_b(env, env_states, asset_name: str) -> torch.Tensor:
     return quat_apply_inverse_xyzw(quat, ang_w)
 
 
+_IMU_OFFSET_CACHE: dict[str, torch.Tensor] = {}
+
+
+def _imu_lin_vel_site_offset(env, asset_name: str) -> torch.Tensor | None:
+    """Position of the ``imu_lin_vel`` velocimeter site in its parent body frame.
+
+    Reads the offset once from the robot's MJCF (the site referenced by the
+    ``imu_lin_vel`` velocimeter) and caches it per ``mjcf_path``. Returns a
+    ``(3,)`` tensor on ``env.device`` or ``None`` if it cannot be resolved.
+
+    mjlab's velocimeter reports the velocity of the IMU *site* expressed in the
+    site frame. Both go1/g1 IMU sites carry only a translation (no rotation),
+    so site frame == parent-body frame and the site velocity in body frame is
+    ``base_lin_vel_b + cross(base_ang_vel_b, r_imu_offset)`` — see
+    ``base_lin_vel_imu_b`` (verified bit-for-bit against the MuJoCo sensor).
+    """
+    mjcf_path = None
+    scenario = getattr(env, "scenario", None)
+    robots = getattr(scenario, "robots", None) or []
+    for r in robots:
+        if getattr(r, "name", None) == asset_name:
+            mjcf_path = getattr(r, "mjcf_path", None)
+            break
+    if mjcf_path is None and robots:
+        mjcf_path = getattr(robots[0], "mjcf_path", None)
+    if mjcf_path is None:
+        return None
+    if mjcf_path in _IMU_OFFSET_CACHE:
+        off = _IMU_OFFSET_CACHE[mjcf_path]
+        return None if off is None else off.to(env.device)
+    off = None
+    try:
+        import mujoco
+
+        m = mujoco.MjModel.from_xml_path(mjcf_path)
+        sid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SENSOR, "imu_lin_vel")
+        if sid >= 0:
+            site_id = int(m.sensor_objid[sid])
+            pos = np.asarray(m.site_pos[site_id], dtype=np.float32)
+            quat = np.asarray(m.site_quat[site_id], dtype=np.float64)  # wxyz
+            # Site frame must equal body frame for the simple cross-product
+            # formula; both go1/g1 IMU sites satisfy this (identity quat).
+            if not np.allclose(quat, [1.0, 0.0, 0.0, 0.0], atol=1e-7):
+                off = None
+            else:
+                off = torch.tensor(pos, dtype=torch.float32)
+    except Exception:
+        off = None
+    _IMU_OFFSET_CACHE[mjcf_path] = off
+    return None if off is None else off.to(env.device)
+
+
 def base_lin_vel_imu_b(env, env_states, asset_name: str) -> torch.Tensor:
     """IMU-velocimeter linear velocity for *observations*. ``(num_envs, 3)``.
 
     Prefers the robot's ``imu_lin_vel`` velocimeter sensor (mjlab obs parity:
-    velocity of the IMU site, in site frame); falls back to the body-origin
-    velocity (``base_lin_vel_b``) when no such sensor exists (e.g. Newton path).
+    velocity of the IMU site, in site frame). On the Newton path no MuJoCo
+    sensor handle exists, so reconstruct the velocimeter reading from the
+    body-origin velocity and the body-frame angular velocity:
+    ``v_imu_b = base_lin_vel_b + cross(base_ang_vel_b, r_imu_offset)``,
+    where ``r_imu_offset`` is the velocimeter site position in the parent body
+    frame (read from the MJCF). This matches the MuJoCo velocimeter to ~1e-6.
+    Falls back to the body-origin velocity only if the offset can't be read.
     """
     sensed = read_builtin_sensor(env, "imu_lin_vel")
     if sensed is not None:
         return sensed
-    return base_lin_vel_b(env, env_states, asset_name)
+    lin_b = base_lin_vel_b(env, env_states, asset_name)
+    r = _imu_lin_vel_site_offset(env, asset_name)
+    if r is None:
+        return lin_b
+    ang_b = base_ang_vel_b(env, env_states, asset_name)
+    return lin_b + torch.cross(ang_b, r.expand_as(ang_b), dim=-1)
 
 
 def base_ang_vel_imu_b(env, env_states, asset_name: str) -> torch.Tensor:

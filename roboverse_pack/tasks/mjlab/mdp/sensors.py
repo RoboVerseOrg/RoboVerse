@@ -777,14 +777,51 @@ class HeightScanSensor:
         self._heights = torch.full((N, R), float(cfg.max_distance), device=device, dtype=torch.float32)
         self._frame_pos_w = torch.zeros((N, 3), device=device, dtype=torch.float32)
 
-        # Newton path is not supported for the grid raycast (no per-env mj_ray);
-        # leave buffers at their miss defaults.
+        import mujoco
+
+        self._geomgroup = np.zeros(6, dtype=np.uint8)
+        for g in cfg.geom_groups:
+            if 0 <= g < 6:
+                self._geomgroup[g] = 1
+
+        # Newton path: the GPU sim only carries a flat ground plane (not the
+        # scene-MJCF terrain), and has no per-env ``mj_ray``. To reproduce the
+        # *mujoco-path* height_scan (which raycasts the RV scene terrain at the
+        # injected/measured root pose) we build a standalone CPU MuJoCo model
+        # from the same scene MJCF and raycast against it, driving the frame
+        # pose from the robot's root state in the TensorState. The robot's own
+        # geoms (groups 2/3) are excluded by ``geom_groups=(0,)`` so the robot's
+        # pose in this static model is irrelevant.
         self._newton = not hasattr(env.handler, "physics")
         if self._newton:
             self._body_id = -1
+            self._newton_model = None
+            self._newton_data = None
+            # On Newton the GPU sim carries a flat ground plane at z=0 (the same
+            # ground the mujoco-path MetaSim handler injects into the scene), so
+            # the raycast target is a single flat plane in geom group 0. Build a
+            # standalone CPU MuJoCo model with exactly that plane and raycast it
+            # — this reproduces the mujoco-path height_scan (uniform trunk-z over
+            # flat ground); the residual vs native mjlab's procedural rough
+            # terrain is the same structural gap the mujoco port has.
+            try:
+                m = mujoco.MjModel.from_xml_string(
+                    "<mujoco><worldbody>"
+                    '<geom name="ground" type="plane" size="0 0 1" group="0"/>'
+                    "</worldbody></mujoco>"
+                )
+                self._newton_model = m
+                self._newton_data = mujoco.MjData(m)
+            except Exception:
+                self._newton_model = None
+            # Resolve the robot key once for reading the frame pose from state.
+            self._robot_key = None
+            try:
+                ts = env.handler.get_states(mode="tensor")
+                self._robot_key = next(iter(ts.robots.keys()))
+            except Exception:
+                self._robot_key = None
             return
-
-        import mujoco
 
         physics = env.handler.physics
         mp = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
@@ -792,11 +829,6 @@ class HeightScanSensor:
         if bid < 0:
             raise ValueError(f"HeightScanSensor: frame body '{cfg.frame_body}' not found.")
         self._body_id = bid
-
-        self._geomgroup = np.zeros(6, dtype=np.uint8)
-        for g in cfg.geom_groups:
-            if 0 <= g < 6:
-                self._geomgroup[g] = 1
 
     @property
     def num_rays(self) -> int:
@@ -822,18 +854,50 @@ class HeightScanSensor:
         self._heights[ids] = float(self.cfg.max_distance)
         self._frame_pos_w[ids] = 0.0
 
-    def update(self, dt: float | None = None) -> None:
-        """Cast the yaw-aligned grid downward and cache distances / heights."""
-        if self._newton:
-            return
+    def _newton_frame_pose(self):
+        """Return ``(frame_pos(3,), frame_mat(3,3))`` of the frame body on Newton.
+
+        The grid is attached to ``cfg.frame_body`` which, for the velocity tasks,
+        is the robot root (go1 ``trunk`` / g1 ``pelvis``). Read its world pose
+        from the robot root state in the TensorState. Returns ``None`` if the
+        pose can't be resolved.
+        """
+        if self._robot_key is None:
+            return None
+        ts = self.env.handler.get_states(mode="tensor")
+        rs = ts.robots.get(self._robot_key)
+        if rs is None:
+            return None
+        root = rs.root_state[0].detach().cpu().numpy().astype(np.float64)
+        frame_pos = root[0:3]
+        # TensorState quaternion is wxyz.
         import mujoco
 
-        physics = self.env.handler.physics
-        data = physics.data
-        mp = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
+        mat9 = np.zeros(9, dtype=np.float64)
+        mujoco.mju_quat2Mat(mat9, root[3:7])
+        return frame_pos, mat9.reshape(3, 3)
 
-        frame_pos = np.asarray(data.xpos[self._body_id], dtype=np.float64)
-        frame_mat = np.asarray(data.xmat[self._body_id], dtype=np.float64).reshape(3, 3)
+    def update(self, dt: float | None = None) -> None:
+        """Cast the yaw-aligned grid downward and cache distances / heights."""
+        import mujoco
+
+        if self._newton:
+            if self._newton_model is None:
+                return
+            pose = self._newton_frame_pose()
+            if pose is None:
+                return
+            frame_pos, frame_mat = pose
+            mp = self._newton_model
+            data = self._newton_data
+            mujoco.mj_forward(mp, data)
+        else:
+            physics = self.env.handler.physics
+            data = physics.data
+            mp = physics.model.ptr if hasattr(physics.model, "ptr") else physics.model
+
+            frame_pos = np.asarray(data.xpos[self._body_id], dtype=np.float64)
+            frame_mat = np.asarray(data.xmat[self._body_id], dtype=np.float64).reshape(3, 3)
 
         if self.cfg.ray_alignment == "yaw":
             rot = _yaw_rotation_matrix(frame_mat)
@@ -853,10 +917,11 @@ class HeightScanSensor:
         dist_np = np.full(self._R, -1.0, dtype=np.float32)
         height_np = np.full(self._R, max_dist, dtype=np.float32)
         geomid_out = np.zeros(1, dtype=np.int32)
+        data_ptr = data.ptr if hasattr(data, "ptr") else data
         env_idx = 0
         for r in range(self._R):
             origin = frame_pos + world_offsets[r]
-            d = mujoco.mj_ray(mp, data.ptr, origin, world_dir, self._geomgroup, 1, -1, geomid_out)
+            d = mujoco.mj_ray(mp, data_ptr, origin, world_dir, self._geomgroup, 1, -1, geomid_out)
             if d < 0 or d > max_dist:
                 dist_np[r] = -1.0
                 height_np[r] = max_dist

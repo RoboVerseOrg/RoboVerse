@@ -465,6 +465,12 @@ class MotionCommandManager:
         # arrays AND to read the robot's own per-body world state.
         self._mujoco_body_ids: list[int] = []
         self._body_indexes: list[int] = []
+        # On the Newton path the robot's per-body world state is read from the
+        # TensorState ``body_state`` whose body axis is sorted by name (NOT
+        # MuJoCo body-id order). ``_newton_body_cols`` maps each tracked body
+        # (cfg.body_names order) to its column in that array.
+        self._newton_body_cols: list[int] = []
+        self._newton_anchor_col: int = 0
         if cfg.body_names:
             if hasattr(env.handler, "physics"):
                 import mujoco
@@ -486,8 +492,33 @@ class MotionCommandManager:
                 # Robot anchor MuJoCo body id (native robot_anchor_body_index).
                 self._anchor_bid = mujoco.mj_name2id(mp, mujoco.mjtObj.mjOBJ_BODY, cfg.anchor_body_name)
             else:
-                self._anchor_idx = 0
+                # Newton path: no MuJoCo handle. Build the same MuJoCo body-id
+                # map from the robot MJCF (so the motion npz, which is indexed by
+                # MuJoCo body id - 1, is sliced to the SAME 14 tracked bodies as
+                # the mujoco path), plus the name->column map for the sorted
+                # TensorState ``body_state`` used to read robot body state.
+                self._anchor_idx = (
+                    cfg.body_names.index(cfg.anchor_body_name)
+                    if cfg.anchor_body_name in cfg.body_names
+                    else 0
+                )
                 self._anchor_bid = -1
+                bidmap = self._mujoco_bodyid_map_from_mjcf()
+                for name in cfg.body_names:
+                    bid = bidmap.get(name, -1)
+                    self._mujoco_body_ids.append(int(bid))
+                    self._body_indexes.append(int(bid) - 1 if bid > 0 else -1)
+                # Newton body_state columns (sorted body_names order).
+                try:
+                    ts = env.handler.get_states(mode="tensor")
+                    rkey = next(iter(ts.robots.keys()))
+                    sorted_names = list(ts.robots[rkey].body_names)
+                    self._newton_body_cols = [
+                        self._match_body_col(sorted_names, n) for n in cfg.body_names
+                    ]
+                    self._newton_anchor_col = self._match_body_col(sorted_names, cfg.anchor_body_name)
+                except Exception:
+                    self._newton_body_cols = []
 
         self.motion = _MotionLoader(
             cfg.motion_file,
@@ -512,6 +543,46 @@ class MotionCommandManager:
         self._kernel = kernel / kernel.sum()
 
         self.resample(torch.arange(N, device=device, dtype=torch.long))
+
+    def _mujoco_bodyid_map_from_mjcf(self) -> dict:
+        """Build {body_name: mujoco_body_id} from the robot MJCF (Newton path).
+
+        The motion npz body axis follows MuJoCo body-id order (worldbody = 0).
+        On Newton there is no live MuJoCo model, so compile a throwaway model
+        from the robot's ``mjcf_path`` to recover the same id ordering. Returns
+        ``{}`` if it can't be built.
+        """
+        scenario = getattr(self.env, "scenario", None)
+        robots = getattr(scenario, "robots", None) or []
+        mjcf_path = None
+        for r in robots:
+            if getattr(r, "name", None) == self.cfg.entity_name:
+                mjcf_path = getattr(r, "mjcf_path", None)
+                break
+        if mjcf_path is None and robots:
+            mjcf_path = getattr(robots[0], "mjcf_path", None)
+        if mjcf_path is None:
+            return {}
+        try:
+            import mujoco
+
+            m = mujoco.MjModel.from_xml_path(mjcf_path)
+            out = {}
+            for bid in range(m.nbody):
+                nm = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, bid)
+                if nm is not None:
+                    out[nm] = bid
+            return out
+        except Exception:
+            return {}
+
+    @staticmethod
+    def _match_body_col(sorted_names, name: str) -> int:
+        """Match a body name to its column in the (sorted) TensorState body axis."""
+        for i, n in enumerate(sorted_names):
+            if n == name or n.endswith("/" + name) or n.endswith(name):
+                return i
+        return 0
 
     @property
     def dt(self) -> float:
@@ -654,6 +725,19 @@ class MotionCommandManager:
         B = len(self.cfg.body_names)
 
         if not hasattr(self.env.handler, "physics") or B == 0:
+            # Newton path: read per-body world state from the TensorState
+            # ``body_state`` (sorted body axis) at the tracked-body columns.
+            if B > 0 and self._newton_body_cols:
+                ts = self.env.handler.get_states(mode="tensor")
+                rkey = next(iter(ts.robots.keys()))
+                bs = ts.robots[rkey].body_state  # (N, nbody, 13): pos,quat(wxyz),lin,ang
+                cols = torch.as_tensor(self._newton_body_cols, dtype=torch.long, device=device)
+                sub = bs[:, cols]  # (N, B, 13)
+                pos = sub[..., 0:3]
+                quat = sub[..., 3:7]  # wxyz
+                lin = sub[..., 7:10]
+                ang = sub[..., 10:13]
+                return pos, quat, lin, ang
             pos = torch.zeros((N, B, 3), device=device)
             quat = torch.zeros((N, B, 4), device=device)
             quat[:, :, 0] = 1.0
