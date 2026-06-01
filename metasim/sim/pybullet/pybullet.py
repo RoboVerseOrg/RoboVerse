@@ -416,15 +416,16 @@ class SinglePybulletHandler(BaseSimHandler):
             rot = convert_quat(np.array(rot), to="wxyz")
             pos = torch.tensor(pos, dtype=torch.float32)
             rot = torch.tensor(rot, dtype=torch.float32)
-            lin_vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
+            base_lin, base_ang = p.getBaseVelocity(obj_id)
+            lin_vel = torch.tensor(base_lin, dtype=torch.float32)
+            ang_vel = torch.tensor(base_ang, dtype=torch.float32)
             root_state = torch.cat([pos, rot, lin_vel, ang_vel]).unsqueeze(0)
             if isinstance(obj, ArticulationObjCfg):
                 joint_reindex = self.get_joint_reindex(obj.name)
                 state = ObjectState(
                     root_state=root_state,
                     body_names=None,
-                    body_state=None,  # TODO
+                    body_state=None,  # per-link state via p.getLinkState; not yet wired
                     joint_pos=torch.tensor([p.getJointState(obj_id, i)[0] for i in joint_reindex]).unsqueeze(0),
                     joint_vel=torch.tensor([p.getJointState(obj_id, i)[1] for i in joint_reindex]).unsqueeze(0),
                 )
@@ -440,18 +441,27 @@ class SinglePybulletHandler(BaseSimHandler):
             rot = convert_quat(np.array(rot), to="wxyz")
             pos = torch.tensor(pos, dtype=torch.float32)
             rot = torch.tensor(rot, dtype=torch.float32)
-            lin_vel = torch.zeros_like(pos)  # TODO
-            ang_vel = torch.zeros_like(pos)  # TODO
+            base_lin, base_ang = p.getBaseVelocity(obj_id)
+            lin_vel = torch.tensor(base_lin, dtype=torch.float32)
+            ang_vel = torch.tensor(base_ang, dtype=torch.float32)
             root_state = torch.cat([pos, rot, lin_vel, ang_vel]).unsqueeze(0)
+            joint_pos_target = None
+            cached_action = (self._actions_cache or {}).get(robot.name)
+            if cached_action is not None and cached_action.get("dof_pos_target") is not None:
+                dof_pos_target = cached_action["dof_pos_target"]
+                joint_pos_target = torch.tensor(
+                    [dof_pos_target[name] for name in self.object_joint_order[robot.name]],
+                    dtype=torch.float32,
+                ).unsqueeze(0)
             state = RobotState(
                 root_state=root_state,
                 body_names=None,
-                body_state=None,  # TODO
+                body_state=None,  # per-link state via p.getLinkState; not yet wired
                 joint_pos=torch.tensor([p.getJointState(obj_id, i)[0] for i in joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor([p.getJointState(obj_id, i)[1] for i in joint_reindex]).unsqueeze(0),
-                joint_pos_target=None,  # TODO
-                joint_vel_target=None,  # TODO
-                joint_effort_target=None,  # TODO
+                joint_pos_target=joint_pos_target,
+                joint_vel_target=None,  # PyBullet motor control is integrated; not separately tracked
+                joint_effort_target=None,  # PyBullet motor control is integrated; not separately tracked
             )
             robot_states[robot.name] = state
 

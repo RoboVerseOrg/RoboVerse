@@ -767,14 +767,15 @@ class IsaacgymHandler(BaseSimHandler):
             body_state = self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :]
             body_state = self._reorder_quat_xyzw_to_wxyz(body_state)
 
+            joint_pos_target = self._joint_pos_target_from_cache(robot)
             state = RobotState(
                 root_state=root_state,
                 body_names=self._get_body_names(robot.name),
                 body_state=body_state,
                 joint_pos=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 0],
                 joint_vel=self._dof_states.view(self.num_envs, -1, 2)[:, joint_ids_reindex, 1],
-                joint_pos_target=None,  # TODO
-                joint_vel_target=None,  # TODO
+                joint_pos_target=joint_pos_target,
+                joint_vel_target=None,  # IsaacGym uses position/effort control; vel target not separately tracked
                 # joint_effort_target=self._effort if self._manual_pd_on else None,
                 # prefer measured forces from simulator over internal PD effort
                 joint_effort_target=self._dof_force.view(self.num_envs, -1)[:, joint_ids_reindex],
@@ -832,6 +833,33 @@ class IsaacgymHandler(BaseSimHandler):
             action_array_list.append(action_array)
         action_array_all = torch.cat(action_array_list, dim=0)
         return action_array_all
+
+    def _joint_pos_target_from_cache(self, robot) -> torch.Tensor | None:
+        """Materialize cached dof_pos_target for ``robot`` into a (num_envs, num_dof) tensor.
+
+        Returns None when the cache is empty or in raw-tensor form (no joint names
+        recoverable without the action_input_to_tensor mapping).
+        """
+        cache = self._actions_cache
+        if not cache or isinstance(cache, (torch.Tensor, np.ndarray)):
+            return None
+        joint_names = self._joint_info[robot.name]["names"]
+        targets_per_env = []
+        for env_idx, env_action in enumerate(cache):
+            if env_idx >= self._num_envs:
+                break
+            if not isinstance(env_action, dict):
+                return None
+            robot_action = env_action.get(robot.name)
+            if not isinstance(robot_action, dict):
+                return None
+            dof_pos_target = robot_action.get("dof_pos_target")
+            if dof_pos_target is None:
+                return None
+            targets_per_env.append([float(dof_pos_target.get(n, 0.0)) for n in joint_names])
+        if not targets_per_env:
+            return None
+        return torch.tensor(targets_per_env, dtype=torch.float32, device=self.device)
 
     def _set_dof_targets(self, actions: CompatActionInput):
         self._actions_cache = actions
