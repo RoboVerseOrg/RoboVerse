@@ -105,8 +105,42 @@ Two-line change in `_build_sapien`, plus a regression test at
 | `background_texture.zip`| 11 GB      | Domain-randomization training only               |
 | Full dataset            | 1.47 TB    | Demo trajectories + RL checkpoints — not needed for sim parity |
 
-Locator (`roboverse_pack/robots/aloha_agilex_cfg.py`) searches
-`~/projects/robotwin/assets/` or `$ROBOTWIN_ASSETS`.
+## Self-contained replay (RoboTwin is deletable)
+
+The replay / side-by-side / object-parity pipeline does **not** need the upstream RoboTwin
+checkout at runtime. Every asset a bridge references — object visual/collision meshes, URDF
+instances, and the ALOHA-AgileX embodiment — is addressed by its *RoboTwin-internal relpath*
+and resolved through one locator,
+[`roboverse_pack/tasks/robotwin/_locator.py`](../../../../roboverse_pack/tasks/robotwin/_locator.py):
+
+1. a local RoboTwin clone — `$ROBOTWIN_ASSETS` or `~/projects/robotwin` (dev / fresh collection);
+2. otherwise the vendored mirror `roboverse_data/robotwin/` (HuggingFace `RoboVerseOrg/roboverse_data`),
+   downloaded on demand — exactly like the mjlab / menagerie locators.
+
+`$ROBOTWIN_ASSETS` is **authoritative**: set it to a non-existent path to force the mirror (this is
+how the deletability test runs).
+
+**Vendor the referenced subset once** (only what the 50 bridges use — ~1.65 GB objects + 0.78 GB
+embodiment + slim RGB-stripped trajectories, *not* the 1.47 TB full dataset):
+
+```bash
+# Against a RoboTwin clone, copy the referenced subset into roboverse_data/robotwin/
+python tools/robotwin_integration/migrate_assets.py        # writes manifest.json
+
+# Replay with the clone "deleted" — resolves everything from the mirror:
+ROBOTWIN_ASSETS=/nonexistent MUJOCO_GL=egl python \
+  tools/robotwin_integration/mesh_replay_robotwin.py \
+  --bridge roboverse_data/robotwin/bridges/move_can_pot.pkl --mode kinematic --video
+```
+
+To make a *fresh, clone-less* machine work, upload the populated mirror to the HF dataset
+(`roboverse_data/` is git-ignored; it is the HF-backed store, not committed):
+
+```bash
+huggingface-cli upload RoboVerseOrg/roboverse_data roboverse_data/robotwin robotwin --repo-type dataset
+```
+
+The embodiment cfg (`roboverse_pack/robots/aloha_agilex_cfg.py`) resolves through the same locator.
 
 ## Policy reproduction (same experience as RoboTwin)
 
