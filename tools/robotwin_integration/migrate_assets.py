@@ -80,7 +80,7 @@ def _slim_bridge(d: dict) -> dict:
     return {k: v for k, v in d.items() if not any(t in k.lower() for t in _RGB_KEYS)}
 
 
-def migrate(bridge_dir: str, robotwin_dir: str, *, dry: bool = False) -> dict:
+def migrate(bridge_dir: str, robotwin_dir: str, *, dry: bool = False, all_instances: bool = True) -> dict:
     bridge_dir = os.path.expanduser(bridge_dir)
     robotwin_dir = os.path.expanduser(robotwin_dir)
     dest = _DEST_PREFIX
@@ -113,6 +113,22 @@ def migrate(bridge_dir: str, robotwin_dir: str, *, dry: bool = False) -> dict:
             if m.get("urdf"):
                 urdf_dirs.add(os.path.dirname(m["urdf"]))
         tasks.append({"task": task, "objects": tinv})
+
+    # URDF objects (laptop/microwave/switch/pot) pick a random INSTANCE per seed via modelid.
+    # The captured bridge only references one instance; vendor *every* instance of each referenced
+    # URDF category (cheap -- ~80 MB) so replaying any seed of those tasks is also clone-free.
+    if all_instances:
+        for urel in sorted(urdf_dirs):
+            cat = os.path.dirname(urel)  # assets/objects/<category>
+            cat_abs = os.path.join(robotwin_dir, cat)
+            if not os.path.isdir(cat_abs):
+                continue
+            for sub in os.listdir(cat_abs):
+                inst = os.path.join(cat_abs, sub)
+                if sub in ("visual", "collision"):
+                    continue
+                if os.path.isfile(os.path.join(inst, "mobility.urdf")):
+                    urdf_dirs.add(os.path.join(cat, sub))
 
     # --- copy object assets (visual + collision + urdf instance dirs) ---
     obj_files = 0
@@ -175,9 +191,16 @@ def main() -> None:
     ap.add_argument("--bridge-dir", default=os.path.expanduser("~/projects/robotwin/data/_rv_bridge"))
     ap.add_argument("--robotwin-dir", default=os.path.expanduser("~/projects/robotwin"))
     ap.add_argument("--dry-run", action="store_true", help="report what would copy without writing")
+    ap.add_argument(
+        "--no-all-instances",
+        dest="all_instances",
+        action="store_false",
+        help="vendor only the captured instance per URDF category (default: ALL instances, so any "
+        "seed of laptop/microwave/switch/pot tasks replays clone-free)",
+    )
     args = ap.parse_args()
 
-    m = migrate(args.bridge_dir, args.robotwin_dir, dry=args.dry_run)
+    m = migrate(args.bridge_dir, args.robotwin_dir, dry=args.dry_run, all_instances=args.all_instances)
     gb = 1e9
     print("\n=== RoboTwin -> roboverse_data migration ===")
     print(
