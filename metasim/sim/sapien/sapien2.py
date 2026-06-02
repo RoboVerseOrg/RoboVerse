@@ -192,16 +192,18 @@ class Sapien2Handler(BaseSimHandler):
             elif isinstance(object, PrimitiveCubeCfg):
                 actor_builder = self.scene.create_actor_builder()
                 # material = get_material(self.scene, agent.rigid_shape_property)
-                actor_builder.add_box_collision(
-                    half_size=object.half_size,
-                    density=object.density,
-                    # material=material,
-                )
+                if object.collision_enabled:
+                    actor_builder.add_box_collision(
+                        half_size=object.half_size,
+                        density=object.density,
+                        # material=material,
+                    )
                 actor_builder.add_box_visual(
                     half_size=object.half_size,
                     color=object.color if object.color else [1.0, 1.0, 0.0],
                 )
-                box = actor_builder.build(name="box")  # Add a box
+                # fix_base_link -> static actor (e.g. a visual-only backdrop box)
+                box = actor_builder.build_static(name="box") if object.fix_base_link else actor_builder.build(name="box")
                 box.set_pose(_load_init_pose(object))
                 # box.set_damping(agent.rigid_shape_property.linear_damping, agent.rigid_shape_property.angular_damping)
                 # if agent.vel:
