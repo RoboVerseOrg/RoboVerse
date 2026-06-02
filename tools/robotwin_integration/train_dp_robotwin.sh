@@ -45,6 +45,15 @@ cd "$repo_root"
 demo_dir="data/robotwin_demo/${task}"
 zarr_path="data_policy/${task}_${num}.zarr"
 
+# This stage runs in the RoboVerse IL env (zarr + torch + roboverse_learn), NOT the robotwin
+# collection env. Fail fast with an actionable message if `python` is the wrong interpreter --
+# otherwise data2zarr_dp.py dies with a bare `ModuleNotFoundError: zarr` mid-pipeline.
+if ! python -c "import zarr, torch" 2>/dev/null; then
+  echo "ERROR: the active 'python' lacks zarr/torch ($(command -v python))." >&2
+  echo "       Run this in the RoboVerse IL env, e.g.: conda activate roboverse  (or set PATH to its bin)." >&2
+  exit 1
+fi
+
 echo "=== [1/3] bridge -> RoboVerse demo dirs ==="
 python tools/robotwin_integration/robotwin_to_demo.py \
   --bridge "${bridge_dir}/demo_*.pkl" --out "$demo_dir" --camera "$camera"
