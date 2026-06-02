@@ -55,7 +55,7 @@ except ImportError:
 
 import os
 import pickle
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import rootutils
 import tyro
@@ -80,11 +80,20 @@ from roboverse_pack.robots.aloha_agilex_cfg import AlohaAgilexCfg
 from roboverse_pack.tasks.robotwin._convert import bridge_to_v2
 
 
+def _default_bridge() -> str:
+    """A live-collection bridge if a RoboTwin clone is present, else the vendored slim one
+    (so this example runs after ~/projects/robotwin is deleted)."""
+    live = os.path.expanduser("~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl")
+    if os.path.exists(live):
+        return live
+    return os.path.join("roboverse_data", "robotwin", "bridges", "beat_block_hammer.pkl")
+
+
 @dataclass
 class Args:
     """Arguments for the RoboTwin ALOHA-AgileX replay."""
 
-    bridge: str = os.path.expanduser("~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl")
+    bridge: str = field(default_factory=_default_bridge)
     sim: str = "sapien3"
     num_envs: int = 1
     save_video: bool = True
