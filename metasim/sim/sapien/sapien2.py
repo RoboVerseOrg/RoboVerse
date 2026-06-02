@@ -62,15 +62,25 @@ class Sapien2Handler(BaseSimHandler):
         self.time_step = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1 / 100.0
 
         scene_config = sapien_core.SceneConfig()
-        # scene_config.default_dynamic_friction = self.physical_params.dynamic_friction
-        # scene_config.default_static_friction = self.physical_params.static_friction
-        # scene_config.contact_offset = self.physical_params.contact_offset
-        # scene_config.default_restitution = self.physical_params.restitution
-        # scene_config.enable_pcm = True
-        # scene_config.solver_iterations = self.sim_params.num_position_iterations
-        # scene_config.solver_velocity_iterations = self.sim_params.num_velocity_iterations
         scene_config.gravity = np.array(self.scenario.gravity)
-        # scene_config.bounce_threshold = self.sim_params.bounce_threshold
+        # Optional PhysX SceneConfig overrides (default None = keep SAPIEN defaults, so
+        # existing tasks are unchanged). Used by upstream-faithful ports (e.g. SimplerEnv /
+        # ManiSkill2-real2sim) that need a specific solver/contact/friction setup.
+        sp = self.scenario.sim_params
+        if getattr(sp, "sapien_enable_tgs", None) is not None:
+            scene_config.enable_tgs = sp.sapien_enable_tgs
+        if getattr(sp, "sapien_enable_pcm", None) is not None:
+            scene_config.enable_pcm = sp.sapien_enable_pcm
+        if getattr(sp, "sapien_default_static_friction", None) is not None:
+            scene_config.default_static_friction = sp.sapien_default_static_friction
+        if getattr(sp, "sapien_default_dynamic_friction", None) is not None:
+            scene_config.default_dynamic_friction = sp.sapien_default_dynamic_friction
+        if getattr(sp, "sapien_default_restitution", None) is not None:
+            scene_config.default_restitution = sp.sapien_default_restitution
+        if getattr(sp, "sapien_apply_scene_solver", None):
+            scene_config.contact_offset = sp.contact_offset
+            scene_config.solver_iterations = sp.num_position_iterations
+            scene_config.solver_velocity_iterations = sp.num_velocity_iterations
 
         self.engine.set_renderer(self.renderer)
         self.scene = self.engine.create_scene(scene_config)

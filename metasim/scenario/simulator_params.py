@@ -39,6 +39,21 @@ class SimParamCfg:
     max_depenetration_velocity: float = 1.0
     default_buffer_size_multiplier: int = 2.0
 
+    ## SAPIEN-specific PhysX scene parameters.
+    # All default to None = "leave the SAPIEN SceneConfig default untouched", so
+    # existing tasks are unaffected. Set them to match an upstream env — e.g.
+    # SimplerEnv / ManiSkill2-real2sim uses solver_iterations=25, enable_tgs=True,
+    # contact_offset=0.02, enable_pcm=False, solver_velocity_iterations=1, friction 1.0.
+    sapien_enable_tgs: bool | None = None
+    sapien_enable_pcm: bool | None = None
+    sapien_default_static_friction: float | None = None
+    sapien_default_dynamic_friction: float | None = None
+    sapien_default_restitution: float | None = None
+    # When True, the sapien handler additionally applies contact_offset and the
+    # solver iteration counts from this cfg onto the SAPIEN SceneConfig. When None/False
+    # it keeps its historical behaviour (only gravity + timestep set).
+    sapien_apply_scene_solver: bool | None = None
+
     ## MJX, Newton specific parameters
     nconmax: int | None = 512
     njmax: int | None = None
