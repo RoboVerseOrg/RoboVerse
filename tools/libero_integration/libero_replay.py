@@ -48,9 +48,19 @@ _COLLECTOR_RS = "/Users/yifengz/workspace/robosuite-master/robosuite/models/asse
 
 
 def remap_libero_model(model_file: str, libero_assets: str | Path | None = None) -> str:
-    """Rebase a LIBERO demo's embedded MJCF to local assets + make it dm_control-safe."""
+    """Rebase a LIBERO demo's embedded MJCF to local assets + make it dm_control-safe.
+
+    Collector machine varies by suite (``/Users/yifengz`` for object/goal/spatial,
+    ``/home/yifengz`` for libero_10/90), so we rebase by the asset-root *suffix*
+    (``…/chiliocosm/assets`` → LIBERO, ``…/robosuite*/…/models/assets`` → robosuite)
+    rather than a fixed prefix.
+    """
     lib = str(libero_assets or _LIBERO_ASSETS)
-    xml = model_file.replace(_COLLECTOR_LIBERO, lib).replace(_COLLECTOR_RS, _RS_ASSETS)
+    xml = model_file
+    # any path ending in /chiliocosm/assets -> local LIBERO assets
+    xml = re.sub(r'file="[^"]*?/chiliocosm/assets', f'file="{lib}', xml)
+    # any robosuite assets root (robosuite-master or robosuite) -> installed robosuite
+    xml = re.sub(r'file="[^"]*?/robosuite[^"]*?/(?:robosuite/)?models/assets', f'file="{_RS_ASSETS}', xml)
     xml = re.sub(r'<default class="main"\s*/>', "", xml)  # implicit main default in dm_control
     for ref in sorted(set(re.findall(r'file="([^"]+)"', xml))):
         if not os.path.exists(ref):
