@@ -1,0 +1,2487 @@
+[
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_alphabet_soup_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 148,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 121,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_alphabet_soup_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_bbq_sauce_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 134,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 121,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_bbq_sauce_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_butter_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 169,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 156,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_butter_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_chocolate_pudding_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 168,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 156,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_chocolate_pudding_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_cream_cheese_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 139,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 126,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_cream_cheese_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_ketchup_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 248,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_ketchup_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_milk_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 150,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 138,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_milk_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_orange_juice_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 126,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 114,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_orange_juice_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_salad_dressing_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 137,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_salad_dressing_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_object",
+    "task": "pick_up_the_tomato_sauce_and_place_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 132,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 120,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_object__pick_up_the_tomato_sauce_and_place_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "open_the_middle_drawer_of_the_cabinet",
+    "predicates": [
+      "open"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 138,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 126,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_goal__open_the_middle_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "open_the_top_drawer_and_put_the_bowl_inside",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 170,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": 159,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_goal__open_the_top_drawer_and_put_the_bowl_inside.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "put_the_bowl_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 90,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_goal__put_the_bowl_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "put_the_bowl_on_the_stove",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 94,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 82,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_goal__put_the_bowl_on_the_stove.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "put_the_bowl_on_top_of_the_cabinet",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 91,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 78,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_goal__put_the_bowl_on_top_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "put_the_cream_cheese_in_the_bowl",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 92,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 75,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_goal__put_the_cream_cheese_in_the_bowl.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "put_the_wine_bottle_on_the_rack",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 347,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 131,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_goal__put_the_wine_bottle_on_the_rack.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "put_the_wine_bottle_on_top_of_the_cabinet",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 93,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 82,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_goal__put_the_wine_bottle_on_top_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "turn_on_the_stove",
+    "predicates": [
+      "turnon"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 80,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 72,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.122,
+    "render_mae_max": 0.142,
+    "video": "outputs/native_sweep/videos/libero_goal__turn_on_the_stove.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 98,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 78,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 103,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 91,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 153,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 118,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 123,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 112,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 115,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 98,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 152,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 106,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 99,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 87,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 137,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 155,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_spatial",
+    "task": "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 136,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 124,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_spatial__pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it",
+    "predicates": [
+      "on",
+      "turnon"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 272,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.131,
+    "render_mae_max": 0.364,
+    "video": "outputs/native_sweep/videos/libero_10__KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "KITCHEN_SCENE4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet_and_close_it",
+    "predicates": [
+      "close",
+      "in"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 261,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_10__KITCHEN_SCENE4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet_and_close_it.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it",
+    "predicates": [
+      "close",
+      "in"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 329,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_10__KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "KITCHEN_SCENE8_put_both_moka_pots_on_the_stove",
+    "predicates": [
+      "on",
+      "turnon"
+    ],
+    "n_goal_preds": 3,
+    "n_demo_steps": 457,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 447,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_10__KITCHEN_SCENE8_put_both_moka_pots_on_the_stove.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 242,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": 230,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_10__LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "LIVING_ROOM_SCENE2_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 388,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 367,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_10__LIVING_ROOM_SCENE2_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 258,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 246,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_10__LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate_and_put_the_yellow_and_white_mug_on_the_right_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 275,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 226,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_10__LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate_and_put_the_yellow_and_white_mug_on_the_right_plate.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_back_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 234,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 223,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_10__STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_back_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE10_close_the_top_drawer_of_the_cabinet",
+    "predicates": [
+      "close"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 71,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 58,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE10_close_the_top_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE10_close_the_top_drawer_of_the_cabinet_and_put_the_black_bowl_on_top_of_it",
+    "predicates": [
+      "close",
+      "on"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 197,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 187,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE10_close_the_top_drawer_of_the_cabinet_and_put_the_black_bowl_on_top_of_it.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE10_put_the_black_bowl_in_the_top_drawer_of_the_cabinet",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 116,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 104,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE10_put_the_black_bowl_in_the_top_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE10_put_the_butter_at_the_back_in_the_top_drawer_of_the_cabinet_and_close_it",
+    "predicates": [
+      "close",
+      "in"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 183,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 171,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE10_put_the_butter_at_the_back_in_the_top_drawer_of_the_cabinet_and_close_it.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE10_put_the_butter_at_the_front_in_the_top_drawer_of_the_cabinet_and_close_it",
+    "predicates": [
+      "close",
+      "in"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 173,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 161,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE10_put_the_butter_at_the_front_in_the_top_drawer_of_the_cabinet_and_close_it.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE10_put_the_chocolate_pudding_in_the_top_drawer_of_the_cabinet_and_close_it",
+    "predicates": [
+      "close",
+      "in"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 168,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 157,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE10_put_the_chocolate_pudding_in_the_top_drawer_of_the_cabinet_and_close_it.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE1_open_the_bottom_drawer_of_the_cabinet",
+    "predicates": [
+      "open"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 124,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 112,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE1_open_the_bottom_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE1_open_the_top_drawer_of_the_cabinet",
+    "predicates": [
+      "open"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 177,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 165,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE1_open_the_top_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE1_open_the_top_drawer_of_the_cabinet_and_put_the_bowl_in_it",
+    "predicates": [
+      "in",
+      "open"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 189,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 177,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE1_open_the_top_drawer_of_the_cabinet_and_put_the_bowl_in_it.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE1_put_the_black_bowl_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 137,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 112,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE1_put_the_black_bowl_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE1_put_the_black_bowl_on_top_of_the_cabinet",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 161,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE1_put_the_black_bowl_on_top_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE2_open_the_top_drawer_of_the_cabinet",
+    "predicates": [
+      "open"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 64,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 52,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE2_open_the_top_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE2_put_the_black_bowl_at_the_back_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 108,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE2_put_the_black_bowl_at_the_back_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE2_put_the_black_bowl_at_the_front_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 134,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 122,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE2_put_the_black_bowl_at_the_front_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE2_put_the_middle_black_bowl_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 108,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 85,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE2_put_the_middle_black_bowl_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE2_put_the_middle_black_bowl_on_top_of_the_cabinet",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 137,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 125,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE2_put_the_middle_black_bowl_on_top_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE2_stack_the_black_bowl_at_the_front_on_the_black_bowl_in_the_middle",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 119,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 100,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE2_stack_the_black_bowl_at_the_front_on_the_black_bowl_in_the_middle.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE2_stack_the_middle_black_bowl_on_the_back_black_bowl",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 137,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 117,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE2_stack_the_middle_black_bowl_on_the_back_black_bowl.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE3_put_the_frying_pan_on_the_stove",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 184,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 160,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE3_put_the_frying_pan_on_the_stove.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE3_put_the_moka_pot_on_the_stove",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 135,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 124,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE3_put_the_moka_pot_on_the_stove.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE3_turn_on_the_stove",
+    "predicates": [
+      "turnon"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 90,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 79,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.313,
+    "render_mae_max": 0.363,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE3_turn_on_the_stove.mp4"
+  },
+  {
+    "suite": "libero_goal",
+    "task": "push_the_plate_to_the_front_of_the_stove",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 155,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 144,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_goal__push_the_plate_to_the_front_of_the_stove.mp4"
+  },
+  {
+    "suite": "libero_10",
+    "task": "LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate_and_put_the_chocolate_pudding_to_the_right_of_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 203,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 191,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_10__LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate_and_put_the_chocolate_pudding_to_the_right_of_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_frying_pan_on_it",
+    "predicates": [
+      "on",
+      "turnon"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 287,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.108,
+    "render_mae_max": 0.389,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE3_turn_on_the_stove_and_put_the_frying_pan_on_it.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE4_close_the_bottom_drawer_of_the_cabinet",
+    "predicates": [
+      "close"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 137,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 103,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE4_close_the_bottom_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE4_close_the_bottom_drawer_of_the_cabinet_and_open_the_top_drawer",
+    "predicates": [
+      "close",
+      "open"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 217,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 204,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE4_close_the_bottom_drawer_of_the_cabinet_and_open_the_top_drawer.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 166,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 154,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE4_put_the_black_bowl_on_top_of_the_cabinet",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 147,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 133,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE4_put_the_black_bowl_on_top_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE4_put_the_wine_bottle_in_the_bottom_drawer_of_the_cabinet",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 169,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 105,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE4_put_the_wine_bottle_in_the_bottom_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE4_put_the_wine_bottle_on_the_wine_rack",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 309,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": false,
+    "native_state_replay_success": false,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 231,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE4_put_the_wine_bottle_on_the_wine_rack.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE5_close_the_top_drawer_of_the_cabinet",
+    "predicates": [
+      "close"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 65,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 54,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE5_close_the_top_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE5_put_the_black_bowl_in_the_top_drawer_of_the_cabinet",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 122,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 110,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE5_put_the_black_bowl_in_the_top_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE5_put_the_black_bowl_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 131,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 103,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE5_put_the_black_bowl_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE5_put_the_black_bowl_on_top_of_the_cabinet",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 147,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 135,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE5_put_the_black_bowl_on_top_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE5_put_the_ketchup_in_the_top_drawer_of_the_cabinet",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 230,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE5_put_the_ketchup_in_the_top_drawer_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE6_close_the_microwave",
+    "predicates": [
+      "close"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 236,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 226,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE6_close_the_microwave.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE6_put_the_yellow_and_white_mug_to_the_front_of_the_white_mug",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 144,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 104,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE6_put_the_yellow_and_white_mug_to_the_front_of_the_white_mug.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE7_open_the_microwave",
+    "predicates": [
+      "open"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 131,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 118,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE7_open_the_microwave.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE7_put_the_white_bowl_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 223,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 210,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE7_put_the_white_bowl_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE7_put_the_white_bowl_to_the_right_of_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 120,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 108,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE7_put_the_white_bowl_to_the_right_of_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE8_put_the_right_moka_pot_on_the_stove",
+    "predicates": [
+      "on",
+      "turnon"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 192,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE8_put_the_right_moka_pot_on_the_stove.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE8_turn_off_the_stove",
+    "predicates": [
+      "turnoff"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 152,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.305,
+    "render_mae_max": 0.378,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE8_turn_off_the_stove.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE9_put_the_frying_pan_on_the_cabinet_shelf",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 177,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE9_put_the_frying_pan_on_the_cabinet_shelf.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE9_put_the_frying_pan_on_top_of_the_cabinet",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 227,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE9_put_the_frying_pan_on_top_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE9_put_the_frying_pan_under_the_cabinet_shelf",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 172,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE9_put_the_frying_pan_under_the_cabinet_shelf.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE9_put_the_white_bowl_on_top_of_the_cabinet",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 144,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE9_put_the_white_bowl_on_top_of_the_cabinet.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE9_turn_on_the_stove",
+    "predicates": [
+      "turnon"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 115,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 101,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.327,
+    "render_mae_max": 0.368,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE9_turn_on_the_stove.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "KITCHEN_SCENE9_turn_on_the_stove_and_put_the_frying_pan_on_it",
+    "predicates": [
+      "on",
+      "turnon"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 255,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 240,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.141,
+    "render_mae_max": 0.363,
+    "video": "outputs/native_sweep/videos/libero_90__KITCHEN_SCENE9_turn_on_the_stove_and_put_the_frying_pan_on_it.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE1_pick_up_the_alphabet_soup_and_put_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 154,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 142,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE1_pick_up_the_alphabet_soup_and_put_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE1_pick_up_the_cream_cheese_box_and_put_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 161,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE1_pick_up_the_cream_cheese_box_and_put_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE1_pick_up_the_ketchup_and_put_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 173,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 162,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE1_pick_up_the_ketchup_and_put_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE1_pick_up_the_tomato_sauce_and_put_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 162,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE1_pick_up_the_tomato_sauce_and_put_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE2_pick_up_the_alphabet_soup_and_put_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 164,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE2_pick_up_the_alphabet_soup_and_put_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE2_pick_up_the_butter_and_put_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 146,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE2_pick_up_the_butter_and_put_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE2_pick_up_the_milk_and_put_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 104,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE2_pick_up_the_milk_and_put_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE2_pick_up_the_orange_juice_and_put_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 148,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 136,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE2_pick_up_the_orange_juice_and_put_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE2_pick_up_the_tomato_sauce_and_put_it_in_the_basket",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 104,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE2_pick_up_the_tomato_sauce_and_put_it_in_the_basket.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE3_pick_up_the_alphabet_soup_and_put_it_in_the_tray",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 111,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE3_pick_up_the_alphabet_soup_and_put_it_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE3_pick_up_the_butter_and_put_it_in_the_tray",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 103,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 91,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE3_pick_up_the_butter_and_put_it_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE3_pick_up_the_cream_cheese_and_put_it_in_the_tray",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 158,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 145,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE3_pick_up_the_cream_cheese_and_put_it_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE3_pick_up_the_ketchup_and_put_it_in_the_tray",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 143,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 132,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE3_pick_up_the_ketchup_and_put_it_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE3_pick_up_the_tomato_sauce_and_put_it_in_the_tray",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 128,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 116,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE3_pick_up_the_tomato_sauce_and_put_it_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE4_pick_up_the_black_bowl_on_the_left_and_put_it_in_the_tray",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 110,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 98,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE4_pick_up_the_black_bowl_on_the_left_and_put_it_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE4_pick_up_the_chocolate_pudding_and_put_it_in_the_tray",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 151,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 139,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE4_pick_up_the_chocolate_pudding_and_put_it_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE4_pick_up_the_salad_dressing_and_put_it_in_the_tray",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 114,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 102,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE4_pick_up_the_salad_dressing_and_put_it_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE4_stack_the_left_bowl_on_the_right_bowl_and_place_them_in_the_tray",
+    "predicates": [
+      "in",
+      "on"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 206,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE4_stack_the_left_bowl_on_the_right_bowl_and_place_them_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE4_stack_the_right_bowl_on_the_left_bowl_and_place_them_in_the_tray",
+    "predicates": [
+      "in",
+      "on"
+    ],
+    "n_goal_preds": 2,
+    "n_demo_steps": 231,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 220,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE4_stack_the_right_bowl_on_the_left_bowl_and_place_them_in_the_tray.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE5_put_the_red_mug_on_the_left_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 127,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": 116,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE5_put_the_red_mug_on_the_left_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE5_put_the_red_mug_on_the_right_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 180,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 168,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE5_put_the_red_mug_on_the_right_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 88,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 76,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE5_put_the_yellow_and_white_mug_on_the_right_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 121,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE5_put_the_yellow_and_white_mug_on_the_right_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_left_of_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 110,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_left_of_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_right_of_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 77,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_right_of_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE6_put_the_red_mug_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 116,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 105,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE6_put_the_red_mug_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 147,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 136,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 165,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_left_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 148,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 135,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_left_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_right_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 142,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_right_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE1_pick_up_the_yellow_and_white_mug_and_place_it_to_the_right_of_the_caddy",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 129,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE1_pick_up_the_yellow_and_white_mug_and_place_it_to_the_right_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_back_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 197,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 157,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_back_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 133,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_left_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 108,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 96,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_left_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_right_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 161,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_right_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE3_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 139,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE3_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE3_pick_up_the_book_and_place_it_in_the_left_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 159,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 148,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE3_pick_up_the_book_and_place_it_in_the_left_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE3_pick_up_the_book_and_place_it_in_the_right_compartment_of_the_caddy",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 121,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE3_pick_up_the_book_and_place_it_in_the_right_compartment_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE3_pick_up_the_red_mug_and_place_it_to_the_right_of_the_caddy",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 119,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 107,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE3_pick_up_the_red_mug_and_place_it_to_the_right_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE3_pick_up_the_white_mug_and_place_it_to_the_right_of_the_caddy",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 112,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE3_pick_up_the_white_mug_and_place_it_to_the_right_of_the_caddy.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE4_pick_up_the_book_in_the_middle_and_place_it_on_the_cabinet_shelf",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 167,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": null,
+    "native_osc_final_success": false,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE4_pick_up_the_book_in_the_middle_and_place_it_on_the_cabinet_shelf.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE4_pick_up_the_book_on_the_left_and_place_it_on_top_of_the_shelf",
+    "predicates": [
+      "on"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 174,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": false,
+    "native_osc_first_success_step": 151,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE4_pick_up_the_book_on_the_left_and_place_it_on_top_of_the_shelf.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE4_pick_up_the_book_on_the_right_and_place_it_on_the_cabinet_shelf",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 92,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 80,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE4_pick_up_the_book_on_the_right_and_place_it_on_the_cabinet_shelf.mp4"
+  },
+  {
+    "suite": "libero_90",
+    "task": "STUDY_SCENE4_pick_up_the_book_on_the_right_and_place_it_under_the_cabinet_shelf",
+    "predicates": [
+      "in"
+    ],
+    "n_goal_preds": 1,
+    "n_demo_steps": 123,
+    "state_replay_checker_mismatches": 0,
+    "native_vs_gt_checker_mismatches": 0,
+    "gt_state_replay_success": true,
+    "native_state_replay_success": true,
+    "gt_action_replay_success": true,
+    "native_osc_first_success_step": 111,
+    "native_osc_final_success": true,
+    "render_mae_mean": 0.0,
+    "render_mae_max": 0.0,
+    "video": "outputs/native_sweep/videos/libero_90__STUDY_SCENE4_pick_up_the_book_on_the_right_and_place_it_under_the_cabinet_shelf.mp4"
+  }
+]

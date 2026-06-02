@@ -13,8 +13,21 @@ Predicate reduction (from ``libero/libero/envs``):
   reduces to ``in_box``: the object's body position lies inside the region site's
   oriented box (``site_pos ± |site_mat @ site_half_size|``, lower z extended by
   1 cm) — verbatim from ``objects/site_object.py::in_box``.
-* ``On(a, b)`` — ``a.z <= b.z`` AND geom contact between the two bodies AND
-  ``||a.xy - b.xy|| < 0.03`` -- verbatim from ``ObjectState.check_ontop``.
+* ``On(a, b)`` with ``b`` an object — ``ObjectState.check_ontop``: the surface ``b``
+  sits below the placed object ``a`` (``z[b] <= z[a]``) AND their ``contact_geoms``
+  touch AND ``||a.xy - b.xy|| < 0.03``.
+* ``On(a, b)`` with ``b`` a region site — ``SiteObjectState.check_ontop`` via
+  ``SiteObject.under``: ``a``'s body lies in the site's oriented box above its floor
+  (``size[2]-0.005 < (mat·(a-site))_z < size[2]+0.10`` and ``|·xy| < size[:2]``) AND
+  the region's parent object's ``contact_geoms`` touch ``a``'s. Contact uses the
+  exact robosuite ``contact_geoms`` sets (resolved to geom ids by the exporter).
+* ``Open/Close/TurnOn/TurnOff(obj)`` — articulated-joint predicates. LIBERO reads
+  each of the object's joint qpos and compares it to a per-object threshold
+  (``articulated_objects.py``); ``Open``/``TurnOn`` are satisfied if **any** joint
+  passes, ``Close``/``TurnOff`` only if **all** joints pass. The export step probes
+  the live object's own ``is_open``/``is_close``/``turn_on``/``turn_off`` method to
+  recover the exact ``(op, threshold)`` per object + the qpos addresses, so this
+  checker reduces the predicate to ``op(qpos[addr], thr)`` with no libero import.
 
 A goal is exported (see ``scripts/native/export_libero_task.py``) as a list of
 predicate dicts with model names already resolved, so this checker needs only the
@@ -23,8 +36,14 @@ names + the MuJoCo state.
 
 from __future__ import annotations
 
+import operator
+
 import mujoco
 import numpy as np
+
+# comparison operators recovered by the exporter when probing the articulated
+# object's own threshold method (e.g. ``qpos < max(open_ranges)`` -> "lt").
+_OPS = {"lt": operator.lt, "le": operator.le, "gt": operator.gt, "ge": operator.ge}
 
 
 def _site(model, data, name):
@@ -50,26 +69,20 @@ def in_box(site_pos, site_mat, site_half_size, other_pos) -> bool:
     return bool(np.all(other_pos > lb) and np.all(other_pos < ub))
 
 
-def _body_geom_ids(model, body_name):
-    """All geom ids whose body is the named body or any of its descendants."""
-    root = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, body_name)
-    bodies = {root}
-    for b in range(model.nbody):  # walk descendants via body_parentid
-        p = b
-        while p != 0:
-            if p == root:
-                bodies.add(b)
-                break
-            p = int(model.body_parentid[p])
-    return {g for g in range(model.ngeom) if int(model.geom_bodyid[g]) in bodies}
-
-
-def _in_contact(model, data, geoms_a, geoms_b) -> bool:
+def _in_contact(data, geoms_a, geoms_b) -> bool:
+    """Robosuite ``check_contact``: any active contact between the two geom-id sets."""
+    a, b = set(geoms_a), set(geoms_b)
     for i in range(data.ncon):
         c = data.contact[i]
-        if (c.geom1 in geoms_a and c.geom2 in geoms_b) or (c.geom1 in geoms_b and c.geom2 in geoms_a):
+        if (c.geom1 in a and c.geom2 in b) or (c.geom1 in b and c.geom2 in a):
             return True
     return False
+
+
+def under(site_pos, site_mat, site_size, other_pos) -> bool:
+    """Verbatim LIBERO ``SiteObject.under`` (object resting in a region site box)."""
+    delta = site_mat @ (other_pos - site_pos)
+    return bool(site_size[2] - 0.005 < delta[2] < site_size[2] + 0.10 and np.all(np.abs(delta[:2]) < site_size[:2]))
 
 
 def eval_predicate(model, data, p) -> bool:
@@ -78,10 +91,23 @@ def eval_predicate(model, data, p) -> bool:
     if fn == "in":  # object inside a region site
         sp, sm, ss = _site(model, data, p["region"])
         return in_box(sp, sm, ss, _body_xpos(model, data, p["obj"]))
-    if fn == "on":  # object a on top of object b
+    if fn == "on":  # placed object `obj` (arg1) resting on surface object `obj2` (arg2)
         a, b = _body_xpos(model, data, p["obj"]), _body_xpos(model, data, p["obj2"])
-        ga, gb = _body_geom_ids(model, p["obj"]), _body_geom_ids(model, p["obj2"])
-        return bool(a[2] <= b[2]) and _in_contact(model, data, ga, gb) and float(np.linalg.norm(a[:2] - b[:2])) < 0.03
+        return (
+            bool(b[2] <= a[2])  # surface below the placed object (ObjectState.check_ontop)
+            and _in_contact(data, p["obj_geoms"], p["obj2_geoms"])
+            and float(np.linalg.norm(a[:2] - b[:2])) < 0.03
+        )
+    if fn == "on_site":  # placed object `obj` (arg1) resting in region site `site` (arg2)
+        sp, sm, ss = _site(model, data, p["site"])
+        if not under(sp, sm, ss, _body_xpos(model, data, p["obj"])):
+            return False
+        # a region with no backing object (table region) has no contact term
+        return p["parent_geoms"] is None or _in_contact(data, p["parent_geoms"], p["obj_geoms"])
+    if fn == "joint":  # open / close / turnon / turnoff on an articulated object
+        op = _OPS[p["op"]]
+        checks = [bool(op(float(data.qpos[addr]), p["thr"])) for addr in p["qpos_addr"]]
+        return any(checks) if p["reduce"] == "any" else all(checks)
     raise NotImplementedError(f"predicate {fn!r} not ported")
 
 

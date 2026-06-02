@@ -52,6 +52,26 @@ class LiberoNativeTask:
             torque_limits=(np.asarray(cfg["torque_limits"][0]), np.asarray(cfg["torque_limits"][1])),
         )
 
+    def render(self, camera: str = "agentview", height: int = 256, width: int = 256):
+        """Offscreen RGB render of the current state from the bundled MuJoCo model.
+
+        Returns a right-side-up ``(H, W, 3)`` uint8 image (the model's camera is the
+        OpenGL bottom-up convention; ``mujoco.Renderer`` already yields it top-down).
+        The geom-group mask matches robosuite's offscreen ``vopt.geomgroup``
+        (``[0,1,1,0,0,0]`` — show visual groups 1/2, hide collision group 0), so the
+        render is **bitwise-identical** to LIBERO's ``agentview_image`` at the same
+        state. Library-free — proves the native task is also renderable without libero.
+        """
+        if getattr(self, "_renderer", None) is None or self._renderer.height != height or self._renderer.width != width:
+            if getattr(self, "_renderer", None) is not None:
+                self._renderer.close()
+            self._renderer = mujoco.Renderer(self.model, height, width)
+            self._vopt = mujoco.MjvOption()
+            for g in (0, 3, 4, 5):  # robosuite shows only geom groups 1 and 2
+                self._vopt.geomgroup[g] = 0
+        self._renderer.update_scene(self.data, camera=camera, scene_option=self._vopt)
+        return self._renderer.render()
+
     def reset(self, state=None):
         """Set the model to a flat ``[time, qpos, qvel]`` state (default: bundled init)."""
         st = self.init_state if state is None else state
