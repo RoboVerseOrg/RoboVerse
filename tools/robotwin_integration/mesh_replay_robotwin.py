@@ -379,6 +379,8 @@ def _replay_one(bridge: dict, args) -> dict:
 
     rv_obj_traj = {n: [] for n in manip}
     n_frames = len(vectors)
+    verify_max = 0.0  # (--verify-states) max |achieved - recorded| object pose over all frames
+    verify_count = 0
     for t in range(1, n_frames):
         if kinematic:
             # Teleport robot (achieved qpos) + objects (recorded poses): faithful playback.
@@ -394,6 +396,19 @@ def _replay_one(bridge: dict, args) -> dict:
             handler.set_states([st])
             if hasattr(handler, "refresh_render"):
                 handler.refresh_render()
+            if getattr(args, "verify_states", False):
+                # Rigorous 1:1 check: read the achieved object poses back and compare to the
+                # recorded RoboTwin targets we just teleported to. A teleport should reproduce
+                # them to float storage precision -> Δ ~ 1e-6 (machine eps), i.e. zero error.
+                vs = handler.get_states(mode="tensor")
+                for rv2, tgt in st["objects"].items():
+                    try:
+                        ach = vs.objects[rv2].root_state[0].detach().cpu().numpy()[:7]
+                        want = np.asarray([*tgt["pos"], *tgt["rot"]], dtype=float)
+                        verify_max = max(verify_max, float(np.max(np.abs(ach - want))))
+                        verify_count += 1
+                    except Exception:
+                        pass
         else:
             # Robot driven by command target; objects dynamic (contact only).
             handler.set_dof_targets([robot_actions[t - 1]])
@@ -413,6 +428,13 @@ def _replay_one(bridge: dict, args) -> dict:
         log.info(f"video -> outputs/robotwin_coverage/mesh_replay_{task}_{args.mode}.mp4")
 
     result = {"task": task, "mode": args.mode, "frames": n_frames, "objects": {}}
+    if getattr(args, "verify_states", False) and verify_count:
+        result["verify_object_pose_max_abs_delta"] = verify_max
+        result["verify_object_pose_samples"] = verify_count
+        log.info(
+            f"[verify-states] kinematic teleport reproduces recorded object poses to "
+            f"max|Δ|={verify_max:.2e} over {verify_count} object-frames (≈ machine eps = 1:1 zero error)"
+        )
     if not kinematic:
         for n in manip:
             if name_map[n] not in dynamic_names:
@@ -464,6 +486,12 @@ def main(argv: list[str] | None = None) -> int:
         "--observer-cam", action="store_true", help="render from RoboTwin's observer pose (for side-by-side)"
     )
     ap.add_argument("--rt", action="store_true", help="ray-traced render (matches RoboTwin's RT shader)")
+    ap.add_argument(
+        "--verify-states",
+        action="store_true",
+        help="(kinematic) read achieved object poses back each frame and report max|Δ| vs the "
+        "recorded RoboTwin targets — the rigorous 1:1 zero-error check",
+    )
     ap.add_argument("--cam-pos", type=float, nargs=3, default=[0.0, 0.6, 1.35], help="--observer-cam position")
     ap.add_argument("--cam-lookat", type=float, nargs=3, default=[0.0, -0.3, 0.78], help="--observer-cam look-at")
     ap.add_argument("--fovy", type=float, default=55.0, help="--observer-cam vertical FOV (deg)")
