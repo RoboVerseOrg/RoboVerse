@@ -92,13 +92,15 @@ for i in $(seq 0 $((num_eval - 1))); do
   # handover_block's 800-step budget), which looked exactly like an RT-render "hang". A plain file
   # redirect decouples the client from any consumer, so it never blocks on write.
   ep_log="$(mktemp /tmp/dp_ep.XXXXXX.log)"
-  # PYTHONUNBUFFERED=1 keeps the client's chatty per-step stdout unbuffered, matching the
-  # known-good standalone path; it measurably REDUCES the eval hangs (tasks that wholly hung
-  # without it complete with it). It is NOT a complete cure, though: a residual, still-
-  # unexplained slowdown/hang occasionally affects this closed-loop eval (some windows run an
-  # 800-step episode in ~90s, others ~10x slower) regardless. When that happens, fall back to a
-  # standalone server + direct eval_robotwin_policy.py loop, which has been the most reliable
-  # path. The per-ep timeout + (post-first-success) early-abort below backstop the rest.
+  # PYTHONUNBUFFERED=1 keeps the client's chatty per-step stdout unbuffered (matches the
+  # standalone path). The one real eval gotcha is a SYSTEM-LEVEL intermittent slowdown (the SAME
+  # seed/ckpt can run an 800-step episode in ~90s in one window and ~10x slower in another -- a
+  # sapien/driver state thing, not a RoboVerse bug). In a slow window a FAILING episode burns its
+  # full step budget slowly; if --per-ep-timeout is too short it gets cut and looks like a "hang".
+  # The default 420s is generous enough to ride that out (verified: a default-timeout run of
+  # click_bell is a clean 4/4). Don't shorten it just to go faster -- that reintroduces spurious
+  # timeouts. The per-ep timeout + (post-first-success) early-abort below are the only backstops
+  # needed; both this tool and a standalone server+client loop work fine with an adequate timeout.
   timeout "${per_ep_timeout}" env MUJOCO_GL=egl SAPIEN_HEADLESS=1 PYTHONUNBUFFERED=1 $ROBOTWIN_PY \
     tools/robotwin_integration/eval_robotwin_policy.py \
     --task "$task" --policy dp --server "127.0.0.1:${port}" \
