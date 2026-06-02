@@ -105,6 +105,31 @@ def test_dp_client_chunk_caching(monkeypatch):
     assert a3[0] == 20
 
 
+def test_dp_needs_obs_tracks_chunk_boundary(monkeypatch):
+    """needs_obs() is True only when the action buffer is empty, so the eval loop renders
+    the (RT-shaded, hang-prone) head-camera once per chunk instead of every step."""
+    ev = _load_eval()
+    import numpy as np
+
+    pol = ev.DPPolicy.__new__(ev.DPPolicy)
+    pol.camera = "head_camera"
+    pol._cache = []
+    pol._rpc = lambda msg: {"action_chunk": [np.full(14, i, dtype=float) for i in range(3)]}
+    obs = {"observation": {"head_camera": {"rgb": np.zeros((4, 4, 3), np.uint8)}}, "robot_joint_state": np.zeros(14)}
+
+    # Empty buffer -> needs a fresh obs.
+    assert pol.needs_obs() is True
+    pol.predict(obs)  # fills a 3-chunk, pops 1 -> 2 buffered
+    assert pol.needs_obs() is False  # next 2 steps replay buffered actions, no render
+    pol.predict(None)  # buffered -> ignores obs (safe with None)
+    assert pol.needs_obs() is False
+    pol.predict(None)  # drains the buffer
+    assert pol.needs_obs() is True  # boundary again -> render + re-query
+
+    # The base Policy renders every step (default), so non-chunked policies are unchanged.
+    assert ev.ReplayPolicy.__new__(ev.ReplayPolicy).needs_obs() is True
+
+
 @pytest.mark.general
 def test_dp_client_raises_on_server_error(monkeypatch):
     """A server-side predict error must propagate, not be silently swallowed."""

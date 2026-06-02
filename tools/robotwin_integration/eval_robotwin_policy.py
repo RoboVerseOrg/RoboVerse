@@ -58,6 +58,16 @@ class Policy:
     def predict(self, obs: dict) -> np.ndarray | None:
         raise NotImplementedError
 
+    def needs_obs(self) -> bool:
+        """Whether the NEXT predict() call will actually consume the observation.
+
+        Lets the eval loop skip the (expensive, RT-rendered) ``get_obs()`` on steps where
+        the policy will just replay a buffered action. Default True = render every step
+        (correct for any policy). Chunked policies override this to render only at chunk
+        boundaries -- a pure efficiency win that does not change the obs the policy sees.
+        """
+        return True
+
 
 class ReplayPolicy(Policy):
     """Emit the bridge-recorded command targets one per step (open-loop replay)."""
@@ -128,6 +138,12 @@ class DPPolicy(Policy):
     def reset(self) -> None:
         self._cache = []
         self._rpc({"cmd": "reset"})
+
+    def needs_obs(self) -> bool:
+        # Only when the action buffer is empty do we query the server (and thus read the
+        # head-camera obs); on the other n_action_steps-1 steps we replay a cached action
+        # and ignore obs -- so the eval can skip rendering it entirely.
+        return not self._cache
 
     def predict(self, obs: dict) -> np.ndarray | None:
         if not self._cache:
@@ -223,18 +239,27 @@ def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: b
         # eval_mode, which we avoid to keep seen textures); fall back to the table.
         step_lim = int(env.step_lim) if getattr(env, "step_lim", None) else step_lim
         while env.take_action_cnt < step_lim:
-            obs = env.get_obs()
-            # Inject the achieved 14-D joint state [L_arm(6), L_grip, R_arm(6), R_grip]
-            # the SAME way collect_bridge records `real_vector` (the DP's training
-            # state obs): in eval mode obs["joint_action"] isn't script-populated, so
-            # read it straight from the robot for train/eval consistency.
-            try:
-                obs["robot_joint_state"] = np.asarray(
-                    list(env.robot.get_left_arm_real_jointState()) + list(env.robot.get_right_arm_real_jointState()),
-                    dtype=float,
-                )
-            except Exception:
-                pass
+            # Render the observation only when the policy will actually use it. A chunked
+            # DP consumes obs once per action chunk and replays buffered actions in between;
+            # since get_obs() renders the head-camera with the (intermittently deadlocking)
+            # RT shader, skipping it on the in-between steps cuts RT renders ~n_action_steps×
+            # -- far fewer chances to hit the upstream hang, and a big speedup -- WITHOUT
+            # changing the obs the policy sees at chunk boundaries.
+            obs = None
+            if getattr(policy, "needs_obs", lambda: True)():
+                obs = env.get_obs()
+                # Inject the achieved 14-D joint state [L_arm(6), L_grip, R_arm(6), R_grip]
+                # the SAME way collect_bridge records `real_vector` (the DP's training
+                # state obs): in eval mode obs["joint_action"] isn't script-populated, so
+                # read it straight from the robot for train/eval consistency.
+                try:
+                    obs["robot_joint_state"] = np.asarray(
+                        list(env.robot.get_left_arm_real_jointState())
+                        + list(env.robot.get_right_arm_real_jointState()),
+                        dtype=float,
+                    )
+                except Exception:
+                    pass
             try:
                 action = policy.predict(obs)
             except (TimeoutError, OSError) as e:
