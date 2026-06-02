@@ -237,6 +237,19 @@ class IsaacsimHandler(BaseSimHandler):
             initialize_physics()
 
     def launch(self, simulation_app=None, simulation_args=None) -> None:
+        try:
+            self._launch_impl(simulation_app, simulation_args)
+        except Exception as err:
+            # A failure anywhere during launch (asset load, physics reset, or
+            # camera-sensor init) otherwise leaves the Omniverse Kit
+            # SimulationApp alive with non-daemon background threads. The Python
+            # main thread dies on the exception but the process never exits, so
+            # it "hangs" while still holding the GPU. Tear the app down here so
+            # the error surfaces and the GPU is freed, then re-raise.
+            self._on_launch_failure(err)
+            raise
+
+    def _launch_impl(self, simulation_app=None, simulation_args=None) -> None:
         self._init_scene(simulation_app, simulation_args)
         self._load_robots()
         self._load_sensors()
@@ -276,6 +289,49 @@ class IsaacsimHandler(BaseSimHandler):
         for sensor in self.scene.sensors.values():
             if hasattr(sensor, "_initialize_callback"):
                 sensor._initialize_callback(None)
+
+    def _on_launch_failure(self, err: Exception) -> None:
+        """Free the GPU after a launch-time failure so the process cannot hang.
+
+        Only tears down a SimulationApp this handler owns; a caller-provided
+        shared app is left untouched. ``close()`` carries its own force-exit
+        watchdog (``METASIM_FORCE_EXIT_ON_CLOSE``), so a wedged Kit shutdown
+        still exits instead of hanging.
+        """
+        log.error(f"IsaacSim launch failed ({type(err).__name__}: {err}); closing SimulationApp to free the GPU.")
+        self._maybe_hint_numpy_abi(err)
+        if getattr(self, "_owns_simulation_app", False) and getattr(self, "simulation_app", None) is not None:
+            try:
+                self.close()
+            except Exception as close_err:
+                log.debug(f"close() during launch-failure teardown raised: {close_err}")
+
+    @staticmethod
+    def _maybe_hint_numpy_abi(err: Exception) -> None:
+        """Surface the numpy<2 requirement when the failure looks like an ABI mismatch.
+
+        IsaacSim 5.0 / Isaac Lab are built against numpy<2. With numpy>=2 the
+        ``omni.syntheticdata`` camera-annotation graph fails to wire up with
+        ``TypeError: Unable to write from unknown dtype`` (preceded by
+        ``missing valid input renderVar LdrColorSD``), which manifests as a
+        broken camera render rather than an obvious version error.
+        """
+        text = " ".join(str(part) for part in (err, getattr(err, "__cause__", None)) if part is not None)
+        if "unknown dtype" not in text and "renderVar" not in text:
+            return
+        try:
+            import numpy as _np
+
+            if int(_np.__version__.split(".")[0]) < 2:
+                return
+            version = _np.__version__
+        except Exception:
+            version = ">=2"
+        log.error(
+            f"This looks like a numpy ABI mismatch: numpy {version} is installed but IsaacSim/Isaac Lab "
+            "require numpy<2. Install a numpy<2 build (e.g. `pip install 'numpy<2'`) in this environment "
+            "to restore IsaacSim camera rendering."
+        )
 
     def close(self) -> None:
         log.info("close Isaacsim Handler")
