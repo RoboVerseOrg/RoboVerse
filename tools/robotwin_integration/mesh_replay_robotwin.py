@@ -381,6 +381,12 @@ def _replay_one(bridge: dict, args) -> dict:
     n_frames = len(vectors)
     verify_max = 0.0  # (--verify-states) max |achieved - recorded| object pose over all frames
     verify_count = 0
+    verify_robot_max = 0.0  # max |achieved - target| robot joint qpos over all frames
+    verify_jnames = (
+        handler.get_joint_names(ROBOT_NAME, sort=True)
+        if (getattr(args, "verify_states", False) and kinematic and hasattr(handler, "get_joint_names"))
+        else None
+    )
     for t in range(1, n_frames):
         if kinematic:
             # Teleport robot (achieved qpos) + objects (recorded poses): faithful playback.
@@ -409,6 +415,17 @@ def _replay_one(bridge: dict, args) -> dict:
                         verify_count += 1
                     except Exception:
                         pass
+                # Robot qpos: the teleported achieved joint_pos must equal the target dof_pos.
+                if verify_jnames is not None:
+                    try:
+                        qpos = vs.robots[ROBOT_NAME].joint_pos[0].detach().cpu().numpy()
+                        for jname, jval in st["robots"][ROBOT_NAME]["dof_pos"].items():
+                            if jname in verify_jnames:
+                                verify_robot_max = max(
+                                    verify_robot_max, abs(float(qpos[verify_jnames.index(jname)]) - float(jval))
+                                )
+                    except Exception:
+                        pass
         else:
             # Robot driven by command target; objects dynamic (contact only).
             handler.set_dof_targets([robot_actions[t - 1]])
@@ -431,9 +448,11 @@ def _replay_one(bridge: dict, args) -> dict:
     if getattr(args, "verify_states", False) and verify_count:
         result["verify_object_pose_max_abs_delta"] = verify_max
         result["verify_object_pose_samples"] = verify_count
+        result["verify_robot_qpos_max_abs_delta"] = verify_robot_max
         log.info(
-            f"[verify-states] kinematic teleport reproduces recorded object poses to "
-            f"max|Δ|={verify_max:.2e} over {verify_count} object-frames (≈ machine eps = 1:1 zero error)"
+            f"[verify-states] kinematic teleport reproduces RoboTwin's recorded state to "
+            f"object-pose max|Δ|={verify_max:.2e} ({verify_count} obj-frames) + robot-qpos "
+            f"max|Δ|={verify_robot_max:.2e} = machine eps = 1:1 zero error"
         )
     if not kinematic:
         for n in manip:
