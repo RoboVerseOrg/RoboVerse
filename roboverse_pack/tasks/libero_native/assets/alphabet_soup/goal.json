@@ -1,0 +1,67 @@
+{
+  "goal": [
+    {
+      "fn": "in",
+      "obj": "alphabet_soup_1_main",
+      "region": "basket_1_contain_region"
+    }
+  ],
+  "suite": "libero_object",
+  "base": "pick_up_the_alphabet_soup_and_place_it_in_the_basket",
+  "task": "pick_up_the_alphabet_soup_and_place_it_in_the_basket_table_1",
+  "osc": {
+    "eef_site": "gripper0_grip_site",
+    "arm_qvel_index": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "arm_act_index": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "grip_act_index": [
+      7,
+      8
+    ],
+    "initial_joint": [
+      0.0,
+      -0.161037389,
+      0.0,
+      -2.44459747,
+      0.0,
+      2.2267522,
+      0.7853981633974483
+    ],
+    "torque_limits": [
+      [
+        -80.0,
+        -80.0,
+        -80.0,
+        -80.0,
+        -80.0,
+        -12.0,
+        -12.0
+      ],
+      [
+        80.0,
+        80.0,
+        80.0,
+        80.0,
+        80.0,
+        12.0,
+        12.0
+      ]
+    ],
+    "substeps": 25
+  }
+}
