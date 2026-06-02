@@ -135,6 +135,27 @@ def _disambiguate(name: str, counts: dict) -> str:
     return name if n == 0 else f"{name}#{n}"
 
 
+def _emit_static_primitives(mesh_sink: dict, object_meshes: dict, object_traj: dict, num_frames: int) -> None:
+    """Emit visual-only primitives (no physx body) as fixed-pose objects.
+
+    ``create_visual_box`` (e.g. stamp_seal's stamp-target marker) builds a render-only
+    actor with no rigid body, so it is absent from ``scene.get_all_actors()`` and never
+    gets a tracked pose trajectory -- the replay would silently drop it ("missing
+    object"). The mesh hook captured its shape AND its static placement under
+    ``_static_pose``; here we add it to ``object_meshes`` (shape) and ``object_traj``
+    (a constant ``[x,y,z, qw,qx,qy,qz]`` repeated ``num_frames`` times) so the RoboVerse
+    replay shows the exact same marker the native render does. Mutates the two dicts in
+    place; entries already present (tracked actors) are left untouched.
+    """
+    for key, mesh in mesh_sink.items():
+        if key in object_meshes or "_static_pose" not in mesh:
+            continue
+        sp = mesh["_static_pose"]
+        object_meshes[key] = {k2: v for k2, v in mesh.items() if k2 != "_static_pose"}
+        object_meshes[key]["type"] = mesh.get("type", "box")
+        object_traj[key] = np.asarray([sp["pos"] + sp["rot"]] * num_frames, dtype=float)
+
+
 def resolve_urdf_instance_dir(objects_root: str, modelname: str, modelid):
     """Resolve the EXACT URDF instance dir RoboTwin's create_sapien_urdf_obj uses.
 
@@ -265,17 +286,32 @@ def _install_mesh_hook(pt) -> dict:
             return orig_box(scene, pose, half_size, *a, color=color, is_static=is_static, name=name, **k)
 
         cau.create_box = hooked_box
-        # Tasks do ``from .utils import *``, which re-exports create_box into the
-        # ``envs.utils`` package namespace -- a SEPARATE binding the task copies at
-        # import time. Patch it there too (before the task is imported) so the hook
-        # actually sees the call.
-        eu = _sys.modules.get("envs.utils")
-        if eu is not None and hasattr(eu, "create_box"):
-            eu.create_box = hooked_box
+        # Tasks do ``from .utils import *``, which copies create_box into the TASK
+        # module's own namespace -- a SEPARATE binding that patching cau alone does
+        # not touch. Rebind every already-imported ``envs.*`` module that still holds
+        # the original object so bare-name calls inside ``load_actors`` hit the hook.
+        for _modname, _mod in list(_sys.modules.items()):
+            if _mod is None or not _modname.startswith("envs"):
+                continue
+            if getattr(_mod, "create_box", None) is orig_box:
+                _mod.create_box = hooked_box
 
     # Capture the OTHER primitive creators too -- create_sphere (dump_bin garbage),
     # create_cylinder, create_visual_box (stamp_seal). Without these the objects have
     # a recorded pose but no shape, so the replay drops them = "missing objects".
+    def _rebind_everywhere(fnname, orig, wrapped):
+        # Tasks do ``from .utils import *`` at import time, which copies the creator
+        # into the TASK module's own namespace -- a separate binding that patching
+        # ``cau``/``envs.utils`` does not touch. Rebind the name in cau, the utils
+        # package, AND every already-imported ``envs.*`` task module that still holds
+        # the original object, so bare-name calls inside ``load_actors`` hit us.
+        setattr(cau, fnname, wrapped)
+        for modname, mod in list(_sys.modules.items()):
+            if mod is None or not modname.startswith("envs"):
+                continue
+            if getattr(mod, fnname, None) is orig:
+                setattr(mod, fnname, wrapped)
+
     def _patch(fnname, record):
         if not hasattr(cau, fnname):
             return
@@ -285,15 +321,24 @@ def _install_mesh_hook(pt) -> dict:
             try:
                 name = k.get("name", "")
                 if name:
-                    sink[_disambiguate(name, counts)] = record(a, k)
+                    rec = record(a, k)
+                    # create_visual_box makes a visual-only actor (no physx body), so
+                    # it is absent from scene.get_all_actors() and never gets a tracked
+                    # pose trajectory. Capture its static placement here so the save
+                    # step can emit it as a fixed-pose object (else it's dropped).
+                    try:
+                        rec["_static_pose"] = {
+                            "pos": [float(x) for x in pose.p],
+                            "rot": [float(x) for x in pose.q],
+                        }
+                    except Exception:
+                        pass
+                    sink[_disambiguate(name, counts)] = rec
             except Exception:
                 pass
             return orig(scene, pose, *a, **k)
 
-        setattr(cau, fnname, wrapped)
-        eu = _sys.modules.get("envs.utils")
-        if eu is not None and hasattr(eu, fnname):
-            setattr(eu, fnname, wrapped)
+        _rebind_everywhere(fnname, orig, wrapped)
 
     def _sphere_rec(a, k):
         radius = k.get("radius", a[0] if a else 0.02)
@@ -616,6 +661,11 @@ def main(argv: list[str] | None = None) -> int:
                     urdf = _locate_urdf(pt.robotwin_dir(), n)
                     if urdf:
                         object_meshes[n] = {"urdf": urdf, "type": "urdf"}
+            # Visual-only primitives (create_visual_box target markers) have no physx
+            # body, so they never appear in init_objects/object_traj. Emit them as
+            # static objects: their captured shape + a constant-pose trajectory, so the
+            # replay shows the same target marker the native render does (1:1 scene).
+            _emit_static_primitives(mesh_sink, object_meshes, object_traj, len(frames))
             # Per-frame camera RGB for IL policy training (only when --rgb). RoboTwin's
             # get_obs nests frames under f["observation"][cam]["rgb"] (uint8 HxWx3);
             # capture every camera so DP/ACT can train on head + wrist views.
