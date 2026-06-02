@@ -1,47 +1,87 @@
 """Run a LIBERO task entirely inside MetaSim's MuJoCo substrate — NO ``libero``.
 
-Loads a self-contained bundle (``model.mjb`` + init state + demo actions + grip
-ctrl + resolved BDDL goal/OSC config, produced once by
-``scripts.native.export_libero_task``) and runs it with the inlined OSC_POSE
-controller (:mod:`.osc`) + the ported BDDL checker (:mod:`.checker`). This module
-imports only ``mujoco`` + ``numpy`` + this package — proving a LIBERO task's
-scene, control law and success criterion all run without the upstream library.
+Two equivalent ways to load a base LIBERO task without the upstream library:
+
+* :meth:`LiberoNativeTask.from_vendored` — the **library-free, shippable** path:
+  resolve the task's portable MJCF + every mesh/texture from
+  ``roboverse_data`` (local clone or HF, via :mod:`._locator`) + the resolved
+  BDDL goal/OSC config. This is what lets the ``libero``/``robosuite`` Python
+  packages be deleted wholesale (assets vendored by
+  ``scripts.native.migrate_libero_assets``).
+* ``LiberoNativeTask(name, bundle_dir)`` — load a self-contained ``model.mjb``
+  bundle (+ demo actions/grip) produced by ``scripts.native.export_libero_task``.
+
+Both run the task with the inlined OSC_POSE controller (:mod:`.osc`) + the ported
+BDDL checker (:mod:`.checker`). This module imports only ``mujoco`` + ``numpy`` +
+this package (the HF fallback in ``_locator`` lazily imports ``metasim``, never
+``libero``/``robosuite``) — proving a LIBERO task's scene, control law and success
+criterion all run without the upstream library.
 
     from roboverse_pack.tasks.libero_native.native_task import LiberoNativeTask
-    task = LiberoNativeTask("alphabet_soup")
-    print(task.replay_demo())   # {'first_success_step': ..., 'final_success': bool}
+    task = LiberoNativeTask.from_vendored("libero_object", "pick_up_the_alphabet_soup_and_place_it_in_the_basket")
+    task.reset(state); print(task.success())
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 
 import mujoco
 import numpy as np
 
 from . import checker as nc
+from ._locator import libero_asset, libero_data
 from .osc import NativeOSCPose
 
 ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+_FILE_RE = re.compile(r'file="([^"]+)"')
 
 
 class LiberoNativeTask:
-    """A LIBERO task loaded from a self-contained bundle; runs with no libero."""
+    """A LIBERO task loaded with no libero — from a vendored MJCF or an MJB bundle."""
 
     def __init__(self, name: str, bundle_dir: str | None = None):
         d = bundle_dir or os.path.join(ASSETS, name)
-        self.model = mujoco.MjModel.from_binary_path(os.path.join(d, "model.mjb"))
-        self.data = mujoco.MjData(self.model)
+        model = mujoco.MjModel.from_binary_path(os.path.join(d, "model.mjb"))
         meta = json.load(open(os.path.join(d, "goal.json")))
-        self.goal = meta["goal"]
-        cfg = meta["osc"]
-        self.substeps = cfg["substeps"]
-        self.arm_act = np.asarray(cfg["arm_act_index"], int)
-        self.grip_act = np.asarray(cfg["grip_act_index"], int)
+        self._setup(model, meta["goal"], meta["osc"])
         self.init_state = np.load(os.path.join(d, "init_states.npy"))
         self.demo_actions = np.load(os.path.join(d, "demo_actions.npy"))
         self.grip_ctrl = np.load(os.path.join(d, "grip_ctrl.npy"))
+
+    @classmethod
+    def from_vendored(cls, suite: str, task: str):
+        """Load a task from the vendored ``roboverse_data/libero`` tree (no libero).
+
+        Resolves the portable task MJCF and rewrites every ``file="<relpath>"`` to a
+        concrete asset path from the local clone / HF, then compiles in-memory.
+        """
+        self = cls.__new__(cls)
+        xml_path = libero_data(f"tasks/{suite}/{task}.xml")
+        meta = json.load(open(libero_data(f"tasks/{suite}/{task}.goal.json")))
+        with open(xml_path) as f:
+            xml = f.read()
+        xml = _FILE_RE.sub(lambda m: f'file="{libero_asset(m.group(1))}"', xml)
+        model = mujoco.MjModel.from_xml_string(xml)
+        # re-apply robosuite's runtime fixture placement (body_pos/quat) that the
+        # serialized MJCF doesn't carry -> makes the model bitwise-identical.
+        if meta.get("body_pos") is not None:
+            model.body_pos[:] = np.asarray(meta["body_pos"])
+            model.body_quat[:] = np.asarray(meta["body_quat"])
+        self._setup(model, meta["goal"], meta["osc"])
+        self.init_state = self.demo_actions = self.grip_ctrl = None
+        return self
+
+    def _setup(self, model, goal, cfg):
+        """Wire up model/data + the ported goal + the inlined OSC controller."""
+        self.model = model
+        self.data = mujoco.MjData(model)
+        self.goal = goal
+        self.substeps = cfg["substeps"]
+        self.arm_act = np.asarray(cfg["arm_act_index"], int)
+        self.grip_act = np.asarray(cfg["grip_act_index"], int)
         self.osc = NativeOSCPose(
             self.model,
             self.data,

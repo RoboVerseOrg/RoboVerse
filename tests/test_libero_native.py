@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 
 import numpy as np
@@ -38,6 +39,43 @@ def test_under_matches_libero_semantics():
     assert not under(pos, mat, size, np.array([0.0, 0.0, 0.20]))  # too high
     assert not under(pos, mat, size, np.array([0.0, 0.0, 0.0]))  # below floor band
     assert not under(pos, mat, size, np.array([0.15, 0.0, 0.06]))  # outside xy
+
+
+def test_from_vendored_loads_without_libero_or_robosuite():
+    """A vendored task loads + runs from roboverse_data with libero/robosuite blocked.
+
+    Skips when the vendored assets aren't present locally (they live on HF
+    ``RoboVerseOrg/roboverse_data`` under ``libero/`` — see migrate_libero_assets).
+    """
+    import builtins
+    import glob
+
+    import pytest
+
+    from roboverse_pack.tasks.libero_native._locator import _data_dirs
+
+    vendored = next((d for d in _data_dirs() if (d / "libero" / "tasks").exists()), None)
+    if vendored is None:
+        pytest.skip("vendored roboverse_data/libero not present locally")
+    xmls = glob.glob(str(vendored / "libero" / "tasks" / "*" / "*.xml"))
+    suite_task = os.path.relpath(xmls[0], vendored / "libero" / "tasks")[:-4].split(os.sep)
+
+    real_import = builtins.__import__
+
+    def blocked(name, *a, **k):
+        if name.split(".")[0] in ("libero", "robosuite"):
+            raise ImportError(f"{name} is blocked")
+        return real_import(name, *a, **k)
+
+    builtins.__import__ = blocked
+    try:
+        from roboverse_pack.tasks.libero_native.native_task import LiberoNativeTask
+
+        tk = LiberoNativeTask.from_vendored(suite_task[0], suite_task[1])
+        assert tk.model.nq > 0 and tk.success() in (True, False)
+        assert "libero" not in sys.modules and "robosuite" not in sys.modules
+    finally:
+        builtins.__import__ = real_import
 
 
 def test_articulated_and_contact_predicates_eval():
