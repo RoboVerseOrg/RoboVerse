@@ -86,10 +86,18 @@ succ=0
 hangstreak=0
 for i in $(seq 0 $((num_eval - 1))); do
   seed=$((start_seed + i))
-  out=$(timeout "${per_ep_timeout}" env MUJOCO_GL=egl SAPIEN_HEADLESS=1 $ROBOTWIN_PY \
+  # Write the client's (very chatty -- per-step "step: N/None" + svulkan) output to a file and
+  # grep the file AFTERWARDS, rather than piping it live through grep. Piping a long episode's
+  # stdout through a grep inside $() can deadlock on pipe back-pressure for high-step tasks (e.g.
+  # handover_block's 800-step budget), which looked exactly like an RT-render "hang". A plain file
+  # redirect decouples the client from any consumer, so it never blocks on write.
+  ep_log="$(mktemp /tmp/dp_ep.XXXXXX.log)"
+  timeout "${per_ep_timeout}" env MUJOCO_GL=egl SAPIEN_HEADLESS=1 $ROBOTWIN_PY \
     tools/robotwin_integration/eval_robotwin_policy.py \
     --task "$task" --policy dp --server "127.0.0.1:${port}" \
-    --num-eval 1 --start-seed "$seed" 2>&1 | grep -aE "seed ${seed}\] (SUCCESS|FAIL)" | grep -av "step:")
+    --num-eval 1 --start-seed "$seed" > "$ep_log" 2>&1
+  out=$(grep -aE "seed ${seed}\] (SUCCESS|FAIL)" "$ep_log" | grep -av "step:")
+  rm -f "$ep_log"
   if echo "$out" | grep -qa "SUCCESS"; then
     succ=$((succ + 1)); hangstreak=0; echo "[seed $seed] SUCCESS"
   elif echo "$out" | grep -qa "FAIL"; then
