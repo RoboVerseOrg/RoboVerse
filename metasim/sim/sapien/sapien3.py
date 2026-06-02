@@ -244,10 +244,7 @@ class Sapien3Handler(BaseSimHandler):
                     cur_joint_names.append(joint_name)
                 self.object_joint_order[object.name] = cur_joint_names
 
-                ### TODO
-                # Change dof properties
-                ###
-
+                # Wire DOF properties (stiffness / damping / drive mode) for robots.
                 if isinstance(object, RobotCfg):
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
@@ -350,24 +347,6 @@ class Sapien3Handler(BaseSimHandler):
                 self.loader.fix_root_link = object.fix_base_link
                 self.loader.scale = object.scale[0]
                 file_path = object.urdf_path
-                # curr_id: sapien_core.Entity
-                # try:
-                #     curr_id = self.loader.load(file_path)
-                # except Exception as e:
-                #     log.warning(f"Error loading {file_path}: {e}")
-                #     curr_id_list = self.loader.load_multiple(file_path)
-                #     # TODO:
-                #     # Don't understand why some urdf are treated as multiple entities
-                #     # Needs to figure out a better way to load!
-                #     for id in curr_id_list:
-                #         if len(id):
-                #             curr_id = id
-                #             break
-                # # builder = self.loader.load_file_as_articulation_builder(file_path)
-                # if isinstance(curr_id, list):
-                #     ## HACK
-                #     curr_id = curr_id[0]
-                # curr_id.set_pose(sapien_core.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]))
                 curr_id = load_actor_from_urdf(self.scene, file_path, scale=object.scale)
                 curr_id.set_pose(_load_init_pose(object))
 
@@ -446,8 +425,9 @@ class Sapien3Handler(BaseSimHandler):
             self.viewer.set_camera_xyz(x=camera_pos[0], y=camera_pos[1], z=camera_pos[2])
             # The rotation of the free camera is represented as [roll(x), pitch(-y), yaw(-z)]
             self.viewer.set_camera_rpy(r=roll, p=pitch, y=-yaw)
-            # TODO:
-            # UNABLE TO REMOVE THE AXIS AND CAMERA LINES FOR EARLY VERSIONS OF SAPIEN3
+            # Early SAPIEN 3 versions don't expose viewer.toggle_axes /
+            # toggle_camera_lines; once the minimum SAPIEN version supports
+            # them, enable the two calls below to hide the debug overlay.
             # self.viewer.toggle_axes(show=False)
             # self.viewer.toggle_camera_lines(show=False)
 

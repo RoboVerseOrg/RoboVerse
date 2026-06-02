@@ -728,7 +728,6 @@ class IsaacsimHandler(BaseSimHandler):
 
         robot_states = {}
         for obj in self.robots:
-            ## TODO: dof_pos_target, dof_vel_target, dof_torque
             obj_inst = self.scene.articulations[obj.name]
             joint_reindex = self.get_joint_reindex(obj.name)
             body_reindex = self.get_body_reindex(obj.name)

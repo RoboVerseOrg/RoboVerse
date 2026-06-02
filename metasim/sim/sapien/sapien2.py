@@ -52,7 +52,6 @@ class Sapien2Handler(BaseSimHandler):
         assert parse_version(sapien.__version__) >= parse_version("2.0.0"), "Sapien version should be 2.0.0 or higher"
         assert parse_version(sapien.__version__) < parse_version("3.0.0a0"), "Sapien version should be lower than 3.0.0"
         super().__init__(scenario, optional_queries)
-        # self.headless = False  # XXX: no headless anyway
         self.headless = scenario.headless
 
     def _build_sapien(self):
@@ -159,10 +158,7 @@ class Sapien2Handler(BaseSimHandler):
                     cur_joint_names.append(joint_name)
                 self.object_joint_order[object.name] = cur_joint_names
 
-                ### TODO
-                # Change dof properties
-                ###
-
+                # Wire DOF properties (stiffness / damping) for robots.
                 if isinstance(object, RobotCfg):
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):

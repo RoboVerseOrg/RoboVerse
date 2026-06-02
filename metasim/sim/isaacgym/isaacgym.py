@@ -97,13 +97,7 @@ class IsaacgymHandler(BaseSimHandler):
         self._robot_num_dof: int = 0  # total number of robot dof across all robots
         self._obj_num_dof: int = 0  # number of object dof
         self._actions: torch.Tensor | None = None
-        self._action_scale: torch.Tensor | None = (
-            None  # for configuration: desire_pos = action_scale * action + default_pos
-        )
-        self._robot_default_dof_pos: torch.Tensor | None = (
-            None  # for the configuration: desire_pos = action_scale * action + default_pos
-        )
-        self._action_offset: bool = False  # for configuration: desire_pos = action_scale * action + default_pos
+        self._robot_default_dof_pos: torch.Tensor | None = None
         self._p_gains: torch.Tensor | None = None  # parameter for PD controller in for pd effort control
         self._d_gains: torch.Tensor | None = None
         self._torque_limits: torch.Tensor | None = None
@@ -425,10 +419,6 @@ class IsaacgymHandler(BaseSimHandler):
 
     def _load_robot_assets(self) -> None:
         asset_root = "."
-
-        # FIXME: hard code for 0-1 action space, should remove all the scale stuff later
-        self._action_scale = torch.tensor(1.0, device=self.device)
-        self._action_offset = torch.tensor(0.0, device=self.device)
 
         total_num_actions = 0
         total_robot_num_dofs = 0
