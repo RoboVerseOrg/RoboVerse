@@ -62,6 +62,7 @@ from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_handler
 from roboverse_pack.robots.aloha_agilex_cfg import AlohaAgilexCfg
 from roboverse_pack.tasks.robotwin._convert import ROBOT_NAME, ROBOT_POS, ROBOT_ROT, bridge_to_v2, vector_to_dof
+from roboverse_pack.tasks.robotwin._locator import robotwin_asset
 
 _INFRA = {"ground", "wall", "table", "table_wall", "floor"}
 
@@ -187,7 +188,7 @@ def _replay_one(bridge: dict, args) -> dict:
             # URDF-articulation object (pot / cabinet / laptop). RoboTwin sets the
             # loader scale to model_data["scale"][0]; reproduce it or the object
             # loads at raw (huge) units.
-            urdf_abs = os.path.join(args.robotwin_dir, mesh["urdf"])
+            urdf_abs = robotwin_asset(mesh["urdf"])
             uscale = mesh.get("scale")
             if uscale is None:
                 md = os.path.join(os.path.dirname(urdf_abs), "model_data.json")
@@ -224,7 +225,7 @@ def _replay_one(bridge: dict, args) -> dict:
                 )
         elif mesh and mesh.get("visual"):
             # Rigid mesh object: wrap the GLB/OBJ in a minimal URDF for sapien3.
-            mesh_abs = os.path.join(args.robotwin_dir, mesh["visual"])
+            mesh_abs = robotwin_asset(mesh["visual"])
             urdf = _glb_to_urdf(mesh_abs, mesh.get("scale"), "outputs/robotwin_coverage/_obj_urdf", rv)
             objects.append(
                 RigidObjCfg(name=rv, urdf_path=urdf, physics=phys, fix_base_link=(phys == PhysicStateType.XFORM))
@@ -440,11 +441,21 @@ def _replay_one(bridge: dict, args) -> dict:
     return result
 
 
+def _default_bridge_dir() -> str:
+    """Prefer the live RoboTwin collection dir; fall back to the vendored slim trajectories so
+    replay works after ~/projects/robotwin is deleted."""
+    live = os.path.expanduser("~/projects/robotwin/data/_rv_bridge")
+    if os.path.isdir(live):
+        return live
+    return os.path.join("roboverse_data", "robotwin", "bridges")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--bridge", default=os.path.expanduser("~/projects/robotwin/data/_rv_bridge/beat_block_hammer.pkl"))
+    _bdir = _default_bridge_dir()
+    ap.add_argument("--bridge", default=os.path.join(_bdir, "beat_block_hammer.pkl"))
     ap.add_argument("--all", action="store_true", help="sweep every *.pkl with object_traj under the bridge dir")
-    ap.add_argument("--bridge-dir", default=os.path.expanduser("~/projects/robotwin/data/_rv_bridge"))
+    ap.add_argument("--bridge-dir", default=_bdir)
     ap.add_argument("--mode", choices=["kinematic", "physics"], default="kinematic")
     ap.add_argument("--sim", default="sapien3")
     ap.add_argument("--settle", type=int, default=8, help="(physics mode) simulate() calls per target")
@@ -456,9 +467,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cam-pos", type=float, nargs=3, default=[0.0, 0.6, 1.35], help="--observer-cam position")
     ap.add_argument("--cam-lookat", type=float, nargs=3, default=[0.0, -0.3, 0.78], help="--observer-cam look-at")
     ap.add_argument("--fovy", type=float, default=55.0, help="--observer-cam vertical FOV (deg)")
-    ap.add_argument("--robotwin-dir", default=os.path.expanduser("~/projects/robotwin"))
+    ap.add_argument(
+        "--robotwin-dir",
+        default=None,
+        help="explicit RoboTwin clone root (sets ROBOTWIN_ASSETS); default resolves via the "
+        "_locator (clone -> roboverse_data mirror -> HF), so a clone is NOT required",
+    )
     ap.add_argument("--out", default="outputs/robotwin_coverage/object_parity.json")
     args = ap.parse_args(argv)
+
+    # An explicit --robotwin-dir overrides locator resolution (dev against a specific clone).
+    if args.robotwin_dir:
+        os.environ["ROBOTWIN_ASSETS"] = args.robotwin_dir
 
     if args.all:
         paths = sorted(
