@@ -109,13 +109,16 @@ for i in $(seq 0 $((num_eval - 1))); do
   else
     hangstreak=$((hangstreak + 1))
     echo "[seed $seed] FAIL (timeout/hang after ${per_ep_timeout}s)"
-    # An episode that produces NO result line hit the wall-clock timeout = a hang, not a
-    # policy decision. The first episodes all hanging means the server is wedged (e.g. GPU
-    # still contended) -- abort fast with a diagnostic instead of burning N*timeout and
-    # reporting a misleading 0/N. (A real policy failure prints "FAIL" and resets the streak.)
-    if [[ $hangstreak -ge 3 ]]; then
-      echo "ERROR: ${hangstreak} consecutive episodes hung with no result -- the policy server" >&2
-      echo "       is not responding (likely GPU contention or a wedged server). Aborting." >&2
+    # An episode that produces NO result line hit the wall-clock timeout. This is a real fail
+    # either way (counted as such). The early-abort exists ONLY to catch a wedged server, which
+    # hangs from the very first episode -- so we abort solely when NOTHING has succeeded yet
+    # (succ == 0). Once any episode has succeeded the server is demonstrably working, and a run
+    # of timeouts just means slow FAILING episodes burning their full step budget (common on
+    # long-budget tasks like handover_block's 800 steps) -- never abort then, or we'd truncate a
+    # legitimate eval. Raise --per-ep-timeout if failing episodes are being cut before they end.
+    if [[ $hangstreak -ge 3 && $succ -eq 0 ]]; then
+      echo "ERROR: ${hangstreak} consecutive episodes hung with NO success yet -- the policy" >&2
+      echo "       server looks wedged (GPU contention / load failure). Aborting." >&2
       echo "       Server log tail:" >&2; tail -15 "$srv_log" >&2
       exit 2
     fi
