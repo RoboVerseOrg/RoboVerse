@@ -271,7 +271,7 @@ class Sapien2Handler(BaseSimHandler):
                 builder.add_visual_from_file(filename=object.mesh_path, scale=scale3)
                 curr_id = builder.build_static(name=object.name) if object.fix_base_link else builder.build(name=object.name)
                 curr_id.set_pose(_load_init_pose(object))
-                if object.linear_damping is not None or object.angular_damping is not None:
+                if (not object.fix_base_link) and (object.linear_damping is not None or object.angular_damping is not None):
                     curr_id.set_damping(object.linear_damping or 0.0, object.angular_damping or 0.0)
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
