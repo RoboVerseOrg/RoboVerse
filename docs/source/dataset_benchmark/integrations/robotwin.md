@@ -152,13 +152,28 @@ policy is evaluated **closed-loop in the native RoboTwin environment** (via the
 passthrough), so its success rate is directly comparable to RoboTwin's own
 learned-policy baseline (not the ~100% scripted expert planner).
 
-A worked result on `beat_block_hammer`: a Diffusion Policy trained on **100**
-RoboTwin demos with RoboTwin-matched hyperparameters (`n_action_steps=6`) reaches
-**9/20 = 45%** closed-loop under RoboTwin's own 400-step budget — successful
-episodes trigger `check_success` early, so the policy is genuinely completing the
-task, not replaying. (A 40-demo / 300-epoch run overfits to 15%; the data volume
-and matched hyperparameters are what close the gap.) The policy is stochastic
-(DDPM sampling), so the rate has run-to-run variance.
+Cross-task results (closed-loop, native RoboTwin, 20 held-out seeds, 400-step
+budget): `beat_block_hammer` **42%** (precision strike, validated over two runs
+45%+40%), `move_can_pot` **30%** (pick-place), `click_bell` **50%** (simple
+single-arm press). All land at RoboTwin's own DP baseline level — simplest task
+highest, as expected. Successful episodes trigger `check_success` early, so the
+policy genuinely completes the task rather than replaying. (A 40-demo / 300-epoch
+run overfits to 15%; data volume + RoboTwin-matched `n_action_steps=6` close the
+gap.) The policy is stochastic (DDPM sampling), so each 20-episode rate has
+run-to-run variance (±10–20%).
+
+**Eval robustness (read before trusting a number).** The DP eval renders the
+head-camera every step with RoboTwin's RT shader (required for train/eval obs
+parity). That RT render path **intermittently deadlocks** headless in upstream
+sapien — an episode then hangs to its `--per-ep-timeout` and is counted a failure.
+Two safeguards in `eval_dp_robotwin.sh` keep this from corrupting a result: it
+waits for any DP-training process to release the GPU before loading the policy
+server (train→eval contention makes the first inference hang), and it **aborts
+after 3 consecutive no-result hangs** with the server log rather than burning
+`N × timeout` and reporting a misleading `0/N`. A genuine all-`0/N` should always
+be investigated as a harness/hang issue, never reported as a policy result; the
+rates above are from clean runs where all 20 episodes returned a real
+success/failure.
 
 ```bash
 # 1. COLLECT — expert demos with head-camera RGB (robotwin env).
