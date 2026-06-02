@@ -92,7 +92,11 @@ for i in $(seq 0 $((num_eval - 1))); do
   # handover_block's 800-step budget), which looked exactly like an RT-render "hang". A plain file
   # redirect decouples the client from any consumer, so it never blocks on write.
   ep_log="$(mktemp /tmp/dp_ep.XXXXXX.log)"
-  timeout "${per_ep_timeout}" env MUJOCO_GL=egl SAPIEN_HEADLESS=1 $ROBOTWIN_PY \
+  # PYTHONUNBUFFERED=1 is REQUIRED: without it the client's very chatty per-step stdout is
+  # block-buffered to the redirected file, and that buffering reproducibly wedges the episode
+  # (standalone clients that set it complete the SAME seed that hangs here without it). With it,
+  # the eval matches the known-good standalone path.
+  timeout "${per_ep_timeout}" env MUJOCO_GL=egl SAPIEN_HEADLESS=1 PYTHONUNBUFFERED=1 $ROBOTWIN_PY \
     tools/robotwin_integration/eval_robotwin_policy.py \
     --task "$task" --policy dp --server "127.0.0.1:${port}" \
     --num-eval 1 --start-seed "$seed" > "$ep_log" 2>&1
