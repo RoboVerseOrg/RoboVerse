@@ -53,6 +53,13 @@ class SimParamCfg:
     # solver iteration counts from this cfg onto the SAPIEN SceneConfig. When None/False
     # it keeps its historical behaviour (only gravity + timestep set).
     sapien_apply_scene_solver: bool | None = None
+    # When True, the sapien handler skips its built-in default lights so a task can install its
+    # own (e.g. SimplerEnv visual-matching lighting) via the exposed scene after launch.
+    sapien_disable_default_lights: bool | None = None
+    # When True, the sapien URDF loader loads multiple convex collision meshes per link
+    # (loader.load_multiple_collisions_from_file). Needed for assets whose collision geometry is
+    # split into several convex pieces (e.g. the SimplerEnv google_robot). Default None = legacy.
+    sapien_load_multiple_collisions: bool | None = None
 
     ## MJX, Newton specific parameters
     nconmax: int | None = 512

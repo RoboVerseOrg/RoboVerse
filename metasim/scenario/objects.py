@@ -79,6 +79,12 @@ class _FileBasedMixin:
                 return self.urdf_path
             return None
         elif file_type == "urdf":
+            if self.urdf_path is not None:
+                return self.urdf_path
+            # sapien2 also natively loads GLB scenes (NonConvexRigidObjCfg.usd_path) and mesh-based
+            # rigid objects (RigidObjCfg.mesh_path); resolve to what the handler actually loads.
+            if sim_name == "sapien2":
+                return self.usd_path or getattr(self, "mesh_path", None)
             return self.urdf_path
         elif file_type == "mjcf":
             return self.mjcf_path
@@ -164,6 +170,21 @@ class BaseRigidObjCfg(BaseObjCfg):
 
     physics: PhysicStateType | None = None
     """IsaacSim's convention for collision and gravity state. Default to None. If specified, it will be translated to :attr:`collision_enabled` and :attr:`fix_base_link`."""
+
+    # Optional rigid-body physical properties (opt-in; default None = backend default). Used by
+    # mesh-based rigid objects in backends that support per-object material/density (sapien2).
+    mesh_density: float | None = None
+    """Uniform density (kg/m^3) used to derive mass/inertia from the collision mesh of a mesh-based
+    rigid object. Named ``mesh_density`` to avoid clashing with the primitive ``density`` property.
+    Default None."""
+    collision_mesh_path: str | None = None
+    """Separate collision mesh for mesh-based rigid objects whose collision geometry differs from the
+    visual (e.g. SimplerEnv objects: collision.obj + textured.dae). Falls back to the visual mesh."""
+    static_friction: float | None = None
+    dynamic_friction: float | None = None
+    restitution: float | None = None
+    linear_damping: float | None = None
+    angular_damping: float | None = None
 
     def __post_init__(self):
         # Parse physics parameter first (if provided)

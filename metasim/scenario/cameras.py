@@ -32,6 +32,10 @@ class BaseCameraCfg:
     """Position of the camera on the mount. Defaults to None."""
     mount_quat: tuple[float, float, float, float] | None = None
     """Quaternion of the camera on the mount. Defaults to None."""
+    intrinsic: list[list[float]] | None = None
+    """Explicit 3x3 pinhole intrinsic [[fx,0,cx],[0,fy,cy],[0,0,1]]. When set, backends that
+    support it (sapien2) apply the exact focal lengths / principal point instead of deriving them
+    from fov/aperture. Defaults to None (derive from fov)."""
 
 
 @configclass

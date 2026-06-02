@@ -85,12 +85,15 @@ class Sapien2Handler(BaseSimHandler):
         self.engine.set_renderer(self.renderer)
         self.scene = self.engine.create_scene(scene_config)
         self.scene.set_timestep(self.time_step)
-        ground_material = self.renderer.create_material()
-        ground_material.base_color = np.array([202, 164, 114, 256]) / 256
-        ground_material.specular = 0.5
-        self.scene.add_ground(altitude=0, render_material=ground_material)
+        if self.scenario.add_default_ground:
+            ground_material = self.renderer.create_material()
+            ground_material.base_color = np.array([202, 164, 114, 256]) / 256
+            ground_material.specular = 0.5
+            self.scene.add_ground(altitude=0, render_material=ground_material)
 
         self.loader: sapien_core.URDFLoader = self.scene.create_urdf_loader()
+        if getattr(sp, "sapien_load_multiple_collisions", None):
+            self.loader.load_multiple_collisions_from_file = True
 
         # Add agents
         self.object_ids: dict[str, sapien_core.Actor | sapien_core.Articulation] = {}
@@ -102,6 +105,10 @@ class Sapien2Handler(BaseSimHandler):
         self.camera_ids = {}
 
         for camera in self.cameras:
+            # Mounted cameras (mount_link set) are created after the robot/objects load below,
+            # so their mount link exists. Free cameras are created here as before.
+            if getattr(camera, "mount_link", None) is not None:
+                continue
             # Create a camera entity in the scene
             camera_id = self.scene.add_camera(
                 name=camera.name,
@@ -118,6 +125,7 @@ class Sapien2Handler(BaseSimHandler):
             pitch = math.atan2(direction_vector[2], math.sqrt(direction_vector[0] ** 2 + direction_vector[1] ** 2))
             roll = 0
             camera_id.set_pose(sapien_core.Pose(p=pos, q=quat_from_euler_np(roll, -pitch, yaw)))
+            self._apply_camera_intrinsic(camera, camera_id)
             self.camera_ids[camera.name] = camera_id
 
             # near, far = 0.1, 100
@@ -243,6 +251,31 @@ class Sapien2Handler(BaseSimHandler):
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
 
+            elif isinstance(object, RigidObjCfg) and getattr(object, "mesh_path", None) is not None:
+                # Mesh-based rigid object (collision mesh + visual mesh + optional density/friction/
+                # damping), built via the actor builder. Used by e.g. SimplerEnv object assets.
+                builder = self.scene.create_actor_builder()
+                scale3 = list(object.scale)
+                mat = None
+                if object.static_friction is not None or object.dynamic_friction is not None:
+                    mat = self.scene.create_physical_material(
+                        object.static_friction if object.static_friction is not None else 0.0,
+                        object.dynamic_friction if object.dynamic_friction is not None else 0.0,
+                        object.restitution if object.restitution is not None else 0.0,
+                    )
+                collision_file = object.collision_mesh_path or object.mesh_path
+                builder.add_multiple_collisions_from_file(
+                    filename=collision_file, scale=scale3, material=mat,
+                    density=object.mesh_density if object.mesh_density is not None else 1000.0,
+                )
+                builder.add_visual_from_file(filename=object.mesh_path, scale=scale3)
+                curr_id = builder.build_static(name=object.name) if object.fix_base_link else builder.build(name=object.name)
+                curr_id.set_pose(_load_init_pose(object))
+                if object.linear_damping is not None or object.angular_damping is not None:
+                    curr_id.set_damping(object.linear_damping or 0.0, object.angular_damping or 0.0)
+                self.object_ids[object.name] = curr_id
+                self.object_joint_order[object.name] = []
+
             elif isinstance(object, RigidObjCfg):
                 self.loader.fix_root_link = object.fix_base_link
                 self.loader.scale = object.scale[0]
@@ -288,12 +321,31 @@ class Sapien2Handler(BaseSimHandler):
             #         capsule.lock_motion()
             #     agent.instance = capsule
 
-        # Add lights
-        self.scene.set_ambient_light([0.5, 0.5, 0.5])
-        self.scene.add_directional_light([0, 1, -1], [0.5, 0.5, 0.5], shadow=True)
-        self.scene.add_point_light([1, 2, 2], [1, 1, 1], shadow=True)
-        self.scene.add_point_light([1, -2, 2], [1, 1, 1], shadow=True)
-        self.scene.add_point_light([-1, 0, 1], [1, 1, 1], shadow=True)
+        # Mounted cameras: created now that the mount target (robot/object) is loaded.
+        for camera in self.cameras:
+            if getattr(camera, "mount_link", None) is None:
+                continue
+            target_name = camera.mount_to if camera.mount_to is not None else self.robot.name
+            art = self.object_ids[target_name]
+            link = next(x for x in art.get_links() if x.get_name() == camera.mount_link)
+            mount_pose = sapien_core.Pose(
+                p=np.array(camera.mount_pos if camera.mount_pos is not None else (0.0, 0.0, 0.0)),
+                q=np.array(camera.mount_quat if camera.mount_quat is not None else (1.0, 0.0, 0.0, 0.0)),
+            )
+            camera_id = self.scene.add_mounted_camera(
+                camera.name, link, mount_pose, camera.width, camera.height,
+                np.deg2rad(camera.vertical_fov), camera.clipping_range[0], camera.clipping_range[1],
+            )
+            self._apply_camera_intrinsic(camera, camera_id)
+            self.camera_ids[camera.name] = camera_id
+
+        # Add lights (skippable so a task can install its own lighting after launch)
+        if not getattr(self.scenario.sim_params, "sapien_disable_default_lights", None):
+            self.scene.set_ambient_light([0.5, 0.5, 0.5])
+            self.scene.add_directional_light([0, 1, -1], [0.5, 0.5, 0.5], shadow=True)
+            self.scene.add_point_light([1, 2, 2], [1, 1, 1], shadow=True)
+            self.scene.add_point_light([1, -2, 2], [1, 1, 1], shadow=True)
+            self.scene.add_point_light([-1, 0, 1], [1, 1, 1], shadow=True)
         # self.scene.add_directional_light(
         #     self.sim_params.directional_light_pos, self.sim_params.directional_light_target
         # )
@@ -339,6 +391,14 @@ class Sapien2Handler(BaseSimHandler):
             self.viewer.render()  # Sapien feature: viewer need to be rendered to allow cameras to create buffer
         for camera_name, camera_id in self.camera_ids.items():
             camera_id.take_picture()
+
+    @staticmethod
+    def _apply_camera_intrinsic(camera, camera_id):
+        """Apply an explicit pinhole intrinsic [[fx,0,cx],[0,fy,cy],[0,0,1]] to a SAPIEN camera."""
+        K = getattr(camera, "intrinsic", None)
+        if K is not None:
+            camera_id.set_focal_lengths(K[0][0], K[1][1])
+            camera_id.set_principal_point(K[0][2], K[1][2])
 
     def _apply_action(self, instance: sapien_core.Articulation, pos_action=None, vel_action=None):
         qf = instance.compute_passive_force(gravity=True, coriolis_and_centrifugal=True, external=False)
