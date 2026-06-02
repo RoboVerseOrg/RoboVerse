@@ -92,10 +92,13 @@ for i in $(seq 0 $((num_eval - 1))); do
   # handover_block's 800-step budget), which looked exactly like an RT-render "hang". A plain file
   # redirect decouples the client from any consumer, so it never blocks on write.
   ep_log="$(mktemp /tmp/dp_ep.XXXXXX.log)"
-  # PYTHONUNBUFFERED=1 is REQUIRED: without it the client's very chatty per-step stdout is
-  # block-buffered to the redirected file, and that buffering reproducibly wedges the episode
-  # (standalone clients that set it complete the SAME seed that hangs here without it). With it,
-  # the eval matches the known-good standalone path.
+  # PYTHONUNBUFFERED=1 keeps the client's chatty per-step stdout unbuffered, matching the
+  # known-good standalone path; it measurably REDUCES the eval hangs (tasks that wholly hung
+  # without it complete with it). It is NOT a complete cure, though: a residual, still-
+  # unexplained slowdown/hang occasionally affects this closed-loop eval (some windows run an
+  # 800-step episode in ~90s, others ~10x slower) regardless. When that happens, fall back to a
+  # standalone server + direct eval_robotwin_policy.py loop, which has been the most reliable
+  # path. The per-ep timeout + (post-first-success) early-abort below backstop the rest.
   timeout "${per_ep_timeout}" env MUJOCO_GL=egl SAPIEN_HEADLESS=1 PYTHONUNBUFFERED=1 $ROBOTWIN_PY \
     tools/robotwin_integration/eval_robotwin_policy.py \
     --task "$task" --policy dp --server "127.0.0.1:${port}" \
