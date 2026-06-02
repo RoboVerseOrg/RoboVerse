@@ -44,6 +44,25 @@ ROBOVERSE_PY="${ROBOVERSE_PY:-conda run -n roboverse python}"
 ROBOTWIN_PY="${ROBOTWIN_PY:-conda run -n robotwin python}"
 srv_log="$(mktemp /tmp/dp_server.XXXXXX.log)"
 
+# Guard against train->eval GPU contention. If a DP training run is still on the GPU when the
+# policy server loads, the server's first inference can HANG indefinitely -- every episode then
+# burns its full --per-ep-timeout and the run reports a spurious 0/N (looks like total policy
+# failure but is purely a scheduling artifact). Wait for any training process to exit + a brief
+# settle so the CUDA caching allocator releases, before the server claims the GPU. No-op when
+# nothing is training (the normal standalone-eval case), so this is backward-compatible.
+echo "=== [0/3] ensuring the GPU is free of DP training (avoids false 0/N from contention) ==="
+for i in $(seq 1 60); do
+  if pgrep -f "roboverse_learn.il.train" >/dev/null 2>&1; then
+    [[ $i -eq 1 ]] && echo "  a DP training process is still on the GPU; waiting for it to finish..."
+    sleep 5
+    [[ $i -eq 60 ]] && echo "  WARN: training still running after 300s; proceeding anyway"
+  else
+    [[ $i -gt 1 ]] && echo "  training finished; GPU released"
+    break
+  fi
+done
+sleep 3  # let the CUDA caching allocator hand the memory back before the server grabs it
+
 echo "=== [1/3] starting DP policy server (roboverse env) on port ${port} ==="
 PYTHONPATH="$repo_root" $ROBOVERSE_PY tools/robotwin_integration/dp_policy_server.py \
   --ckpt "$ckpt" --port "$port" --device "cuda:${gpu}" > "$srv_log" 2>&1 &
@@ -64,6 +83,7 @@ echo "=== [3/3] closed-loop eval: ${num_eval} episodes from seed ${start_seed} =
 # timeout kills a hung episode, counts it FAIL, and the sweep continues. The server
 # (model) stays loaded across episodes; only the lightweight robotwin client restarts.
 succ=0
+hangstreak=0
 for i in $(seq 0 $((num_eval - 1))); do
   seed=$((start_seed + i))
   out=$(timeout "${per_ep_timeout}" env MUJOCO_GL=egl SAPIEN_HEADLESS=1 $ROBOTWIN_PY \
@@ -71,11 +91,22 @@ for i in $(seq 0 $((num_eval - 1))); do
     --task "$task" --policy dp --server "127.0.0.1:${port}" \
     --num-eval 1 --start-seed "$seed" 2>&1 | grep -aE "seed ${seed}\] (SUCCESS|FAIL)" | grep -av "step:")
   if echo "$out" | grep -qa "SUCCESS"; then
-    succ=$((succ + 1)); echo "[seed $seed] SUCCESS"
+    succ=$((succ + 1)); hangstreak=0; echo "[seed $seed] SUCCESS"
   elif echo "$out" | grep -qa "FAIL"; then
-    echo "[seed $seed] FAIL"
+    hangstreak=0; echo "[seed $seed] FAIL"
   else
+    hangstreak=$((hangstreak + 1))
     echo "[seed $seed] FAIL (timeout/hang after ${per_ep_timeout}s)"
+    # An episode that produces NO result line hit the wall-clock timeout = a hang, not a
+    # policy decision. The first episodes all hanging means the server is wedged (e.g. GPU
+    # still contended) -- abort fast with a diagnostic instead of burning N*timeout and
+    # reporting a misleading 0/N. (A real policy failure prints "FAIL" and resets the streak.)
+    if [[ $hangstreak -ge 3 ]]; then
+      echo "ERROR: ${hangstreak} consecutive episodes hung with no result -- the policy server" >&2
+      echo "       is not responding (likely GPU contention or a wedged server). Aborting." >&2
+      echo "       Server log tail:" >&2; tail -15 "$srv_log" >&2
+      exit 2
+    fi
   fi
 done
 rate=$(awk "BEGIN{printf \"%.1f\", ${succ}/${num_eval}*100}")
