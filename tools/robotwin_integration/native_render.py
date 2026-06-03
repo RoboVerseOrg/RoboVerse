@@ -132,17 +132,6 @@ def main(argv: list[str] | None = None) -> int:
             eu = sys.modules.get("envs.utils")
             if eu is not None and hasattr(eu, "get_glb_or_obj_file"):
                 eu.get_glb_or_obj_file = _forced_glb
-            # Forcing the recorded mesh (instead of setup_demo's natural pick) can leave the object
-            # unstable at the pose setup_demo chose for the *other* mesh, so RoboTwin's check_stable
-            # aborts setup_demo with UnStableError. That check is irrelevant here: we immediately
-            # teleport every object to the bridge's recorded pose each frame (kinematic, no physics
-            # settle), so initial instability never matters. Neutralize it.
-            try:
-                from envs._base_task import Base_Task
-
-                Base_Task.check_stable = lambda self, *a, **k: (True, [])
-            except Exception:
-                pass
         except Exception as e:
             print(f"[native_render] could not force recorded instances ({type(e).__name__}: {e})")
 
