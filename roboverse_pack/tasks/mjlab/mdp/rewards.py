@@ -711,13 +711,14 @@ def _quat_error_magnitude(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     """Angle between two unit quaternions (wxyz). Shape preserves leading dims.
 
     Native parity: mjlab ``quat_error_magnitude`` uses the box-minus log map
-    ``||log(q1 * q2^-1)||`` (math.py:685-697), NOT ``2*acos(|dot|)``. The two
-    agree near zero error but diverge for large angles, so we port the exact
-    box-minus formula for float-eps reward parity.
+    ``||log(q1 * q2^-1)||`` (NOT ``2*acos(|dot|)``). Core
+    ``metasim.utils.math.quat_error_magnitude`` is the same IsaacLab-lineage
+    log-map implementation — verified bitwise-equal to the previous local port
+    over the full 0..π range (max-diff 0.0) — so we use it directly.
     """
-    from ._math import quat_error_magnitude_wxyz
+    from metasim.utils.math import quat_error_magnitude
 
-    return quat_error_magnitude_wxyz(q1, q2)
+    return quat_error_magnitude(q1, q2)
 
 
 def _get_motion_command(env, command_name: str):

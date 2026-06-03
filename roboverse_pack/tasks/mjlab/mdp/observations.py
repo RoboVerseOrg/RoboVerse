@@ -270,7 +270,7 @@ def _site_pos_w(env, *, site_name: str) -> torch.Tensor:
     read from the robot MJCF — ``site_pos_w = body_pos_w + R(body_quat) ·
     site_local_pos`` (mirrors ``robot.data.site_pos_w``).
     """
-    from ._math import quat_apply_wxyz
+    from metasim.utils.math import quat_apply  # wxyz; bitwise-equal to old ._math port
 
     if not hasattr(env.handler, "physics"):
         off = _site_offset_from_mjcf(env, site_name)
@@ -280,7 +280,7 @@ def _site_pos_w(env, *, site_name: str) -> torch.Tensor:
             if bs is not None:
                 body_pos, body_quat = bs
                 lp = torch.as_tensor(local_pos, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
-                return body_pos + quat_apply_wxyz(body_quat, lp)
+                return body_pos + quat_apply(body_quat, lp)
         return torch.zeros(env.num_envs, 3, device=env.device)
 
     import mujoco

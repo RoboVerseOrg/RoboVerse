@@ -871,7 +871,9 @@ class MotionCommandManager:
         (``yaw_quat(robot_anchor_quat * anchor_quat^-1)``) is applied to every
         target body's position (relative to the target anchor) and orientation.
         """
-        from ._math import quat_apply_wxyz, quat_inv_wxyz, quat_mul_wxyz, yaw_quat_wxyz
+        # wxyz quaternion ops from core (IsaacLab-lineage, bitwise-equal to the
+        # mjlab math this previously hand-rolled in ._math).
+        from metasim.utils.math import quat_apply, quat_inv, quat_mul, yaw_quat
 
         B = len(self.cfg.body_names)
         body_pos = self.body_pos_w  # (N, B, 3)
@@ -883,12 +885,12 @@ class MotionCommandManager:
 
         delta_pos_w = robot_anchor_pos.clone()
         delta_pos_w[..., 2] = anchor_pos[..., 2]
-        delta_ori_w = yaw_quat_wxyz(
-            quat_mul_wxyz(robot_anchor_quat, quat_inv_wxyz(anchor_quat))
+        delta_ori_w = yaw_quat(
+            quat_mul(robot_anchor_quat, quat_inv(anchor_quat))
         )
 
-        body_quat_relative_w = quat_mul_wxyz(delta_ori_w, body_quat)
-        body_pos_relative_w = delta_pos_w + quat_apply_wxyz(
+        body_quat_relative_w = quat_mul(delta_ori_w, body_quat)
+        body_pos_relative_w = delta_pos_w + quat_apply(
             delta_ori_w, body_pos - anchor_pos
         )
         return body_pos_relative_w, body_quat_relative_w
