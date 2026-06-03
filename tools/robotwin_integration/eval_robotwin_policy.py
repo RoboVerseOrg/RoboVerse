@@ -209,13 +209,35 @@ def _robotwin_step_lim(pt, task: str) -> int:
         return 1000
 
 
-def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: bool, step_lim: int) -> tuple[bool, int]:
-    """Run one closed-loop episode; return (success, steps_taken)."""
+def _eval_one(
+    pt, task: str, task_config: str, seed: int, policy: Policy, rgb: bool, step_lim: int, video_path: str | None = None
+) -> tuple[bool, int]:
+    """Run one closed-loop episode; return (success, steps_taken).
+
+    If ``video_path`` is set, capture a world-up observer camera every action step and
+    write an mp4 -- a diagnostic to SEE what the policy does (e.g. why a task fails).
+    """
     data_type = {k: False for k in ("rgb", "third_view", "depth", "pointcloud", "observer", "endpose", "qpos")}
     data_type["rgb"] = rgb  # the policy may consume head_camera RGB
     env = pt._make_robotwin_env(
         task_name=task, task_config=task_config, seed=seed, is_test=True, data_type=data_type, render_freq=0,
     )  # fmt: skip
+    _vframes: list = []
+    _vcam = None
+    if video_path:
+        try:
+            import sapien
+
+            pos = np.array([0.0, 0.6, 1.35]); look = np.array([0.0, -0.3, 0.78])
+            fwd = look - pos; fwd /= np.linalg.norm(fwd) + 1e-9
+            left = np.cross([0.0, 0.0, 1.0], fwd); left /= np.linalg.norm(left) + 1e-9
+            up = np.cross(fwd, left)
+            mat = np.eye(4); mat[:3, 0], mat[:3, 1], mat[:3, 2], mat[:3, 3] = fwd, left, up, pos
+            _vcam = env.scene.add_camera(name="diag", width=512, height=512, fovy=np.deg2rad(55), near=0.05, far=100)
+            _vcam.entity.set_pose(sapien.Pose(mat))
+        except Exception as e:
+            print(f"[video] camera setup failed: {type(e).__name__}: {e}")
+            _vcam = None
     if rgb:
         # setup_demo enables the RT shader + OIDN denoiser; the DP eval renders the
         # head_camera every step, and OIDN deadlocks headless on a long episode
@@ -270,12 +292,29 @@ def _eval_one(pt, task: str, task_config: str, seed: int, policy: Policy, rgb: b
             if action is None:
                 break
             env.take_action(np.asarray(action, dtype=float), action_type="qpos")
+            if _vcam is not None:
+                try:
+                    env.scene.update_render()
+                    _vcam.take_picture()
+                    px = np.asarray(_vcam.get_picture("Color"))[..., :3]
+                    _vframes.append((np.clip(px, 0, 1) * 255).astype(np.uint8))
+                except Exception:
+                    pass
             if env.eval_success:
                 break
         succ = bool(env.eval_success)
         steps = int(env.take_action_cnt)
     finally:
         env.close_env()
+    if video_path and _vframes:
+        try:
+            import imageio.v2 as imageio
+
+            os.makedirs(os.path.dirname(os.path.abspath(video_path)), exist_ok=True)
+            imageio.mimsave(video_path, _vframes, fps=20)
+            print(f"[video] saved {len(_vframes)} frames -> {video_path} (success={succ})")
+        except Exception as e:
+            print(f"[video] save failed: {type(e).__name__}: {e}")
     return succ, steps
 
 
@@ -289,6 +328,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--camera", default="head_camera", help="image obs camera for --policy dp")
     ap.add_argument("--num-eval", type=int, default=1, help="episodes to evaluate")
     ap.add_argument("--start-seed", type=int, default=None, help="first seed (default: bridge seed for replay, else 0)")
+    ap.add_argument("--video", default=None, help="diagnostic: save an observer mp4 of the FIRST episode to this path")
     args = ap.parse_args(argv)
 
     pt = _load_passthrough()
@@ -310,7 +350,8 @@ def main(argv: list[str] | None = None) -> int:
     successes = 0
     for i in range(args.num_eval):
         seed = base_seed + i
-        succ, steps = _eval_one(pt, args.task, args.task_config, seed, policy, needs_rgb, step_lim)
+        vpath = args.video if (args.video and i == 0) else None
+        succ, steps = _eval_one(pt, args.task, args.task_config, seed, policy, needs_rgb, step_lim, video_path=vpath)
         successes += int(succ)
         print(f"[{args.task} seed {seed}] {'SUCCESS' if succ else 'FAIL'} ({steps} steps)")
 
