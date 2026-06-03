@@ -37,6 +37,97 @@ def _load_passthrough():
     return mod
 
 
+def _install_force_model_id(pt, bridge) -> bool:
+    """Force RoboTwin's object creation to reuse the bridge's recorded model_ids.
+
+    RoboTwin tasks pick each object's ``model_id`` with ``np.random.choice`` inside
+    ``setup_demo`` (e.g. ``pick_diverse_bottles`` chooses ``bottle1_id``/``bottle2_id``),
+    which selects *which* base mesh (``base<model_id>.glb``) is loaded. A fresh
+    ``setup_demo`` at the bridge's seed does NOT always re-draw the same model_ids the
+    bridge recorded (collect_bridge's per-seed retry path diverges from a one-shot env),
+    so the native re-render shows a *different bottle instance* than the RoboVerse replay
+    (which loads the bridge's recorded mesh). That reads as "wrong / mismatched objects".
+
+    We wrap ``get_glb_or_obj_file(modeldir, model_id)`` — the single resolver
+    ``create_actor`` uses — to substitute the bridge's recorded model_id for the k-th
+    actor of each asset name, in creation order. ``create_actor`` resolves *collision then
+    visual* for one actor (two calls, same model_id), so we advance the per-name counter
+    only on the visual call to keep one index per actor. For non-stale tasks the recorded
+    model_id already equals the natural draw, so this is a no-op; for stale tasks it pins
+    the native instance to match the replay. Visual only: poses still come from the bridge.
+    """
+    import os as _os
+
+    om = bridge.get("object_meshes") or {}
+    # Per asset-name queue of recorded model_ids, in creation (insertion) order. Only
+    # mesh entries go through get_glb_or_obj_file; box/sphere/cylinder are skipped.
+    queues: dict = {}
+    for key, m in om.items():
+        if not isinstance(m, dict) or m.get("type") != "mesh":
+            continue
+        base = key.split("#")[0]
+        queues.setdefault(base, []).append(m.get("model_id"))
+    if not any(queues.values()):
+        return False
+
+    rt = pt.robotwin_dir()
+    pt._prepare_robotwin_runtime(rt)
+    import importlib as _il
+    import sys as _sys
+
+    if rt not in _sys.path:
+        _sys.path.insert(0, rt)
+    try:
+        cau = _il.import_module("envs.utils.create_actor")
+    except Exception as e:
+        print(f"[force-model_id] import failed ({type(e).__name__}: {e}); native may show a different instance")
+        return False
+
+    orig = cau.get_glb_or_obj_file
+    counters: dict = {}
+
+    def _name_of(modeldir):
+        name = _os.path.basename(str(modeldir).rstrip("/"))
+        if name in ("visual", "collision"):
+            name = _os.path.basename(_os.path.dirname(str(modeldir).rstrip("/")))
+        return name
+
+    def forced(modeldir, model_id):
+        name = _name_of(modeldir)
+        q = queues.get(name)
+        if not q:
+            return orig(modeldir, model_id)
+        i = counters.get(name, 0)
+        if i >= len(q):
+            return orig(modeldir, model_id)
+        mid = q[i]
+        res = orig(modeldir, mid if mid is not None else model_id)
+        # One actor = collision-then-visual (same model_id); advance once, on visual.
+        if f"{_os.sep}visual{_os.sep}" in str(res):
+            counters[name] = i + 1
+        return res
+
+    cau.get_glb_or_obj_file = forced
+
+    # Forcing a different base mesh than the seed naturally drew can leave the initial
+    # placement (positions were drawn for the natural instance) failing RoboTwin's
+    # post-setup stability check -> UnStableError aborts setup_demo. In replay-bridge
+    # mode we immediately teleport every object to the bridge's recorded pose, so the
+    # initial placement is discarded -> the stability gate is irrelevant here. Stub it.
+    try:
+        bt = _il.import_module("envs._base_task")
+        for cls_name in ("Base_Task", "Base_task"):
+            cls = getattr(bt, cls_name, None)
+            if cls is not None and hasattr(cls, "check_stable"):
+                cls.check_stable = lambda self: (True, [])
+                break
+    except Exception:
+        pass
+
+    print(f"[force-model_id] pinned native instances to bridge model_ids: { {k: v for k, v in queues.items()} }")
+    return True
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--task", default="move_can_pot")
@@ -66,6 +157,17 @@ def main(argv: list[str] | None = None) -> int:
     # and we capture our OWN match camera below. Rendering RoboTwin's observer too
     # (third_view) just doubles the per-frame RT cost on long episodes.
     data_type = {k: False for k in ("rgb", "third_view", "depth", "pointcloud", "observer", "endpose", "qpos")}
+
+    # When replaying a bridge, pin the native env's object instances (model_id ->
+    # base<N>.glb) to the ones the bridge recorded BEFORE setup_demo runs, so the native
+    # re-render shows the SAME object instances as the RoboVerse replay (not a different
+    # random draw). Load the bridge once here and reuse it in the replay block below.
+    _bridge = None
+    if args.replay_bridge:
+        import pickle as _pickle
+
+        _bridge = _pickle.load(open(args.replay_bridge, "rb"))
+        _install_force_model_id(pt, _bridge)
 
     env = pt._make_robotwin_env(
         task_name=args.task, task_config=args.task_config, seed=args.seed,
@@ -122,9 +224,7 @@ def main(argv: list[str] | None = None) -> int:
         # uses (teleport robot arm qpos + object poses/joints per frame), instead of
         # re-planning via play_once -> the two videos are the *identical* episode,
         # frame-for-frame, so any remaining difference is purely the render engine.
-        import pickle
-
-        br = pickle.load(open(args.replay_bridge, "rb"))
+        br = _bridge
         real = br.get("real_vectors") or br["vectors"]
         otraj = br.get("object_traj", {})
         ojoint = br.get("object_joint_traj", {})
