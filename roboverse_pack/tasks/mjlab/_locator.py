@@ -22,6 +22,10 @@ from pathlib import Path
 _HF_LOCAL_DIR = "roboverse_data"
 _HF_MJLAB_PREFIX = "robots/mjlab"
 
+# Well-known mjlab-internal asset relpaths (under ``src/mjlab/``), shared by the
+# task modules that load them via :func:`mjlab_asset`.
+_CARTPOLE_XML = "tasks/cartpole/cartpole.xml"
+
 
 def mjlab_repo_path() -> Path:
     """Locate a local mjlab clone, or raise if none is present."""

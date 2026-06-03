@@ -35,8 +35,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
 
-from ._locator import mjlab_asset
-from .cartpole import _CARTPOLE_XML  # path string
+from ._locator import _CARTPOLE_XML, mjlab_asset
 
 # dm_control tolerance defaults: value_at_margin = 0.1
 _GAUSSIAN_SCALE = math.sqrt(-2 * math.log(0.1))

@@ -37,8 +37,7 @@ from roboverse_learn.managers import (
     RewTerm,
 )
 
-from ._locator import mjlab_asset
-from .cartpole import _CARTPOLE_XML
+from ._locator import _CARTPOLE_XML, mjlab_asset
 from .mdp import (
     SceneEntityCfg,
 )
