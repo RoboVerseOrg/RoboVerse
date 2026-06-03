@@ -136,8 +136,25 @@ def main(argv: list[str] | None = None) -> int:
         lgrip = [(act.index(j[0].get_name()), j[1], j[2]) for j in env.robot.left_gripper]
         rgrip = [(act.index(j[0].get_name()), j[1], j[2]) for j in env.robot.right_gripper]
         lgs, rgs = env.robot.left_gripper_scale, env.robot.right_gripper_scale
-        actors = {a.get_name(): a for a in env.scene.get_all_actors()}
-        arts = {a.get_name(): a for a in env.scene.get_all_articulations() if a.get_name() != rob.get_name()}
+
+        # Disambiguate duplicate-named actors EXACTLY as the bridge did when it recorded
+        # object_traj (name, name#1, name#2, ... in get_all_actors creation order). A plain
+        # {name: actor} dict collapses duplicates (e.g. put_bottles_dustbin's three 114_bottle,
+        # place_cans_plasticbox's multiple cans) to a single entry -> only ONE of them gets its
+        # recorded pose and the rest stay at their setup_demo positions = the native side looks
+        # misaligned / wrong-instance vs the replay. Counting by occurrence makes the keys match
+        # object_traj's disambiguated keys so EVERY duplicate is positioned.
+        def _disambiguated(seq):
+            out, counts = {}, {}
+            for a in seq:
+                nm = a.get_name()
+                n = counts.get(nm, 0)
+                counts[nm] = n + 1
+                out[nm if n == 0 else f"{nm}#{n}"] = a
+            return out
+
+        actors = _disambiguated(env.scene.get_all_actors())
+        arts = _disambiguated([a for a in env.scene.get_all_articulations() if a.get_name() != rob.get_name()])
         for t in range(len(real)):
             q = np.asarray(rob.get_qpos(), dtype=float).copy()
             for i, ix in enumerate(lidx):
