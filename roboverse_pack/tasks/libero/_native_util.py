@@ -65,17 +65,39 @@ def _in_region(model, data, obj: str, region: str) -> bool:
     return bool(np.all(np.abs(data.xpos[bid] - sp) < half))
 
 
-def _is_open(model, data, region: str) -> bool:
-    base = re.sub(r"_(\w+_)?(region|level)$", "", region)
-    cls = next((k for k in _OPEN_RANGES if k in base.lower()), None)
-    rng, direction = _OPEN_RANGES.get(cls, ([-0.14, -0.14], "lt"))
+# turn-on/off ranges (FlatStove etc.): turn_on if qpos >= min(range); off if < max(off)
+_TURNON_RANGES = {"flat_stove": [0.5, 2.1]}
+
+
+def _artic_qpos(model, data, base: str):
+    """qpos values of the object's articulated (non-free, 1-dof) joints."""
+    out = []
     for j in range(model.njnt):
         jn = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, j) or ""
-        if base in jn and any(k in jn for k in ("level", "joint", "cabinet", "door")):
-            q = data.qpos[model.jnt_qposadr[j]]
-            if (q < max(rng)) if direction == "lt" else (q > min(rng)):
-                return True
+        if base in jn and model.jnt_type[j] in (mujoco.mjtJoint.mjJNT_HINGE, mujoco.mjtJoint.mjJNT_SLIDE):
+            out.append(float(data.qpos[model.jnt_qposadr[j]]))
+    return out
+
+
+def _region_base(region: str) -> str:
+    return re.sub(r"_(\w+_)?(region|level)$", "", region)
+
+
+def _is_open(model, data, region: str) -> bool:
+    base = _region_base(region)
+    cls = next((k for k in _OPEN_RANGES if k in base.lower()), None)
+    rng, direction = _OPEN_RANGES.get(cls, ([-0.14, -0.14], "lt"))
+    for q in _artic_qpos(model, data, base):
+        if (q < max(rng)) if direction == "lt" else (q > min(rng)):
+            return True
     return False
+
+
+def _turn_on(model, data, region: str) -> bool:
+    base = _region_base(region)
+    cls = next((k for k in _TURNON_RANGES if k in base.lower()), None)
+    rng = _TURNON_RANGES.get(cls, [0.5, 2.1])
+    return any(q >= min(rng) for q in _artic_qpos(model, data, base))
 
 
 def _contact(model, data, body_a: int, body_b: int) -> bool:
@@ -90,7 +112,26 @@ def _contact(model, data, body_a: int, body_b: int) -> bool:
 
 
 def _on(model, data, a: str, b: str) -> bool:
-    """LIBERO On(a,b): a above b, in contact, xy-aligned (<0.03). (b.check_ontop(a))"""
+    """LIBERO On(a,b) = b.check_ontop(a).
+
+    If ``b`` is a region *site* (e.g. ``cabinet_top_side``) LIBERO uses the
+    site's box containment (``SiteObject.under``; site contact is always True) —
+    same as :func:`_in_region`. If ``b`` is a movable *object* it's the
+    body-center on-top test (above + in contact + xy-aligned <0.03).
+    """
+    sid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, b)
+    if sid >= 0:
+        # SiteObject.under: obj within site-local xy half-size, z from surface up to +0.10
+        bid = _bid(model, a) if _bid(model, a) >= 0 else _bid(model, a + "_main")
+        if bid < 0:
+            return False
+        size = model.site_size[sid]
+        delta = data.site_xmat[sid].reshape(3, 3) @ (data.xpos[bid] - data.site_xpos[sid])
+        return bool(
+            size[2] - 0.005 < delta[2] < size[2] + 0.10
+            and abs(delta[0]) < size[0]
+            and abs(delta[1]) < size[1]
+        )
     ba = _bid(model, a) if _bid(model, a) >= 0 else _bid(model, a + "_main")
     bb = _bid(model, b) if _bid(model, b) >= 0 else _bid(model, b + "_main")
     if ba < 0 or bb < 0:
@@ -112,6 +153,10 @@ def check_bddl_success(model, data, goal_terms) -> bool:
             ok = _is_open(model, data, args[0])
         elif p == "close" and len(args) == 1:
             ok = not _is_open(model, data, args[0])
+        elif p == "turnon" and len(args) == 1:
+            ok = _turn_on(model, data, args[0])
+        elif p == "turnoff" and len(args) == 1:
+            ok = not _turn_on(model, data, args[0])
         else:
             return False
         if not ok:
