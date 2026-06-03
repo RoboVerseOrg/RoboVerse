@@ -25,6 +25,14 @@ epochs=300
 policy="ddpm_unet"   # ResNet+UNet image encoder: robust to the 240x320 RoboTwin frame
 camera="head_camera"
 gpu=0
+# Match RoboTwin's OWN DP spec (policy/DP/diffusion_policy/config/robot_dp_14.yaml):
+# horizon=8, n_obs_steps=3, n_action_steps=6. roboverse_learn's default_runner.yaml
+# ships n_action_steps=4, which deviates -> under-reproduces RoboTwin on precise tasks
+# (e.g. place_empty_cup). Default to RoboTwin's value so the pipeline matches the
+# published DP numbers out of the box; override per-task if needed.
+n_action_steps=6
+n_obs_steps=3
+horizon=8
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -32,6 +40,7 @@ while [[ $# -gt 0 ]]; do
     --bridge-dir) bridge_dir="$2"; shift 2;;
     --num) num="$2"; shift 2;;
     --epochs) epochs="$2"; shift 2;;
+    --n-action-steps) n_action_steps="$2"; shift 2;;
     --policy) policy="$2"; shift 2;;
     --camera) camera="$2"; shift 2;;
     --gpu) gpu="$2"; shift 2;;
@@ -79,6 +88,9 @@ PYTHONPATH="$repo_root" policy_name="$policy" python -m roboverse_learn.il.train
   "shape_meta.obs.agent_pos.shape=[14]" \
   "shape_meta.action.shape=[14]" \
   train_config.training_params.num_epochs="$epochs" \
+  n_action_steps="$n_action_steps" \
+  n_obs_steps="$n_obs_steps" \
+  horizon="$horizon" \
   "train_config.training_params.device=cuda:${gpu}" \
   logging.mode=offline \
   train_enable=True eval_enable=False
