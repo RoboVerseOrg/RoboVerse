@@ -154,6 +154,7 @@ LIBERO + LIBERO-plus Integration <dataset_benchmark/integrations/libero>
 ManiSkill Integration <dataset_benchmark/integrations/maniskill>
 mjlab Integration <dataset_benchmark/integrations/mjlab>
 RoboTwin Integration <dataset_benchmark/integrations/robotwin>
+SimplerEnv Integration <dataset_benchmark/integrations/simpler_env>
 ```
 
 ```{toctree}
