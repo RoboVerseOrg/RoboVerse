@@ -1,0 +1,1 @@
+{"dim": "table", "suite": "libero_spatial", "bddl": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_table_10.bddl", "nq": 48, "nv": 43, "lang": "pick the akita black bowl between the plate and the ramekin and place it on the plate", "goal": [["On", ["akita_black_bowl_1", "plate_1"]]]}

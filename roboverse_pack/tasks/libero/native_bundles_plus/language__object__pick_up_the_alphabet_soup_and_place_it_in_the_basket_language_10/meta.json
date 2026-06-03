@@ -1,0 +1,1 @@
+{"dim": "language", "suite": "libero_object", "bddl": "pick_up_the_alphabet_soup_and_place_it_in_the_basket_language_10.bddl", "nq": 58, "nv": 51, "lang": "grip the canned mixture of letters and broth and deposit it into the woven container", "goal": [["In", ["alphabet_soup_1", "basket_1_contain_region"]]]}

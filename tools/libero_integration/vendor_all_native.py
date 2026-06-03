@@ -20,12 +20,12 @@ from pathlib import Path
 os.environ.setdefault("MUJOCO_GL", "egl")
 os.environ.setdefault("HF_HUB_OFFLINE", "0")
 
-import fsspec  # noqa: E402
-import h5py  # noqa: E402
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
+import fsspec
+import h5py
+import mujoco
+import numpy as np
 
-from roboverse_pack.tasks.libero._native_util import check_bddl_success, parse_goal, remap_libero_model  # noqa: E402
+from roboverse_pack.tasks.libero._native_util import check_bddl_success, parse_goal, remap_libero_model
 
 _HF = "https://huggingface.co/datasets/yifengzhu-hf/LIBERO-datasets/resolve/main"
 _BDDL = "/venv/roboverse/lib/python3.11/site-packages/libero/libero/bddl_files"
@@ -39,14 +39,18 @@ _LOCAL = {
 
 def _read(suite, stem):
     local = _LOCAL.get((suite, stem))
-    f = h5py.File(local, "r") if local and os.path.exists(local) else h5py.File(fsspec.open(f"{_HF}/{suite}/{stem}_demo.hdf5", "rb").open(), "r")
+    f = (
+        h5py.File(local, "r")
+        if local and os.path.exists(local)
+        else h5py.File(fsspec.open(f"{_HF}/{suite}/{stem}_demo.hdf5", "rb").open(), "r")
+    )
     g = f["data"]["demo_0"]
     mf = g.attrs["model_file"]
     s0 = g["states"][0]
-    sN = g["states"][-1]
+    sWin = g["states"][-15:]  # success window (LIBERO done marks success achieved)
     done = int(g["dones"][()][-1]) if "dones" in g else int(g["rewards"][()][-1] >= 1.0)
     f.close()
-    return mf, s0, sN, done
+    return mf, s0, sWin, done
 
 
 def main() -> None:
@@ -61,7 +65,7 @@ def main() -> None:
     for i, (suite, pf, stem) in enumerate(tasks):
         name = f"{suite.replace('libero_', '')}__{stem}"[:120]
         try:
-            mf, s0, sN, done = _read(suite, stem)
+            mf, s0, sWin, done = _read(suite, stem)
             xml = remap_libero_model(mf, _ASSETS)
             m = mujoco.MjModel.from_xml_string(xml)
             d = mujoco.MjData(m)
@@ -74,16 +78,30 @@ def main() -> None:
             (out / "goal.json").write_text(json.dumps(goal))
             np.savez(out / "init.npz", qpos=s0[1 : 1 + nq], qvel=s0[1 + nq : 1 + nq + nv])
             vendored += 1
-            # verify native success at demo-final == recorded done
-            d.qpos[:] = sN[1 : 1 + nq]
-            d.qvel[:] = sN[1 + nq : 1 + nq + nv]
-            native = check_bddl_success(m, d, goal)
+
+            # native success must hold in the demo's success window == recorded done
+            def _succ(s, m=m, d=d, goal=goal, nq=nq, nv=nv):
+                d.qpos[:] = s[1 : 1 + nq]
+                d.qvel[:] = s[1 + nq : 1 + nq + nv]
+                return check_bddl_success(m, d, goal)
+
+            native = any(_succ(s) for s in sWin)
             ok = native == bool(done)
             matched += ok
             by_suite_match.setdefault(suite, []).append(ok)
-            rec = {"name": name, "suite": suite, "goal": goal, "native_success": native, "recorded_done": done, "match": ok}
-            print(f"  [{i + 1:3d}/130] {name[:60]:60s} goal={[g[0] for g in goal]} native={native} done={done} match={ok}", flush=True)
-        except Exception as e:  # noqa: BLE001
+            rec = {
+                "name": name,
+                "suite": suite,
+                "goal": goal,
+                "native_success": native,
+                "recorded_done": done,
+                "match": ok,
+            }
+            print(
+                f"  [{i + 1:3d}/130] {name[:60]:60s} goal={[g[0] for g in goal]} native={native} done={done} match={ok}",
+                flush=True,
+            )
+        except Exception as e:
             errs += 1
             rec = {"name": name, "suite": suite, "error": str(e)[:140]}
             print(f"  [{i + 1:3d}/130] {name[:60]:60s} ERROR {str(e)[:60]}", flush=True)
@@ -91,7 +109,10 @@ def main() -> None:
         time.sleep(0.25)
 
     summary = {
-        "n": len(tasks), "vendored": vendored, "success_match": f"{matched}/{len(tasks)}", "errors": errs,
+        "n": len(tasks),
+        "vendored": vendored,
+        "success_match": f"{matched}/{len(tasks)}",
+        "errors": errs,
         "per_suite_match": {s: f"{sum(v)}/{len(v)}" for s, v in by_suite_match.items()},
         "tasks": results,
     }

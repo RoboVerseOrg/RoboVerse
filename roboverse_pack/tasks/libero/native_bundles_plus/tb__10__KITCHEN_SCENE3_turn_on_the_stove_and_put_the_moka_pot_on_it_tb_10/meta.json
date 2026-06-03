@@ -1,0 +1,1 @@
+{"dim": "tb", "suite": "libero_10", "bddl": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it_tb_10.bddl", "nq": 24, "nv": 22, "lang": "turn on the stove and put the moka pot on it", "goal": [["Turnon", ["flat_stove_1"]], ["On", ["moka_pot_1", "flat_stove_1_cook_region"]]]}

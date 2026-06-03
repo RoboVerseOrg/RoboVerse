@@ -41,6 +41,19 @@ def remap_libero_model(model_file: str, libero_assets: str) -> str:
     return xml
 
 
+def remap_liberoplus_model(model_file: str, libero_assets: str, plus_assets: str) -> str:
+    """Rebase a LIBERO-plus perturbed ``model_file`` to local assets.
+
+    Same as :func:`remap_libero_model` (robosuite + chiliocosm roots, dm_control-safe)
+    plus the LIBERO-plus overlay asset root — perturbed scenes embed absolute paths
+    into ``.../LIBERO-plus/libero/libero/assets`` (light scenes, new-object meshes,
+    textures). Rebase that root to ``plus_assets`` so the bundle is portable.
+    """
+    xml = remap_libero_model(model_file, libero_assets)
+    xml = re.sub(r'file="[^"]*?/LIBERO-plus/libero/libero/assets', f'file="{plus_assets}', xml)
+    return xml
+
+
 def parse_goal(bddl_text: str) -> list[tuple[str, list[str]]]:
     m = re.search(r"\(:goal\s*(.*?)\)\s*\)\s*$", bddl_text, re.S)
     block = m.group(1) if m else bddl_text
@@ -69,25 +82,39 @@ def _in_region(model, data, obj: str, region: str) -> bool:
 _TURNON_RANGES = {"flat_stove": [0.5, 2.1]}
 
 
-def _artic_qpos(model, data, base: str):
-    """qpos values of the object's articulated (non-free, 1-dof) joints."""
-    out = []
-    for j in range(model.njnt):
-        jn = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, j) or ""
-        if base in jn and model.jnt_type[j] in (mujoco.mjtJoint.mjJNT_HINGE, mujoco.mjtJoint.mjJNT_SLIDE):
-            out.append(float(data.qpos[model.jnt_qposadr[j]]))
-    return out
-
-
 def _region_base(region: str) -> str:
     return re.sub(r"_(\w+_)?(region|level)$", "", region)
+
+
+def _artic_qpos(model, data, region: str):
+    """qpos of the articulated (non-free) joint(s) for ``region``.
+
+    A multi-drawer cabinet has one joint per drawer (``<obj>_<level>_level``); a
+    region like ``<obj>_<level>_region`` must target ONLY that drawer's joint, not
+    every joint on the object. We first try the level-specific joint
+    (``region`` with ``region``→``level``); if none match we fall back to all of
+    the object's articulated joints (single-DOF objects: microwave, window, …).
+    """
+    level_joint = re.sub(r"region$", "level", region)
+    base = _region_base(region)
+    specific, generic = [], []
+    for j in range(model.njnt):
+        if model.jnt_type[j] not in (mujoco.mjtJoint.mjJNT_HINGE, mujoco.mjtJoint.mjJNT_SLIDE):
+            continue
+        jn = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, j) or ""
+        q = float(data.qpos[model.jnt_qposadr[j]])
+        if level_joint in jn:
+            specific.append(q)
+        if base in jn:
+            generic.append(q)
+    return specific if specific else generic
 
 
 def _is_open(model, data, region: str) -> bool:
     base = _region_base(region)
     cls = next((k for k in _OPEN_RANGES if k in base.lower()), None)
     rng, direction = _OPEN_RANGES.get(cls, ([-0.14, -0.14], "lt"))
-    for q in _artic_qpos(model, data, base):
+    for q in _artic_qpos(model, data, region):
         if (q < max(rng)) if direction == "lt" else (q > min(rng)):
             return True
     return False
@@ -97,7 +124,7 @@ def _turn_on(model, data, region: str) -> bool:
     base = _region_base(region)
     cls = next((k for k in _TURNON_RANGES if k in base.lower()), None)
     rng = _TURNON_RANGES.get(cls, [0.5, 2.1])
-    return any(q >= min(rng) for q in _artic_qpos(model, data, base))
+    return any(q >= min(rng) for q in _artic_qpos(model, data, region))
 
 
 def _contact(model, data, body_a: int, body_b: int) -> bool:
@@ -127,11 +154,7 @@ def _on(model, data, a: str, b: str) -> bool:
             return False
         size = model.site_size[sid]
         delta = data.site_xmat[sid].reshape(3, 3) @ (data.xpos[bid] - data.site_xpos[sid])
-        return bool(
-            size[2] - 0.005 < delta[2] < size[2] + 0.10
-            and abs(delta[0]) < size[0]
-            and abs(delta[1]) < size[1]
-        )
+        return bool(size[2] - 0.005 < delta[2] < size[2] + 0.10 and abs(delta[0]) < size[0] and abs(delta[1]) < size[1])
     ba = _bid(model, a) if _bid(model, a) >= 0 else _bid(model, a + "_main")
     bb = _bid(model, b) if _bid(model, b) >= 0 else _bid(model, b + "_main")
     if ba < 0 or bb < 0:

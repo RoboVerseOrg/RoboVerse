@@ -1,0 +1,1 @@
+{"dim": "table", "suite": "libero_goal", "bddl": "open_the_middle_drawer_of_the_cabinet_table_1.bddl", "nq": 41, "nv": 37, "lang": "open the middle layer of the drawer", "goal": [["Open", ["wooden_cabinet_1_middle_region"]]]}

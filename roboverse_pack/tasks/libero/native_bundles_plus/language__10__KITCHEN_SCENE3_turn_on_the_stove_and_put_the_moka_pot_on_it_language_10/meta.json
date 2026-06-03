@@ -1,0 +1,1 @@
+{"dim": "language", "suite": "libero_10", "bddl": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it_language_10.bddl", "nq": 24, "nv": 22, "lang": "activate the burner and place the espresso maker on top", "goal": [["Turnon", ["flat_stove_1"]], ["On", ["moka_pot_1", "flat_stove_1_cook_region"]]]}

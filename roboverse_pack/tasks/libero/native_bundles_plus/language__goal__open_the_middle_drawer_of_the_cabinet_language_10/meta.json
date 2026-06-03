@@ -1,0 +1,1 @@
+{"dim": "language", "suite": "libero_goal", "bddl": "open_the_middle_drawer_of_the_cabinet_language_10.bddl", "nq": 41, "nv": 37, "lang": "access the central compartment of the cupboard", "goal": [["Open", ["wooden_cabinet_1_middle_region"]]]}
