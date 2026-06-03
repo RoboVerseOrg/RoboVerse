@@ -1,0 +1,481 @@
+<mujoco model="base">
+  <compiler angle="radian" meshdir="meshes/" autolimits="true"/>
+  <option impratio="20" density="1.2" viscosity="2e-05" cone="elliptic"/>
+  <size njmax="5000" nconmax="5000"/>
+  <visual>
+    <map znear="0.001"/>
+  </visual>
+  <default class="main"/>
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.9 0.9 1" rgb2="0.2 0.3 0.4" width="256" height="1536"/>
+    <texture type="2d" name="texplane" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/../textures/seamless_wood_planks_floor.png"/>
+    <texture type="cube" name="tex-table" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/../textures/seamless_wood_planks_floor.png"/>
+    <texture type="cube" name="tex-table-legs" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/../textures/seamless_wood_planks_floor.png"/>
+    <texture type="2d" name="tex-wall" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/../textures/light-gray-plaster.png"/>
+    <texture type="cube" name="textable" builtin="flat" rgb1="0.5 0.5 0.5" width="512" height="3072"/>
+    <texture type="2d" name="tex-living_room_table" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/living_room_table/living_room_table_texture.png"/>
+    <texture type="2d" name="tex-wall_decoration" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/wall_decoration/wall_decoration_texture.png"/>
+    <texture type="2d" name="tex-living_room" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/living_room/living_room_wall_unit.png"/>
+    <texture type="2d" name="akita_black_bowl_1_tex-akita_black_bowl" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/stable_scanned_objects/akita_black_bowl/texture.png"/>
+    <texture type="2d" name="akita_black_bowl_2_tex-akita_black_bowl" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/stable_scanned_objects/akita_black_bowl/texture.png"/>
+    <texture type="2d" name="new_salad_dressing_1_tex-textured" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/stable_hope_objects/new_salad_dressing/texture_map.png"/>
+    <texture type="2d" name="chocolate_pudding_1_tex-textured" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/stable_hope_objects/chocolate_pudding/texture_map.png"/>
+    <texture type="2d" name="wooden_tray_1_tex-wooden_tray" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/turbosquid_objects/wooden_tray/crate_mat_BaseColor.png"/>
+    <material name="floorplane" texture="texplane" texuniform="true" texrepeat="3 3" specular="0" shininess="0"/>
+    <material name="table_texture" texture="tex-table" specular="0.2" shininess="0"/>
+    <material name="table_legs" texture="tex-table-legs" shininess="0.8" reflectance="0.8"/>
+    <material name="walls_mat" texture="tex-wall" texuniform="true" texrepeat="3 3" specular="0.9" shininess="0.2"/>
+    <material name="table_mat" texture="textable"/>
+    <material name="living_room_table" texture="tex-living_room_table" reflectance="0.5"/>
+    <material name="wall_decoration" texture="tex-wall_decoration" reflectance="0.5"/>
+    <material name="living_room" texture="tex-living_room" reflectance="0.5"/>
+    <material name="robot0_Face636_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+    <material name="robot0_Part__Feature017_001" shininess="0.45"/>
+    <material name="robot0_Part__Feature018_001" shininess="0.45"/>
+    <material name="robot0_Part__Feature019_001" shininess="0.45"/>
+    <material name="robot0_Part__Feature022_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+    <material name="robot0_Part__Feature023_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Shell001_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Shell002_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+    <material name="robot0_Shell003_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+    <material name="robot0_Shell009_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Shell010_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+    <material name="robot0_Shell_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Feature_001" shininess="0.45"/>
+    <material name="robot0_Part__Feature024" shininess="0.45"/>
+    <material name="robot0_Part__Feature001_010_001_002" shininess="0.45"/>
+    <material name="robot0_Part__Feature002_007_001_002" shininess="0.45"/>
+    <material name="robot0_Part__Feature003_004_001_002" shininess="0.45"/>
+    <material name="robot0_Part__Feature_001_001_001_002" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Feature001_001_003_001" shininess="0.45"/>
+    <material name="robot0_Part__Feature002_001_003_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Feature003_001_003_001" shininess="0.45"/>
+    <material name="robot0_Part__Feature_002_003_001" shininess="0.45"/>
+    <material name="robot0_Part__Feature_002_004_003" shininess="0.45"/>
+    <material name="robot0_Shell001_001_001_003" shininess="0.45" rgba="0.25 0.25 0.25 1"/>
+    <material name="robot0_Shell_001_001_003" shininess="0.45"/>
+    <material name="robot0_Face064_002_001_002_001" shininess="0.45" rgba="1 0 0 1"/>
+    <material name="robot0_Face065_002_001_002_001" shininess="0.45" rgba="0 1 0 1"/>
+    <material name="robot0_Face374_002_001_002_001" shininess="0.45"/>
+    <material name="robot0_Face539_002_001_002_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Feature001_009_001_002_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Feature002_006_001_002_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Shell002_002_001_002_001" shininess="0.45"/>
+    <material name="robot0_Shell003_002_001_002_001" shininess="0.45"/>
+    <material name="robot0_Shell004_001_001_002_001" shininess="0.45"/>
+    <material name="robot0_Shell005_001_001_002_001" shininess="0.45"/>
+    <material name="robot0_Shell006_003_002_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+    <material name="robot0_Shell007_002_002_001" shininess="0.45" rgba="0.25 0.25 0.25 1"/>
+    <material name="robot0_Shell011_002_002_001" shininess="0.45"/>
+    <material name="robot0_Shell012_002_002_001" shininess="0.45"/>
+    <material name="robot0_Shell_003_001_002_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Union001_001_001_002_001" shininess="0.45" rgba="0.039216 0.541176 0.780392 1"/>
+    <material name="robot0_Union_001_001_002_001" shininess="0.45" rgba="0.039216 0.541176 0.780392 1"/>
+    <material name="robot0_Part__Mirroring001_004_002" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Mirroring002_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Mirroring003_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Mirroring004_004_002" shininess="0.45"/>
+    <material name="robot0_Part__Mirroring005_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Mirroring006_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Mirroring007_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+    <material name="robot0_Part__Mirroring_004_001" shininess="0.45" rgba="0.898039 0.917647 0.929412 1"/>
+    <material name="akita_black_bowl_1_akita_black_bowl" texture="akita_black_bowl_1_tex-akita_black_bowl" reflectance="0.5"/>
+    <material name="akita_black_bowl_2_akita_black_bowl" texture="akita_black_bowl_2_tex-akita_black_bowl" reflectance="0.5"/>
+    <material name="new_salad_dressing_1_textured" texture="new_salad_dressing_1_tex-textured" reflectance="0.5"/>
+    <material name="chocolate_pudding_1_textured" texture="chocolate_pudding_1_tex-textured" reflectance="0.5"/>
+    <material name="wooden_tray_1_wooden_tray" texture="wooden_tray_1_tex-wooden_tray" reflectance="0.5"/>
+    <mesh name="living_room_table_vis" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/living_room_table/visual/living_room_table_vis.msh" scale="1.5 1.5 1.5"/>
+    <mesh name="wall_decoration_vis" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/wall_decoration/visual/wall_decoration_vis.msh" scale="0.4 0.1 0.4"/>
+    <mesh name="living_room_vis" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/scenes/living_room/visual/living_room_vis.msh" scale="0.7 0.7 0.7"/>
+    <mesh name="robot0_link0" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/meshes/link0.stl"/>
+    <mesh name="robot0_link1" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/meshes/link1.stl"/>
+    <mesh name="robot0_link2" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/meshes/link2.stl"/>
+    <mesh name="robot0_link3" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/meshes/link3.stl"/>
+    <mesh name="robot0_link4" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/meshes/link4.stl"/>
+    <mesh name="robot0_link5" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/meshes/link5.stl"/>
+    <mesh name="robot0_link6" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/meshes/link6.stl"/>
+    <mesh name="robot0_link7" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/meshes/link7.stl"/>
+    <mesh name="robot0_link0_vis_0" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_0.obj"/>
+    <mesh name="robot0_link0_vis_1" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_1.obj"/>
+    <mesh name="robot0_link0_vis_2" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_2.obj"/>
+    <mesh name="robot0_link0_vis_3" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_3.obj"/>
+    <mesh name="robot0_link0_vis_4" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_4.obj"/>
+    <mesh name="robot0_link0_vis_5" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_5.obj"/>
+    <mesh name="robot0_link0_vis_6" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_6.obj"/>
+    <mesh name="robot0_link0_vis_7" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_7.obj"/>
+    <mesh name="robot0_link0_vis_8" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_8.obj"/>
+    <mesh name="robot0_link0_vis_9" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_9.obj"/>
+    <mesh name="robot0_link0_vis_10" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_10.obj"/>
+    <mesh name="robot0_link0_vis_11" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_11.obj"/>
+    <mesh name="robot0_link1_vis" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link1_vis/link1_vis.obj"/>
+    <mesh name="robot0_link2_vis" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link2_vis/link2_vis.obj"/>
+    <mesh name="robot0_link3_vis_0" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_0.obj"/>
+    <mesh name="robot0_link3_vis_1" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_1.obj"/>
+    <mesh name="robot0_link3_vis_2" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_2.obj"/>
+    <mesh name="robot0_link3_vis_3" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_3.obj"/>
+    <mesh name="robot0_link4_vis_0" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_0.obj"/>
+    <mesh name="robot0_link4_vis_1" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_1.obj"/>
+    <mesh name="robot0_link4_vis_2" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_2.obj"/>
+    <mesh name="robot0_link4_vis_3" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_3.obj"/>
+    <mesh name="robot0_link5_vis_0" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link5_vis/link5_vis_0.obj"/>
+    <mesh name="robot0_link5_vis_1" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link5_vis/link5_vis_1.obj"/>
+    <mesh name="robot0_link5_vis_2" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link5_vis/link5_vis_2.obj"/>
+    <mesh name="robot0_link6_vis_0" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_0.obj"/>
+    <mesh name="robot0_link6_vis_1" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_1.obj"/>
+    <mesh name="robot0_link6_vis_2" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_2.obj"/>
+    <mesh name="robot0_link6_vis_3" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_3.obj"/>
+    <mesh name="robot0_link6_vis_4" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_4.obj"/>
+    <mesh name="robot0_link6_vis_5" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_5.obj"/>
+    <mesh name="robot0_link6_vis_6" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_6.obj"/>
+    <mesh name="robot0_link6_vis_7" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_7.obj"/>
+    <mesh name="robot0_link6_vis_8" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_8.obj"/>
+    <mesh name="robot0_link6_vis_9" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_9.obj"/>
+    <mesh name="robot0_link6_vis_10" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_10.obj"/>
+    <mesh name="robot0_link6_vis_11" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_11.obj"/>
+    <mesh name="robot0_link6_vis_12" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_12.obj"/>
+    <mesh name="robot0_link6_vis_13" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_13.obj"/>
+    <mesh name="robot0_link6_vis_14" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_14.obj"/>
+    <mesh name="robot0_link6_vis_15" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_15.obj"/>
+    <mesh name="robot0_link6_vis_16" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_16.obj"/>
+    <mesh name="robot0_link7_vis_0" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_0.obj"/>
+    <mesh name="robot0_link7_vis_1" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_1.obj"/>
+    <mesh name="robot0_link7_vis_2" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_2.obj"/>
+    <mesh name="robot0_link7_vis_3" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_3.obj"/>
+    <mesh name="robot0_link7_vis_4" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_4.obj"/>
+    <mesh name="robot0_link7_vis_5" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_5.obj"/>
+    <mesh name="robot0_link7_vis_6" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_6.obj"/>
+    <mesh name="robot0_link7_vis_7" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_7.obj"/>
+    <mesh name="gripper0_hand" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/grippers/meshes/panda_gripper/hand.stl"/>
+    <mesh name="gripper0_hand_vis" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/grippers/meshes/panda_gripper/hand_vis.stl"/>
+    <mesh name="gripper0_finger" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/grippers/meshes/panda_gripper/finger.stl"/>
+    <mesh name="gripper0_finger_vis" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/grippers/meshes/panda_gripper/finger_vis.stl"/>
+    <mesh name="gripper0_finger_vis2" file="/home/yifengz/workspace/robosuite-master/robosuite/models/assets/grippers/meshes/panda_gripper/finger_longer.stl"/>
+    <mesh name="akita_black_bowl_1_akita_black_bowl_vis" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/stable_scanned_objects/akita_black_bowl/visual/akita_black_bowl_vis.msh" scale="0.7 0.7 0.7"/>
+    <mesh name="akita_black_bowl_2_akita_black_bowl_vis" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/stable_scanned_objects/akita_black_bowl/visual/akita_black_bowl_vis.msh" scale="0.7 0.7 0.7"/>
+    <mesh name="new_salad_dressing_1_textured_vis" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/stable_hope_objects/new_salad_dressing/visual/textured_vis.msh" scale="0.01 0.01 0.01"/>
+    <mesh name="chocolate_pudding_1_textured_vis" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/stable_hope_objects/chocolate_pudding/visual/textured_vis.msh" scale="0.01 0.01 0.01"/>
+    <mesh name="wooden_tray_1_wooden_tray_vis" file="/home/yifengz/workspace/libero-dev/chiliocosm/assets/turbosquid_objects/wooden_tray/visual/wooden_tray_vis.msh" scale="0.5 0.5 0.5"/>
+  </asset>
+  <worldbody>
+    <geom name="wall_decoration" pos="-1.95 0.6 1.5" quat="0.707107 0 0 -0.707107" type="mesh" contype="0" conaffinity="0" group="1" material="wall_decoration" mesh="wall_decoration_vis"/>
+    <geom name="living_room" pos="-1.7 0 0" quat="0 0 0 1" type="mesh" contype="0" conaffinity="0" group="1" material="living_room" mesh="living_room_vis"/>
+    <geom name="wall_leftcorner_visual" size="1.06 1.5 0.01" pos="-1.25 2.25 1.5" quat="0.653281 0.653281 0.270598 0.270598" type="box" contype="0" conaffinity="0" group="1" material="walls_mat"/>
+    <geom name="wall_rightcorner_visual" size="1.06 1.5 0.01" pos="-1.25 -2.25 1.5" quat="0.653281 0.653281 -0.270598 -0.270598" type="box" contype="0" conaffinity="0" group="1" material="walls_mat"/>
+    <geom name="wall_left_visual" size="1.75 1.5 0.01" pos="1.25 3 1.5" quat="0.707107 0.707107 0 0" type="box" contype="0" conaffinity="0" group="1" material="walls_mat"/>
+    <geom name="wall_right_visual" size="1.75 1.5 0.01" pos="1.25 -3 1.5" quat="0.707107 -0.707107 0 0" type="box" contype="0" conaffinity="0" group="1" material="walls_mat"/>
+    <geom name="wall_rear_visual" size="1.5 1.5 0.01" pos="-2 0 1.5" quat="0.5 0.5 0.5 0.5" type="box" contype="0" conaffinity="0" group="1" material="walls_mat"/>
+    <geom name="wall_front_visual" size="3 1.5 0.01" pos="3 0 1.5" quat="0.5 0.5 -0.5 -0.5" type="box" contype="0" conaffinity="0" group="1" material="walls_mat"/>
+    <camera name="frontview" pos="1.5 0 0.9" quat="0.560842 0.430646 0.430646 0.560842"/>
+    <camera name="birdview" pos="-0.2 0 3" quat="0.707107 0 0 0.707107"/>
+    <camera name="agentview" pos="0.606577 0 0.96" quat="0.618217 0.343231 0.343231 0.618218"/>
+    <camera name="sideview" pos="-0.0565177 1.27612 1.48796" quat="0.00990507 0.00687796 0.591223 0.806418"/>
+    <camera name="canonical_agentview" pos="0.538613 0 0.79035" quat="0.638018 0.30485 0.30485 0.638018"/>
+    <camera name="galleryview" pos="2.84455 2.12797 3.12862" quat="0.422614 0.233744 0.416469 0.770269"/>
+    <light name="light1" pos="1 1 4" dir="0 -0.14834 -0.988936" castshadow="false" diffuse="0.8 0.8 0.8"/>
+    <light name="light2" pos="-3 -3 4" dir="0 -0.14834 -0.988936" castshadow="false" diffuse="0.8 0.8 0.8"/>
+    <body name="floor" pos="0 0 0" gravcomp="0">
+      <geom name="floor" size="3 3 0.125" type="plane" group="1" material="floorplane"/>
+    </body>
+    <body name="living_room_table" pos="0 0 0" gravcomp="0">
+      <site name="living_room_table_wooden_tray_init_region" pos="0 0.26 0.41" size="0.01 0.01 0.007" type="box" rgba="0 0 1 0"/>
+      <site name="living_room_table_chocolate_pudding_init_region" pos="0.1 -0.2 0.41" size="0.025 0.025 0.007" type="box" rgba="0 0 1 0"/>
+      <site name="living_room_table_akita_black_bowl_right_init_region" pos="-0.1 0.05 0.41" size="0.025 0.025 0.007" type="box" rgba="0 0 1 0"/>
+      <site name="living_room_table_akita_black_bowl_left_init_region" pos="-0.1 -0.15 0.41" size="0.025 0.025 0.007" type="box" rgba="0 0 1 0"/>
+      <site name="living_room_table_salad_dressing_init_region" pos="-0.25 -0.1 0.41" size="0.025 0.025 0.007" type="box" rgba="0 0 1 0"/>
+      <body name="living_room_table_col" pos="-0.25 0.25 0" quat="0.707107 0 0 0.707107" gravcomp="0">
+        <geom type="mesh" contype="0" conaffinity="0" group="1" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" material="living_room_table" mesh="living_room_table_vis"/>
+        <geom size="0.01184 0.44432 0.67171" pos="-0.19761 0 0.42492" quat="0.707107 0 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.5 0.5 0 1"/>
+        <geom size="0.01184 0.10133 0.41675" pos="0.54936 0 0.42492" quat="0.5 0.5 0.5 -0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.5 0.5 0 1"/>
+        <geom size="0.01184 0.10133 0.41675" pos="-0.97006 0 0.42492" quat="0.5 -0.5 -0.5 -0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.5 0.5 0 1"/>
+        <geom size="0.01184 0.07752 0.67171" pos="-0.19761 -0.51121 0.42492" quat="0.707107 0 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.5 0.5 0 1"/>
+        <geom size="0.01184 0.07752 0.67171" pos="-0.19761 0.49665 0.42492" quat="0.707107 0 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.5 0.5 0 1"/>
+        <geom size="0.20884 0.41162 0.43516" pos="0 0 0.20414" quat="0.707107 0 -0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.5 0.5 0 1"/>
+      </body>
+    </body>
+    <body name="robot0_base" pos="-0.51 0 0.42" gravcomp="0">
+      <inertial pos="0 0 0" mass="0" diaginertia="0 0 0"/>
+      <camera name="robot0_robotview" pos="1 0 0.4" quat="0.653098 0.271041 0.271041 0.653098"/>
+      <body name="robot0_link0" pos="0 0 0" gravcomp="0">
+        <inertial pos="0 0 0.05" mass="4" diaginertia="0.4 0.4 0.4"/>
+        <geom name="robot0_g0_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell010_001" mesh="robot0_link0_vis_0"/>
+        <geom name="robot0_g1_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell009_001" mesh="robot0_link0_vis_1"/>
+        <geom name="robot0_g2_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell003_001" mesh="robot0_link0_vis_2"/>
+        <geom name="robot0_g3_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell_001" mesh="robot0_link0_vis_3"/>
+        <geom name="robot0_g4_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell002_001" mesh="robot0_link0_vis_4"/>
+        <geom name="robot0_g5_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell001_001" mesh="robot0_link0_vis_5"/>
+        <geom name="robot0_g6_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Face636_001" mesh="robot0_link0_vis_6"/>
+        <geom name="robot0_g7_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature018_001" mesh="robot0_link0_vis_7"/>
+        <geom name="robot0_g8_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature019_001" mesh="robot0_link0_vis_8"/>
+        <geom name="robot0_g9_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature023_001" mesh="robot0_link0_vis_9"/>
+        <geom name="robot0_g10_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature022_001" mesh="robot0_link0_vis_10"/>
+        <geom name="robot0_g11_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature017_001" mesh="robot0_link0_vis_11"/>
+        <geom name="robot0_link0_collision" type="mesh" rgba="0 0.5 0 1" mesh="robot0_link0"/>
+        <body name="robot0_link1" pos="0 0 0.333" gravcomp="0">
+          <inertial pos="0 0 -0.07" mass="3" diaginertia="0.3 0.3 0.3"/>
+          <joint name="robot0_joint1" pos="0 0 0" axis="0 0 1" range="-2.8973 2.8973" armature="5" damping="0.1" frictionloss="0.1"/>
+          <geom name="robot0_g12_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature_001" mesh="robot0_link1_vis"/>
+          <geom name="robot0_link1_collision" type="mesh" rgba="0 0.5 0 1" mesh="robot0_link1"/>
+          <body name="robot0_link2" pos="0 0 0" quat="0.707107 -0.707107 0 0" gravcomp="0">
+            <inertial pos="0 -0.1 0" mass="3" diaginertia="0.3 0.3 0.3"/>
+            <joint name="robot0_joint2" pos="0 0 0" axis="0 0 1" range="-1.7628 1.7628" armature="2.5" damping="0.1" frictionloss="0.1"/>
+            <geom name="robot0_g13_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature024" mesh="robot0_link2_vis"/>
+            <geom name="robot0_link2_collision" type="mesh" rgba="0 0.5 0 1" mesh="robot0_link2"/>
+            <body name="robot0_link3" pos="0 -0.316 0" quat="0.707107 0.707107 0 0" gravcomp="0">
+              <inertial pos="0.04 0 -0.05" mass="2" diaginertia="0.2 0.2 0.2"/>
+              <joint name="robot0_joint3" pos="0 0 0" axis="0 0 1" range="-2.8973 2.8973" armature="1.66667" damping="0.1" frictionloss="0.1"/>
+              <geom name="robot0_g14_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature003_004_001_002" mesh="robot0_link3_vis_0"/>
+              <geom name="robot0_g15_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature002_007_001_002" mesh="robot0_link3_vis_1"/>
+              <geom name="robot0_g16_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature001_010_001_002" mesh="robot0_link3_vis_2"/>
+              <geom name="robot0_g17_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature_001_001_001_002" mesh="robot0_link3_vis_3"/>
+              <geom name="robot0_link3_collision" type="mesh" rgba="0 0.5 0 1" mesh="robot0_link3"/>
+              <body name="robot0_link4" pos="0.0825 0 0" quat="0.707107 0.707107 0 0" gravcomp="0">
+                <inertial pos="-0.04 0.05 0" mass="2" diaginertia="0.2 0.2 0.2"/>
+                <joint name="robot0_joint4" pos="0 0 0" axis="0 0 1" range="-3.0718 -0.0698" armature="1.25" damping="0.1" frictionloss="0.1"/>
+                <geom name="robot0_g18_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature001_001_003_001" mesh="robot0_link4_vis_0"/>
+                <geom name="robot0_g19_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature003_001_003_001" mesh="robot0_link4_vis_1"/>
+                <geom name="robot0_g20_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature002_001_003_001" mesh="robot0_link4_vis_2"/>
+                <geom name="robot0_g21_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature_002_003_001" mesh="robot0_link4_vis_3"/>
+                <geom name="robot0_link4_collision" type="mesh" rgba="0 0.5 0 1" mesh="robot0_link4"/>
+                <body name="robot0_link5" pos="-0.0825 0.384 0" quat="0.707107 -0.707107 0 0" gravcomp="0">
+                  <inertial pos="0 0 -0.15" mass="2" diaginertia="0.2 0.2 0.2"/>
+                  <joint name="robot0_joint5" pos="0 0 0" axis="0 0 1" range="-2.8973 2.8973" armature="1" damping="0.1" frictionloss="0.1"/>
+                  <geom name="robot0_g22_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell001_001_001_003" mesh="robot0_link5_vis_0"/>
+                  <geom name="robot0_g23_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell_001_001_003" mesh="robot0_link5_vis_1"/>
+                  <geom name="robot0_g24_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature_002_004_003" mesh="robot0_link5_vis_2"/>
+                  <geom name="robot0_link5_collision" type="mesh" rgba="0 0.5 0 1" mesh="robot0_link5"/>
+                  <body name="robot0_link6" pos="0 0 0" quat="0.707107 0.707107 0 0" gravcomp="0">
+                    <inertial pos="0.06 0 0" mass="1.5" diaginertia="0.1 0.1 0.1"/>
+                    <joint name="robot0_joint6" pos="0 0 0" axis="0 0 1" range="-0.0175 3.7525" armature="0.833333" damping="0.01" frictionloss="0.1"/>
+                    <geom name="robot0_g25_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell006_003_002_001" mesh="robot0_link6_vis_0"/>
+                    <geom name="robot0_g26_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell011_002_002_001" mesh="robot0_link6_vis_1"/>
+                    <geom name="robot0_g27_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell007_002_002_001" mesh="robot0_link6_vis_2"/>
+                    <geom name="robot0_g28_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell005_001_001_002_001" mesh="robot0_link6_vis_3"/>
+                    <geom name="robot0_g29_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell004_001_001_002_001" mesh="robot0_link6_vis_4"/>
+                    <geom name="robot0_g30_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell003_002_001_002_001" mesh="robot0_link6_vis_5"/>
+                    <geom name="robot0_g31_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell002_002_001_002_001" mesh="robot0_link6_vis_6"/>
+                    <geom name="robot0_g32_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Union001_001_001_002_001" mesh="robot0_link6_vis_7"/>
+                    <geom name="robot0_g33_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Union_001_001_002_001" mesh="robot0_link6_vis_8"/>
+                    <geom name="robot0_g34_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Face539_002_001_002_001" mesh="robot0_link6_vis_9"/>
+                    <geom name="robot0_g35_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell_003_001_002_001" mesh="robot0_link6_vis_10"/>
+                    <geom name="robot0_g36_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Face374_002_001_002_001" mesh="robot0_link6_vis_11"/>
+                    <geom name="robot0_g37_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Face065_002_001_002_001" mesh="robot0_link6_vis_12"/>
+                    <geom name="robot0_g38_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Face064_002_001_002_001" mesh="robot0_link6_vis_13"/>
+                    <geom name="robot0_g39_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature002_006_001_002_001" mesh="robot0_link6_vis_14"/>
+                    <geom name="robot0_g40_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Feature001_009_001_002_001" mesh="robot0_link6_vis_15"/>
+                    <geom name="robot0_g41_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Shell012_002_002_001" mesh="robot0_link6_vis_16"/>
+                    <geom name="robot0_link6_collision" type="mesh" rgba="0 0.5 0 1" mesh="robot0_link6"/>
+                    <body name="robot0_link7" pos="0.088 0 0" quat="0.707107 0.707107 0 0" gravcomp="0">
+                      <inertial pos="0 0 0.08" mass="0.5" diaginertia="0.05 0.05 0.05"/>
+                      <joint name="robot0_joint7" pos="0 0 0" axis="0 0 1" range="-2.8973 2.8973" armature="0.714286" damping="0.01" frictionloss="0.1"/>
+                      <geom name="robot0_g42_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Mirroring004_004_002" mesh="robot0_link7_vis_0"/>
+                      <geom name="robot0_g43_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Mirroring001_004_002" mesh="robot0_link7_vis_1"/>
+                      <geom name="robot0_g44_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Mirroring007_004_001" mesh="robot0_link7_vis_2"/>
+                      <geom name="robot0_g45_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Mirroring006_004_001" mesh="robot0_link7_vis_3"/>
+                      <geom name="robot0_g46_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Mirroring005_004_001" mesh="robot0_link7_vis_4"/>
+                      <geom name="robot0_g47_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Mirroring003_004_001" mesh="robot0_link7_vis_5"/>
+                      <geom name="robot0_g48_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Mirroring002_004_001" mesh="robot0_link7_vis_6"/>
+                      <geom name="robot0_g49_vis" type="mesh" contype="0" conaffinity="0" group="1" material="robot0_Part__Mirroring_004_001" mesh="robot0_link7_vis_7"/>
+                      <geom name="robot0_link7_collision" type="mesh" rgba="0 0.5 0 1" mesh="robot0_link7"/>
+                      <body name="robot0_right_hand" pos="0 0 0.1065" quat="0.923785 0 0 -0.382911" gravcomp="0">
+                        <inertial pos="0 0 0" mass="0.5" diaginertia="0.05 0.05 0.05"/>
+                        <camera name="robot0_eye_in_hand" pos="0.05 0 0" quat="0 0.707107 0.707107 0" fovy="75"/>
+                        <body name="gripper0_right_gripper" pos="0 0 0" quat="0.707107 0 0 -0.707107" gravcomp="0">
+                          <inertial pos="0 0 0.17" quat="0.707107 0.707107 0 0" mass="0.3" diaginertia="0.09 0.07 0.05"/>
+                          <geom name="gripper0_hand_visual" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="gripper0_hand_vis"/>
+                          <geom name="gripper0_hand_collision" quat="0.707107 0 0 0.707107" type="mesh" rgba="0 0 0.5 1" mesh="gripper0_hand"/>
+                          <site name="gripper0_ft_frame" pos="0 0 0" size="0.01" group="1" rgba="1 0 0 -1"/>
+                          <body name="gripper0_eef" pos="0 0 0.097" gravcomp="0">
+                            <site name="gripper0_grip_site" pos="0 0 0" size="0.01" group="1" rgba="1 0 0 -0.5"/>
+                            <site name="gripper0_ee_x" pos="0.1 0 0" quat="0.707105 0 0.707108 0" size="0.005 0.1" group="1" type="cylinder" rgba="1 0 0 0"/>
+                            <site name="gripper0_ee_y" pos="0 0.1 0" quat="0.707105 0.707108 0 0" size="0.005 0.1" group="1" type="cylinder" rgba="0 1 0 0"/>
+                            <site name="gripper0_ee_z" pos="0 0 0.1" size="0.005 0.1" group="1" type="cylinder" rgba="0 0 1 0"/>
+                            <site name="gripper0_grip_site_cylinder" pos="0 0 0" size="0.005 10" group="1" type="cylinder" rgba="0 1 0 -0.3"/>
+                          </body>
+                          <body name="gripper0_leftfinger" pos="0 0 0.0524" quat="0.707107 0 0 0.707107" gravcomp="0">
+                            <inertial pos="0 0 0.05" mass="0.1" diaginertia="0.01 0.01 0.005"/>
+                            <joint name="gripper0_finger_joint1" pos="0 0 0" axis="0 1 0" type="slide" range="0 0.04" armature="1" damping="100" frictionloss="1"/>
+                            <geom name="gripper0_finger1_visual" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.499 0.499 0.499 1" mesh="gripper0_finger_vis"/>
+                            <geom name="gripper0_finger1_collision" type="mesh" contype="0" condim="4" rgba="0 0 0.5 1" mesh="gripper0_finger"/>
+                            <body name="gripper0_finger_joint1_tip" pos="0 0.0085 0.056" gravcomp="0">
+                              <inertial pos="0 0 0" quat="0 0 0 1" mass="0.01" diaginertia="0.01 0.01 0.01"/>
+                              <geom name="gripper0_finger1_pad_collision" size="0.008 0.004 0.008" pos="0 -0.005 -0.015" quat="0 0 0 1" type="box" friction="2 0.05 0.0001" solref="0.01 0.5" rgba="0 0 0.5 1"/>
+                            </body>
+                          </body>
+                          <body name="gripper0_rightfinger" pos="0 0 0.0524" quat="0.707107 0 0 0.707107" gravcomp="0">
+                            <inertial pos="0 0 0.05" mass="0.1" diaginertia="0.01 0.01 0.005"/>
+                            <joint name="gripper0_finger_joint2" pos="0 0 0" axis="0 1 0" type="slide" range="-0.04 0" armature="1" damping="100" frictionloss="1"/>
+                            <geom name="gripper0_finger2_visual" quat="0 0 0 1" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.499 0.499 0.499 1" mesh="gripper0_finger_vis"/>
+                            <geom name="gripper0_finger2_collision" quat="0 0 0 1" type="mesh" contype="0" condim="4" rgba="0 0 0.5 1" mesh="gripper0_finger"/>
+                            <body name="gripper0_finger_joint2_tip" pos="0 -0.0085 0.056" gravcomp="0">
+                              <inertial pos="0 0 0" quat="0 0 0 1" mass="0.01" diaginertia="0.01 0.01 0.01"/>
+                              <geom name="gripper0_finger2_pad_collision" size="0.008 0.004 0.008" pos="0 0.005 -0.015" quat="0 0 0 1" type="box" friction="2 0.05 0.0001" solref="0.01 0.5" rgba="0 0 0.5 1"/>
+                            </body>
+                          </body>
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="mount0_base" pos="0 0 0" gravcomp="0"/>
+    </body>
+    <body name="akita_black_bowl_1_main" pos="0 -0.1 0" gravcomp="0">
+      <joint name="akita_black_bowl_1_joint0" type="free" damping="0.0005"/>
+      <geom name="akita_black_bowl_1_g0" type="mesh" contype="0" conaffinity="0" group="1" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" material="akita_black_bowl_1_akita_black_bowl" mesh="akita_black_bowl_1_akita_black_bowl_vis"/>
+      <geom name="akita_black_bowl_1_g1" size="0.00071 0.00992 0.01187" pos="-0.0001 0.03361 0.00939" quat="0.609901 -0.3578 -0.3578 -0.609901" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g2" size="0.00071 0.00992 0.01187" pos="-0.01469 0.03017 0.00959" quat="0.459591 -0.426721 0.267041 0.731692" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g3" size="0.00071 0.00992 0.01187" pos="-0.02605 0.02108 0.00975" quat="0.291721 -0.472991 0.16619 0.814592" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g4" size="0.00071 0.00992 0.01187" pos="-0.03253 0.00793 0.00984" quat="0.10855 -0.496982 0.0565802 0.859083" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g5" size="0.00071 0.00992 0.01187" pos="-0.03287 -0.00635 0.00984" quat="0.497612 -0.0772204 0.862464 0.0507402" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g6" size="0.00071 0.00992 0.01187" pos="-0.02692 -0.0199 0.00984" quat="0.474079 -0.265969 0.824058 0.15949" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g7" size="0.00071 0.00992 0.01187" pos="-0.01557 -0.02964 0.00984" quat="0.426461 -0.443361 0.743802 0.261381" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g8" size="0.00071 0.00992 0.01187" pos="-0.00121 -0.03346 0.00984" quat="0.597279 0.357869 0.349459 -0.626949" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g9" size="0.00071 0.00992 0.01187" pos="0.01351 -0.03063 0.00984" quat="0.722489 0.27055 0.420699 -0.477309" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g10" size="0.00071 0.00992 0.01187" pos="0.02523 -0.02201 0.00984" quat="0.172669 -0.808937 0.308909 0.469448" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g11" size="0.00071 0.00992 0.01187" pos="0.03222 -0.0091 0.00984" quat="0.856998 0.0654998 0.495879 -0.12397" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g12" size="0.00071 0.00992 0.01187" pos="0.03222 -0.0091 0.00984" quat="0.856998 0.0654998 0.495879 -0.12397" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g13" size="0.00071 0.00992 0.01187" pos="0.03348 0.00022 0.00984" quat="0.865911 -0.00473 0.50017 -0.00248" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g14" size="0.00071 0.00992 0.01187" pos="0.03036 0.01411 0.00984" quat="0.84663 -0.11101 0.48771 0.18175" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g15" size="0.00071 0.00992 0.01187" pos="0.02156 0.02562 0.00984" quat="0.21392 0.787241 0.36065 -0.45213" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g16" size="0.00071 0.00992 0.01187" pos="0.01157 0.03142 0.00984" quat="0.713241 -0.2887 0.408471 0.491011" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g17" size="0.00128 0.00934 0.01875" pos="-0.0001 0.04712 0.03367" quat="0.0904104 0.701303 0.701303 -0.0904104" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g18" size="0.00128 0.00934 0.01875" pos="-0.01724 0.04385 0.03367" quat="0.10558 0.559299 0.819049 -0.0720899" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g19" size="0.00128 0.00934 0.01875" pos="-0.03174 0.03483 0.03367" quat="0.11689 0.40164 0.906831 -0.0517601" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g20" size="0.00128 0.00934 0.01875" pos="-0.04214 0.02108 0.03367" quat="0.2289 -0.12439 0.02951 0.965019" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g21" size="0.00128 0.00934 0.01875" pos="-0.04689 0.0046 0.03367" quat="0.12768 0.04949 0.990559 -0.00638" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g22" size="0.00128 0.00934 0.01875" pos="-0.04555 -0.01204 0.03367" quat="0.126789 0.126799 0.0163499 -0.983656" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g23" size="0.00128 0.00934 0.01875" pos="-0.03825 -0.02751 0.03367" quat="0.121729 -0.303249 0.944296 0.0390898" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g24" size="0.00128 0.00934 0.01875" pos="-0.02576 -0.03946 0.03367" quat="0.11249 -0.471279 0.872669 0.0607499" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g25" size="0.00128 0.00934 0.01875" pos="-0.0101 -0.04602 0.03367" quat="0.620797 0.0997095 0.0800296 -0.773476" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g26" size="0.00128 0.00934 0.01875" pos="0.00698 -0.0466 0.03367" quat="0.750819 0.0835199 0.0967799 -0.648019" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g27" size="0.00128 0.00934 0.01875" pos="0.02325 -0.04098 0.03367" quat="0.0644502 -0.856513 0.500042 0.11041" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g28" size="0.00128 0.00934 0.01875" pos="0.03631 -0.03003 0.03367" quat="0.932832 0.0434201 0.12024 -0.336871" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g29" size="0.00128 0.00934 0.01875" pos="0.04475 -0.01475 0.03367" quat="0.0203999 -0.979087 0.15826 0.1262" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g30" size="0.00128 0.00934 0.01875" pos="0.04708 0.00185 0.03367" quat="0.00238001 0.991623 0.0184401 -0.12782" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g31" size="0.00128 0.00934 0.01875" pos="0.04708 0.00185 0.03367" quat="0.00238001 0.991623 0.0184401 -0.12782" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g32" size="0.00128 0.00934 0.01875" pos="0.04341 0.01832 0.03367" quat="0.0252399 0.972287 0.195739 -0.12533" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g33" size="0.00128 0.00934 0.01875" pos="0.03416 0.03245 0.03367" quat="0.0472901 0.921461 0.36683 -0.11878" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g34" size="0.00128 0.00934 0.01875" pos="0.02067 0.04234 0.03367" quat="0.0675998 0.841747 0.524518 -0.1085" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g35" size="0.00125 0.00444 0.01872" pos="0.01056 0.04592 0.03367" quat="0.0795303 0.776563 0.616932 -0.1001" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g36" size="0.00258 0.01547 0.01617" pos="0 -0.00075 0.00417" quat="0.707107 0 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g37" size="0.00258 0.00431 0.01617" pos="0 -0.02021 0.00417" quat="0.707107 0 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g38" size="0.00258 0.00495 0.01547" pos="0.01821 0.00016 0.00417" quat="0.5 -0.5 0.5 0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g39" size="0.00258 0.00453 0.01547" pos="-0.0181 4e-05 0.00417" quat="0.5 -0.5 0.5 0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_1_g40" size="0.00258 0.00741 0.01617" pos="0 0.0149 0.00417" quat="0 0.707107 0 -0.707107" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <site name="akita_black_bowl_1_default_site" pos="0 0 0" size="0.002" rgba="1 0 0 0"/>
+    </body>
+    <body name="akita_black_bowl_2_main" pos="0 -0.1 0" gravcomp="0">
+      <joint name="akita_black_bowl_2_joint0" type="free" damping="0.0005"/>
+      <geom name="akita_black_bowl_2_g0" type="mesh" contype="0" conaffinity="0" group="1" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" material="akita_black_bowl_2_akita_black_bowl" mesh="akita_black_bowl_2_akita_black_bowl_vis"/>
+      <geom name="akita_black_bowl_2_g1" size="0.00071 0.00992 0.01187" pos="-0.0001 0.03361 0.00939" quat="0.609901 -0.3578 -0.3578 -0.609901" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g2" size="0.00071 0.00992 0.01187" pos="-0.01469 0.03017 0.00959" quat="0.459591 -0.426721 0.267041 0.731692" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g3" size="0.00071 0.00992 0.01187" pos="-0.02605 0.02108 0.00975" quat="0.291721 -0.472991 0.16619 0.814592" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g4" size="0.00071 0.00992 0.01187" pos="-0.03253 0.00793 0.00984" quat="0.10855 -0.496982 0.0565802 0.859083" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g5" size="0.00071 0.00992 0.01187" pos="-0.03287 -0.00635 0.00984" quat="0.497612 -0.0772204 0.862464 0.0507402" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g6" size="0.00071 0.00992 0.01187" pos="-0.02692 -0.0199 0.00984" quat="0.474079 -0.265969 0.824058 0.15949" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g7" size="0.00071 0.00992 0.01187" pos="-0.01557 -0.02964 0.00984" quat="0.426461 -0.443361 0.743802 0.261381" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g8" size="0.00071 0.00992 0.01187" pos="-0.00121 -0.03346 0.00984" quat="0.597279 0.357869 0.349459 -0.626949" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g9" size="0.00071 0.00992 0.01187" pos="0.01351 -0.03063 0.00984" quat="0.722489 0.27055 0.420699 -0.477309" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g10" size="0.00071 0.00992 0.01187" pos="0.02523 -0.02201 0.00984" quat="0.172669 -0.808937 0.308909 0.469448" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g11" size="0.00071 0.00992 0.01187" pos="0.03222 -0.0091 0.00984" quat="0.856998 0.0654998 0.495879 -0.12397" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g12" size="0.00071 0.00992 0.01187" pos="0.03222 -0.0091 0.00984" quat="0.856998 0.0654998 0.495879 -0.12397" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g13" size="0.00071 0.00992 0.01187" pos="0.03348 0.00022 0.00984" quat="0.865911 -0.00473 0.50017 -0.00248" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g14" size="0.00071 0.00992 0.01187" pos="0.03036 0.01411 0.00984" quat="0.84663 -0.11101 0.48771 0.18175" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g15" size="0.00071 0.00992 0.01187" pos="0.02156 0.02562 0.00984" quat="0.21392 0.787241 0.36065 -0.45213" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g16" size="0.00071 0.00992 0.01187" pos="0.01157 0.03142 0.00984" quat="0.713241 -0.2887 0.408471 0.491011" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g17" size="0.00128 0.00934 0.01875" pos="-0.0001 0.04712 0.03367" quat="0.0904104 0.701303 0.701303 -0.0904104" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g18" size="0.00128 0.00934 0.01875" pos="-0.01724 0.04385 0.03367" quat="0.10558 0.559299 0.819049 -0.0720899" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g19" size="0.00128 0.00934 0.01875" pos="-0.03174 0.03483 0.03367" quat="0.11689 0.40164 0.906831 -0.0517601" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g20" size="0.00128 0.00934 0.01875" pos="-0.04214 0.02108 0.03367" quat="0.2289 -0.12439 0.02951 0.965019" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g21" size="0.00128 0.00934 0.01875" pos="-0.04689 0.0046 0.03367" quat="0.12768 0.04949 0.990559 -0.00638" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g22" size="0.00128 0.00934 0.01875" pos="-0.04555 -0.01204 0.03367" quat="0.126789 0.126799 0.0163499 -0.983656" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g23" size="0.00128 0.00934 0.01875" pos="-0.03825 -0.02751 0.03367" quat="0.121729 -0.303249 0.944296 0.0390898" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g24" size="0.00128 0.00934 0.01875" pos="-0.02576 -0.03946 0.03367" quat="0.11249 -0.471279 0.872669 0.0607499" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g25" size="0.00128 0.00934 0.01875" pos="-0.0101 -0.04602 0.03367" quat="0.620797 0.0997095 0.0800296 -0.773476" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g26" size="0.00128 0.00934 0.01875" pos="0.00698 -0.0466 0.03367" quat="0.750819 0.0835199 0.0967799 -0.648019" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g27" size="0.00128 0.00934 0.01875" pos="0.02325 -0.04098 0.03367" quat="0.0644502 -0.856513 0.500042 0.11041" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g28" size="0.00128 0.00934 0.01875" pos="0.03631 -0.03003 0.03367" quat="0.932832 0.0434201 0.12024 -0.336871" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g29" size="0.00128 0.00934 0.01875" pos="0.04475 -0.01475 0.03367" quat="0.0203999 -0.979087 0.15826 0.1262" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g30" size="0.00128 0.00934 0.01875" pos="0.04708 0.00185 0.03367" quat="0.00238001 0.991623 0.0184401 -0.12782" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g31" size="0.00128 0.00934 0.01875" pos="0.04708 0.00185 0.03367" quat="0.00238001 0.991623 0.0184401 -0.12782" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g32" size="0.00128 0.00934 0.01875" pos="0.04341 0.01832 0.03367" quat="0.0252399 0.972287 0.195739 -0.12533" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g33" size="0.00128 0.00934 0.01875" pos="0.03416 0.03245 0.03367" quat="0.0472901 0.921461 0.36683 -0.11878" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g34" size="0.00128 0.00934 0.01875" pos="0.02067 0.04234 0.03367" quat="0.0675998 0.841747 0.524518 -0.1085" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g35" size="0.00125 0.00444 0.01872" pos="0.01056 0.04592 0.03367" quat="0.0795303 0.776563 0.616932 -0.1001" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g36" size="0.00258 0.01547 0.01617" pos="0 -0.00075 0.00417" quat="0.707107 0 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g37" size="0.00258 0.00431 0.01617" pos="0 -0.02021 0.00417" quat="0.707107 0 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g38" size="0.00258 0.00495 0.01547" pos="0.01821 0.00016 0.00417" quat="0.5 -0.5 0.5 0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g39" size="0.00258 0.00453 0.01547" pos="-0.0181 4e-05 0.00417" quat="0.5 -0.5 0.5 0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="akita_black_bowl_2_g40" size="0.00258 0.00741 0.01617" pos="0 0.0149 0.00417" quat="0 0.707107 0 -0.707107" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <site name="akita_black_bowl_2_default_site" pos="0 0 0" size="0.002" rgba="1 0 0 0"/>
+    </body>
+    <body name="new_salad_dressing_1_main" pos="0 0 0" gravcomp="0">
+      <joint name="new_salad_dressing_1_joint0" type="free" damping="0.0005"/>
+      <site name="new_salad_dressing_1_default_site" pos="0 0 0" size="0.002" rgba="1 0 0 0"/>
+      <body name="new_salad_dressing_1_sald_dressing_body" pos="0 0.05 0" gravcomp="0">
+        <geom name="new_salad_dressing_1_g0" type="mesh" contype="0" conaffinity="0" group="1" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" material="new_salad_dressing_1_textured" mesh="new_salad_dressing_1_textured_vis"/>
+        <geom name="new_salad_dressing_1_g1" size="0.01237 0.01277 0.01865" pos="0.00012 0.0542 0.00043" quat="0.5 0.5 0.5 -0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g2" size="0.01733 0.02097 0.02637" pos="-0.00096 -0.03138 0.00023" quat="0.707107 0 -0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g3" size="0.01294 0.01494 0.02738" pos="0.00048 0.00843 0.00023" quat="0.707107 0.707107 0 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g4" size="0.00208 0.0078 0.01865" pos="0.00012 0.0542 -0.01366" quat="0.5 -0.5 0.5 0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g5" size="0.00208 0.0078 0.01865" pos="0.00012 0.0542 0.01479" quat="0.5 -0.5 0.5 0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g6" size="0.00208 0.0078 0.01865" pos="0.01509 0.0542 -0.00068" quat="0.707106 0.707106 0.000859995 -0.000859995" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g7" size="0.00208 0.0078 0.01865" pos="-0.01447 0.0542 -0.00068" quat="0.707106 0.707106 0.000859995 -0.000859995" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g8" size="0.00208 0.0078 0.01865" pos="-0.01145 0.0542 -0.01062" quat="0.239941 0.239941 0.665153 -0.665153" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g9" size="0.00208 0.0078 0.01865" pos="0.01182 0.0542 -0.01062" quat="0.663883 0.663883 0.243431 -0.243431" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g10" size="0.00208 0.0078 0.01865" pos="0.0122 0.0542 0.00988" quat="0.21187 0.21187 0.674619 -0.674619" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g11" size="0.00208 0.0078 0.01865" pos="-0.01158 0.0542 0.00988" quat="0.665574 -0.665574 0.238771 0.238771" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g12" size="0.00325 0.01729 0.01733" pos="-0.00096 -0.06947 0.00023" quat="0 -0.707107 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g13" size="0.00558 0.01733 0.02217" pos="-0.00096 -0.05722 0.00023" quat="0.5 0.5 -0.5 -0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g14" size="0.00558 0.01733 0.0229" pos="-0.00096 -0.00434 0.00023" quat="0.5 0.5 -0.5 -0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+        <geom name="new_salad_dressing_1_g15" size="0.00558 0.01712 0.01733" pos="-0.00096 0.00719 0.00023" quat="0.707107 0 0 -0.707107" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      </body>
+    </body>
+    <body name="chocolate_pudding_1_main" pos="0 0 0" gravcomp="0">
+      <joint name="chocolate_pudding_1_joint0" type="free" damping="0.0005"/>
+      <geom name="chocolate_pudding_1_g0" type="mesh" contype="0" conaffinity="0" group="1" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" material="chocolate_pudding_1_textured" mesh="chocolate_pudding_1_textured_vis"/>
+      <geom name="chocolate_pudding_1_g1" size="0.01371 0.02316 0.0401" pos="-0.0005 0 0.00063" quat="0.707107 0 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <site name="chocolate_pudding_1_default_site" pos="0 0 0" size="0.002" rgba="1 0 0 0"/>
+    </body>
+    <body name="wooden_tray_1_main" pos="0 0 0" gravcomp="0">
+      <joint name="wooden_tray_1_joint0" type="free" damping="0.0005"/>
+      <geom name="wooden_tray_1_g0" type="mesh" contype="0" conaffinity="0" group="1" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" material="wooden_tray_1_wooden_tray" mesh="wooden_tray_1_wooden_tray_vis"/>
+      <geom name="wooden_tray_1_g1" size="0.00232 0.0246 0.07784" pos="-0.13924 -0.00547 0.02993" quat="0 0 0.707107 0.707107" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g2" size="0.00232 0.0246 0.07784" pos="0.15323 -0.00547 0.02993" quat="0 0 0.707107 0.707107" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g3" size="0.00232 0.02943 0.144" pos="0.00781 -0.08453 0.03323" quat="0.498678 0.498678 -0.501318 -0.501318" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g4" size="0.00232 0.02843 0.144" pos="0.00781 0.0758 0.03117" quat="0.501318 0.501318 0.498678 0.498678" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g5" size="0.00363 0.0246 0.144" pos="0.00781 -0.00556 0.00354" quat="0.000899998 0.708969 -0.000889998 -0.705239" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g6" size="0.00363 0.02087 0.144" pos="0.00781 0.05385 0.00363" quat="0.000899998 0.708969 -0.000899998 -0.705239" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g7" size="0.00363 0.02087 0.144" pos="0.00781 -0.06421 0.00346" quat="0.000899998 0.708969 -0.000899998 -0.705239" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g8" size="0.00232 0.00542 0.07756" pos="0.14715 -0.0042 0.00223" quat="0.50068 -0.50195 0.49931 0.49805" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g9" size="0.00232 0.00542 0.07756" pos="-0.13099 -0.0042 0.00287" quat="0.50195 0.50068 0.49805 -0.49931" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g10" size="0.00548 0.0062 0.03918" pos="-0.13206 0.06811 0.04084" quat="0 0.707107 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g11" size="0.00121 0.0067 0.07862" pos="-0.1335 -0.0049 0.07967" quat="0.5 -0.5 0.5 0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g12" size="0.00121 0.0067 0.07862" pos="0.14712 -0.0049 0.07967" quat="0.5 -0.5 0.5 0.5" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g13" size="0.00548 0.0062 0.03918" pos="-0.13206 -0.07846 0.04084" quat="0 -0.707107 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g14" size="0.00548 0.0062 0.03918" pos="0.14531 -0.07846 0.04084" quat="0 0.707107 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <geom name="wooden_tray_1_g15" size="0.00548 0.0062 0.03918" pos="0.14531 0.06891 0.04084" quat="0 0.707107 0.707107 0" type="box" friction="0.95 0.3 0.1" solref="0.001 1" solimp="0.998 0.998 0.001 0.5 2" density="100" rgba="0.8 0.8 0.8 0.3"/>
+      <site name="wooden_tray_1_contain_region" pos="0.00863 -0.00471 0.04255" quat="0.707107 0 0.707107 0" size="0.04038 0.07839 0.13549" type="box" rgba="1 0 0 0"/>
+      <site name="wooden_tray_1_default_site" pos="0 0 0" size="0.002" rgba="1 0 0 0"/>
+    </body>
+  </worldbody>
+  <actuator>
+    <general name="robot0_torq_j1" joint="robot0_joint1" ctrlrange="-80 80" actdim="0"/>
+    <general name="robot0_torq_j2" joint="robot0_joint2" ctrlrange="-80 80" actdim="0"/>
+    <general name="robot0_torq_j3" joint="robot0_joint3" ctrlrange="-80 80" actdim="0"/>
+    <general name="robot0_torq_j4" joint="robot0_joint4" ctrlrange="-80 80" actdim="0"/>
+    <general name="robot0_torq_j5" joint="robot0_joint5" ctrlrange="-80 80" actdim="0"/>
+    <general name="robot0_torq_j6" joint="robot0_joint6" ctrlrange="-12 12" actdim="0"/>
+    <general name="robot0_torq_j7" joint="robot0_joint7" ctrlrange="-12 12" actdim="0"/>
+    <general name="gripper0_gripper_finger_joint1" joint="gripper0_finger_joint1" ctrlrange="0 0.04" forcerange="-20 20" actdim="0" biastype="affine" gainprm="1000 0 0 0 0 0 0 0 0 0" biasprm="0 -1000 0 0 0 0 0 0 0 0"/>
+    <general name="gripper0_gripper_finger_joint2" joint="gripper0_finger_joint2" ctrlrange="-0.04 0" forcerange="-20 20" actdim="0" biastype="affine" gainprm="1000 0 0 0 0 0 0 0 0 0" biasprm="0 -1000 0 0 0 0 0 0 0 0"/>
+  </actuator>
+  <sensor>
+    <force site="gripper0_ft_frame" name="gripper0_force_ee"/>
+    <torque site="gripper0_ft_frame" name="gripper0_torque_ee"/>
+  </sensor>
+</mujoco>
