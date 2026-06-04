@@ -150,8 +150,11 @@ class DPPolicy(Policy):
 
     def predict(self, obs: dict) -> np.ndarray | None:
         if not self._cache:
+            # Cameras the server asked for (set from ping); fall back to the single primary
+            # camera when constructed without a handshake (e.g. unit tests).
+            cam_list = getattr(self, "cameras", None) or [self.camera]
             try:
-                cams = {c: np.asarray(obs["observation"][c]["rgb"]) for c in self.cameras}
+                cams = {c: np.asarray(obs["observation"][c]["rgb"]) for c in cam_list}
             except (KeyError, TypeError) as e:
                 raise RuntimeError(
                     f"obs missing observation[{self.cameras}]['rgb'] -- run the env with data_type rgb=True "
