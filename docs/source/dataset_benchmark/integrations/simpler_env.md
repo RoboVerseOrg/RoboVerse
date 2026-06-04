@@ -118,108 +118,320 @@ Regenerate with `scripts/render_metasim_1to1_gallery.py`.
 
 ### Google Robot — pick coke can (4)
 
-<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_pick_coke_can.mp4" type="video/mp4"></video>
-<p><code>google_robot_pick_coke_can</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_pick_horizontal_coke_can.mp4" type="video/mp4"></video>
-<p><code>google_robot_pick_horizontal_coke_can</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_pick_vertical_coke_can.mp4" type="video/mp4"></video>
-<p><code>google_robot_pick_vertical_coke_can</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_pick_standing_coke_can.mp4" type="video/mp4"></video>
-<p><code>google_robot_pick_standing_coke_can</code> · Δ=0.0</p></div>
-</div>
+::::{grid} 2
+:gutter: 2
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_pick_coke_can.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_pick_coke_can · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_pick_horizontal_coke_can.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_pick_horizontal_coke_can · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_pick_vertical_coke_can.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_pick_vertical_coke_can · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_pick_standing_coke_can.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_pick_standing_coke_can · Δ=0.0
+```
+:::
+
+::::
 
 ### Google Robot — pick object & move near (4)
 
-<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_pick_object.mp4" type="video/mp4"></video>
-<p><code>google_robot_pick_object</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_move_near.mp4" type="video/mp4"></video>
-<p><code>google_robot_move_near</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_move_near_v0.mp4" type="video/mp4"></video>
-<p><code>google_robot_move_near_v0</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_move_near_v1.mp4" type="video/mp4"></video>
-<p><code>google_robot_move_near_v1</code> · Δ=0.0</p></div>
-</div>
+::::{grid} 2
+:gutter: 2
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_pick_object.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_pick_object · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_move_near.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_move_near · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_move_near_v0.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_move_near_v0 · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_move_near_v1.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_move_near_v1 · Δ=0.0
+```
+:::
+
+::::
 
 ### Google Robot — open drawer (4)
 
-<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_open_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_open_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_open_top_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_open_top_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_open_middle_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_open_middle_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_open_bottom_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_open_bottom_drawer</code> · Δ=0.0</p></div>
-</div>
+::::{grid} 2
+:gutter: 2
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_open_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_open_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_open_top_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_open_top_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_open_middle_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_open_middle_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_open_bottom_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_open_bottom_drawer · Δ=0.0
+```
+:::
+
+::::
 
 ### Google Robot — close drawer (4)
 
-<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_close_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_close_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_close_top_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_close_top_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_close_middle_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_close_middle_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_close_bottom_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_close_bottom_drawer</code> · Δ=0.0</p></div>
-</div>
+::::{grid} 2
+:gutter: 2
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_close_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_close_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_close_top_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_close_top_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_close_middle_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_close_middle_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_close_bottom_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_close_bottom_drawer · Δ=0.0
+```
+:::
+
+::::
 
 ### Google Robot — place in closed drawer (5)
 
-<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_place_in_closed_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_place_in_closed_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_place_in_closed_top_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_place_in_closed_top_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_place_in_closed_middle_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_place_in_closed_middle_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_place_in_closed_bottom_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_place_in_closed_bottom_drawer</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/google_robot_place_apple_in_closed_top_drawer.mp4" type="video/mp4"></video>
-<p><code>google_robot_place_apple_in_closed_top_drawer</code> · Δ=0.0</p></div>
-</div>
+::::{grid} 2
+:gutter: 2
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_place_in_closed_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_place_in_closed_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_place_in_closed_top_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_place_in_closed_top_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_place_in_closed_middle_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_place_in_closed_middle_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_place_in_closed_bottom_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_place_in_closed_bottom_drawer · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/google_robot_place_apple_in_closed_top_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: google_robot_place_apple_in_closed_top_drawer · Δ=0.0
+```
+:::
+
+::::
 
 ### WidowX / Bridge — put-on (4)
 
-<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/widowx_spoon_on_towel.mp4" type="video/mp4"></video>
-<p><code>widowx_spoon_on_towel</code> · Δ=0.0018</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/widowx_carrot_on_plate.mp4" type="video/mp4"></video>
-<p><code>widowx_carrot_on_plate</code> · Δ=0.0003</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/widowx_stack_cube.mp4" type="video/mp4"></video>
-<p><code>widowx_stack_cube</code> · Δ=0.0</p></div>
-<div style="flex:1 1 360px;max-width:520px;text-align:center">
-<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/simpler_env/widowx_put_eggplant_in_basket.mp4" type="video/mp4"></video>
-<p><code>widowx_put_eggplant_in_basket</code> · Δ=0.0005</p></div>
-</div>
+::::{grid} 2
+:gutter: 2
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/widowx_spoon_on_towel.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: widowx_spoon_on_towel · Δ=0.0018
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/widowx_carrot_on_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: widowx_carrot_on_plate · Δ=0.0003
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/widowx_stack_cube.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: widowx_stack_cube · Δ=0.0
+```
+:::
+
+:::{grid-item}
+```{video} ../../_static/integrations/simpler_env/widowx_put_eggplant_in_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: widowx_put_eggplant_in_basket · Δ=0.0005
+```
+:::
+
+::::
 
 ## Design notes & honest caveats
 
