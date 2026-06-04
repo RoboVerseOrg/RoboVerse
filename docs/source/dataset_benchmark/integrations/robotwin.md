@@ -82,6 +82,275 @@ SAPIEN API.
   the engines (RT vs. RoboTwin's exact lights); a *moving* URDF object
   renders untextured (sapien3's articulation loader drops `.mtl`).
 
+## 1:1 visualization — all 50 tasks
+
+Every task rendered **native RoboTwin (left) vs RoboVerse replay (right)**, same observer pose, frame-for-frame: the RoboVerse replay is driven by the *same* recorded bridge trajectory (`native_render.py --replay-bridge`), so robot pose + every object (mesh, instance, pose) line up 1:1 — only cross-engine texture shading differs. Regenerate **any** of the 50 clips with one command (swap `--task <name>` for any task below):
+
+```bash
+# native RoboTwin (robotwin env) + RoboVerse replay (roboverse env), composited side-by-side
+conda run -n roboverse python tools/robotwin_integration/sidebyside.py --task move_can_pot
+#   -> outputs/robotwin_coverage/sidebyside_move_can_pot.mp4
+```
+
+<details><summary><b>All 50 task names + regenerate the whole gallery</b></summary>
+
+`adjust_bottle` · `beat_block_hammer` · `blocks_ranking_rgb` · `blocks_ranking_size` · `click_alarmclock`  
+`click_bell` · `dump_bin_bigbin` · `grab_roller` · `handover_block` · `handover_mic`  
+`hanging_mug` · `lift_pot` · `move_can_pot` · `move_pillbottle_pad` · `move_playingcard_away`  
+`move_stapler_pad` · `open_laptop` · `open_microwave` · `pick_diverse_bottles` · `pick_dual_bottles`  
+`place_a2b_left` · `place_a2b_right` · `place_bread_basket` · `place_bread_skillet` · `place_burger_fries`  
+`place_can_basket` · `place_cans_plasticbox` · `place_container_plate` · `place_dual_shoes` · `place_empty_cup`  
+`place_fan` · `place_mouse_pad` · `place_object_basket` · `place_object_scale` · `place_object_stand`  
+`place_phone_stand` · `place_shoe` · `press_stapler` · `put_bottles_dustbin` · `put_object_cabinet`  
+`rotate_qrcode` · `scan_object` · `shake_bottle` · `shake_bottle_horizontally` · `stack_blocks_three`  
+`stack_blocks_two` · `stack_bowls_three` · `stack_bowls_two` · `stamp_seal` · `turn_switch`  
+
+```bash
+# regenerate every side-by-side (both envs handled inside sidebyside.py)
+for t in \
+    adjust_bottle beat_block_hammer blocks_ranking_rgb blocks_ranking_size \
+    click_alarmclock click_bell dump_bin_bigbin grab_roller \
+    handover_block handover_mic hanging_mug lift_pot \
+    move_can_pot move_pillbottle_pad move_playingcard_away move_stapler_pad \
+    open_laptop open_microwave pick_diverse_bottles pick_dual_bottles \
+    place_a2b_left place_a2b_right place_bread_basket place_bread_skillet \
+    place_burger_fries place_can_basket place_cans_plasticbox place_container_plate \
+    place_dual_shoes place_empty_cup place_fan place_mouse_pad \
+    place_object_basket place_object_scale place_object_stand place_phone_stand \
+    place_shoe press_stapler put_bottles_dustbin put_object_cabinet \
+    rotate_qrcode scan_object shake_bottle shake_bottle_horizontally \
+    stack_blocks_three stack_blocks_two stack_bowls_three stack_bowls_two \
+    stamp_seal turn_switch ; do
+  conda run -n roboverse python tools/robotwin_integration/sidebyside.py --task $t
+done
+```
+</details>
+
+### Grasp · tool · press (11)
+
+<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_beat_block_hammer.mp4" type="video/mp4"></video>
+<sub><code>beat_block_hammer</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_click_bell.mp4" type="video/mp4"></video>
+<sub><code>click_bell</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_click_alarmclock.mp4" type="video/mp4"></video>
+<sub><code>click_alarmclock</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_press_stapler.mp4" type="video/mp4"></video>
+<sub><code>press_stapler</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_grab_roller.mp4" type="video/mp4"></video>
+<sub><code>grab_roller</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_stamp_seal.mp4" type="video/mp4"></video>
+<sub><code>stamp_seal</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_rotate_qrcode.mp4" type="video/mp4"></video>
+<sub><code>rotate_qrcode</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_turn_switch.mp4" type="video/mp4"></video>
+<sub><code>turn_switch</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_handover_block.mp4" type="video/mp4"></video>
+<sub><code>handover_block</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_handover_mic.mp4" type="video/mp4"></video>
+<sub><code>handover_mic</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_move_playingcard_away.mp4" type="video/mp4"></video>
+<sub><code>move_playingcard_away</code></sub>
+</div>
+</div>
+
+### Place onto target (20)
+
+<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_move_can_pot.mp4" type="video/mp4"></video>
+<sub><code>move_can_pot</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_move_pillbottle_pad.mp4" type="video/mp4"></video>
+<sub><code>move_pillbottle_pad</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_move_stapler_pad.mp4" type="video/mp4"></video>
+<sub><code>move_stapler_pad</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_a2b_left.mp4" type="video/mp4"></video>
+<sub><code>place_a2b_left</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_a2b_right.mp4" type="video/mp4"></video>
+<sub><code>place_a2b_right</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_bread_basket.mp4" type="video/mp4"></video>
+<sub><code>place_bread_basket</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_bread_skillet.mp4" type="video/mp4"></video>
+<sub><code>place_bread_skillet</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_burger_fries.mp4" type="video/mp4"></video>
+<sub><code>place_burger_fries</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_can_basket.mp4" type="video/mp4"></video>
+<sub><code>place_can_basket</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_cans_plasticbox.mp4" type="video/mp4"></video>
+<sub><code>place_cans_plasticbox</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_container_plate.mp4" type="video/mp4"></video>
+<sub><code>place_container_plate</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_dual_shoes.mp4" type="video/mp4"></video>
+<sub><code>place_dual_shoes</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_empty_cup.mp4" type="video/mp4"></video>
+<sub><code>place_empty_cup</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_fan.mp4" type="video/mp4"></video>
+<sub><code>place_fan</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_mouse_pad.mp4" type="video/mp4"></video>
+<sub><code>place_mouse_pad</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_object_basket.mp4" type="video/mp4"></video>
+<sub><code>place_object_basket</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_object_scale.mp4" type="video/mp4"></video>
+<sub><code>place_object_scale</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_object_stand.mp4" type="video/mp4"></video>
+<sub><code>place_object_stand</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_phone_stand.mp4" type="video/mp4"></video>
+<sub><code>place_phone_stand</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_place_shoe.mp4" type="video/mp4"></video>
+<sub><code>place_shoe</code></sub>
+</div>
+</div>
+
+### Bottles · pick · shake (6)
+
+<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_pick_diverse_bottles.mp4" type="video/mp4"></video>
+<sub><code>pick_diverse_bottles</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_pick_dual_bottles.mp4" type="video/mp4"></video>
+<sub><code>pick_dual_bottles</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_shake_bottle.mp4" type="video/mp4"></video>
+<sub><code>shake_bottle</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_shake_bottle_horizontally.mp4" type="video/mp4"></video>
+<sub><code>shake_bottle_horizontally</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_adjust_bottle.mp4" type="video/mp4"></video>
+<sub><code>adjust_bottle</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_put_bottles_dustbin.mp4" type="video/mp4"></video>
+<sub><code>put_bottles_dustbin</code></sub>
+</div>
+</div>
+
+### Stack · rank (6)
+
+<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_stack_blocks_two.mp4" type="video/mp4"></video>
+<sub><code>stack_blocks_two</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_stack_blocks_three.mp4" type="video/mp4"></video>
+<sub><code>stack_blocks_three</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_stack_bowls_two.mp4" type="video/mp4"></video>
+<sub><code>stack_bowls_two</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_stack_bowls_three.mp4" type="video/mp4"></video>
+<sub><code>stack_bowls_three</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_blocks_ranking_rgb.mp4" type="video/mp4"></video>
+<sub><code>blocks_ranking_rgb</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_blocks_ranking_size.mp4" type="video/mp4"></video>
+<sub><code>blocks_ranking_size</code></sub>
+</div>
+</div>
+
+### Articulated · container (URDF joints) (7)
+
+<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_open_laptop.mp4" type="video/mp4"></video>
+<sub><code>open_laptop</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_open_microwave.mp4" type="video/mp4"></video>
+<sub><code>open_microwave</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_lift_pot.mp4" type="video/mp4"></video>
+<sub><code>lift_pot</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_put_object_cabinet.mp4" type="video/mp4"></video>
+<sub><code>put_object_cabinet</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_dump_bin_bigbin.mp4" type="video/mp4"></video>
+<sub><code>dump_bin_bigbin</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_hanging_mug.mp4" type="video/mp4"></video>
+<sub><code>hanging_mug</code></sub>
+</div>
+<div style="flex:1 1 300px;max-width:480px;text-align:center">
+<video width="100%" autoplay loop muted playsinline style="border-radius:4px"><source src="/roboverse/_static/integrations/robotwin/sbs_all_scan_object.mp4" type="video/mp4"></video>
+<sub><code>scan_object</code></sub>
+</div>
+</div>
+
 ## MetaSim fix that enables this
 
 The `Sapien3Handler` used to crash with `KeyError` when an active
