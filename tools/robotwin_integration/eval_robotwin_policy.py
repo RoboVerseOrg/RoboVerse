@@ -114,7 +114,10 @@ class DPPolicy(Policy):
         self._cache: list = []
         info = self._rpc({"cmd": "ping"})
         self.n_action_steps = int(info.get("n_action_steps", 1))
-        print(f"[dp client] connected to {self._addr}, n_action_steps={self.n_action_steps}")
+        # The server reports which RoboTwin cameras its (possibly multi-view) ckpt needs;
+        # fall back to the single primary camera for an old single-view server.
+        self.cameras = list(info.get("cameras") or [camera])
+        print(f"[dp client] connected to {self._addr}, n_action_steps={self.n_action_steps}, cameras={self.cameras}")
 
     # --- length-prefixed pickle RPC (mirrors dp_policy_server) ---
     def _rpc(self, obj):
@@ -148,13 +151,14 @@ class DPPolicy(Policy):
     def predict(self, obs: dict) -> np.ndarray | None:
         if not self._cache:
             try:
-                head = obs["observation"][self.camera]["rgb"]
+                cams = {c: np.asarray(obs["observation"][c]["rgb"]) for c in self.cameras}
             except (KeyError, TypeError) as e:
                 raise RuntimeError(
-                    f"obs has no observation[{self.camera!r}]['rgb'] -- run the env with data_type rgb=True"
+                    f"obs missing observation[{self.cameras}]['rgb'] -- run the env with data_type rgb=True "
+                    "and ensure the wrist cameras are enabled for a multi-view ckpt"
                 ) from e
             jq = self._robotwin_joint_qpos(obs)
-            resp = self._rpc({"cmd": "predict", "head_camera": np.asarray(head), "joint_qpos": jq})
+            resp = self._rpc({"cmd": "predict", "cameras": cams, "joint_qpos": jq})
             if "error" in resp:
                 raise RuntimeError(f"dp server predict failed: {resp['error']}\n{resp.get('traceback', '')}")
             self._cache = [np.asarray(a, dtype=float) for a in resp["action_chunk"]]

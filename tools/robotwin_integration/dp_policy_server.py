@@ -66,6 +66,14 @@ class _DPInference:
     RoboVerse simulation needed), so it can run alongside the robotwin-env client.
     """
 
+    # policy shape_meta image key -> RoboTwin camera name the client must capture.
+    _OBS_TO_CAM = {
+        "head_cam": "head_camera",
+        "front_cam": "front_camera",
+        "left_cam": "left_camera",
+        "right_cam": "right_camera",
+    }
+
     def __init__(self, ckpt: str, device: str = "cuda:0"):
         from collections import deque
 
@@ -88,8 +96,15 @@ class _DPInference:
         policy.eval()
         self.policy = policy
         self._obs = deque(maxlen=self.n_obs_steps)
+        # Which image obs the policy expects (head_cam, and optionally left_cam/right_cam
+        # for a multi-view ckpt), in shape_meta order. Map each to its RoboTwin camera
+        # name so the client knows what RGB to send. Single-view ckpts => just head_cam.
+        obs_meta = cfg.shape_meta["obs"]
+        self.cam_obs_keys = [k for k, v in obs_meta.items() if str(v.get("type", "")) == "rgb"] or ["head_cam"]
+        self.cam_names = [self._OBS_TO_CAM.get(k, "head_camera") for k in self.cam_obs_keys]
         print(
-            f"[dp_server] loaded {ckpt} (n_obs={self.n_obs_steps}, n_action={self.n_action_steps}, device={device})",
+            f"[dp_server] loaded {ckpt} (n_obs={self.n_obs_steps}, n_action={self.n_action_steps}, "
+            f"cams={self.cam_obs_keys}, device={device})",
             flush=True,
         )
 
@@ -104,16 +119,22 @@ class _DPInference:
             items.insert(0, items[0])
         return torch.stack(items, dim=1)  # (1, To, *feat)
 
-    def predict(self, head_camera, joint_qpos):
+    def predict(self, cameras, joint_qpos):
         import numpy as np
 
         torch = self.torch
-        # head_camera: HxWx3 uint8 -> (1, 3, H, W) float in [0,1]; agent_pos: (1, A).
-        img = torch.from_numpy(np.ascontiguousarray(head_camera)).to(self.device).float() / 255.0
-        img = img.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
-        agent_pos = torch.from_numpy(np.asarray(joint_qpos, dtype=np.float32)).to(self.device).unsqueeze(0)  # (1, A)
-        self._obs.append({"head_cam": img, "agent_pos": agent_pos})
-        obs_dict = {"head_cam": self._stacked("head_cam"), "agent_pos": self._stacked("agent_pos")}
+        # ``cameras``: {camera_name: HxWx3 uint8} for each camera the policy needs. For a
+        # single-view ckpt this is just {"head_camera": img}. Build (1, 3, H, W) per cam.
+        if not isinstance(cameras, dict):  # back-compat: a bare head_camera array
+            cameras = {"head_camera": cameras}
+        step = {}
+        for obs_key, cam_name in zip(self.cam_obs_keys, self.cam_names):
+            rgb = cameras.get(cam_name, cameras.get("head_camera"))
+            img = torch.from_numpy(np.ascontiguousarray(rgb)).to(self.device).float() / 255.0
+            step[obs_key] = img.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
+        step["agent_pos"] = torch.from_numpy(np.asarray(joint_qpos, dtype=np.float32)).to(self.device).unsqueeze(0)
+        self._obs.append(step)
+        obs_dict = {k: self._stacked(k) for k in step}
         with torch.no_grad():
             chunk = self.policy.predict_action(obs_dict)["action"]  # (1, n_action, action_dim)
         return chunk[0].detach().to(torch.float32).cpu().numpy()  # (n_action, action_dim)
@@ -145,13 +166,16 @@ def main(argv: list[str] | None = None) -> int:
                     break
                 cmd = msg.get("cmd")
                 if cmd == "ping":
-                    _send_msg(conn, {"ok": True, "n_action_steps": engine.n_action_steps})
+                    # Tell the client which RoboTwin cameras this (possibly multi-view) ckpt needs.
+                    _send_msg(conn, {"ok": True, "n_action_steps": engine.n_action_steps, "cameras": engine.cam_names})
                 elif cmd == "reset":
                     engine.reset()
                     _send_msg(conn, {"ok": True})
                 elif cmd == "predict":
                     try:
-                        chunk = engine.predict(msg["head_camera"], msg["joint_qpos"])
+                        # New clients send {"cameras": {name: rgb}}; old ones send {"head_camera": rgb}.
+                        cams = msg.get("cameras", msg.get("head_camera"))
+                        chunk = engine.predict(cams, msg["joint_qpos"])
                         _send_msg(conn, {"action_chunk": chunk})
                     except Exception as e:  # surface inference errors to the client
                         import traceback
