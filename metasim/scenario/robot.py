@@ -23,6 +23,11 @@ class BaseActuatorCfg:
     armature: float | None = None
     """Armature of the actuator. If not specified, use the default value specified for the whole robot instead."""
 
+    frictionloss: float | None = None
+    """Dry (Coulomb) joint friction loss of the actuated DOF. If not specified, use the value
+    from the asset file. Applied to MuJoCo ``dof_frictionloss`` / Newton ``joint_friction`` so the
+    same RobotCfg yields the same joint friction across backends."""
+
     damping: float | None = None
     """Damping of the actuator. If not specified, use the value specified in the asset file and interpreted by the simulator."""
 

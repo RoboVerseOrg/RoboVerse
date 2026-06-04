@@ -247,16 +247,34 @@ class MujocoHandler(BaseSimHandler):
             joint_names = self._get_joint_names(robot.name, sort=True)
             self._robot_num_dofs.append(len(joint_names))
             for joint_name in joint_names:
+                actuator_cfg = robot.actuators.get(joint_name) if robot.actuators else None
+                full_name = f"{self._mujoco_robot_names[robot_idx]}{joint_name}"
+
+                # Armature (reflected motor inertia) and dry frictionloss are
+                # joint-DOF dynamics properties, independent of control mode.
+                # Apply them from the cfg whenever provided so MuJoCo matches the
+                # Newton handler (``joint_armature`` / ``joint_friction``)
+                # instead of silently keeping the MJCF-authored value — otherwise
+                # the same RobotCfg yields different joint dynamics on the two
+                # backends. Controlled joints are single-DOF (hinge/slide), so
+                # the first DOF address of the joint is the one to set.
+                if actuator_cfg is not None and (
+                    actuator_cfg.armature is not None or actuator_cfg.frictionloss is not None
+                ):
+                    joint_dof_adr = self.physics.model.jnt_dofadr[self.physics.model.joint(full_name).id]
+                    if actuator_cfg.armature is not None:
+                        self.physics.model.dof_armature[joint_dof_adr] = float(actuator_cfg.armature)
+                    if actuator_cfg.frictionloss is not None:
+                        self.physics.model.dof_frictionloss[joint_dof_adr] = float(actuator_cfg.frictionloss)
+
                 # Resolve control mode from this robot's config
                 i_control_mode = robot.control_type.get(joint_name, "position") if robot.control_type else "position"
                 if i_control_mode != "position":
                     continue
 
-                actuator_cfg = robot.actuators.get(joint_name) if robot.actuators else None
                 if actuator_cfg is None:
                     continue
 
-                full_name = f"{self._mujoco_robot_names[robot_idx]}{joint_name}"
                 actuator = self.physics.model.actuator(full_name)
                 actuator_id = actuator.id
 
