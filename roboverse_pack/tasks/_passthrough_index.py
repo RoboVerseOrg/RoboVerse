@@ -25,6 +25,10 @@ PASSTHROUGH_PREFIXES = [
     "MyoSuite/",
     "GymRobotics/",
     "DMControl/",
+    "Libero/",
+    "LiberoPlus/",
+    "SimplerEnv/",  # MetaSim-native SimplerEnv tasks (zero upstream dependency)
+    "SimplerEnvPassthrough/",  # optional upstream forward, only when the clone is installed
 ]
 
 

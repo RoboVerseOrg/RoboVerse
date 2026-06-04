@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "roboverse-py"
-version = "0.1.17"
+version = "1.0.0b0"
 description = "RoboVerse content, learning, and examples built on MetaSim"
 requires-python = ">=3.8"
 license = { file = "LICENSE" }
@@ -148,7 +148,10 @@ extend-exclude = [
     "tmp",
     "roboverse_data",
     "assets",
-    "docker"
+    "docker",
+    # Vendored SimplerEnv (ManiSkill2-real2sim) controller stack — kept byte-identical to
+    # upstream for verified bitwise parity; exclude from lint + format.
+    "roboverse_pack/tasks/simpler_env/_native/control",
 ]
 
 [tool.setuptools.packages.find]

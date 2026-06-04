@@ -137,4 +137,9 @@ CLAUDE.local.md
 ENVIRONMENTS.local.md
 datasets/
 .robosuite_bundle/
+
+# --- LIBERO / LIBERO-plus 1:1 isolated integration ---
 third_party/
+INTEGRATION_LOG.md
+*.hdf5
+libero_datasets/

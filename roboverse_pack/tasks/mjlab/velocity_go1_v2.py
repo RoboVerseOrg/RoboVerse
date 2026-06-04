@@ -79,6 +79,8 @@ from .mdp.sensors import (
     BuiltinSensorCfg,
     ContactSensor,
     ContactSensorCfg,
+    TerrainGridScanSensor,
+    TerrainGridScanSensorCfg,
     TerrainHeightSensor,
     TerrainHeightSensorCfg,
 )
@@ -208,7 +210,12 @@ class _Go1ObsCfg:
 
     @configclass
     class ActorCfg:
-        base_lin_vel = ObsTerm(func=obs.base_lin_vel, params={"asset_cfg": _GO1_TRUNK})
+        # mjlab reads base_lin_vel from the `imu_lin_vel` velocimeter at the go1
+        # `imu` site (offset from trunk in go1.xml); match it with omega x r.
+        base_lin_vel = ObsTerm(
+            func=obs.base_lin_vel,
+            params={"asset_cfg": _GO1_TRUNK, "imu_offset": (-0.01592, -0.06659, -0.00617)},
+        )
         base_ang_vel = ObsTerm(func=obs.base_ang_vel, params={"asset_cfg": _GO1_TRUNK})
         projected_gravity = ObsTerm(func=obs.projected_gravity, params={"asset_cfg": _GO1_TRUNK})
         joint_pos = ObsTerm(
@@ -218,6 +225,35 @@ class _Go1ObsCfg:
         joint_vel = ObsTerm(func=obs.joint_vel_rel, params={"asset_cfg": _GO1_JOINTS})
         last_action = ObsTerm(func=obs.last_action)
         command = ObsTerm(func=obs.generated_commands, params={"command_name": "twist"})
+
+    @configclass
+    class CriticCfg(ActorCfg):
+        pass
+
+    actor = ActorCfg()
+    critic = CriticCfg()
+
+
+@configclass
+class _Go1RoughObsCfg(_Go1ObsCfg):
+    """Rough-terrain obs = flat obs + mjlab ``height_scan`` (terrain grid scan).
+
+    mjlab's velocity base cfg has ``height_scan`` in both actor and critic; the
+    flat cfg deletes it, rough keeps it (as the LAST actor term). The 187-ray
+    grid (1.6x1.0 @ res 0.1) is read from the ``terrain_scan``
+    :class:`TerrainGridScanSensor` registered by :class:`VelocityRoughGo1Task`.
+    """
+
+    @configclass
+    class ActorCfg(_Go1ObsCfg.ActorCfg):
+        # mjlab scales height_scan by 1/terrain_scan.max_distance (=1/5.0); see
+        # velocity_env_cfg.py:108. Obs kept deterministic (no Unoise) to match
+        # this file's parity-first convention (mjlab enable_corruption=False).
+        height_scan = ObsTerm(
+            func=obs.height_scan,
+            params={"sensor_name": "terrain_scan", "num_rays": 187},
+            scale=1.0 / 5.0,
+        )
 
     @configclass
     class CriticCfg(ActorCfg):
@@ -447,7 +483,28 @@ class _Go1CurriculumCfg:
 # ---------------------------------------------------------------------------
 
 
-def _go1_scenario() -> ScenarioCfg:
+def _go1_rough_ground():
+    """Continuous random-noise rough terrain (mjlab-like) via scenario.ground.
+
+    A zero-slope ``SlopeCfg`` with ``random=True`` triggers
+    ``random_uniform_terrain`` (±0.05 m noise over the whole field) — a
+    continuous heightfield, unlike the sparse obstacle/stone primitives.
+    """
+    from metasim.scenario.grounds import GroundCfg, SlopeCfg
+
+    # vertical_scale must be fine enough that the ±0.05 m noise (step 0.005)
+    # doesn't discretize to 0 (the default 0.1 would → ZeroDivisionError in
+    # random_uniform_terrain). 0.005 = 5 mm height resolution.
+    g = GroundCfg(width=12.0, length=12.0, vertical_scale=0.005)
+    for key in g.elements:
+        g.elements[key].clear()
+    g.elements["slope"].append(
+        SlopeCfg(origin=[0.0, 0.0], size=[12.0, 12.0], slope=0.0, random=True, platform_size=0.5)
+    )
+    return g
+
+
+def _go1_scenario(rough: bool = False) -> ScenarioCfg:
     # Patch the MJCF at load time to add 12 <position> actuators with mjlab PD gains.
     # Also force smaller dt (0.002 = MuJoCo's default) since the patched
     # XML's stiff PD (kp ≈ 16-36) is numerically unstable under explicit
@@ -463,7 +520,10 @@ def _go1_scenario() -> ScenarioCfg:
         simulator="mujoco",
         num_envs=1,
         headless=True,
-        add_default_ground=True,
+        # Rough: MetaSim builds a continuous random-noise hfield from
+        # scenario.ground (native terrain path). Flat keeps the default plane.
+        ground=_go1_rough_ground() if rough else None,
+        add_default_ground=not rough,
     )
 
 
@@ -486,9 +546,13 @@ class _Go1TaskBase(ManagerBasedRVEnv):
     """Shared scaffold for all go1 velocity variants (flat / rough)."""
 
     scenario = _go1_scenario()
+    # Subclasses override these: rough adds the height_scan obs + terrain_scan sensor.
+    _obs_cfg_cls: type = _Go1ObsCfg
+    _use_terrain_scan: bool = False
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:
         cfg = VelocityFlatGo1EnvCfg()
+        cfg.observations = self._obs_cfg_cls()  # rough swaps in the height_scan obs group
         # Two-path scenario handling (mirror cartpole_v2):
         #   mujoco: scene-MJCF self-contained — drop trainer-injected robots
         #   newton: needs RobotCfg list — keep trainer-injected mjlab_go1
@@ -570,6 +634,15 @@ class _Go1TaskBase(ManagerBasedRVEnv):
                 target_height=0.0,
             ),
         )
+        # Rough terrain: the trunk-centered grid scan that feeds the height_scan
+        # obs term (flat task omits this — mjlab deletes height_scan on flat).
+        if self._use_terrain_scan:
+            self._mjlab_sensors["terrain_scan"] = TerrainGridScanSensor(
+                self,
+                TerrainGridScanSensorCfg(
+                    name="terrain_scan", base_body="trunk", size=(1.6, 1.0), resolution=0.1, max_distance=5.0
+                ),
+            )
         # BuiltinSensor (subtree_angmom) works on both backends now (Newton reads
         # mujoco_warp's batched subtree_angmom). Completes 6/6 sensor rewards on GPU.
         self._mjlab_sensors["robot/root_angmom"] = BuiltinSensor(
@@ -692,4 +765,17 @@ class VelocityFlatGo1Task(_Go1TaskBase):
 
 @register_task("mjlab.velocity_rough_go1_v2")
 class VelocityRoughGo1Task(_Go1TaskBase):
-    """Same scaffold as flat go1. Rough terrain wiring deferred (needs height-field MJCF)."""
+    """Go1 velocity on rough terrain.
+
+    Adds the mjlab ``height_scan`` terrain obs (187-ray trunk grid via
+    :class:`TerrainGridScanSensor`) that the flat task omits — so the obs is
+    structurally 1:1 with mjlab's rough policy input. NOTE: the heightfield
+    terrain itself is not yet injected into the scene MJCF, so on the current
+    flat ground the scan reads a uniform trunk height; wiring the heightfield
+    (``mdp.terrain.generate_rough_hfield_mjcf``) into the scenario is the
+    remaining step for full rough 1:1.
+    """
+
+    scenario = _go1_scenario(rough=True)
+    _obs_cfg_cls = _Go1RoughObsCfg
+    _use_terrain_scan = True
