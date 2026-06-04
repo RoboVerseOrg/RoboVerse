@@ -1,8 +1,11 @@
 """ALOHA-AgileX dual-arm RobotCfg (RoboTwin embodiment).
 
-The URDF + meshes live in RoboTwin's embodiments asset bundle. We expect
-them at `~/projects/robotwin/assets/embodiments/aloha-agilex/` or via
-the `ROBOTWIN_ASSETS` env var. See
+The URDF + meshes are resolved through the RoboTwin asset locator
+(`roboverse_pack.tasks.robotwin._locator`): a local RoboTwin clone
+(`~/projects/robotwin` or `ROBOTWIN_ASSETS`) if present, else the vendored
+`roboverse_data/robotwin/` mirror (HF-backed). This means the embodiment loads
+**without the RoboTwin checkout** once the mirror is populated by
+`tools/robotwin_integration/migrate_assets.py`. See
 `tools/robotwin_integration/` for the integration harness and
 `docs/source/dataset_benchmark/integrations/robotwin.md` for the full
 write-up.
@@ -17,30 +20,15 @@ typically stay locked in the RL tasks RoboTwin ships.
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
 from metasim.utils import configclass
 
 
-def _resolve_robotwin_assets() -> Path:
-    env = os.environ.get("ROBOTWIN_ASSETS")
-    if env:
-        p = Path(env).expanduser().resolve()
-        if p.exists():
-            return p
-    for c in (Path.home() / "projects" / "robotwin" / "assets",):
-        if (c / "embodiments" / "aloha-agilex" / "urdf").exists():
-            return c
-    raise FileNotFoundError(
-        "Could not locate robotwin assets. Clone RoboTwin under ~/projects/robotwin and "
-        "download embodiments.zip (220 MB) per `assets/_download.py`, or set ROBOTWIN_ASSETS."
-    )
-
-
 def _aloha_agilex_urdf() -> str:
-    return str(_resolve_robotwin_assets() / "embodiments" / "aloha-agilex" / "urdf" / "arx5_description_isaac.urdf")
+    """Resolve the ALOHA-AgileX URDF via the RoboTwin locator (clone -> mirror -> HF)."""
+    from roboverse_pack.tasks.robotwin._locator import robotwin_asset
+
+    return robotwin_asset("assets/embodiments/aloha-agilex/urdf/arx5_description_isaac.urdf")
 
 
 _ARM_NAMES = [

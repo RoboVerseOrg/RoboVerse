@@ -1,0 +1,194 @@
+"""Serve a RoboVerse-trained Diffusion Policy for closed-loop RoboTwin eval.
+
+The trained DP checkpoint lives in RoboVerse's IL stack and its inference deps
+(diffusers/einops/dill + the numba-optional dataset) run in the ``roboverse`` env,
+but the *only* closed-loop RoboTwin environment runs in the ``robotwin`` env (which
+pins a conflicting SAPIEN/torch). RoboTwin solves exactly this with a policy
+server/client split; this mirrors it: run this server in the ``roboverse`` env, run
+``eval_robotwin_policy.py --policy dp --server <host:port>`` in the ``robotwin`` env.
+
+Protocol: length-prefixed (4-byte big-endian) pickled dicts over TCP.
+  client -> {"cmd": "reset"}                                          -> {"ok": True}
+  client -> {"cmd": "predict", "head_camera": HxWx3 uint8,
+             "joint_qpos": (A,) float}                                -> {"action_chunk": (n_action, A) float}
+  client -> {"cmd": "ping"}                                           -> {"ok": True, "n_action_steps": int}
+
+Run (roboverse env, worktree on PYTHONPATH so roboverse_learn resolves locally)::
+
+    PYTHONPATH=$PWD conda run -n roboverse python \\
+        tools/robotwin_integration/dp_policy_server.py \\
+        --ckpt il_outputs/ddpm_unet/beat_block_hammer/checkpoints/<ckpt> --port 5599
+"""
+
+from __future__ import annotations
+
+import argparse
+import pickle
+import socket
+import struct
+import sys
+
+
+def _recv_exactly(conn: socket.socket, n: int) -> bytes | None:
+    buf = b""
+    while len(buf) < n:
+        chunk = conn.recv(n - len(buf))
+        if not chunk:
+            return None
+        buf += chunk
+    return buf
+
+
+def _recv_msg(conn: socket.socket):
+    header = _recv_exactly(conn, 4)
+    if header is None:
+        return None
+    (length,) = struct.unpack(">I", header)
+    body = _recv_exactly(conn, length)
+    return None if body is None else pickle.loads(body)
+
+
+def _send_msg(conn: socket.socket, obj) -> None:
+    body = pickle.dumps(obj)
+    conn.sendall(struct.pack(">I", len(body)) + body)
+
+
+class _DPInference:
+    """Loads a DP checkpoint and runs the model's predict_action over an obs deque.
+
+    Builds only RoboVerse's DefaultRunner (which constructs the model from the ckpt
+    cfg and is scenario-free) and replicates DefaultEvalRunner's obs handling --
+    the n_obs_steps deque + last-n stacking + policy.predict_action. We deliberately
+    do NOT instantiate DefaultEvalRunner: its __post_init__ calls
+    get_curobo_models(scenario.robots[0]) for the (here-unused) IK/action path,
+    which requires a full RoboVerse scenario. Feeding pre-formatted
+    {head_cam, agent_pos} straight to the model keeps this server env-only (no
+    RoboVerse simulation needed), so it can run alongside the robotwin-env client.
+    """
+
+    # policy shape_meta image key -> RoboTwin camera name the client must capture.
+    _OBS_TO_CAM = {
+        "head_cam": "head_camera",
+        "front_cam": "front_camera",
+        "left_cam": "left_camera",
+        "right_cam": "right_camera",
+    }
+
+    def __init__(self, ckpt: str, device: str = "cuda:0"):
+        from collections import deque
+
+        import dill
+        import torch
+
+        from roboverse_learn.il.runners.default_runner import DefaultRunner
+
+        self.torch = torch
+        payload = torch.load(open(ckpt, "rb"), pickle_module=dill)
+        cfg = payload["cfg"]
+        self.n_action_steps = int(cfg.n_action_steps)
+        self.n_obs_steps = int(cfg.n_obs_steps)
+        self.device = device
+
+        runner = DefaultRunner(cfg)  # builds the model architecture from the ckpt cfg
+        runner.load_payload(payload, exclude_keys=None, include_keys=None)  # restore weights
+        policy = runner.ema_model if cfg.train_config.training_params.use_ema else runner.model
+        policy.to(device)
+        policy.eval()
+        self.policy = policy
+        self._obs = deque(maxlen=self.n_obs_steps)
+        # Which image obs the policy expects (head_cam, and optionally left_cam/right_cam
+        # for a multi-view ckpt), in shape_meta order. Map each to its RoboTwin camera
+        # name so the client knows what RGB to send. Single-view ckpts => just head_cam.
+        obs_meta = cfg.shape_meta["obs"]
+        self.cam_obs_keys = [k for k, v in obs_meta.items() if str(v.get("type", "")) == "rgb"] or ["head_cam"]
+        self.cam_names = [self._OBS_TO_CAM.get(k, "head_camera") for k in self.cam_obs_keys]
+        print(
+            f"[dp_server] loaded {ckpt} (n_obs={self.n_obs_steps}, n_action={self.n_action_steps}, "
+            f"cams={self.cam_obs_keys}, device={device})",
+            flush=True,
+        )
+
+    def reset(self) -> None:
+        self._obs.clear()
+
+    def _stacked(self, key: str):
+        """Stack the last n_obs_steps of one obs key -> (1, To, *feat), front-padded."""
+        torch = self.torch
+        items = [o[key] for o in self._obs]  # each (1, *feat)
+        while len(items) < self.n_obs_steps:  # pad front with the oldest available
+            items.insert(0, items[0])
+        return torch.stack(items, dim=1)  # (1, To, *feat)
+
+    def predict(self, cameras, joint_qpos):
+        import numpy as np
+
+        torch = self.torch
+        # ``cameras``: {camera_name: HxWx3 uint8} for each camera the policy needs. For a
+        # single-view ckpt this is just {"head_camera": img}. Build (1, 3, H, W) per cam.
+        if not isinstance(cameras, dict):  # back-compat: a bare head_camera array
+            cameras = {"head_camera": cameras}
+        step = {}
+        for obs_key, cam_name in zip(self.cam_obs_keys, self.cam_names):
+            rgb = cameras.get(cam_name, cameras.get("head_camera"))
+            img = torch.from_numpy(np.ascontiguousarray(rgb)).to(self.device).float() / 255.0
+            step[obs_key] = img.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
+        step["agent_pos"] = torch.from_numpy(np.asarray(joint_qpos, dtype=np.float32)).to(self.device).unsqueeze(0)
+        self._obs.append(step)
+        obs_dict = {k: self._stacked(k) for k in step}
+        with torch.no_grad():
+            chunk = self.policy.predict_action(obs_dict)["action"]  # (1, n_action, action_dim)
+        return chunk[0].detach().to(torch.float32).cpu().numpy()  # (n_action, action_dim)
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--ckpt", required=True, help="DP checkpoint (il_outputs/<policy>/<task>/checkpoints/<ckpt>)")
+    ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--port", type=int, default=5599)
+    ap.add_argument("--device", default="cuda:0")
+    args = ap.parse_args(argv)
+
+    engine = _DPInference(args.ckpt, device=args.device)
+
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind((args.host, args.port))
+    srv.listen(1)
+    print(f"[dp_server] listening on {args.host}:{args.port}", flush=True)
+
+    while True:
+        conn, addr = srv.accept()
+        print(f"[dp_server] client {addr} connected", flush=True)
+        try:
+            while True:
+                msg = _recv_msg(conn)
+                if msg is None:
+                    break
+                cmd = msg.get("cmd")
+                if cmd == "ping":
+                    # Tell the client which RoboTwin cameras this (possibly multi-view) ckpt needs.
+                    _send_msg(conn, {"ok": True, "n_action_steps": engine.n_action_steps, "cameras": engine.cam_names})
+                elif cmd == "reset":
+                    engine.reset()
+                    _send_msg(conn, {"ok": True})
+                elif cmd == "predict":
+                    try:
+                        # New clients send {"cameras": {name: rgb}}; old ones send {"head_camera": rgb}.
+                        cams = msg.get("cameras", msg.get("head_camera"))
+                        chunk = engine.predict(cams, msg["joint_qpos"])
+                        _send_msg(conn, {"action_chunk": chunk})
+                    except Exception as e:  # surface inference errors to the client
+                        import traceback
+
+                        _send_msg(conn, {"error": f"{type(e).__name__}: {e}", "traceback": traceback.format_exc()})
+                else:
+                    _send_msg(conn, {"error": f"unknown cmd {cmd!r}"})
+        except Exception as e:  # keep the server alive across client errors
+            print(f"[dp_server] client error: {type(e).__name__}: {e}", flush=True)
+        finally:
+            conn.close()
+            print("[dp_server] client disconnected", flush=True)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
