@@ -32,8 +32,8 @@ def _download_from_hf() -> pathlib.Path | None:
     """Fetch the SimplerEnv asset subtrees from HF into the default roboverse_data dir.
 
     Returns the populated root, or ``None`` if the download is unavailable. The SAPIEN
-    ``*.convex.stl`` collision caches are intentionally absent on HF (repo ``.gitignore``);
-    SAPIEN regenerates them on first load.
+    ``*.convex.stl`` collision caches are intentionally absent on HF (repo ``.gitignore``)
+    and are not required — tasks build and render from the downloaded assets without them.
     """
     target = (
         pathlib.Path(os.environ["ROBOVERSE_DATA"]) if os.environ.get("ROBOVERSE_DATA") else _REPO / "roboverse_data"

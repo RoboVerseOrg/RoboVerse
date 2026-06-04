@@ -455,4 +455,5 @@ Regenerate with `scripts/render_metasim_1to1_gallery.py`.
   and **download automatically on first use** (`_native/_assets.py` → `snapshot_download`)
   when no local `roboverse_data` checkout (or `$ROBOVERSE_DATA`) is found — so a fresh
   install needs no manual asset fetch. The SAPIEN `*.convex.stl` collision caches are not
-  stored (repo `.gitignore` convention); SAPIEN regenerates them on first load.
+  stored (repo `.gitignore` convention) and are not required — verified by a cold-start run
+  (empty dir → HF download → task builds and renders) with no caches present.
