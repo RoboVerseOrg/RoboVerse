@@ -144,6 +144,13 @@ def _quat_angle(q1, q2) -> float:
 def _replay_one(bridge: dict, args) -> dict:
     """Replay one bridge trajectory; render video and/or measure object parity."""
     task = bridge.get("task", "?")
+    # Some RoboTwin tasks shift the table height via _init_task_env_(table_height_bias=...);
+    # objects are then recorded at the lowered z. The replay must lower its table proxy by the
+    # same amount or the objects render *under* the default-height table (invisible). Prefer the
+    # value recorded in the bridge; fall back to the known per-task bias for older bridges so a
+    # re-collection isn't required. Default 0.0 keeps every other task's table at z=0.74.
+    _TABLE_HEIGHT_BIAS = {"place_dual_shoes": -0.1}  # envs/<task>.py _init_task_env_(table_height_bias=...)
+    table_z_bias = float(bridge.get("table_z_bias", _TABLE_HEIGHT_BIAS.get(task, 0.0)))
     ls, rs = bridge["left_gripper_scale"], bridge["right_gripper_scale"]
     vectors = bridge["vectors"]
     real = bridge.get("real_vectors") or vectors
@@ -359,7 +366,7 @@ def _replay_one(bridge: dict, args) -> dict:
             out[rv] = st
         # table + wall proxies at RoboTwin's fixed poses (create_table_and_wall):
         # table centred so its top sits at z=0.74; wall behind the table at [0,1,1.5].
-        out["table"] = {"pos": [0.0, 0.0, 0.37], "rot": [1.0, 0.0, 0.0, 0.0]}
+        out["table"] = {"pos": [0.0, 0.0, 0.37 + table_z_bias], "rot": [1.0, 0.0, 0.0, 0.0]}
         out["floor"] = {"pos": [0.0, 0.0, -0.02], "rot": [1.0, 0.0, 0.0, 0.0]}
         return out
 

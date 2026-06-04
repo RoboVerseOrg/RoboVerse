@@ -687,6 +687,10 @@ def main(argv: list[str] | None = None) -> int:
             success = {
                 "task": args.task,
                 "seed": seed,
+                # RoboTwin's per-episode table height offset (random_table_height draw +
+                # the task's table_height_bias). The replay lowers its table proxy by this
+                # so objects recorded at the shifted z don't render under the table.
+                "table_z_bias": float(getattr(env, "table_z_bias", 0.0)),
                 "vectors": vectors,  # (T, 14) command target: [L_arm(6), L_grip, R_arm(6), R_grip]
                 "real_vectors": real_vectors,  # (T, 14) achieved qpos, same layout (empty if capture failed)
                 "left_endpose": left_endpose,  # (T, 7) achieved EE world pose [x,y,z, qw,qx,qy,qz]
