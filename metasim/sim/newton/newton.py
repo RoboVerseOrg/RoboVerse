@@ -949,6 +949,9 @@ class NewtonHandler(BaseSimHandler):
         joint_target_ke = self._model.joint_target_ke.numpy()
         joint_target_kd = self._model.joint_target_kd.numpy()
         joint_armature = self._model.joint_armature.numpy()
+        joint_friction = (
+            self._model.joint_friction.numpy() if getattr(self._model, "joint_friction", None) is not None else None
+        )
         joint_effort_limit = self._model.joint_effort_limit.numpy()
         joint_velocity_limit = self._model.joint_velocity_limit.numpy()
         joint_target_pos = self._model.joint_target_pos.numpy()
@@ -990,6 +993,9 @@ class NewtonHandler(BaseSimHandler):
                             updated = True
                     if actuator.armature is not None:
                         joint_armature[qd_start:qd_end] = actuator.armature
+                        updated = True
+                    if actuator.frictionloss is not None and joint_friction is not None:
+                        joint_friction[qd_start:qd_end] = actuator.frictionloss
                         updated = True
                     stiffness_overridden = (actuator.stiffness is not None) or (actuator.damping is not None)
                     if actuator.effort_limit_sim is not None:
@@ -1039,6 +1045,8 @@ class NewtonHandler(BaseSimHandler):
             self._model.joint_target_ke.assign(joint_target_ke)
             self._model.joint_target_kd.assign(joint_target_kd)
             self._model.joint_armature.assign(joint_armature)
+            if joint_friction is not None:
+                self._model.joint_friction.assign(joint_friction)
             self._model.joint_effort_limit.assign(joint_effort_limit)
             self._model.joint_velocity_limit.assign(joint_velocity_limit)
             self._model.joint_target_pos.assign(joint_target_pos)
