@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import gc
+import os
+import tempfile
 from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from typing import TYPE_CHECKING
 
@@ -454,6 +456,59 @@ class NewtonHandler(BaseSimHandler):
         self._model = builder.finalize(device=self._device)
         log.debug(f"Newton model built: {self._model.body_count} bodies, {self._model.joint_count} joints")
 
+    def _mjcf_with_cfg_actuators_stripped(self, mjcf_path: str, robot) -> tuple[str, bool]:
+        """Drop asset ``<actuator>`` entries for joints that ``RobotCfg`` controls.
+
+        Newton's MJCF importer maps ``<position>``/``<velocity>`` actuators to
+        the JOINT_TARGET path (driven by ``joint_target_pos``, which this
+        handler writes every step) but ``<general>``/``<motor>`` to CTRL_DIRECT
+        (driven by ``ctrl``, which the handler never writes). An asset that
+        ships ``<general>`` position-servos — e.g. Franka ``panda.xml`` uses
+        ``<general biastype="affine" gainprm="kp 0 0" biasprm="0 -kp -kd">`` —
+        therefore imports actuators that sit at ``ctrl=0`` and pull every joint
+        toward zero with their (force-limited) gain, fighting the cfg PD that
+        ``_apply_actuator_settings`` installs. The MuJoCo backend avoids this by
+        reconfiguring the single asset actuator in-place; on Newton we instead
+        remove the asset actuator for any cfg-controlled joint so exactly one
+        servo (the cfg one) drives it.
+
+        Returns ``(path, is_temp)``. ``is_temp`` paths are written next to the
+        original (so relative mesh/include paths still resolve) and must be
+        deleted by the caller after import. When nothing needs stripping the
+        original path is returned with ``is_temp=False``.
+        """
+        actuators = getattr(robot, "actuators", None)
+        if not actuators:
+            return mjcf_path, False
+        try:
+            tree = ET.parse(mjcf_path)
+        except Exception as exc:  # pragma: no cover - fall back to raw asset
+            log.debug(f"Newton: could not pre-parse {mjcf_path} to strip actuators ({exc}); using as-is")
+            return mjcf_path, False
+        root = tree.getroot()
+        act_section = root.find("actuator")
+        if act_section is None:
+            return mjcf_path, False
+        controlled = set(actuators.keys())
+        to_remove = [el for el in list(act_section) if el.get("joint") in controlled]
+        if not to_remove:
+            return mjcf_path, False
+        for el in to_remove:
+            act_section.remove(el)
+        # Drop an emptied <actuator> so the importer's parse_actuators is skipped.
+        if len(act_section) == 0:
+            root.remove(act_section)
+        src = Path(mjcf_path)
+        fd, tmp = tempfile.mkstemp(prefix=f".{src.stem}_noact_", suffix=".xml", dir=str(src.parent))
+        os.close(fd)
+        tree.write(tmp)
+        log.debug(
+            f"Newton: stripped {len(to_remove)} cfg-controlled <actuator> "
+            f"entr{'y' if len(to_remove) == 1 else 'ies'} from {src.name} for "
+            f"'{robot.name}' (cfg joint_target PD is authoritative)"
+        )
+        return tmp, True
+
     def _add_robot_to_builder(self, builder: newton.ModelBuilder, robot) -> None:
         """Add a robot to the model builder.
 
@@ -480,15 +535,29 @@ class NewtonHandler(BaseSimHandler):
             # path below still uses fix_base_link since URDF doesn't natively
             # model "base attaches via a constrained joint" — it's always
             # fully fixed or fully floating.
-            add_mjcf(
-                builder,
-                mjcf_path,
-                xform=xform,
-                floating=None,
-                enable_self_collisions=robot.enabled_self_collisions,
-                ignore_inertial_definitions=False,
-                collapse_fixed_joints=getattr(robot, "collapse_fixed_joints", False),
-            )
+            #
+            # Strip the asset's <actuator> entries for joints that RobotCfg
+            # controls so the cfg-driven joint_target PD (see
+            # _apply_actuator_settings) is the sole control path — otherwise
+            # <general>/<motor> actuators import as dead CTRL_DIRECT drives
+            # that fight it (see _mjcf_with_cfg_actuators_stripped).
+            import_path, is_tmp = self._mjcf_with_cfg_actuators_stripped(mjcf_path, robot)
+            try:
+                add_mjcf(
+                    builder,
+                    import_path,
+                    xform=xform,
+                    floating=None,
+                    enable_self_collisions=robot.enabled_self_collisions,
+                    ignore_inertial_definitions=False,
+                    collapse_fixed_joints=getattr(robot, "collapse_fixed_joints", False),
+                )
+            finally:
+                if is_tmp:
+                    try:
+                        os.remove(import_path)
+                    except OSError:
+                        pass
             return
 
         if urdf_path is None:
@@ -955,6 +1024,20 @@ class NewtonHandler(BaseSimHandler):
         joint_target_vel = self._model.joint_target_vel.numpy()
         joint_q = self._model.joint_q.numpy()
 
+        # SolverMuJoCo only synthesizes a MuJoCo actuator for a DOF when that
+        # DOF's joint_target_mode is non-NONE. ``add_mjcf`` infers the mode from
+        # the asset's inline <actuator> block, so a robot that carries its gains
+        # in a RobotCfg.actuators dict (rather than inline <position>/<motor>
+        # tags) is built with every mode left at NONE -> the solver installs
+        # nu=0 actuators. The PD gains/targets written below are then never read
+        # and a position-controlled robot collapses under gravity. Set the mode
+        # from the resolved gains/control_type so the solver builds the matching
+        # servo. ``joint_target_mode`` is a newton >= 1.2 field; guard for None
+        # so older builds keep their prior (no-synthesis) behaviour.
+        joint_target_mode = (
+            self._model.joint_target_mode.numpy() if self._model.joint_target_mode is not None else None
+        )
+
         updated = False
 
         for env_id in range(self.num_envs):
@@ -978,6 +1061,10 @@ class NewtonHandler(BaseSimHandler):
 
                     if is_effort:
                         # Effort-controlled joints should not have internal PD drives.
+                        # Leave joint_target_mode at NONE so no MuJoCo servo is
+                        # synthesized: effort is injected through Control.joint_f ->
+                        # qfrc_applied directly, and an EFFORT actuator here would
+                        # double-count the commanded torque.
                         joint_target_ke[qd_start:qd_end] = 0.0
                         joint_target_kd[qd_start:qd_end] = 0.0
                         updated = True
@@ -988,6 +1075,21 @@ class NewtonHandler(BaseSimHandler):
                         if actuator.damping is not None:
                             joint_target_kd[qd_start:qd_end] = actuator.damping
                             updated = True
+                        # Install the servo that reads joint_target_pos/_vel. A
+                        # non-zero stiffness -> POSITION actuator (gainprm=[kp],
+                        # biasprm=[0,-kp,-kd]); stiffness 0 but damping set ->
+                        # VELOCITY actuator. POSITION (not POSITION_VELOCITY) keeps
+                        # kd inside the same actuator, matching a MuJoCo <position
+                        # kp=.. kv=..> drive 1:1.
+                        if joint_target_mode is not None:
+                            ke = joint_target_ke[qd_start]
+                            kd = joint_target_kd[qd_start]
+                            if ke != 0.0:
+                                joint_target_mode[qd_start:qd_end] = int(newton.JointTargetMode.POSITION)
+                                updated = True
+                            elif kd != 0.0:
+                                joint_target_mode[qd_start:qd_end] = int(newton.JointTargetMode.VELOCITY)
+                                updated = True
                     if actuator.armature is not None:
                         joint_armature[qd_start:qd_end] = actuator.armature
                         updated = True
@@ -1043,6 +1145,8 @@ class NewtonHandler(BaseSimHandler):
             self._model.joint_velocity_limit.assign(joint_velocity_limit)
             self._model.joint_target_pos.assign(joint_target_pos)
             self._model.joint_target_vel.assign(joint_target_vel)
+            if joint_target_mode is not None:
+                self._model.joint_target_mode.assign(joint_target_mode)
 
     def _get_body_indices(self, env_id: int, obj_name: str) -> list[int]:
         """Return body indices (root first) for an object in a given env."""

@@ -46,17 +46,15 @@ def reset_robot_to_default(handler, request):
 def test_set_dof_targets_basic(handler):
     """Test basic set_dof_targets functionality.
 
-    Newton-specific xfail: on the current Newton 1.2 + MuJoCo-Warp solver
-    stack with the FrankaCfg actuator settings, joints stay at qpos ~0
-    after 50 sim steps — the PD impulse is effectively zero because
-    Newton's actuator wiring doesn't pick up the cfg's stiffness/damping
-    the same way native MuJoCo does. The silent-no-op warning in
-    ``NewtonHandler._set_dof_targets`` already fires for the underlying
-    case (effort buffer None); here the buffers exist but the gains
-    aren't applied. xfail until Newton-side PD wiring is audited.
+    Previously xfailed on Newton: with FrankaCfg's actuator settings the
+    joints stayed at qpos ~0 because SolverMuJoCo synthesized nu=0
+    actuators — ``add_mjcf`` left every ``joint_target_mode`` at NONE (the
+    gains live in RobotCfg.actuators, not inline MJCF), so the PD targets
+    were written but no servo consumed them. Fixed in
+    ``NewtonHandler._apply_actuator_settings`` by setting the mode to
+    POSITION/VELOCITY from the resolved gains; this test now drives the
+    joints to target on Newton too and guards that regression.
     """
-    if handler.scenario.simulator == "newton":
-        pytest.xfail("Newton FrankaCfg PD does not drive joints to target (stays ~0); needs PD-wiring audit")
     target_positions = {
         "panda_joint1": 0.5,
         "panda_joint2": -0.5,
@@ -94,10 +92,9 @@ def test_set_dof_targets_basic(handler):
 def test_set_dof_targets_sequential_changes(handler):
     """Test applying sequential dof targets.
 
-    See ``test_set_dof_targets_basic`` for the Newton PD-wiring xfail rationale.
+    See ``test_set_dof_targets_basic`` for the Newton actuator-synthesis fix
+    this test now also exercises (previously xfailed on Newton).
     """
-    if handler.scenario.simulator == "newton":
-        pytest.xfail("Newton FrankaCfg PD does not drive joints to target; needs PD-wiring audit")
     # First target
     target1 = {
         "panda_joint1": 0.2,
@@ -151,10 +148,9 @@ def test_set_dof_targets_sequential_changes(handler):
 def test_set_dof_targets_per_env(handler):
     """Test setting different dof targets for each environment.
 
-    See ``test_set_dof_targets_basic`` for the Newton PD-wiring xfail rationale.
+    See ``test_set_dof_targets_basic`` for the Newton actuator-synthesis fix
+    this test now also exercises (previously xfailed on Newton).
     """
-    if handler.scenario.simulator == "newton":
-        pytest.xfail("Newton FrankaCfg PD does not drive joints to target; needs PD-wiring audit")
     if handler.scenario.num_envs < 2:
         pytest.skip("Test requires at least 2 parallel environments")
 
