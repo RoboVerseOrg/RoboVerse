@@ -236,7 +236,11 @@ Regenerate with `scripts/render_metasim_1to1_gallery.py`.
   reward / success *contract* (open-loop, scripted or seeded actions). Closed-loop
   policy success is a property of the policy and is out of scope for the integration
   claim.
-- **Assets.** The native track reads from `roboverse_data/assets/simpler_env/`
-  (Google Robot + WidowX URDFs, the `mk_station` cabinet, scene GLBs, model DB, and
-  the real-image overlays). These must be present locally; an HF mirror upload is
-  pending.
+- **Assets.** The native track reads from `roboverse_data/assets/simpler_env/` +
+  `roboverse_data/robots/{google_robot,widowx}/` (URDFs, the `mk_station` cabinet, scene
+  GLBs, object meshes, model DB, real-image overlays). These are mirrored on HuggingFace
+  at [`RoboVerseOrg/roboverse_data`](https://huggingface.co/datasets/RoboVerseOrg/roboverse_data)
+  and **download automatically on first use** (`_native/_assets.py` → `snapshot_download`)
+  when no local `roboverse_data` checkout (or `$ROBOVERSE_DATA`) is found — so a fresh
+  install needs no manual asset fetch. The SAPIEN `*.convex.stl` collision caches are not
+  stored (repo `.gitignore` convention); SAPIEN regenerates them on first load.

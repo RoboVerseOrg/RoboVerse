@@ -5,9 +5,10 @@ real-world overlay images) that live under ``roboverse_data/assets/simpler_env``
 ``roboverse_data/robots``. Resolution order:
   1. ``$ROBOVERSE_DATA`` env var (a roboverse_data checkout),
   2. ``roboverse_data`` next to this repo (default dev layout),
-  3. (future) HF-backed download, mirroring the robotwin/mjlab ``_locator`` pattern.
+  3. HF-backed download from ``RoboVerseOrg/roboverse_data`` (mirrors the robotwin/mjlab
+     ``_locator`` pattern) — a fresh checkout works with no manual asset fetch.
 
-These assets are vendored copies (HF-backed at release); the native port reads ONLY from here,
+These assets are vendored copies on HuggingFace; the native port reads ONLY from here,
 never from a cloned ``mani_skill2_real2sim`` / ``simpler_env`` tree.
 """
 
@@ -18,6 +19,37 @@ import pathlib
 
 _REPO = pathlib.Path(__file__).resolve().parents[4]  # .../RoboVerse-simpler
 
+_HF_REPO = "RoboVerseOrg/roboverse_data"
+# The asset subtrees the native SimplerEnv tasks read from, as HF dataset glob patterns.
+_HF_PATTERNS = [
+    "assets/simpler_env/**",
+    "robots/google_robot/**",
+    "robots/widowx/**",
+]
+
+
+def _download_from_hf() -> pathlib.Path | None:
+    """Fetch the SimplerEnv asset subtrees from HF into the default roboverse_data dir.
+
+    Returns the populated root, or ``None`` if the download is unavailable. The SAPIEN
+    ``*.convex.stl`` collision caches are intentionally absent on HF (repo ``.gitignore``);
+    SAPIEN regenerates them on first load.
+    """
+    target = (
+        pathlib.Path(os.environ["ROBOVERSE_DATA"]) if os.environ.get("ROBOVERSE_DATA") else _REPO / "roboverse_data"
+    )
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError:
+        return None
+    snapshot_download(
+        repo_id=_HF_REPO,
+        repo_type="dataset",
+        local_dir=str(target),
+        allow_patterns=_HF_PATTERNS,
+    )
+    return target if (target / "assets" / "simpler_env").exists() else None
+
 
 def data_root() -> pathlib.Path:
     cands = []
@@ -27,9 +59,14 @@ def data_root() -> pathlib.Path:
     for c in cands:
         if c and (c / "assets" / "simpler_env").exists():
             return c
+    # No local checkout — pull the assets from HuggingFace on demand.
+    downloaded = _download_from_hf()
+    if downloaded is not None:
+        return downloaded
     raise FileNotFoundError(
-        "roboverse_data/assets/simpler_env not found. Set $ROBOVERSE_DATA to a roboverse_data "
-        "checkout containing the migrated SimplerEnv assets (robots/, assets/simpler_env/)."
+        "roboverse_data/assets/simpler_env not found locally and the HuggingFace download failed. "
+        "Set $ROBOVERSE_DATA to a roboverse_data checkout with the migrated SimplerEnv assets "
+        "(robots/google_robot, robots/widowx, assets/simpler_env), or install `huggingface_hub`."
     )
 
 
