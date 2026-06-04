@@ -83,6 +83,9 @@ def migrate(out_dir, limit):
         m0 = e.sim.model._model
         body_pos = m0.body_pos.tolist()
         body_quat = m0.body_quat.tolist()
+        # the deterministic (seed=0) BDDL reset state, so a registered/native task can
+        # ``reset()`` into a valid LIBERO start without the upstream library.
+        init_state = e.sim.get_state().flatten().tolist()
         env.close()
 
         refs = _FILE_RE.findall(xml)
@@ -103,7 +106,15 @@ def migrate(out_dir, limit):
         with open(os.path.join(sdir, base + ".xml"), "w") as f:
             f.write(xml_portable)
         json.dump(
-            {"goal": goal, "osc": cfg, "suite": suite, "base": base, "body_pos": body_pos, "body_quat": body_quat},
+            {
+                "goal": goal,
+                "osc": cfg,
+                "suite": suite,
+                "base": base,
+                "body_pos": body_pos,
+                "body_quat": body_quat,
+                "init_state": init_state,
+            },
             open(os.path.join(sdir, base + ".goal.json"), "w"),
             indent=2,
         )

@@ -71,7 +71,10 @@ class LiberoNativeTask:
             model.body_pos[:] = np.asarray(meta["body_pos"])
             model.body_quat[:] = np.asarray(meta["body_quat"])
         self._setup(model, meta["goal"], meta["osc"])
-        self.init_state = self.demo_actions = self.grip_ctrl = None
+        # bundled deterministic BDDL reset state (so reset() yields a valid start);
+        # demo actions/grip are demo data and intentionally not vendored.
+        self.init_state = np.asarray(meta["init_state"]) if meta.get("init_state") is not None else None
+        self.demo_actions = self.grip_ctrl = None
         return self
 
     def _setup(self, model, goal, cfg):

@@ -37,7 +37,7 @@ task's MJCF and meshes from HF on demand and runs it; verified bitwise on all 13
 | MetaSim MuJoCo migration | 6/6 dims: state-set Δ=0, **engine Δ=0** | `scripts/migrate_liberoplus_metasim.py` |
 | OSC_POSE port | **bitwise** — per-state joint-torque Δ = 5.55e-15 N·m | `scripts/osc/` |
 | BC policy (closed-loop) | clean 100 % / light 0 % / camera 50 % / noise 75 %; passthrough==native Δ=0 | `scripts/policy/` |
-| **Native tasks (no libero/robosuite)** | **130 / 130** base tasks: ported BDDL checker bitwise (0 mismatch vs `env._check_success`), render bitwise (state-replay) | `roboverse_pack/tasks/libero_native/` |
+| **Native tasks (no libero/robosuite)** | **130 / 130** base tasks: ported BDDL checker bitwise (0 mismatch vs `env._check_success`), render bitwise (state-replay); **discoverable via `get_task_class("libero_native/...")`** | `roboverse_pack/tasks/libero_native/` |
 | **Vendored assets (library-deletable)** | 130 portable MJCF + **193 deduped assets / 265 MB** on HF; fresh-machine model fields **130/130** exact (max\|Δ\|=0), checker **130/130** | `RoboVerseOrg/roboverse_data` `libero/` |
 
 MetaSim core changes: **0** (the passthrough reuses the unmodified upstream env;
@@ -96,6 +96,22 @@ task.success()               # ported BDDL goal checker (bitwise vs env._check_s
 task.render()                # agentview RGB (geom-group matched to robosuite)
 task.step(action, grip)      # one OSC_POSE policy step (inlined controller)
 ```
+
+All 130 base tasks are also **registered**, so they are discoverable through the
+task registry exactly like the other RoboVerse tasks — and resolve and run even
+with `libero` / `robosuite` uninstalled:
+
+```python
+from metasim.task.registry import get_task_class
+
+Task = get_task_class("libero_native/libero_object/pick_up_the_alphabet_soup_and_place_it_in_the_basket")
+env = Task()                                   # loads the vendored scene; no libero
+obs = env.reset()                              # deterministic seed=0 BDDL reset state
+obs, reward, success, time_out, _ = env.step([0, 0, -0.1, 0, 0, 0, -1])  # OSC delta + gripper
+```
+
+Registration is cheap (the task list is shipped; the scene/assets load lazily on
+first instantiation), and `success` uses the **bitwise** ported BDDL checker.
 
 What was ported, and how it stays 1:1:
 
