@@ -78,6 +78,43 @@ def test_from_vendored_loads_without_libero_or_robosuite():
         builtins.__import__ = real_import
 
 
+def test_registered_tasks_register_without_libero():
+    """All 130 native tasks register (cheaply, no libero/robosuite) under the registry."""
+    import importlib
+
+    before = set(sys.modules)
+    importlib.import_module("roboverse_pack.tasks.libero_native.registered")
+    from metasim.task.registry import TASK_REGISTRY
+
+    names = [k for k in TASK_REGISTRY if k.startswith("libero_native/")]
+    assert len(names) == 130, f"expected 130 registered native tasks, got {len(names)}"
+    pulled = {m.split(".")[0] for m in set(sys.modules) - before}
+    assert "libero" not in pulled and "robosuite" not in pulled, "registration must not import libero/robosuite"
+
+
+def test_registered_task_instantiates_and_runs():
+    """A registered native task resets/steps/checks success (skips if assets absent)."""
+    import pytest
+
+    from roboverse_pack.tasks.libero_native._locator import _data_dirs
+
+    if not any((d / "libero" / "tasks").exists() for d in _data_dirs()):
+        pytest.skip("vendored roboverse_data/libero not present locally")
+    from roboverse_pack.tasks.libero_native.registered import LiberoNativeRegisteredTask
+
+    cls = type(
+        "T",
+        (LiberoNativeRegisteredTask,),
+        {"suite": "libero_object", "task": "pick_up_the_alphabet_soup_and_place_it_in_the_basket"},
+    )
+    env = cls()
+    env.reset()
+    obs, reward, success, timeout, _ = env.step([0, 0, -0.05, 0, 0, 0, -1])
+    assert obs["joint_qpos"].shape == (1, 7)
+    assert success.dtype.is_floating_point is False and bool(timeout[0]) is False
+    env.close()
+
+
 def test_articulated_and_contact_predicates_eval():
     """The 4 articulated reductions + on/on_site dict forms evaluate (no libero)."""
     import mujoco
