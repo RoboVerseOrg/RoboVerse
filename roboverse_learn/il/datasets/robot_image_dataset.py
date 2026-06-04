@@ -30,6 +30,14 @@ from roboverse_learn.il.utils.normalizer import LinearNormalizer
 
 
 class RobotImageDataset(BaseImageDataset):
+    # zarr camera array name -> the obs key the policy's shape_meta expects.
+    _CAM_OBS_NAME = {
+        "head_camera": "head_cam",
+        "front_camera": "front_cam",
+        "left_camera": "left_cam",
+        "right_camera": "right_cam",
+    }
+
     def __init__(
         self,
         zarr_path,
@@ -40,14 +48,19 @@ class RobotImageDataset(BaseImageDataset):
         val_ratio=0.0,
         batch_size=64,
         max_train_episodes=None,
+        camera_keys=("head_camera",),
     ):
 
         super().__init__()
 
+        # Which camera array(s) to load from the zarr. Defaults to the single
+        # head_camera (unchanged behaviour); pass extra keys (e.g. left/right_camera)
+        # to train a multi-view policy. Only cameras actually present in the zarr are
+        # kept, so an old single-cam zarr + a multi-cam request degrades gracefully.
+        self.camera_keys = [str(k) for k in camera_keys] or ["head_camera"]
         self.replay_buffer = ReplayBuffer.copy_from_path(
             zarr_path,
-            # keys=['head_camera', 'front_camera', 'left_camera', 'right_camera', 'state', 'action'],
-            keys=["head_camera", "state", "action"],
+            keys=[*self.camera_keys, "state", "action"],
         )
 
         val_mask = get_val_mask(n_episodes=self.replay_buffer.n_episodes, val_ratio=val_ratio, seed=seed)
@@ -106,13 +119,11 @@ class RobotImageDataset(BaseImageDataset):
 
     def _sample_to_data(self, sample):
         agent_pos = sample["state"].astype(np.float32)  # (agent_posx2, block_posex3)
-        head_cam = np.moveaxis(sample["head_camera"], -1, 1) / 255.0
-
+        obs = {"agent_pos": agent_pos}  # T, D
+        for cam in self.camera_keys:
+            obs[self._CAM_OBS_NAME.get(cam, cam)] = np.moveaxis(sample[cam], -1, 1) / 255.0  # T, 3, H, W
         data = {
-            "obs": {
-                "head_cam": head_cam,  # T, 3, H, W
-                "agent_pos": agent_pos,  # T, D
-            },
+            "obs": obs,
             "action": sample["action"].astype(np.float32),  # T, D
         }
         return data
@@ -142,13 +153,12 @@ class RobotImageDataset(BaseImageDataset):
 
     def postprocess(self, samples, device):
         agent_pos = samples["state"].to(device, non_blocking=True)
-        head_cam = samples["head_camera"].to(device, non_blocking=True) / 255.0
         action = samples["action"].to(device, non_blocking=True)
+        obs = {"agent_pos": agent_pos}  # B, T, D
+        for cam in self.camera_keys:
+            obs[self._CAM_OBS_NAME.get(cam, cam)] = samples[cam].to(device, non_blocking=True) / 255.0  # B,T,3,H,W
         return {
-            "obs": {
-                "head_cam": head_cam,  # B, T, 3, H, W
-                "agent_pos": agent_pos,  # B, T, D
-            },
+            "obs": obs,
             "action": action,  # B, T, D
         }
 

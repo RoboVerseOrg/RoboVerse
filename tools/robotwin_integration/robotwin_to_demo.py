@@ -38,13 +38,20 @@ import imageio.v2 as imageio
 import numpy as np
 
 
-def _convert_one(bridge: dict, demo_dir: str, camera: str) -> int:
-    """Write one demo_<id>/ dir from a bridge pickle; return the frame count (0 if skipped)."""
+def _convert_one(bridge: dict, demo_dir: str, camera: str, cameras: list | None = None) -> int:
+    """Write one demo_<id>/ dir from a bridge pickle; return the frame count (0 if skipped).
+
+    Writes ``rgb.mp4`` for the primary ``camera`` (back-compat) plus a ``<cam>.mp4`` for
+    every camera in ``cameras`` (default just the primary), so a multi-view DP can train
+    on wrist cameras. Only cameras actually present in the bridge RGB are written.
+    """
+    cams = list(dict.fromkeys([camera, *(cameras or [])]))  # primary first, de-duped
     vectors = np.asarray(bridge.get("vectors", []), dtype=float)  # command target -> action
     real = np.asarray(bridge.get("real_vectors", []), dtype=float)  # achieved state -> obs
     rgb_all = bridge.get("rgb", {})
-    if camera not in rgb_all:
-        print(f"  skip {demo_dir}: no '{camera}' RGB (have {list(rgb_all)}); re-collect with --rgb")
+    missing = [c for c in cams if c not in rgb_all]
+    if missing:
+        print(f"  skip {demo_dir}: missing RGB {missing} (have {list(rgb_all)}); re-collect with --rgb")
         return 0
     rgb = np.asarray(rgb_all[camera], dtype=np.uint8)
     if len(vectors) == 0 or len(real) == 0 or len(rgb) == 0:
@@ -53,13 +60,16 @@ def _convert_one(bridge: dict, demo_dir: str, camera: str) -> int:
     # Align lengths: a frame missing its achieved capture would desync state/action/rgb.
     t = min(len(vectors), len(real), len(rgb))
     os.makedirs(demo_dir, exist_ok=True)
-    imageio.mimsave(os.path.join(demo_dir, "rgb.mp4"), list(rgb[:t]), fps=20)
+    imageio.mimsave(os.path.join(demo_dir, "rgb.mp4"), list(rgb[:t]), fps=20)  # primary, legacy name
+    for c in cams:
+        imageio.mimsave(os.path.join(demo_dir, f"{c}.mp4"), list(np.asarray(rgb_all[c], dtype=np.uint8)[:t]), fps=20)
     metadata = {
         "joint_qpos": real[:t].tolist(),  # achieved state (obs) -- data2zarr observation_space=joint_pos
         "joint_qpos_target": vectors[:t].tolist(),  # command target (action)
         "task": bridge.get("task"),
         "seed": int(bridge.get("seed", -1)),
         "camera": camera,
+        "cameras": cams,
         "source": "robotwin_bridge",
     }
     with open(os.path.join(demo_dir, "metadata.json"), "w", encoding="utf-8") as f:
@@ -71,7 +81,13 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--bridge", required=True, help="glob of bridge pickles (collect_bridge --rgb output)")
     ap.add_argument("--out", required=True, help="output metadata dir (becomes data2zarr --metadata_dir)")
-    ap.add_argument("--camera", default="head_camera", help="which captured camera to use as the image obs")
+    ap.add_argument("--camera", default="head_camera", help="primary image-obs camera (written as rgb.mp4)")
+    ap.add_argument(
+        "--cameras",
+        nargs="+",
+        default=None,
+        help="also write these cameras as <cam>.mp4 (e.g. head_camera left_camera right_camera) for multi-view DP",
+    )
     ap.add_argument("--start-id", type=int, default=0, help="first demo_<id> index")
     args = ap.parse_args(argv)
 
@@ -87,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         with open(path, "rb") as f:
             bridge = pickle.load(f)
         demo_dir = os.path.join(out, f"demo_{str(args.start_id + written).zfill(4)}")
-        t = _convert_one(bridge, demo_dir, args.camera)
+        t = _convert_one(bridge, demo_dir, args.camera, cameras=args.cameras)
         if t:
             print(f"  {os.path.basename(path)} -> {os.path.basename(demo_dir)} ({t} frames)")
             written += 1
