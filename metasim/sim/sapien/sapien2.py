@@ -199,7 +199,9 @@ class Sapien2Handler(BaseSimHandler):
                     color=object.color if object.color else [1.0, 1.0, 0.0],
                 )
                 # fix_base_link -> static actor (e.g. a visual-only backdrop box)
-                box = actor_builder.build_static(name="box") if object.fix_base_link else actor_builder.build(name="box")
+                box = (
+                    actor_builder.build_static(name="box") if object.fix_base_link else actor_builder.build(name="box")
+                )
                 box.set_pose(_load_init_pose(object))
                 # box.set_damping(agent.rigid_shape_property.linear_damping, agent.rigid_shape_property.angular_damping)
                 # if agent.vel:
@@ -263,13 +265,19 @@ class Sapien2Handler(BaseSimHandler):
                     )
                 collision_file = object.collision_mesh_path or object.mesh_path
                 builder.add_multiple_collisions_from_file(
-                    filename=collision_file, scale=scale3, material=mat,
+                    filename=collision_file,
+                    scale=scale3,
+                    material=mat,
                     density=object.mesh_density if object.mesh_density is not None else 1000.0,
                 )
                 builder.add_visual_from_file(filename=object.mesh_path, scale=scale3)
-                curr_id = builder.build_static(name=object.name) if object.fix_base_link else builder.build(name=object.name)
+                curr_id = (
+                    builder.build_static(name=object.name) if object.fix_base_link else builder.build(name=object.name)
+                )
                 curr_id.set_pose(_load_init_pose(object))
-                if (not object.fix_base_link) and (object.linear_damping is not None or object.angular_damping is not None):
+                if (not object.fix_base_link) and (
+                    object.linear_damping is not None or object.angular_damping is not None
+                ):
                     curr_id.set_damping(object.linear_damping or 0.0, object.angular_damping or 0.0)
                 self.object_ids[object.name] = curr_id
                 self.object_joint_order[object.name] = []
@@ -331,8 +339,14 @@ class Sapien2Handler(BaseSimHandler):
                 q=np.array(camera.mount_quat if camera.mount_quat is not None else (1.0, 0.0, 0.0, 0.0)),
             )
             camera_id = self.scene.add_mounted_camera(
-                camera.name, link, mount_pose, camera.width, camera.height,
-                np.deg2rad(camera.vertical_fov), camera.clipping_range[0], camera.clipping_range[1],
+                camera.name,
+                link,
+                mount_pose,
+                camera.width,
+                camera.height,
+                np.deg2rad(camera.vertical_fov),
+                camera.clipping_range[0],
+                camera.clipping_range[1],
             )
             self._apply_camera_intrinsic(camera, camera_id)
             self.camera_ids[camera.name] = camera_id
