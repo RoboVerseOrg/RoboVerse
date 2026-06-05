@@ -131,6 +131,1340 @@ tree with `tools/libero_integration/vendor_shared_assets.py`; override the roots
 `ROBOVERSE_DATA_DIR`, or `LIBERO_ASSETS` / `ROBOSUITE_ASSETS` to point at local
 installs.
 
+### 1:1 side-by-side — all 130 base tasks
+
+Every base LIBERO task, rendered by state-replaying the same demo states into both
+native LIBERO (robosuite, left) and the MetaSim-native task (`NativeLiberoEnv`, right).
+The BDDL success checker matches `env._check_success` **bitwise on all 130**
+(0 mismatch over the full replay); the side-by-side render is visually aligned
+(mean MAE 1.85/255 — re-triangulated meshes + sub-pixel shading). Expand a suite to view.
+
+:::::{dropdown} OBJECT · 10 tasks · checker 1:1
+::::{grid} 2
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_alphabet_soup_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the alphabet soup and place it in the basket · MAE 0.183
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_bbq_sauce_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the bbq sauce and place it in the basket · MAE 0.179
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_butter_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the butter and place it in the basket · MAE 0.187
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_chocolate_pudding_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the chocolate pudding and place it in the basket · MAE 0.187
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_cream_cheese_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the cream cheese and place it in the basket · MAE 0.185
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_ketchup_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the ketchup and place it in the basket · MAE 0.192
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_milk_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the milk and place it in the basket · MAE 0.177
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_orange_juice_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the orange juice and place it in the basket · MAE 0.178
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_salad_dressing_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the salad dressing and place it in the basket · MAE 0.187
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_tomato_sauce_and_place_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the tomato sauce and place it in the basket · MAE 0.181
+```
+:::
+::::
+:::::
+
+:::::{dropdown} GOAL · 10 tasks · checker 1:1
+::::{grid} 2
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__open_the_middle_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: open the middle drawer of the cabinet · MAE 3.239
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__open_the_top_drawer_and_put_the_bowl_inside.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: open the top drawer and put the bowl inside · MAE 3.34
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__push_the_plate_to_the_front_of_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: push the plate to the front of the stove · MAE 4.172
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__put_the_bowl_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: put the bowl on the plate · MAE 4.147
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__put_the_bowl_on_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: put the bowl on the stove · MAE 4.086
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__put_the_bowl_on_top_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: put the bowl on top of the cabinet · MAE 3.211
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__put_the_cream_cheese_in_the_bowl.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: put the cream cheese in the bowl · MAE 4.857
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__put_the_wine_bottle_on_the_rack.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: put the wine bottle on the rack · MAE 3.188
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__put_the_wine_bottle_on_top_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: put the wine bottle on top of the cabinet · MAE 4.409
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_goal__turn_on_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: turn on the stove · MAE 5.111
+```
+:::
+::::
+:::::
+
+:::::{dropdown} SPATIAL · 10 tasks · checker 1:1
+::::{grid} 2
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl between the plate and the ramekin and · MAE 2.108
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl from table center and place it on the · MAE 2.92
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl in the top drawer of the wooden cabin · MAE 3.34
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl next to the cookie box and place it o · MAE 2.86
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl next to the plate and place it on the · MAE 3.204
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl next to the ramekin and place it on t · MAE 2.302
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl on the cookie box and place it on the · MAE 1.309
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl on the ramekin and place it on the pl · MAE 2.767
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl on the stove and place it on the plat · MAE 2.423
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick up the black bowl on the wooden cabinet and place it on · MAE 2.149
+```
+:::
+::::
+:::::
+
+:::::{dropdown} LONG-10 · 10 tasks · checker 1:1
+::::{grid} 2
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 3 turn on the stove and put the moka pot on it · MAE 2.623
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__KITCHEN_SCENE4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet_and_close_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 4 put the black bowl in the bottom drawer of the cab · MAE 5.98
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 6 put the yellow and white mug in the microwave and  · MAE 2.975
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__KITCHEN_SCENE8_put_both_moka_pots_on_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 8 put both moka pots on the stove · MAE 1.878
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 1 put both the alphabet soup and the cream cheese box · MAE 0.228
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__LIVING_ROOM_SCENE2_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 2 put both the alphabet soup and the tomato sauce in  · MAE 0.245
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 2 put both the cream cheese box and the butter in the · MAE 0.244
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate_and_put_the_yellow_and_white_mug_on_the_right_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 5 put the white mug on the left plate and put the yel · MAE 0.162
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate_and_put_the_chocolate_pudding_to_the_right_of_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 6 put the white mug on the plate and put the chocolat · MAE 0.185
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_10__STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_back_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 1 pick up the book and place it in the back compartmen · MAE 0.795
+```
+:::
+::::
+:::::
+
+:::::{dropdown} 90 · 90 tasks · checker 1:1
+::::{grid} 2
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE10_close_the_top_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 10 close the top drawer of the cabinet · MAE 2.031
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE10_close_the_top_drawer_of_the_cabinet_and_put_the_black_bowl_on_top_of_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 10 close the top drawer of the cabinet and put the b · MAE 0.887
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE10_put_the_black_bowl_in_the_top_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 10 put the black bowl in the top drawer of the cabin · MAE 2.787
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE10_put_the_butter_at_the_back_in_the_top_drawer_of_the_cabinet_and_close_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 10 put the butter at the back in the top drawer of t · MAE 2.058
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE10_put_the_butter_at_the_front_in_the_top_drawer_of_the_cabinet_and_close_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 10 put the butter at the front in the top drawer of  · MAE 1.198
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE10_put_the_chocolate_pudding_in_the_top_drawer_of_the_cabinet_and_close_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 10 put the chocolate pudding in the top drawer of th · MAE 0.814
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE1_open_the_bottom_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 1 open the bottom drawer of the cabinet · MAE 2.302
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE1_open_the_top_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 1 open the top drawer of the cabinet · MAE 1.827
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE1_open_the_top_drawer_of_the_cabinet_and_put_the_bowl_in_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 1 open the top drawer of the cabinet and put the bow · MAE 1.996
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE1_put_the_black_bowl_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 1 put the black bowl on the plate · MAE 0.243
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE1_put_the_black_bowl_on_top_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 1 put the black bowl on top of the cabinet · MAE 2.186
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE2_open_the_top_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 2 open the top drawer of the cabinet · MAE 2.271
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE2_put_the_black_bowl_at_the_back_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 2 put the black bowl at the back on the plate · MAE 1.878
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE2_put_the_black_bowl_at_the_front_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 2 put the black bowl at the front on the plate · MAE 2.68
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE2_put_the_middle_black_bowl_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 2 put the middle black bowl on the plate · MAE 1.653
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE2_put_the_middle_black_bowl_on_top_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 2 put the middle black bowl on top of the cabinet · MAE 1.636
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE2_stack_the_black_bowl_at_the_front_on_the_black_bowl_in_the_middle.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 2 stack the black bowl at the front on the black bow · MAE 2.706
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE2_stack_the_middle_black_bowl_on_the_back_black_bowl.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 2 stack the middle black bowl on the back black bowl · MAE 0.531
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE3_put_the_frying_pan_on_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 3 put the frying pan on the stove · MAE 1.36
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE3_put_the_moka_pot_on_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 3 put the moka pot on the stove · MAE 2.165
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE3_turn_on_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 3 turn on the stove · MAE 2.265
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE3_turn_on_the_stove_and_put_the_frying_pan_on_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 3 turn on the stove and put the frying pan on it · MAE 2.368
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE4_close_the_bottom_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 4 close the bottom drawer of the cabinet · MAE 6.14
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE4_close_the_bottom_drawer_of_the_cabinet_and_open_the_top_drawer.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 4 close the bottom drawer of the cabinet and open th · MAE 5.067
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 4 put the black bowl in the bottom drawer of the cab · MAE 5.936
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE4_put_the_black_bowl_on_top_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 4 put the black bowl on top of the cabinet · MAE 6.936
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE4_put_the_wine_bottle_in_the_bottom_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 4 put the wine bottle in the bottom drawer of the ca · MAE 6.266
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE4_put_the_wine_bottle_on_the_wine_rack.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 4 put the wine bottle on the wine rack · MAE 6.079
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE5_close_the_top_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 5 close the top drawer of the cabinet · MAE 3.543
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE5_put_the_black_bowl_in_the_top_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 5 put the black bowl in the top drawer of the cabine · MAE 3.02
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE5_put_the_black_bowl_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 5 put the black bowl on the plate · MAE 4.746
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE5_put_the_black_bowl_on_top_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 5 put the black bowl on top of the cabinet · MAE 1.428
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE5_put_the_ketchup_in_the_top_drawer_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 5 put the ketchup in the top drawer of the cabinet · MAE 1.303
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE6_close_the_microwave.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 6 close the microwave · MAE 2.831
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE6_put_the_yellow_and_white_mug_to_the_front_of_the_white_mug.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 6 put the yellow and white mug to the front of the w · MAE 4.343
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE7_open_the_microwave.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 7 open the microwave · MAE 3.065
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE7_put_the_white_bowl_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 7 put the white bowl on the plate · MAE 0.669
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE7_put_the_white_bowl_to_the_right_of_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 7 put the white bowl to the right of the plate · MAE 2.79
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE8_put_the_right_moka_pot_on_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 8 put the right moka pot on the stove · MAE 1.224
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE8_turn_off_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 8 turn off the stove · MAE 2.618
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE9_put_the_frying_pan_on_the_cabinet_shelf.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 9 put the frying pan on the cabinet shelf · MAE 2.353
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE9_put_the_frying_pan_on_top_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 9 put the frying pan on top of the cabinet · MAE 3.292
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE9_put_the_frying_pan_under_the_cabinet_shelf.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 9 put the frying pan under the cabinet shelf · MAE 2.627
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE9_put_the_white_bowl_on_top_of_the_cabinet.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 9 put the white bowl on top of the cabinet · MAE 2.034
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE9_turn_on_the_stove.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 9 turn on the stove · MAE 2.767
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE9_turn_on_the_stove_and_put_the_frying_pan_on_it.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: KITCHEN 9 turn on the stove and put the frying pan on it · MAE 2.738
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE1_pick_up_the_alphabet_soup_and_put_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 1 pick up the alphabet soup and put it in the basket · MAE 0.236
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE1_pick_up_the_cream_cheese_box_and_put_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 1 pick up the cream cheese box and put it in the bask · MAE 0.24
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE1_pick_up_the_ketchup_and_put_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 1 pick up the ketchup and put it in the basket · MAE 0.223
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE1_pick_up_the_tomato_sauce_and_put_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 1 pick up the tomato sauce and put it in the basket · MAE 0.23
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE2_pick_up_the_alphabet_soup_and_put_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 2 pick up the alphabet soup and put it in the basket · MAE 0.252
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE2_pick_up_the_butter_and_put_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 2 pick up the butter and put it in the basket · MAE 14.423
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE2_pick_up_the_milk_and_put_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 2 pick up the milk and put it in the basket · MAE 0.25
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE2_pick_up_the_orange_juice_and_put_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 2 pick up the orange juice and put it in the basket · MAE 0.239
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE2_pick_up_the_tomato_sauce_and_put_it_in_the_basket.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 2 pick up the tomato sauce and put it in the basket · MAE 0.24
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE3_pick_up_the_alphabet_soup_and_put_it_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 3 pick up the alphabet soup and put it in the tray · MAE 0.163
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE3_pick_up_the_butter_and_put_it_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 3 pick up the butter and put it in the tray · MAE 0.164
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE3_pick_up_the_cream_cheese_and_put_it_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 3 pick up the cream cheese and put it in the tray · MAE 0.172
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE3_pick_up_the_ketchup_and_put_it_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 3 pick up the ketchup and put it in the tray · MAE 0.159
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE3_pick_up_the_tomato_sauce_and_put_it_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 3 pick up the tomato sauce and put it in the tray · MAE 0.16
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE4_pick_up_the_black_bowl_on_the_left_and_put_it_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 4 pick up the black bowl on the left and put it in th · MAE 0.548
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE4_pick_up_the_chocolate_pudding_and_put_it_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 4 pick up the chocolate pudding and put it in the tra · MAE 0.463
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE4_pick_up_the_salad_dressing_and_put_it_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 4 pick up the salad dressing and put it in the tray · MAE 0.169
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE4_stack_the_left_bowl_on_the_right_bowl_and_place_them_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 4 stack the left bowl on the right bowl and place the · MAE 0.474
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE4_stack_the_right_bowl_on_the_left_bowl_and_place_them_in_the_tray.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 4 stack the right bowl on the left bowl and place the · MAE 0.437
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE5_put_the_red_mug_on_the_left_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 5 put the red mug on the left plate · MAE 0.17
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE5_put_the_red_mug_on_the_right_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 5 put the red mug on the right plate · MAE 0.16
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 5 put the white mug on the left plate · MAE 0.175
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE5_put_the_yellow_and_white_mug_on_the_right_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 5 put the yellow and white mug on the right plate · MAE 0.171
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_left_of_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 6 put the chocolate pudding to the left of the plate · MAE 0.177
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_right_of_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 6 put the chocolate pudding to the right of the plate · MAE 0.18
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE6_put_the_red_mug_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 6 put the red mug on the plate · MAE 0.177
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: LIVING 6 put the white mug on the plate · MAE 0.185
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 1 pick up the book and place it in the front compartme · MAE 0.498
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_left_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 1 pick up the book and place it in the left compartmen · MAE 1.423
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_right_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 1 pick up the book and place it in the right compartme · MAE 0.996
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE1_pick_up_the_yellow_and_white_mug_and_place_it_to_the_right_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 1 pick up the yellow and white mug and place it to the · MAE 1.019
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_back_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 2 pick up the book and place it in the back compartmen · MAE 0.233
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 2 pick up the book and place it in the front compartme · MAE 0.189
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_left_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 2 pick up the book and place it in the left compartmen · MAE 1.122
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE2_pick_up_the_book_and_place_it_in_the_right_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 2 pick up the book and place it in the right compartme · MAE 1.075
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE3_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 3 pick up the book and place it in the front compartme · MAE 0.949
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE3_pick_up_the_book_and_place_it_in_the_left_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 3 pick up the book and place it in the left compartmen · MAE 0.868
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE3_pick_up_the_book_and_place_it_in_the_right_compartment_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 3 pick up the book and place it in the right compartme · MAE 0.39
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE3_pick_up_the_red_mug_and_place_it_to_the_right_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 3 pick up the red mug and place it to the right of the · MAE 1.126
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE3_pick_up_the_white_mug_and_place_it_to_the_right_of_the_caddy.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 3 pick up the white mug and place it to the right of t · MAE 1.222
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE4_pick_up_the_book_in_the_middle_and_place_it_on_the_cabinet_shelf.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 4 pick up the book in the middle and place it on the c · MAE 0.603
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE4_pick_up_the_book_on_the_left_and_place_it_on_top_of_the_shelf.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 4 pick up the book on the left and place it on top of  · MAE 0.766
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE4_pick_up_the_book_on_the_right_and_place_it_on_the_cabinet_shelf.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 4 pick up the book on the right and place it on the ca · MAE 0.271
+```
+:::
+:::{grid-item}
+```{video} ../../_static/integrations/libero/native_sb/libero_90__STUDY_SCENE4_pick_up_the_book_on_the_right_and_place_it_under_the_cabinet_shelf.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: STUDY 4 pick up the book on the right and place it under the · MAE 1.145
+```
+:::
+::::
+:::::
+
+
 ## Reproduce — run commands
 
 All commands assume `MUJOCO_GL=egl` (headless) and the dedicated env. The
