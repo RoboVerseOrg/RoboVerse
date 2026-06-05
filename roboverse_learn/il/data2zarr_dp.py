@@ -66,6 +66,13 @@ def main():
         default=0,
         help="If > 0, pad joint positions to this length when using joint_pos observation/action space",
     )
+    parser.add_argument(
+        "--cameras",
+        nargs="+",
+        default=["head_camera"],
+        help="Camera arrays to write (default just head_camera = unchanged single-view zarr). Each <cam> reads "
+        "demo_<id>/<cam>.mp4 (head_camera falls back to rgb.mp4 for back-compat); multi-view enables wrist-cam DP.",
+    )
 
     args = parser.parse_args()
 
@@ -122,7 +129,8 @@ def main():
 
     # Batch processing settings
     batch_size = 100
-    head_camera_arrays = []
+    # One image buffer per requested camera (default just "head_camera" = original behaviour).
+    cam_arrays = {cam: [] for cam in args.cameras}
     action_arrays = []
     state_arrays = []
     episode_ends_arrays = []
@@ -154,7 +162,15 @@ def main():
                 metadata = json.load(f)
 
         data_length = len(metadata["joint_qpos"])
-        rgbs = iio.mimread(os.path.join(demo_dir, "rgb.mp4"))
+        # Read each requested camera's frames. head_camera falls back to the legacy
+        # rgb.mp4 filename (single-view demos) if a head_camera.mp4 isn't present.
+        cam_rgbs = {}
+        for cam in args.cameras:
+            cam_mp4 = os.path.join(demo_dir, f"{cam}.mp4")
+            if not os.path.isfile(cam_mp4) and cam == "head_camera":
+                cam_mp4 = os.path.join(demo_dir, "rgb.mp4")
+            cam_rgbs[cam] = iio.mimread(cam_mp4)
+        rgbs = cam_rgbs[args.cameras[0]]
         for i, rgb in enumerate(rgbs):
             if i % downsample_ratio != 0:
                 continue
@@ -232,8 +248,9 @@ def main():
                 raise ValueError(f"Unknown action space: {args.action_space}")
 
             action = list(action)
-            # Append data to batch arrays
-            head_camera_arrays.append(rgb)
+            # Append data to batch arrays (one image per requested camera)
+            for cam in args.cameras:
+                cam_arrays[cam].append(cam_rgbs[cam][i])
             state_arrays.append(state)
             action_arrays.append(action)
             total_count += 1
@@ -242,24 +259,26 @@ def main():
 
         # Write to ZARR if batch is full or if this is the last episode
         if (current_ep + 1) % batch_size == 0 or (current_ep + 1) == len(demo_indices):
-            # Convert arrays to NumPy and format head_camera
-            head_camera_arrays = np.array(head_camera_arrays)
-            head_camera_arrays = np.moveaxis(head_camera_arrays, -1, 1)  # NHWC -> NCHW
-            # print(head_camera_arrays)
+            # Convert each camera's buffer to NCHW NumPy.
+            cam_np = {}
+            for cam in args.cameras:
+                arr = np.array(cam_arrays[cam])
+                cam_np[cam] = np.moveaxis(arr, -1, 1)  # NHWC -> NCHW
             action_arrays = np.array(action_arrays)
             state_arrays = np.array(state_arrays)
             episode_ends_arrays = np.array(episode_ends_arrays)
 
             # Create datasets dynamically during the first write
             if current_batch == 0:
-                zarr_data.create_dataset(
-                    "head_camera",
-                    shape=(0, *head_camera_arrays.shape[1:]),
-                    chunks=(batch_size, *head_camera_arrays.shape[1:]),
-                    dtype=head_camera_arrays.dtype,
-                    compressor=compressor,
-                    overwrite=True,
-                )
+                for cam in args.cameras:
+                    zarr_data.create_dataset(
+                        cam,
+                        shape=(0, *cam_np[cam].shape[1:]),
+                        chunks=(batch_size, *cam_np[cam].shape[1:]),
+                        dtype=cam_np[cam].dtype,
+                        compressor=compressor,
+                        overwrite=True,
+                    )
                 zarr_data.create_dataset(
                     "state",
                     shape=(0, state_arrays.shape[1]),
@@ -286,15 +305,16 @@ def main():
                 )
 
             # Append data to ZARR datasets
-            zarr_data["head_camera"].append(head_camera_arrays)
+            for cam in args.cameras:
+                zarr_data[cam].append(cam_np[cam])
             zarr_data["state"].append(state_arrays)
             zarr_data["action"].append(action_arrays)
             zarr_meta["episode_ends"].append(episode_ends_arrays)
 
-            print(f"Batch {current_batch + 1} written with {len(head_camera_arrays)} samples.")
+            print(f"Batch {current_batch + 1} written with {len(cam_np[args.cameras[0]])} samples.")
 
             # Clear arrays for next batch
-            head_camera_arrays = []
+            cam_arrays = {cam: [] for cam in args.cameras}
             action_arrays = []
             state_arrays = []
             episode_ends_arrays = []

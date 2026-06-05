@@ -37,6 +37,50 @@ def robotwin_dir() -> str:
     return os.environ.get("ROBOTWIN_DIR", _DEFAULT_ROBOTWIN_DIR)
 
 
+def _prepare_robotwin_runtime(rt: str) -> None:
+    """Make the active env importable as RoboTwin expects, in place.
+
+    Two environment quirks have to be handled before importing any RoboTwin
+    task, and both are no-ops once satisfied:
+
+    * **CWD**: RoboTwin reads assets via *relative* paths (``./assets/...``) at
+      import time (e.g. ``envs/utils`` loads ``./assets/objects/objaverse/
+      list.json``), so the process CWD must be the checkout root.
+    * **warp.torch shim**: RoboTwin's planner uses curobo 0.7.8, which calls
+      ``warp.torch.device_from_torch``; warp-lang >= 1.5 moved those helpers to
+      the ``warp`` top level and dropped the ``warp.torch`` submodule. We alias
+      the old namespace to the new functions so curobo imports unchanged.
+    """
+    import sys
+
+    if os.path.realpath(os.getcwd()) != os.path.realpath(rt):
+        os.chdir(rt)
+
+    if "warp.torch" not in sys.modules:
+        try:
+            import types
+
+            import warp as wp
+
+            shim = types.ModuleType("warp.torch")
+            for fn in (
+                "device_from_torch",
+                "device_to_torch",
+                "dtype_from_torch",
+                "dtype_to_torch",
+                "from_torch",
+                "to_torch",
+                "stream_from_torch",
+                "stream_to_torch",
+            ):
+                if hasattr(wp, fn):
+                    setattr(shim, fn, getattr(wp, fn))
+            sys.modules["warp.torch"] = shim
+            wp.torch = shim
+        except ImportError:
+            pass  # warp not installed; curobo import will report it directly
+
+
 def _discover_task_names(rt_dir: str) -> list[str]:
     """List RoboTwin task names = ``envs/<name>.py`` files (no import needed).
 
@@ -78,6 +122,7 @@ def _make_robotwin_env(task_name: str, task_config: str = "demo_clean", seed: in
         )
     if rt not in sys.path:
         sys.path.insert(0, rt)
+    _prepare_robotwin_runtime(rt)
     cfg_dir = os.path.join(rt, "task_config")
 
     try:
@@ -87,8 +132,8 @@ def _make_robotwin_env(task_name: str, task_config: str = "demo_clean", seed: in
             f"Could not import RoboTwin task 'envs.{task_name}' ({type(e).__name__}: {e}). "
             f"RoboTwin's deps are likely not installed in this env (it needs mplib 0.2.1 / "
             f"sapien 3.0.0b1 / pytorch3d / curobo / torch 2.4.1, which conflict with the RoboVerse "
-            f"env). Install them in a dedicated env via `{rt}/script/_install.sh`, then this task "
-            f"runs the native RoboTwin code path (1:1)."
+            f"env). Install them in a dedicated env via `{rt}/script/_install.sh` (curobo needs an "
+            f"sm-matching CUDA nvcc), then this task runs the native RoboTwin code path (1:1)."
         ) from e
 
     task_cls = getattr(mod, task_name)
@@ -119,6 +164,18 @@ def _make_robotwin_env(task_name: str, task_config: str = "demo_clean", seed: in
     env = task_cls()
     env.setup_demo(now_ep_num=0, seed=seed, **args)
     return env
+
+
+def list_robotwin_tasks(prefix: str = "RoboTwin/") -> list[str]:
+    """Return the discoverable RoboTwin task ids (``RoboTwin/<name>``).
+
+    A convenience for enumerating RoboTwin tasks without importing RoboTwin or
+    having to know the ``RoboTwin/<name>`` naming convention (they live only in
+    gymnasium's registry, not MetaSim's ``list_tasks()``). Pure filename scan, so
+    it is safe when RoboTwin's deps are absent; returns ``[]`` if the checkout is
+    missing. Pass ``prefix=""`` for the bare task names.
+    """
+    return [f"{prefix}{name}" for name in _discover_task_names(robotwin_dir())]
 
 
 def register_robotwin_passthrough(prefix: str = "RoboTwin/") -> list[str]:

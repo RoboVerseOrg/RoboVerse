@@ -7,9 +7,11 @@ when RoboTwin's deps are not installed; see :mod:`._passthrough`.
 
 from __future__ import annotations
 
-try:
-    from roboverse_pack.tasks.robotwin._passthrough import register_robotwin_passthrough
+from roboverse_pack.tasks.robotwin._passthrough import list_robotwin_tasks, register_robotwin_passthrough
 
+__all__ = ["list_robotwin_tasks", "register_robotwin_passthrough"]
+
+try:
     register_robotwin_passthrough()
 except Exception:
     pass

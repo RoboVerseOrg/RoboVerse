@@ -71,6 +71,9 @@ args = tyro.cli(Args)
 ## Utils
 ###########################################################
 def get_actions(all_actions, action_idx: int, num_envs: int, robot: RobotCfg):
+    # Multi-agent safe with no change: each ``env_actions[action_idx]`` is already
+    # the per-step ``{robot_name: action}`` dict spanning every agent (get_traj
+    # merged them), so this just forwards it. ``robot`` is unused/legacy.
     envs_actions = all_actions[:num_envs]
     actions = [
         env_actions[action_idx] if action_idx < len(env_actions) else env_actions[-1] for env_actions in envs_actions
@@ -140,31 +143,26 @@ def main():
     if scene_cfg is None:
         log.warning("Scene is not specified by task or args; proceeding with None.")
 
-    if args.robot == "None":
-        scenario = task_cls.scenario.update(
-            # robots=[args.robot],
-            scene=scene_cfg,
-            cameras=[camera],
-            # random=args.random,
-            render=args.render,
-            simulator=args.sim,
-            renderer=args.renderer,
-            num_envs=args.num_envs,
-            headless=args.headless,
-        )
+    # A task that already declares more than one robot is a multi-agent (e.g.
+    # bimanual) cell: keep every agent the task defines and load each agent's
+    # trajectory slice. In that case the single ``--robot`` flag is ignored.
+    task_robots = task_cls.scenario.robots
+    multi_agent = task_robots is not None and len(task_robots) > 1
 
+    common = dict(
+        scene=scene_cfg,
+        cameras=[camera],
+        # random=args.random,
+        render=args.render,
+        simulator=args.sim,
+        renderer=args.renderer,
+        num_envs=args.num_envs,
+        headless=args.headless,
+    )
+    if multi_agent or args.robot == "None":
+        scenario = task_cls.scenario.update(**common)
     else:
-        scenario = task_cls.scenario.update(
-            robots=[args.robot],
-            scene=scene_cfg,
-            cameras=[camera],
-            # random=args.random,
-            render=args.render,
-            simulator=args.sim,
-            renderer=args.renderer,
-            num_envs=args.num_envs,
-            headless=args.headless,
-        )
+        scenario = task_cls.scenario.update(robots=[args.robot], **common)
 
     num_envs: int = scenario.num_envs
 
@@ -190,9 +188,11 @@ def main():
     ## Data
     tic = time.time()
     assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
-    init_states, all_actions, all_states = get_traj(
-        traj_filepath, scenario.robots[0], env.handler
-    )  # XXX: only support one robot
+    # Single robot -> pass the one RobotCfg (byte-identical legacy path); multiple
+    # robots -> pass the list so get_traj merges every agent's slice into the
+    # same 3-tuple shape (each per-step action dict spans all robots).
+    robot_arg = scenario.robots if len(scenario.robots) > 1 else scenario.robots[0]
+    init_states, all_actions, all_states = get_traj(traj_filepath, robot_arg, env.handler)
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
 

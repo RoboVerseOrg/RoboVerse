@@ -1,11 +1,22 @@
 from typing import Optional
 
-import numba
 import numpy as np
 from roboverse_learn.il.utils.replay_buffer import ReplayBuffer
 
+try:
+    # numba jit-compiles create_indices (fast path); it needs numpy <= 1.26 and
+    # fails to import on numpy >= 2.0. Fall back to an identity decorator so the
+    # function runs as plain Python -- correct, just not jit-accelerated.
+    import numba
 
-@numba.jit(nopython=True)
+    _jit = numba.jit(nopython=True)
+except Exception:
+
+    def _jit(fn):
+        return fn
+
+
+@_jit
 def create_indices(
     episode_ends: np.ndarray,
     sequence_length: int,
