@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import torch
 
-from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveSphereCfg
+from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveMultiBoxCfg, PrimitiveSphereCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
 from metasim.utils.state import TensorState
@@ -28,6 +28,8 @@ def _build_object(name, kind, geom, mass, color, pos, kinematic):
         return PrimitiveCubeCfg(size=list(geom), **common)
     if kind == "sphere":
         return PrimitiveSphereCfg(radius=float(geom), **common)
+    if kind == "multibox":
+        return PrimitiveMultiBoxCfg(boxes=list(geom), **common)
     raise ValueError(f"unsupported primitive kind: {kind}")
 
 

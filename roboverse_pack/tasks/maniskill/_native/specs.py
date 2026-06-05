@@ -97,4 +97,47 @@ TASK_SPECS: dict[str, dict] = {
         ],
         "success": _stacked("cubeC", "cubeA"),
     },
+    # --- multi-shape (compound-box) tasks, via PrimitiveMultiBoxCfg ---
+    "pull_cube_tool": {
+        "gym_id": "PullCubeTool-v1", "base": _BASE, "max_steps": 50,
+        "objects": [
+            ("cube", "box", _CUBE, 0.064, _MSBLUE, (0.0677, -0.2104, 0.025), False),
+            ("l_shape_tool", "multibox", [
+                {"half_size": [0.10, 0.025, 0.025], "pos": [0.10, 0.0, 0.0]},
+                {"half_size": [0.025, 0.05, 0.025], "pos": [0.175, 0.05, 0.0]},
+            ], 0.5, _RED, (-0.1993, -0.2536, 0.025), False),
+        ],
+        "success": _moved("cube", (0.0677, -0.2104)),
+    },
+    "peg_insertion_side": {
+        "gym_id": "PegInsertionSide-v1", "base": _BASE, "max_steps": 50,
+        "objects": [
+            ("peg_0", "box", [0.214, 0.0444, 0.0444], 0.41986, [0.843, 0.173, 0.094], (-0.0007, -0.0695, 0.0222), False),
+            ("box_with_hole_0", "multibox", [
+                {"half_size": [0.107, 0.0365, 0.107], "pos": [0.0, 0.0704, 0.0]},
+                {"half_size": [0.107, 0.0453, 0.107], "pos": [0.0, -0.0617, 0.0]},
+                {"half_size": [0.107, 0.107, 0.039], "pos": [0.0, 0.0, 0.068]},
+                {"half_size": [0.107, 0.107, 0.0428], "pos": [0.0, 0.0, -0.0641]},
+            ], 14.97128, [1.0, 0.652, 0.255], (0.0134, 0.298, 0.107), True),
+        ],
+        "success": _moved("peg_0", (-0.0007, -0.0695)),
+    },
+    "plug_charger": {
+        "gym_id": "PlugCharger-v1", "base": _BASE, "max_steps": 50,
+        "objects": [
+            ("charger", "multibox", [
+                {"half_size": [0.008, 0.0008, 0.0032], "pos": [0.008, 0.007, 0.0]},
+                {"half_size": [0.008, 0.0008, 0.0032], "pos": [0.008, -0.007, 0.0]},
+                {"half_size": [0.02, 0.015, 0.012], "pos": [-0.02, 0.0, 0.0]},
+            ], 0.02911, [1, 1, 1], (-0.0496, 0.1661, 0.012), False),
+            ("receptacle", "multibox", [
+                {"half_size": [0.01, 0.05, 0.0232], "pos": [-0.01, 0.0, 0.0268]},
+                {"half_size": [0.01, 0.05, 0.0232], "pos": [-0.01, 0.0, -0.0268]},
+                {"half_size": [0.01, 0.0209, 0.05], "pos": [-0.01, 0.0291, 0.0]},
+                {"half_size": [0.01, 0.0209, 0.05], "pos": [-0.01, -0.0291, 0.0]},
+                {"half_size": [0.01, 0.0058, 0.0037], "pos": [-0.01, 0.0, 0.0]},
+            ], 0.3539, [1, 1, 1], (0.0598, 0.0905, 0.10), True),
+        ],
+        "success": _moved("charger", (-0.0496, 0.1661)),
+    },
 }
