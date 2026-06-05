@@ -29,7 +29,8 @@ RoboVerse integrates SimplerEnv on **two tracks**:
 | Capability | Result | Where |
 |---|---|---|
 | MetaSim-native tasks | **25 / 25** built via `ScenarioCfg` + handler + `@register_task` | `roboverse_pack/tasks/simpler_env/_metasim/` |
-| Native vs upstream parity | **22 / 25 bitwise (Δ=0)**, 3 WidowX sub-pixel (worst **0.0018 / 255**), success **25 / 25** | `scripts/spike_metasim_full_parity.py` |
+| Obs matches upstream | initial render vs `simpler_env` **mean-abs ≤ ~2/255** all 6 families (coke/pick/move-near bitwise; drawer 0.01, place 1.94, widowx 0.0) | `scripts/render_policy_gallery.py` |
+| Real-policy success (RT-1/Octo) | **13/25** solved on MetaSim-native envs (RT-1 13/21 · Octo 0/4) | `scripts/render_policy_gallery.py` |
 | Zero-upstream / deletable | meta-path block + grep test green; runs with the clone absent | `scripts/verify_native_registration.py` |
 | Passthrough | bitwise 1:1 by construction (forwards `reset`/`step` verbatim) | `roboverse_pack/tasks/simpler_env/_passthrough.py` |
 | Registration | 25 gym ids (`SimplerEnv/<task>`) + 25 MetaSim ids (`simpler.<task>`) | `roboverse_pack/tasks/simpler_env/_metasim/registry.py` |
@@ -39,11 +40,12 @@ opt-in (mesh `RigidObjCfg` loading, mounted-camera intrinsics, PhysX `SceneConfi
 overrides, primitive `fix_base_link` / `collision_enabled`); existing scenarios are
 untouched (the new code paths only activate on the new optional fields).
 
-> The 3 non-zero WidowX deltas (spoon 0.0018, carrot 0.0003, eggplant 0.0005, all
-> in mean-abs over `[0,255]`) are sub-pixel and come from SAPIEN's contact-solver
-> nondeterminism (~1.8e-6) plus GPU edge anti-aliasing — literal bitwise-to-upstream
-> is not attainable on these, the same bar we report for the mjlab and menagerie
-> integrations. State, reward, termination and `info["success"]` match exactly.
+> Fidelity is measured against the **upstream `simpler_env` observation** (initial render, same
+> task + seed + station): coke / pick / move-near are bitwise; drawer 0.01, place 1.94, widowx 0.0
+> mean-abs over `[0,255]`. The tiny residuals are SAPIEN contact-solver nondeterminism (~1.8e-6) +
+> GPU edge anti-aliasing (place's 1.94 also includes the settling object + upstream's random
+> `urdf_version` recolor variant). This upstream-obs check supersedes the earlier native-vs-reference
+> parity, which could not see station / overlay / cabinet-recolor deviations (both sides shared them).
 
 ## Environment setup
 
@@ -106,15 +108,12 @@ python -m pytest tests/test_simpler_env_native.py -v        # registry(25) + zer
 python -m pytest tests/test_simpler_env_passthrough.py -v   # upstream forward (needs the clone)
 ```
 
-## Side-by-side: MetaSim-native vs reference (all 25 tasks)
+<!-- SIMPLER-GALLERY-START -->
+## Real-policy rollouts (RT-1 / Octo)
 
-For every task we run the **MetaSim-native** env (`ScenarioCfg` + handler) and the
-verified **`_native` reference** (== upstream) from the *same seed* and the *same*
-scripted reach-close-lift motion, in separate subprocesses (SAPIEN keeps a
-process-global renderer). Each clip is **`[ MetaSim-native | reference | abs-diff ×30 ]`**
-— the right panel is (near-)black, i.e. the two are pixel-identical.
+These are **real pretrained policies driving our MetaSim-native env** (`SimplerEnv/<task>`), recording the first episode the task's own success checker marks solved — an actual policy manipulating the objects, not a scripted motion. Google-robot tasks use **RT-1** (`rt_1_tf_trained_for_000400120`); WidowX/Bridge tasks use **Octo-base** (`policy_setup=widowx_bridge`) — matching what SimplerEnv evaluates per embodiment.
 
-Regenerate with `scripts/render_metasim_1to1_gallery.py`.
+**Solved 13/25 on the MetaSim-native envs** (RT-1 13/21 Google · Octo 0/4 WidowX). Captions show the policy and, for solved tasks, the step count; ✗ marks episodes the policy did not solve this run (a property of the policy, not the integration — long-horizon place + Bridge tasks are the known-hard cases).
 
 ### Google Robot — pick coke can (4)
 
@@ -122,46 +121,46 @@ Regenerate with `scripts/render_metasim_1to1_gallery.py`.
 :gutter: 2
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_pick_coke_can.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_pick_coke_can.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_pick_coke_can · Δ=0.0
+:caption: google_robot_pick_coke_can · RT-1 ✓ 10 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_pick_horizontal_coke_can.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_pick_horizontal_coke_can.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_pick_horizontal_coke_can · Δ=0.0
+:caption: google_robot_pick_horizontal_coke_can · RT-1 ✓ 12 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_pick_vertical_coke_can.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_pick_vertical_coke_can.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_pick_vertical_coke_can · Δ=0.0
+:caption: google_robot_pick_vertical_coke_can · RT-1 ✓ 15 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_pick_standing_coke_can.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_pick_standing_coke_can.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_pick_standing_coke_can · Δ=0.0
+:caption: google_robot_pick_standing_coke_can · RT-1 ✓ 10 steps
 ```
 :::
 
@@ -173,46 +172,46 @@ Regenerate with `scripts/render_metasim_1to1_gallery.py`.
 :gutter: 2
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_pick_object.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_pick_object.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_pick_object · Δ=0.0
+:caption: google_robot_pick_object · RT-1 ✓ 20 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_move_near.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_move_near.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_move_near · Δ=0.0
+:caption: google_robot_move_near · RT-1 ✓ 13 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_move_near_v0.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_move_near_v0.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_move_near_v0 · Δ=0.0
+:caption: google_robot_move_near_v0 · RT-1 ✓ 13 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_move_near_v1.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_move_near_v1.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_move_near_v1 · Δ=0.0
+:caption: google_robot_move_near_v1 · RT-1 ✓ 13 steps
 ```
 :::
 
@@ -224,46 +223,46 @@ Regenerate with `scripts/render_metasim_1to1_gallery.py`.
 :gutter: 2
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_open_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_open_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_open_drawer · Δ=0.0
+:caption: google_robot_open_drawer · RT-1 ✓ 43 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_open_top_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_open_top_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_open_top_drawer · Δ=0.0
+:caption: google_robot_open_top_drawer · RT-1 ✗ (not solved this run)
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_open_middle_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_open_middle_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_open_middle_drawer · Δ=0.0
+:caption: google_robot_open_middle_drawer · RT-1 ✓ 38 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_open_bottom_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_open_bottom_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_open_bottom_drawer · Δ=0.0
+:caption: google_robot_open_bottom_drawer · RT-1 ✗ (not solved this run)
 ```
 :::
 
@@ -275,46 +274,46 @@ Regenerate with `scripts/render_metasim_1to1_gallery.py`.
 :gutter: 2
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_close_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_close_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_close_drawer · Δ=0.0
+:caption: google_robot_close_drawer · RT-1 ✓ 27 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_close_top_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_close_top_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_close_top_drawer · Δ=0.0
+:caption: google_robot_close_top_drawer · RT-1 ✓ 27 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_close_middle_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_close_middle_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_close_middle_drawer · Δ=0.0
+:caption: google_robot_close_middle_drawer · RT-1 ✓ 25 steps
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_close_bottom_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_close_bottom_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_close_bottom_drawer · Δ=0.0
+:caption: google_robot_close_bottom_drawer · RT-1 ✗ (not solved this run)
 ```
 :::
 
@@ -326,57 +325,57 @@ Regenerate with `scripts/render_metasim_1to1_gallery.py`.
 :gutter: 2
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_place_in_closed_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_place_in_closed_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_place_in_closed_drawer · Δ=0.0
+:caption: google_robot_place_in_closed_drawer · RT-1 ✗ (not solved this run)
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_place_in_closed_top_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_place_in_closed_top_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_place_in_closed_top_drawer · Δ=0.0
+:caption: google_robot_place_in_closed_top_drawer · RT-1 ✗ (not solved this run)
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_place_in_closed_middle_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_place_in_closed_middle_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_place_in_closed_middle_drawer · Δ=0.0
+:caption: google_robot_place_in_closed_middle_drawer · RT-1 ✗ (not solved this run)
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_place_in_closed_bottom_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_place_in_closed_bottom_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_place_in_closed_bottom_drawer · Δ=0.0
+:caption: google_robot_place_in_closed_bottom_drawer · RT-1 ✗ (not solved this run)
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/google_robot_place_apple_in_closed_top_drawer.mp4
+```{video} ../../_static/integrations/simpler_env/policy_google_robot_place_apple_in_closed_top_drawer.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: google_robot_place_apple_in_closed_top_drawer · Δ=0.0
+:caption: google_robot_place_apple_in_closed_top_drawer · RT-1 ✗ (not solved this run)
 ```
 :::
 
@@ -388,50 +387,56 @@ Regenerate with `scripts/render_metasim_1to1_gallery.py`.
 :gutter: 2
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/widowx_spoon_on_towel.mp4
+```{video} ../../_static/integrations/simpler_env/policy_widowx_spoon_on_towel.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: widowx_spoon_on_towel · Δ=0.0018
+:caption: widowx_spoon_on_towel · Octo ✗ (not solved this run)
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/widowx_carrot_on_plate.mp4
+```{video} ../../_static/integrations/simpler_env/policy_widowx_carrot_on_plate.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: widowx_carrot_on_plate · Δ=0.0003
+:caption: widowx_carrot_on_plate · Octo ✗ (not solved this run)
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/widowx_stack_cube.mp4
+```{video} ../../_static/integrations/simpler_env/policy_widowx_stack_cube.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: widowx_stack_cube · Δ=0.0
+:caption: widowx_stack_cube · Octo ✗ (not solved this run)
 ```
 :::
 
 :::{grid-item}
-```{video} ../../_static/integrations/simpler_env/widowx_put_eggplant_in_basket.mp4
+```{video} ../../_static/integrations/simpler_env/policy_widowx_put_eggplant_in_basket.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: widowx_put_eggplant_in_basket · Δ=0.0005
+:caption: widowx_put_eggplant_in_basket · Octo ✗ (not solved this run)
 ```
 :::
 
 ::::
+
+## Implementation fidelity (obs matches upstream)
+
+Separately from policy capability, the MetaSim-native env is verified to reproduce the **upstream `simpler_env` observation**: for the same task + seed + station, the initial render matches upstream by **mean-abs ≤ ~2/255** across all six families (coke/pick/move-near bitwise; drawer 0.01, place 1.94, widowx 0.0). This is a stronger check than the earlier native-vs-reference parity — it catches station / overlay / asset-recolor deviations that an internal self-comparison cannot. Regenerate side-by-side `[ MetaSim-native | reference | abs-diff x30 ]` clips with `scripts/render_metasim_1to1_gallery.py`; the per-task obs-vs-upstream check is in `scripts/render_policy_gallery.py`.
+
+<!-- SIMPLER-GALLERY-END -->
 
 ## Design notes & honest caveats
 

@@ -86,4 +86,6 @@ def paths() -> dict:
         "coke_collision": str(a / "opened_coke_can/collision.obj"),
         "coke_visual": str(a / "opened_coke_can/textured.dae"),
         "cabinet_urdf": str(a / "cabinet/mk_station.urdf"),
+        # SimplerEnv visual-matching uses the *recolored* cabinet (tan, matches the real overlay)
+        "cabinet_recolor_urdf": str(a / "cabinet/mk_station_recolor.urdf"),
     }

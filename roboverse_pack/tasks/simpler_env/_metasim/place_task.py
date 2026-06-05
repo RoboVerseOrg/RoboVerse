@@ -14,6 +14,7 @@ import os
 
 import numpy as np
 import sapien.core as sapien
+from transforms3d.euler import euler2quat
 
 from metasim.scenario.objects import ArticulationObjCfg
 from metasim.scenario.scenario import ScenarioCfg
@@ -22,6 +23,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 from .._native._assets import paths
 from .._native.control import CombinedController
 from .._native.grasp import compute_total_impulse, get_pairwise_contacts
+from .._native.overlay import load_overlay_image
 from .._native.robot_config import google_robot_deployed_controller_configs
 from .._native.scene import INIT_QPOS, ROBOT_INIT_HEIGHT
 from .base import HIDDEN_POS, SimplerMetaSimTask, candidate_mesh_objects, set_actor_collision
@@ -30,6 +32,12 @@ from .drawer_task import CABINET_POSE_P, _google_robot_cfg, _overhead_camera_cfg
 CAB_NAME = "cabinet"
 SCENE_TABLE_HEIGHT, OBJ_FRICTION, FORCE_ADVANCE_STEPS = 0.87, 0.5, 100
 MODEL_DB_JSON = "info_pick_custom_baked_tex_v1.json"
+
+# SimplerEnv visual-matching stations for place (place_in_closed_drawer_in_scene.py): 3 overlays
+_STATION_OVERLAY_IDS = ["a0", "b0", "c0"]
+_STATION_ROBOT_XS = [0.644, 0.652, 0.665]
+_STATION_ROBOT_YS = [-0.179, 0.009, 0.224]
+_STATION_ROBOT_ROTZS = [-0.03, 0.0, 0.0]
 
 
 def _place_sim_params():
@@ -66,7 +74,7 @@ class SimplerPlaceTask(SimplerMetaSimTask):
         self._candidate_ids = sorted(db.keys())
         cabinet = ArticulationObjCfg(
             name=CAB_NAME,
-            urdf_path=paths()["cabinet_urdf"],
+            urdf_path=paths()["cabinet_recolor_urdf"],
             fix_base_link=True,
             default_position=CABINET_POSE_P,
             default_orientation=(1.0, 0.0, 0.0, 0.0),
@@ -132,10 +140,14 @@ class SimplerPlaceTask(SimplerMetaSimTask):
         obj_xy = (options.get("obj_init_options") or {}).get("init_xy")
         if obj_xy is None:
             obj_xy = rng.uniform([-0.10, -0.00], [-0.05, 0.1], [2])
-        rxy = (options.get("robot_init_options") or {}).get("init_xy") or [
-            rng.uniform(0.30, 0.40),
-            rng.uniform(0.0, 0.2),
-        ]
+        # visual-matching station: robot base xy + yaw + matching real-image overlay
+        rio = options.get("robot_init_options") or {}
+        idx = int(rio["station"]) if rio.get("station") is not None else int(rng.choice(len(_STATION_OVERLAY_IDS)))
+        rxy = rio.get("init_xy") or [_STATION_ROBOT_XS[idx], _STATION_ROBOT_YS[idx]]
+        rquat = (sapien.Pose(q=euler2quat(0, 0, _STATION_ROBOT_ROTZS[idx])) * sapien.Pose(q=[0, 0, 0, 1])).q
+        self._overlay = load_overlay_image(
+            os.path.join(paths()["overlay_dir"], f"open_drawer_{_STATION_OVERLAY_IDS[idx]}.png")
+        )
 
         self.cabinet.set_qpos(np.zeros(self.cabinet.dof))
         self.cabinet.set_qvel(np.zeros(self.cabinet.dof))
@@ -154,7 +166,7 @@ class SimplerPlaceTask(SimplerMetaSimTask):
             self._settle(1.5)
         self.obj_height_after_settle = float(self.obj.pose.p[2])
 
-        self.robot.set_root_pose(sapien.Pose([rxy[0], rxy[1], ROBOT_INIT_HEIGHT], [0, 0, 0, 1]))
+        self.robot.set_root_pose(sapien.Pose([rxy[0], rxy[1], ROBOT_INIT_HEIGHT], rquat))
         self.robot.set_qpos(INIT_QPOS)
         self.robot.set_qvel(np.zeros(self.robot.dof))
         self.controller.reset()
@@ -166,7 +178,11 @@ class SimplerPlaceTask(SimplerMetaSimTask):
         return self.get_obs(), {"model_id": self.model_id, "drawer_id": self.drawer_id}
 
     def _foreground_ids(self):
-        return [link.get_id() for link in self.robot.get_links()] + [self.obj.get_id()]
+        return (
+            [link.get_id() for link in self.robot.get_links()]
+            + [lk.get_id() for lk in self.cabinet.get_links()]
+            + [self.obj.get_id()]
+        )
 
     def step(self, action):
         if self._elapsed >= FORCE_ADVANCE_STEPS:
