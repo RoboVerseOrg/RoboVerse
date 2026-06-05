@@ -33,17 +33,17 @@ import tempfile
 os.environ.setdefault("MUJOCO_GL", "egl")
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
-import gymnasium as gym  # noqa: E402
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
-import torch  # noqa: E402
+import gymnasium as gym
+import mujoco
+import numpy as np
+import torch
 
-from metasim.scenario.scenario import ScenarioCfg  # noqa: E402
-from metasim.scenario.scene import SceneCfg  # noqa: E402
-from metasim.scenario.simulator_params import SimParamCfg  # noqa: E402
-from metasim.sim.mujoco.mujoco import MujocoHandler  # noqa: E402
-from metasim.task.base import BaseTaskEnv  # noqa: E402
-from metasim.task.registry import register_task  # noqa: E402
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.scenario.scene import SceneCfg
+from metasim.scenario.simulator_params import SimParamCfg
+from metasim.sim.mujoco.mujoco import MujocoHandler
+from metasim.task.base import BaseTaskEnv
+from metasim.task.registry import register_task
 
 _MODEL_TIMESTEP = 0.002  # robosuite macros.SIMULATION_TIMESTEP
 
@@ -56,7 +56,7 @@ class _GroundlessMujocoHandler(MujocoHandler):
     error) and add a second floor plane that changes contact dynamics.
     """
 
-    def _add_ground(self, mjcf_model) -> None:  # noqa: ANN001
+    def _add_ground(self, mjcf_model) -> None:
         return None
 
 
@@ -77,7 +77,7 @@ class RobosuiteEnv(BaseTaskEnv):
         np.random.seed(seed)
         self._oracle.reset()
 
-        self._decimation = int(round((1.0 / self.control_freq) / _MODEL_TIMESTEP))
+        self._decimation = round((1.0 / self.control_freq) / _MODEL_TIMESTEP)
         # capture per-substep ctrl emitted by robosuite's controller
         self._substep_ctrl: list[np.ndarray] = []
         self._wrap_pre_action()
@@ -129,7 +129,7 @@ class RobosuiteEnv(BaseTaskEnv):
         orig = oracle._pre_action
         data = oracle.sim.data._data
 
-        def patched(action, policy_step=False):  # noqa: ANN001
+        def patched(action, policy_step=False):
             orig(action, policy_step)
             self._substep_ctrl.append(data.ctrl.copy())
 
@@ -238,6 +238,15 @@ class RobosuiteEnv(BaseTaskEnv):
         except Exception:
             pass
         super().close()
+        # remove the per-instance temp MJCF (delete=False so the handler could
+        # open it by path); otherwise these leak into the tmp dir.
+        f = getattr(self, "_xml_file", None)
+        if f is not None:
+            try:
+                os.unlink(f.name)
+            except OSError:
+                pass
+            self._xml_file = None
 
 
 # --------------------------------------------------------------------- tasks

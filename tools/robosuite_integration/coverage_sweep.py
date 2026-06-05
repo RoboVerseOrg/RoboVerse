@@ -1,4 +1,4 @@
-"""Broad engine-parity sweep across robosuite tasks × robots.
+"""Broad engine-parity sweep across robosuite tasks x robots.
 
 Controller-free: load each (env, robot)'s compiled MJCF, drive the raw actuators
 with a deterministic sinusoid in robosuite's own MjSim and in MetaSim's
@@ -22,14 +22,24 @@ os.environ.setdefault("MUJOCO_GL", "egl")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
+import mujoco
+import numpy as np
 
 # single-arm concrete manipulation tasks
 SINGLE_ARM_TASKS = [
-    "Lift", "Stack", "Door", "Wipe", "ToolHang",
-    "NutAssembly", "NutAssemblySquare", "NutAssemblyRound",
-    "PickPlace", "PickPlaceCan", "PickPlaceBread", "PickPlaceCereal", "PickPlaceMilk",
+    "Lift",
+    "Stack",
+    "Door",
+    "Wipe",
+    "ToolHang",
+    "NutAssembly",
+    "NutAssemblySquare",
+    "NutAssemblyRound",
+    "PickPlace",
+    "PickPlaceCan",
+    "PickPlaceBread",
+    "PickPlaceCereal",
+    "PickPlaceMilk",
 ]
 TWO_ARM_TASKS = ["TwoArmLift", "TwoArmPegInHole", "TwoArmHandover", "TwoArmTransport"]
 ROBOTS = ["Panda", "Sawyer", "IIWA", "UR5e", "Kinova3", "Jaco", "XArm7"]
@@ -41,8 +51,15 @@ def _make(env_name: str, robots):
 
     cfg = load_composite_controller_config(controller="BASIC", robot=robots if isinstance(robots, str) else robots[0])
     return robosuite.make(
-        env_name, robots=robots, controller_configs=cfg, has_renderer=False,
-        has_offscreen_renderer=False, use_camera_obs=False, control_freq=20, horizon=200, ignore_done=True,
+        env_name,
+        robots=robots,
+        controller_configs=cfg,
+        has_renderer=False,
+        has_offscreen_renderer=False,
+        use_camera_obs=False,
+        control_freq=20,
+        horizon=200,
+        ignore_done=True,
     )
 
 
@@ -53,7 +70,7 @@ def engine_parity(env_name: str, robots, n_steps: int = 60) -> dict:
     xml = env.model.get_xml()
     m, d = env.sim.model._model, env.sim.data._data
     nu, nq, nv = m.nu, m.nq, m.nv
-    dec = int(round((1 / 20) / m.opt.timestep))
+    dec = round((1 / 20) / m.opt.timestep)
     body_pos, body_quat = m.body_pos.copy(), m.body_quat.copy()
     qpos0, qvel0 = d.qpos.copy(), d.qvel.copy()
 
@@ -86,9 +103,13 @@ def engine_parity(env_name: str, robots, n_steps: int = 60) -> dict:
 
     diff = float(np.abs(rs_qpos - ms_qpos).max())
     return {
-        "task": env_name, "robot": robots if isinstance(robots, str) else "+".join(robots),
-        "nq": int(nq), "nv": int(nv), "nu": int(nu),
-        "qpos_max_abs_diff": diff, "bitwise": bool(diff == 0.0),
+        "task": env_name,
+        "robot": robots if isinstance(robots, str) else "+".join(robots),
+        "nq": int(nq),
+        "nv": int(nv),
+        "nu": int(nu),
+        "qpos_max_abs_diff": diff,
+        "bitwise": bool(diff == 0.0),
     }
 
 
@@ -105,7 +126,9 @@ def main() -> None:
     for t in SINGLE_ARM_TASKS:
         try:
             r = engine_parity(t, "Panda", args.n_steps)
-            print(f"  {t:20s} nq={r['nq']:3d} nu={r['nu']:2d} max|Δqpos|={r['qpos_max_abs_diff']:.1e} bitwise={r['bitwise']}")
+            print(
+                f"  {t:20s} nq={r['nq']:3d} nu={r['nu']:2d} max|Δqpos|={r['qpos_max_abs_diff']:.1e} bitwise={r['bitwise']}"
+            )
         except Exception as e:
             r = {"task": t, "robot": "Panda", "error": str(e)[:120]}
             print(f"  {t:20s} ERROR {str(e)[:80]}")
@@ -115,7 +138,9 @@ def main() -> None:
     for rb in ROBOTS:
         try:
             r = engine_parity("Lift", rb, args.n_steps)
-            print(f"  {rb:10s} nq={r['nq']:3d} nu={r['nu']:2d} max|Δqpos|={r['qpos_max_abs_diff']:.1e} bitwise={r['bitwise']}")
+            print(
+                f"  {rb:10s} nq={r['nq']:3d} nu={r['nu']:2d} max|Δqpos|={r['qpos_max_abs_diff']:.1e} bitwise={r['bitwise']}"
+            )
         except Exception as e:
             r = {"task": "Lift", "robot": rb, "error": str(e)[:120]}
             print(f"  {rb:10s} ERROR {str(e)[:80]}")
@@ -126,7 +151,9 @@ def main() -> None:
         for t in TWO_ARM_TASKS:
             try:
                 r = engine_parity(t, ["Panda", "Panda"], args.n_steps)
-                print(f"  {t:20s} nq={r['nq']:3d} nu={r['nu']:2d} max|Δqpos|={r['qpos_max_abs_diff']:.1e} bitwise={r['bitwise']}")
+                print(
+                    f"  {t:20s} nq={r['nq']:3d} nu={r['nu']:2d} max|Δqpos|={r['qpos_max_abs_diff']:.1e} bitwise={r['bitwise']}"
+                )
             except Exception as e:
                 r = {"task": t, "robot": "Panda+Panda", "error": str(e)[:120]}
                 print(f"  {t:20s} ERROR {str(e)[:80]}")

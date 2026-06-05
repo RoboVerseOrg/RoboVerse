@@ -37,9 +37,9 @@ os.environ.setdefault("MUJOCO_GL", "egl")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
-import h5py  # noqa: E402
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
+import h5py
+import mujoco
+import numpy as np
 
 _LIBERO_ASSETS = Path(__file__).resolve().parents[2] / "third_party/LIBERO/libero/libero/assets"
 _RS_ASSETS = "/venv/roboverse/lib/python3.11/site-packages/robosuite/models/assets"
@@ -95,15 +95,21 @@ def _handler(xml: str):
     from metasim.scenario.scenario import ScenarioCfg
     from metasim.scenario.scene import SceneCfg
     from metasim.scenario.simulator_params import SimParamCfg
-
     from roboverse_pack.tasks.robosuite.robosuite_env import _GroundlessMujocoHandler
 
     tmp = tempfile.NamedTemporaryFile(suffix=".xml", delete=False, mode="w")
     tmp.write(xml)
     tmp.flush()
     sc = ScenarioCfg(
-        scene=SceneCfg(mjcf_path=tmp.name), robots=[], lights=[], ground=None,
-        sim_params=SimParamCfg(dt=0.002), decimation=25, simulator="mujoco", num_envs=1, headless=True,
+        scene=SceneCfg(mjcf_path=tmp.name),
+        robots=[],
+        lights=[],
+        ground=None,
+        sim_params=SimParamCfg(dt=0.002),
+        decimation=25,
+        simulator="mujoco",
+        num_envs=1,
+        headless=True,
     )
     h = _GroundlessMujocoHandler(sc)
     h.launch()
@@ -124,7 +130,7 @@ def analyze_demo(hdf5: str, demo: str, n_engine: int = 60, n_states: int = 80) -
     d = mujoco.MjData(m)
     nq, nv = m.nq, m.nv
     dt = m.opt.timestep
-    dec = int(round((1 / 20) / dt))
+    dec = round((1 / 20) / dt)
     q0, v0 = states[0][1 : 1 + nq], states[0][1 + nq : 1 + nq + nv]
 
     # engine parity: raw mujoco (LIBERO engine) vs dm_control (MetaSim loader)
@@ -147,9 +153,15 @@ def analyze_demo(hdf5: str, demo: str, n_engine: int = 60, n_states: int = 80) -
         fk_max = max(fk_max, float(np.abs(d.xpos - hd.xpos).max()))
 
     return {
-        "demo": demo, "nq": int(nq), "nv": int(nv), "nu": int(m.nu), "T": int(states.shape[0]),
-        "engine_qpos_max_abs_diff": engine_diff, "engine_bitwise": bool(engine_diff == 0.0),
-        "state_replay_fk_max_abs_diff": fk_max, "state_replay_bitwise": bool(fk_max == 0.0),
+        "demo": demo,
+        "nq": int(nq),
+        "nv": int(nv),
+        "nu": int(m.nu),
+        "T": int(states.shape[0]),
+        "engine_qpos_max_abs_diff": engine_diff,
+        "engine_bitwise": bool(engine_diff == 0.0),
+        "state_replay_fk_max_abs_diff": fk_max,
+        "state_replay_bitwise": bool(fk_max == 0.0),
         "demo_success": bool(dones[-1] == 1 or rewards[-1] >= 1.0),
     }
 
@@ -179,14 +191,20 @@ def main() -> None:
             f"state-FK max|Δ|={r['state_replay_fk_max_abs_diff']:.1e} (bit={r['state_replay_bitwise']}) success={r['demo_success']}"
         )
     summary = {
-        "hdf5": os.path.basename(args.hdf5), "task": str(task), "n_demos": len(demos),
-        "engine_bitwise": f"{eng_ok}/{len(demos)}", "state_replay_bitwise": f"{sr_ok}/{len(demos)}",
-        "demo_success": f"{succ}/{len(demos)}", "demos": results,
+        "hdf5": os.path.basename(args.hdf5),
+        "task": str(task),
+        "n_demos": len(demos),
+        "engine_bitwise": f"{eng_ok}/{len(demos)}",
+        "state_replay_bitwise": f"{sr_ok}/{len(demos)}",
+        "demo_success": f"{succ}/{len(demos)}",
+        "demos": results,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(summary, indent=2))
-    print(f"\nLIBERO {summary['task']}: engine {summary['engine_bitwise']} bitwise | "
-          f"state-replay {summary['state_replay_bitwise']} bitwise | success {summary['demo_success']}")
+    print(
+        f"\nLIBERO {summary['task']}: engine {summary['engine_bitwise']} bitwise | "
+        f"state-replay {summary['state_replay_bitwise']} bitwise | success {summary['demo_success']}"
+    )
     print(f"wrote {args.out}")
 
 

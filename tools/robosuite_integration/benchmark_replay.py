@@ -32,9 +32,9 @@ from pathlib import Path
 os.environ.setdefault("MUJOCO_GL", "egl")
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
-import h5py  # noqa: E402
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
+import h5py
+import mujoco
+import numpy as np
 
 
 def _iter_demos(path: str, n: int | None):
@@ -74,7 +74,6 @@ def _handler_for(xml: str):
     from metasim.scenario.scenario import ScenarioCfg
     from metasim.scenario.scene import SceneCfg
     from metasim.scenario.simulator_params import SimParamCfg
-
     from roboverse_pack.tasks.robosuite.robosuite_env import _GroundlessMujocoHandler
 
     tmp = tempfile.NamedTemporaryFile(suffix=".xml", delete=False, mode="w")
@@ -116,9 +115,7 @@ def render_state_replay_with_success(env_name: str, states: np.ndarray, out_path
     handler = _handler_for(xml)
     hm, hd = handler.physics.model.ptr, handler.physics.data.ptr
     hrenderer = mujoco.Renderer(hm, height=480, width=480)
-    hcam = camera if any(
-        mujoco.mj_id2name(hm, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(hm.ncam)
-    ) else 0
+    hcam = camera if any(mujoco.mj_id2name(hm, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(hm.ncam)) else 0
     # show visual meshes (group 1/2), hide collision geoms (group 0) so the
     # handler render matches robosuite's visual appearance — same qpos, same look.
     scene_opt = mujoco.MjvOption()
@@ -179,9 +176,7 @@ def render_qpos_replay_with_success(
         hm.body_pos[:] = body_pos
         hm.body_quat[:] = body_quat
     hr = mujoco.Renderer(hm, height=480, width=480)
-    hcam = camera if any(
-        mujoco.mj_id2name(hm, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(hm.ncam)
-    ) else 0
+    hcam = camera if any(mujoco.mj_id2name(hm, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(hm.ncam)) else 0
     opt = mujoco.MjvOption()
     opt.geomgroup[0] = 0
     for g in range(1, 6):
@@ -218,9 +213,7 @@ def _handler_state_frames(xml: str, qpos_seq: np.ndarray, camera: str = "agentvi
     handler = _handler_for(xml)
     hm, hd = handler.physics.model.ptr, handler.physics.data.ptr
     renderer = mujoco.Renderer(hm, height=384, width=384)
-    cam = camera if any(
-        mujoco.mj_id2name(hm, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(hm.ncam)
-    ) else 0
+    cam = camera if any(mujoco.mj_id2name(hm, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(hm.ncam)) else 0
     frames = []
     for qpos in qpos_seq:
         hd.qpos[:] = qpos
@@ -416,7 +409,9 @@ def main() -> None:
         f"state-replay FK max|Δ| {sr_max:.1e} (bitwise={summary['state_replay_bitwise_all']})"
     )
     if args.action:
-        msg += f" | action-replay max|Δqpos| {ar_max:.1e} (bitwise={ar_bitwise_all}) | success {n_success}/{len(per_demo)}"
+        msg += (
+            f" | action-replay max|Δqpos| {ar_max:.1e} (bitwise={ar_bitwise_all}) | success {n_success}/{len(per_demo)}"
+        )
     print(msg)
     print(f"wrote {args.out / 'benchmark_replay.json'}")
 

@@ -55,13 +55,11 @@ def quat2mat(q: np.ndarray) -> np.ndarray:
     wX, wY, wZ = w * X, w * Y, w * Z
     xX, xY, xZ = x * X, x * Y, x * Z
     yY, yZ, zZ = y * Y, y * Z, z * Z
-    return np.array(
-        [
-            [1.0 - (yY + zZ), xY - wZ, xZ + wY],
-            [xY + wZ, 1.0 - (xX + zZ), yZ - wX],
-            [xZ - wY, yZ + wX, 1.0 - (xX + yY)],
-        ]
-    )
+    return np.array([
+        [1.0 - (yY + zZ), xY - wZ, xZ + wY],
+        [xY + wZ, 1.0 - (xX + zZ), yZ - wX],
+        [xZ - wY, yZ + wX, 1.0 - (xX + yY)],
+    ])
 
 
 def orientation_error(desired: np.ndarray, current: np.ndarray) -> np.ndarray:

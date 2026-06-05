@@ -6,8 +6,8 @@ import os
 
 os.environ.setdefault("MUJOCO_GL", "egl")
 
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
+import mujoco
+import numpy as np
 
 
 def render_qpos_sequence(
@@ -21,9 +21,11 @@ def render_qpos_sequence(
     """Render an RGB frame for each qpos by forward-kinematics only (no stepping)."""
     data = mujoco.MjData(model)
     renderer = mujoco.Renderer(model, height=height, width=width)
-    cam = camera if any(
-        mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(model.ncam)
-    ) else 0
+    cam = (
+        camera
+        if any(mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_CAMERA, i) == camera for i in range(model.ncam))
+        else 0
+    )
     frames = []
     for qpos in qpos_seq:
         data.qpos[:] = qpos

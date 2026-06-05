@@ -22,9 +22,9 @@ from pathlib import Path
 os.environ.setdefault("MUJOCO_GL", "egl")
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
-import numpy as np  # noqa: E402
+import numpy as np
 
-from .inventory import ALL_TASKS, get  # noqa: E402
+from .inventory import ALL_TASKS, get
 
 
 def _scripted_policy(action_dim: int):

@@ -24,12 +24,12 @@ os.environ.setdefault("MUJOCO_GL", "egl")
 os.environ.setdefault("HF_HUB_OFFLINE", "0")  # need network for remote reads
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
-import fsspec  # noqa: E402
-import h5py  # noqa: E402
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
+import fsspec
+import h5py
+import mujoco
+import numpy as np
 
-from .libero_replay import _roll, remap_libero_model  # noqa: E402
+from .libero_replay import _roll, remap_libero_model
 
 _HF = "https://huggingface.co/datasets/yifengzhu-hf/LIBERO-datasets/resolve/main"
 _LOCAL = {  # already downloaded in full — read locally
@@ -60,7 +60,7 @@ def analyze(suite: str, stem: str, n_engine: int = 40) -> dict:
     m = mujoco.MjModel.from_xml_string(xml)
     d = mujoco.MjData(m)
     nq, nv = m.nq, m.nv
-    dec = int(round((1 / 20) / m.opt.timestep))
+    dec = round((1 / 20) / m.opt.timestep)
     q0, v0 = states[0][1 : 1 + nq], states[0][1 + nq : 1 + nq + nv]
     raw = _roll(m, d, q0, v0, dec, n_engine)
     from dm_control import mjcf
@@ -78,9 +78,16 @@ def analyze(suite: str, stem: str, n_engine: int = 40) -> dict:
         mujoco.mj_forward(hm, hd)
         fk = max(fk, float(np.abs(d.xpos - hd.xpos).max()))
     return {
-        "suite": suite, "task": stem, "nq": int(nq), "nv": int(nv), "nu": int(m.nu),
-        "engine_max_abs_diff": eng, "engine_bitwise": bool(eng == 0.0),
-        "state_fk_max_abs_diff": fk, "state_bitwise": bool(fk == 0.0), "demo_success": bool(last_done == 1),
+        "suite": suite,
+        "task": stem,
+        "nq": int(nq),
+        "nv": int(nv),
+        "nu": int(m.nu),
+        "engine_max_abs_diff": eng,
+        "engine_bitwise": bool(eng == 0.0),
+        "state_fk_max_abs_diff": fk,
+        "state_bitwise": bool(fk == 0.0),
+        "demo_success": bool(last_done == 1),
     }
 
 
@@ -103,9 +110,12 @@ def main() -> None:
             st_ok += r["state_bitwise"]
             succ += r["demo_success"]
             by_suite.setdefault(suite, []).append(r["engine_bitwise"] and r["state_bitwise"])
-            print(f"  [{i + 1:3d}/{len(tasks)}] {suite:14s} {stem[:42]:42s} eng={r['engine_max_abs_diff']:.0e} "
-                  f"st={r['state_fk_max_abs_diff']:.0e} bit={r['engine_bitwise'] and r['state_bitwise']}", flush=True)
-        except Exception as e:  # noqa: BLE001
+            print(
+                f"  [{i + 1:3d}/{len(tasks)}] {suite:14s} {stem[:42]:42s} eng={r['engine_max_abs_diff']:.0e} "
+                f"st={r['state_fk_max_abs_diff']:.0e} bit={r['engine_bitwise'] and r['state_bitwise']}",
+                flush=True,
+            )
+        except Exception as e:
             errs += 1
             r = {"suite": suite, "task": stem, "error": str(e)[:140]}
             print(f"  [{i + 1:3d}/{len(tasks)}] {suite:14s} {stem[:42]:42s} ERROR {str(e)[:60]}", flush=True)
@@ -114,15 +124,20 @@ def main() -> None:
 
     n = len(tasks)
     summary = {
-        "n_tasks": n, "engine_bitwise": f"{eng_ok}/{n}", "state_bitwise": f"{st_ok}/{n}",
-        "demo_success": f"{succ}/{n}", "errors": errs,
+        "n_tasks": n,
+        "engine_bitwise": f"{eng_ok}/{n}",
+        "state_bitwise": f"{st_ok}/{n}",
+        "demo_success": f"{succ}/{n}",
+        "errors": errs,
         "per_suite_bitwise": {s: f"{sum(v)}/{len(v)}" for s, v in by_suite.items()},
         "tasks": results,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(summary, indent=2))
-    print(f"\nALL LIBERO: engine {summary['engine_bitwise']} | state {summary['state_bitwise']} | "
-          f"success {summary['demo_success']} | errors {errs}")
+    print(
+        f"\nALL LIBERO: engine {summary['engine_bitwise']} | state {summary['state_bitwise']} | "
+        f"success {summary['demo_success']} | errors {errs}"
+    )
     print("per-suite:", summary["per_suite_bitwise"])
     print(f"wrote {args.out}")
 

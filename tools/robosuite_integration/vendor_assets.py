@@ -31,8 +31,15 @@ def vendor(env_name: str, out_dir: Path, robot: str = "Panda") -> Path:
 
     cfg = load_composite_controller_config(controller="BASIC", robot=robot)
     env = robosuite.make(
-        env_name, robots=robot, controller_configs=cfg, has_renderer=False,
-        has_offscreen_renderer=False, use_camera_obs=False, control_freq=20, horizon=200, ignore_done=True,
+        env_name,
+        robots=robot,
+        controller_configs=cfg,
+        has_renderer=False,
+        has_offscreen_renderer=False,
+        use_camera_obs=False,
+        control_freq=20,
+        horizon=200,
+        ignore_done=True,
     )
     env.reset()
     xml = env.model.get_xml()

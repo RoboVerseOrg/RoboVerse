@@ -21,11 +21,11 @@ from pathlib import Path
 # robosuite spams part-controller warnings for single-arm robots; quiet them.
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
-from .common import sinusoid_ctrl, zero_ctrl  # noqa: E402
-from .diff import diff_rollouts  # noqa: E402
-from .inventory import ALL_TASKS, get  # noqa: E402
-from .metasim_rollout import metasim_dm_control_rollout  # noqa: E402
-from .robosuite_rollout import robosuite_engine_rollout  # noqa: E402
+from .common import sinusoid_ctrl, zero_ctrl
+from .diff import diff_rollouts
+from .inventory import ALL_TASKS, get
+from .metasim_rollout import metasim_dm_control_rollout
+from .robosuite_rollout import robosuite_engine_rollout
 
 CTRL_BUILDERS = {
     "zero": lambda nu: zero_ctrl(nu),
@@ -87,7 +87,7 @@ def main() -> None:
 
     args.out.mkdir(parents=True, exist_ok=True)
     summary = {"n_steps": args.n_steps, "tasks": []}
-    print(f"engine-parity sweep: {len(args.tasks)} tasks × {len(args.signals)} signals, {args.n_steps} steps")
+    print(f"engine-parity sweep: {len(args.tasks)} tasks x {len(args.signals)} signals, {args.n_steps} steps")
     for name in args.tasks:
         try:
             entry = run_task(name, n_steps=args.n_steps, out_dir=args.out, signals=args.signals)

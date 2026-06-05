@@ -22,15 +22,15 @@ from pathlib import Path
 
 os.environ.setdefault("MUJOCO_GL", "egl")
 
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
+import mujoco
+import numpy as np
 
-from metasim.scenario.scenario import ScenarioCfg  # noqa: E402
-from metasim.scenario.scene import SceneCfg  # noqa: E402
-from metasim.scenario.simulator_params import SimParamCfg  # noqa: E402
+from metasim.scenario.scenario import ScenarioCfg
+from metasim.scenario.scene import SceneCfg
+from metasim.scenario.simulator_params import SimParamCfg
 
-from ._osc import NativeOSC  # noqa: E402
-from .robosuite_env import _GroundlessMujocoHandler  # noqa: E402
+from ._osc import NativeOSC
+from .robosuite_env import _GroundlessMujocoHandler
 
 _PANDA_INIT_QPOS = np.array([0.0, 0.19635, 0.0, -2.61799, 0.0, 2.94159, 0.7854])
 _TABLE_TOP_Z = 0.8
@@ -73,11 +73,17 @@ class NativeRobosuiteEnv:
                 f"--out .robosuite_bundle/{self.ENV_NAME.lower()}"
             )
         self._rng = np.random.RandomState(seed)
-        self.decimation = int(round((1.0 / self.control_freq) / 0.002))
+        self.decimation = round((1.0 / self.control_freq) / 0.002)
         sc = ScenarioCfg(
-            scene=SceneCfg(mjcf_path=str(model_path)), robots=[], lights=[], ground=None,
-            sim_params=SimParamCfg(dt=0.002), decimation=self.decimation,
-            simulator="mujoco", num_envs=1, headless=True,
+            scene=SceneCfg(mjcf_path=str(model_path)),
+            robots=[],
+            lights=[],
+            ground=None,
+            sim_params=SimParamCfg(dt=0.002),
+            decimation=self.decimation,
+            simulator="mujoco",
+            num_envs=1,
+            headless=True,
         )
         self.handler = _GroundlessMujocoHandler(sc)
         self.handler.launch()
@@ -110,7 +116,8 @@ class NativeRobosuiteEnv:
         self._grip_qpos = [self.m.jnt_qposadr[self._jid(f"gripper0_right_finger_joint{i}")] for i in (1, 2)]
         self._eef_sid = self._sid("gripper0_right_grip_site")
         self._finger_geoms = {
-            g for g in range(self.m.ngeom)
+            g
+            for g in range(self.m.ngeom)
             if (mujoco.mj_id2name(self.m, mujoco.mjtObj.mjOBJ_GEOM, g) or "").startswith("gripper0")
             and "finger" in (mujoco.mj_id2name(self.m, mujoco.mjtObj.mjOBJ_GEOM, g) or "")
         }
@@ -120,8 +127,7 @@ class NativeRobosuiteEnv:
         self._base_ori = self.d.xmat[bid].reshape(3, 3).copy()
 
     # ---- hooks (subclasses) ----
-    def _setup_task(self):
-        ...
+    def _setup_task(self): ...
 
     def _check_success(self) -> bool:
         return False
@@ -163,10 +169,16 @@ class NativeRobosuiteEnv:
 
     def _make_osc(self):
         self._osc = NativeOSC(
-            self.m, self.d, eef_site="gripper0_right_grip_site",
-            arm_joint_qpos=self._arm_qpos, arm_joint_qvel=self._arm_qvel,
-            arm_actuator_ids=self._arm_act, gripper_actuator_ids=self._grip_act,
-            initial_joint=_PANDA_INIT_QPOS, base_pos=self._base_pos, base_ori=self._base_ori,
+            self.m,
+            self.d,
+            eef_site="gripper0_right_grip_site",
+            arm_joint_qpos=self._arm_qpos,
+            arm_joint_qvel=self._arm_qvel,
+            arm_actuator_ids=self._arm_act,
+            gripper_actuator_ids=self._grip_act,
+            initial_joint=_PANDA_INIT_QPOS,
+            base_pos=self._base_pos,
+            base_ori=self._base_ori,
         )
 
     def step(self, action: np.ndarray):
@@ -205,8 +217,12 @@ class NativeRobosuiteEnv:
     def _obs(self) -> np.ndarray:
         qpos = self.d.qpos[self._arm_qpos]
         parts = [
-            np.cos(qpos), np.sin(qpos), self.d.qvel[self._arm_qvel], self._eef_pos(),
-            _mat2quat(self.d.site_xmat[self._eef_sid].reshape(3, 3)), self.d.qpos[self._grip_qpos],
+            np.cos(qpos),
+            np.sin(qpos),
+            self.d.qvel[self._arm_qvel],
+            self._eef_pos(),
+            _mat2quat(self.d.site_xmat[self._eef_sid].reshape(3, 3)),
+            self.d.qpos[self._grip_qpos],
         ]
         parts += self._object_obs()
         return np.concatenate(parts).astype(np.float32)
@@ -255,7 +271,12 @@ class NativeStackEnv(NativeRobosuiteEnv):
         return bool(lifted and touching and not self._grasping(self._gA))
 
     def _object_obs(self):
-        return [self._body_pos(self._A), self.d.xquat[self._A].copy(), self._body_pos(self._B), self.d.xquat[self._B].copy()]
+        return [
+            self._body_pos(self._A),
+            self.d.xquat[self._A].copy(),
+            self._body_pos(self._B),
+            self.d.xquat[self._B].copy(),
+        ]
 
 
 class NativeDoorEnv(NativeRobosuiteEnv):
@@ -348,9 +369,7 @@ class NativeNutAssemblyEnv(NativeRobosuiteEnv):
     def _on_peg(self, obj_pos) -> bool:
         peg = self._body_pos(self._peg)
         return bool(
-            abs(obj_pos[0] - peg[0]) < 0.03
-            and abs(obj_pos[1] - peg[1]) < 0.03
-            and obj_pos[2] < _TABLE_TOP_Z + 0.05
+            abs(obj_pos[0] - peg[0]) < 0.03 and abs(obj_pos[1] - peg[1]) < 0.03 and obj_pos[2] < _TABLE_TOP_Z + 0.05
         )
 
     def _check_success(self) -> bool:

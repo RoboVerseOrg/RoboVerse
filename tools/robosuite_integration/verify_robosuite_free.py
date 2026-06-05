@@ -27,8 +27,8 @@ import sys
 os.environ.setdefault("MUJOCO_GL", "egl")
 sys.modules["robosuite"] = None  # simulate robosuite deleted
 
-import h5py  # noqa: E402
-import numpy as np  # noqa: E402
+import h5py
+import numpy as np
 
 _DATASETS = {
     "Lift": "datasets/lift_ph_low_dim_v141.hdf5",
@@ -85,7 +85,7 @@ def smoke(env_name: str) -> dict:
     for _ in range(20):
         try:
             env.step(np.zeros(7))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             ok = False
             print(f"   {env_name} step error: {e}")
             break

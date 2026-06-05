@@ -24,9 +24,9 @@ import tempfile
 os.environ.setdefault("MUJOCO_GL", "egl")
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
-import h5py  # noqa: E402
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
+import h5py
+import mujoco
+import numpy as np
 
 
 def _native_lift_success(model, data, cube_body: str = "cube_main", table_top_z: float = 0.8) -> bool:
@@ -39,7 +39,6 @@ def run(n_demos: int) -> dict:
     from metasim.scenario.scenario import ScenarioCfg
     from metasim.scenario.scene import SceneCfg
     from metasim.scenario.simulator_params import SimParamCfg
-
     from roboverse_pack.tasks.robosuite._osc import NativeOSC
     from roboverse_pack.tasks.robosuite.robosuite_env import _GroundlessMujocoHandler
 
@@ -62,7 +61,13 @@ def run(n_demos: int) -> dict:
         c = env.robots[0].composite_controller.part_controllers["right"]
         xml = env.model.get_xml()
         qpos0, qvel0 = env.sim.data._data.qpos.copy(), env.sim.data._data.qvel.copy()
-        cfg = (list(c.qpos_index), list(c.qvel_index), np.array(c.initial_joint), np.array(c.origin_pos), np.array(c.origin_ori))
+        cfg = (
+            list(c.qpos_index),
+            list(c.qvel_index),
+            np.array(c.initial_joint),
+            np.array(c.origin_pos),
+            np.array(c.origin_ori),
+        )
         # robosuite reference success (action-replay through robosuite)
         for a in actions:
             env.step(a)
@@ -73,21 +78,36 @@ def run(n_demos: int) -> dict:
         tmp.write(xml)
         tmp.flush()
         sc = ScenarioCfg(
-            scene=SceneCfg(mjcf_path=tmp.name), robots=[], lights=[], ground=None,
-            sim_params=SimParamCfg(dt=0.002), decimation=25, simulator="mujoco", num_envs=1, headless=True,
+            scene=SceneCfg(mjcf_path=tmp.name),
+            robots=[],
+            lights=[],
+            ground=None,
+            sim_params=SimParamCfg(dt=0.002),
+            decimation=25,
+            simulator="mujoco",
+            num_envs=1,
+            headless=True,
         )
         h = _GroundlessMujocoHandler(sc)
         h.launch()
         m, d = h.physics.model.ptr, h.physics.data.ptr
-        aid = lambda n: mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_ACTUATOR, n)  # noqa: E731
+        aid = lambda n, m=m: mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_ACTUATOR, n)  # noqa: E731
         arm_act = [aid(f"robot0_torq_j{i}") for i in range(1, 8)]
         grip = [aid("gripper0_right_gripper_finger_joint1"), aid("gripper0_right_gripper_finger_joint2")]
         with h.physics.reset_context():
             d.qpos[:] = qpos0
             d.qvel[:] = qvel0
         osc = NativeOSC(
-            m, d, eef_site="gripper0_right_grip_site", arm_joint_qpos=cfg[0], arm_joint_qvel=cfg[1],
-            arm_actuator_ids=arm_act, gripper_actuator_ids=grip, initial_joint=cfg[2], base_pos=cfg[3], base_ori=cfg[4],
+            m,
+            d,
+            eef_site="gripper0_right_grip_site",
+            arm_joint_qpos=cfg[0],
+            arm_joint_qvel=cfg[1],
+            arm_actuator_ids=arm_act,
+            gripper_actuator_ids=grip,
+            initial_joint=cfg[2],
+            base_pos=cfg[3],
+            base_ori=cfg[4],
         )
         for a in actions:
             osc.apply(a)

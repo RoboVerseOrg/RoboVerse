@@ -9,11 +9,11 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
 
-from .common import RolloutResult  # noqa: E402
-from .inventory import ALL_TASKS  # noqa: E402
+from .common import RolloutResult
+from .inventory import ALL_TASKS
 
 _BLUE = "#3b82f6"
 _ORANGE = "#f59e0b"
@@ -104,14 +104,12 @@ def parity_overview(report_dir: Path) -> Path | None:
         rows.append(entry["env_name"])
         r = rep.get(entry["task"], {})
         ok_rs = r.get("reward_bitwise_equal", False) and r.get("success_sequence_match", False)
-        cells.append(
-            [
-                entry["signals"]["zero"]["qpos_max_abs"],
-                entry["signals"]["sinusoid"]["qpos_max_abs"],
-                r.get("qpos_max_abs_diff", float("nan")),
-                0.0 if ok_rs else float("nan"),
-            ]
-        )
+        cells.append([
+            entry["signals"]["zero"]["qpos_max_abs"],
+            entry["signals"]["sinusoid"]["qpos_max_abs"],
+            r.get("qpos_max_abs_diff", float("nan")),
+            0.0 if ok_rs else float("nan"),
+        ])
     cells = np.array(cells)
     fig, ax = plt.subplots(figsize=(7.8, 0.62 * len(rows) + 1.6), facecolor=_BG)
     ax.set_facecolor(_BG)

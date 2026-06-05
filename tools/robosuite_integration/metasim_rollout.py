@@ -15,9 +15,9 @@ import numpy as np
 
 os.environ.setdefault("MUJOCO_GL", "egl")
 
-import mujoco  # noqa: E402
+import mujoco
 
-from .common import CtrlFn, RolloutResult  # noqa: E402
+from .common import CtrlFn, RolloutResult
 
 
 def metasim_dm_control_rollout(

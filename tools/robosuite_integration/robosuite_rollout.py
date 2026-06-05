@@ -23,10 +23,10 @@ import numpy as np
 
 os.environ.setdefault("MUJOCO_GL", "egl")
 
-import mujoco  # noqa: E402
+import mujoco
 
-from .common import CtrlFn, RolloutResult  # noqa: E402
-from .inventory import RobosuiteTask, get  # noqa: E402
+from .common import CtrlFn, RolloutResult
+from .inventory import RobosuiteTask, get
 
 
 def make_robosuite_env(task: RobosuiteTask, *, render: bool = False, camera: str = "frontview"):
@@ -78,7 +78,7 @@ def export_model_xml(task: RobosuiteTask, out_path: str | Path, *, seed: int = 0
         "qpos0": d.qpos.copy(),
         "qvel0": d.qvel.copy(),
         "dt": float(m.opt.timestep),
-        "decimation": int(round((1.0 / task.control_freq) / m.opt.timestep)),
+        "decimation": round((1.0 / task.control_freq) / m.opt.timestep),
         "joint_names": [mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, i) or f"j{i}" for i in range(m.njnt)],
         "actuator_names": [mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_ACTUATOR, i) or f"a{i}" for i in range(m.nu)],
     }
@@ -113,7 +113,7 @@ def robosuite_engine_rollout(
     xml = env.model.get_xml()
 
     m, d = env.sim.model._model, env.sim.data._data
-    dec = int(round((1.0 / task.control_freq) / m.opt.timestep))
+    dec = round((1.0 / task.control_freq) / m.opt.timestep)
     nu = m.nu
     ctrl_fn = ctrl_builder(nu)
 
@@ -209,7 +209,7 @@ def robosuite_episode(
 
     if policy is None:
         # deterministic scripted probe: gentle sinusoid so the replay is non-trivial
-        def policy(t: int, obs: dict) -> np.ndarray:  # noqa: ANN001
+        def policy(t: int, obs: dict) -> np.ndarray:
             a = 0.3 * np.sin(2 * np.pi * t / 50 + np.arange(action_dim) * 0.5)
             return a
 

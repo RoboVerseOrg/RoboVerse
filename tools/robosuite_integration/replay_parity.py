@@ -33,12 +33,12 @@ from pathlib import Path
 os.environ.setdefault("MUJOCO_GL", "egl")
 logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
-import mujoco  # noqa: E402
-import numpy as np  # noqa: E402
+import mujoco
+import numpy as np
 
-from .inventory import get  # noqa: E402
-from .policies import descend_close_policy, lift_grasp_policy  # noqa: E402
-from .robosuite_rollout import make_robosuite_env  # noqa: E402
+from .inventory import get
+from .policies import descend_close_policy, lift_grasp_policy
+from .robosuite_rollout import make_robosuite_env
 
 
 def _policy_for(env_name: str, action_dim: int):
@@ -57,7 +57,7 @@ def run(env_name: str, *, n_steps: int, out_dir: Path, render: bool, camera: str
     np.random.seed(seed)
     obs = ref.reset()
     rm, rd = ref.sim.model._model, ref.sim.data._data
-    dec = int(round((1.0 / task.control_freq) / rm.opt.timestep))
+    dec = round((1.0 / task.control_freq) / rm.opt.timestep)
     xml = ref.model.get_xml()
     body_pos, body_quat = rm.body_pos.copy(), rm.body_quat.copy()
     qpos0, qvel0 = rd.qpos.copy(), rd.qvel.copy()
@@ -85,7 +85,6 @@ def run(env_name: str, *, n_steps: int, out_dir: Path, render: bool, camera: str
     from metasim.scenario.scenario import ScenarioCfg
     from metasim.scenario.scene import SceneCfg
     from metasim.scenario.simulator_params import SimParamCfg
-
     from roboverse_pack.tasks.robosuite.robosuite_env import _GroundlessMujocoHandler
 
     tmp = tempfile.NamedTemporaryFile(suffix=".xml", delete=False, mode="w")
@@ -190,16 +189,14 @@ def eval_over_seeds(env_name: str, *, n_steps: int, out_dir: Path, seeds: list[i
     episodes = []
     for sd in seeds:
         r = run(env_name, n_steps=n_steps, out_dir=out_dir, render=False, seed=sd)
-        episodes.append(
-            {
-                "seed": sd,
-                "ref_return": r["ref_total_reward"],
-                "metasim_return": r["metasim_total_reward"],
-                "ref_success": r["ref_any_success"],
-                "metasim_success": r["metasim_success_final"],
-                "return_match": r["reward_bitwise_equal"],
-            }
-        )
+        episodes.append({
+            "seed": sd,
+            "ref_return": r["ref_total_reward"],
+            "metasim_return": r["metasim_total_reward"],
+            "ref_success": r["ref_any_success"],
+            "metasim_success": r["metasim_success_final"],
+            "return_match": r["reward_bitwise_equal"],
+        })
     ref_ret = np.array([e["ref_return"] for e in episodes])
     ms_ret = np.array([e["metasim_return"] for e in episodes])
     ref_sr = float(np.mean([e["ref_success"] for e in episodes]))

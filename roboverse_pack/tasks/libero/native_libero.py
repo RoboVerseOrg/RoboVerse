@@ -186,6 +186,15 @@ class NativeLiberoEnv(BaseTaskEnv):
 
     def close(self):
         super().close()
+        # remove the per-instance temp MJCF (written with delete=False so the
+        # handler could open it by path); otherwise these leak into the tmp dir.
+        f = getattr(self, "_xml_file", None)
+        if f is not None:
+            try:
+                os.unlink(f.name)
+            except OSError:
+                pass
+            self._xml_file = None
 
 
 def _register_bundled_tasks():
