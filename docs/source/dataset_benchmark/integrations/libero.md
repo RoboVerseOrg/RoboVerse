@@ -140,6 +140,8 @@ The BDDL success checker matches `env._check_success` **bitwise on all 130**
 (mean MAE 1.85/255 — re-triangulated meshes + sub-pixel shading). Expand a suite to view.
 
 :::::{dropdown} OBJECT · 10 tasks · checker 1:1
+:open:
+
 ::::{grid} 2
 :::{grid-item}
 ```{video} ../../_static/integrations/libero/native_sb/libero_object__pick_up_the_alphabet_soup_and_place_it_in_the_basket.mp4
@@ -245,6 +247,8 @@ The BDDL success checker matches `env._check_success` **bitwise on all 130**
 :::::
 
 :::::{dropdown} GOAL · 10 tasks · checker 1:1
+:open:
+
 ::::{grid} 2
 :::{grid-item}
 ```{video} ../../_static/integrations/libero/native_sb/libero_goal__open_the_middle_drawer_of_the_cabinet.mp4
@@ -350,6 +354,8 @@ The BDDL success checker matches `env._check_success` **bitwise on all 130**
 :::::
 
 :::::{dropdown} SPATIAL · 10 tasks · checker 1:1
+:open:
+
 ::::{grid} 2
 :::{grid-item}
 ```{video} ../../_static/integrations/libero/native_sb/libero_spatial__pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate.mp4
@@ -455,6 +461,8 @@ The BDDL success checker matches `env._check_success` **bitwise on all 130**
 :::::
 
 :::::{dropdown} LONG-10 · 10 tasks · checker 1:1
+:open:
+
 ::::{grid} 2
 :::{grid-item}
 ```{video} ../../_static/integrations/libero/native_sb/libero_10__KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.mp4
@@ -560,6 +568,8 @@ The BDDL success checker matches `env._check_success` **bitwise on all 130**
 :::::
 
 :::::{dropdown} 90 · 90 tasks · checker 1:1
+:open:
+
 ::::{grid} 2
 :::{grid-item}
 ```{video} ../../_static/integrations/libero/native_sb/libero_90__KITCHEN_SCENE10_close_the_top_drawer_of_the_cabinet.mp4
