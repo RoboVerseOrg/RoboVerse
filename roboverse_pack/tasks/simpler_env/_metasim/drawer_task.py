@@ -9,8 +9,11 @@ qpos>=0.15; close: qpos 0.2 -> <=0.05.
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import sapien.core as sapien
+from transforms3d.euler import euler2quat
 
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg
@@ -20,6 +23,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 
 from .._native._assets import paths
 from .._native.control import CombinedController
+from .._native.overlay import load_overlay_image
 from .._native.robot_config import (
     ARM_DAMPING,
     ARM_JOINT_NAMES,
@@ -34,6 +38,14 @@ ROBOT_NAME, CAB_NAME, CAM_NAME = "google_robot", "cabinet", "overhead_camera"
 CABINET_POSE_P = (-0.295, 0.0, 0.017)
 CABINET_JOINT_FRICTION = 0.05
 CLOSE_INIT_QPOS = 0.2
+
+# SimplerEnv visual-matching "station" config (open_drawer_in_scene.py): 9 real-image overlays, each
+# with a matching fixed robot base xy + small yaw. The robot base is head-mounted-camera-relevant, so
+# the right station is what makes the obs match the RT-1 training distribution (and the handle reachable).
+_STATION_OVERLAY_IDS = ["a0", "a1", "a2", "b0", "b1", "b2", "c0", "c1", "c2"]
+_STATION_ROBOT_XS = [0.644, 0.765, 0.889, 0.652, 0.752, 0.851, 0.665, 0.765, 0.865]
+_STATION_ROBOT_YS = [-0.179, -0.182, -0.203, 0.009, 0.009, 0.035, 0.224, 0.222, 0.222]
+_STATION_ROBOT_ROTZS = [-0.03, -0.02, -0.06, 0.0, 0.0, 0.0, 0.0, -0.025, -0.025]
 
 
 def _google_robot_cfg():
@@ -110,7 +122,7 @@ class SimplerDrawerTask(SimplerMetaSimTask):
     def _build_scenario(self):
         cabinet = ArticulationObjCfg(
             name=CAB_NAME,
-            urdf_path=paths()["cabinet_urdf"],
+            urdf_path=paths()["cabinet_recolor_urdf"],
             fix_base_link=True,
             default_position=CABINET_POSE_P,
             default_orientation=(1.0, 0.0, 0.0, 0.0),
@@ -147,14 +159,18 @@ class SimplerDrawerTask(SimplerMetaSimTask):
 
     def reset(self, env_ids=None, options=None, seed=0):
         options = options or {}
-        self.drawer_id = str(np.random.RandomState(seed).choice(list(self.drawer_ids)))
-        self.joint_idx = self.joint_names.index(f"{self.drawer_id}_drawer_joint")
         rng = np.random.RandomState(seed)
-        rxy = (options.get("robot_init_options") or {}).get("init_xy") or [
-            rng.uniform(0.30, 0.40),
-            rng.uniform(0.0, 0.2),
-        ]
-        self.robot.set_root_pose(sapien.Pose([rxy[0], rxy[1], ROBOT_INIT_HEIGHT], [0, 0, 0, 1]))
+        self.drawer_id = str(rng.choice(list(self.drawer_ids)))
+        self.joint_idx = self.joint_names.index(f"{self.drawer_id}_drawer_joint")
+        # pick a visual-matching station: fixes the robot base xy + yaw AND the matching overlay
+        rio = options.get("robot_init_options") or {}
+        idx = int(rio["station"]) if rio.get("station") is not None else int(rng.choice(len(_STATION_OVERLAY_IDS)))
+        rxy = rio.get("init_xy") or [_STATION_ROBOT_XS[idx], _STATION_ROBOT_YS[idx]]
+        quat = (sapien.Pose(q=euler2quat(0, 0, _STATION_ROBOT_ROTZS[idx])) * sapien.Pose(q=[0, 0, 0, 1])).q
+        self._overlay = load_overlay_image(
+            os.path.join(paths()["overlay_dir"], f"open_drawer_{_STATION_OVERLAY_IDS[idx]}.png")
+        )
+        self.robot.set_root_pose(sapien.Pose([rxy[0], rxy[1], ROBOT_INIT_HEIGHT], quat))
         self.robot.set_qpos(INIT_QPOS)
         self.robot.set_qvel(np.zeros(self.robot.dof))
         qpos = np.zeros(self.cabinet.dof)
@@ -165,6 +181,10 @@ class SimplerDrawerTask(SimplerMetaSimTask):
         self.controller.reset()
         self._elapsed = 0
         return self.get_obs(), {"drawer_id": self.drawer_id}
+
+    def _foreground_ids(self):
+        # keep robot + cabinet in front of the real-image overlay (the white floor is background)
+        return [lk.get_id() for lk in self.robot.get_links()] + [lk.get_id() for lk in self.cabinet.get_links()]
 
     def _evaluate(self):
         qpos = float(self.cabinet.get_qpos()[self.joint_idx])

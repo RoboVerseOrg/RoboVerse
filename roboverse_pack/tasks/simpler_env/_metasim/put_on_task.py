@@ -24,6 +24,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 
 from .._native._assets import paths
 from .._native.control import CombinedController
+from .._native.overlay import load_overlay_image
 from .._native.put_on import TASKS as _PUTON_CFG
 from .._native.widowx_config import (
     ARM_DAMPING,
@@ -178,6 +179,10 @@ class SimplerPutOnTask(SimplerMetaSimTask):
         self.grasp_checker = WidowXGraspChecker(self.robot, self.scene)
         with open(os.path.join(paths()["model_db_dir"], self.cfg["model_json"])) as f:
             self.model_db = json.load(f)
+        # SimplerEnv bridge visual-matching overlay (sink setup uses a different real image).
+        # The sink is intentionally left out of the foreground so it reads as background (== upstream).
+        overlay_name = "bridge_sink.png" if self.cfg["sink"] else "bridge_real_eval_1.png"
+        self._overlay = load_overlay_image(os.path.join(paths()["overlay_dir"], overlay_name))
 
     def _foreground_ids(self):
         return [link.get_id() for link in self.robot.get_links()] + [o.get_id() for o in self.objs]
