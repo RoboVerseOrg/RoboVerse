@@ -15,6 +15,7 @@ from metasim.scenario.objects import (
     PrimitiveCubeCfg,
     PrimitiveCylinderCfg,
     PrimitiveFrameCfg,
+    PrimitiveMultiBoxCfg,
     PrimitiveSphereCfg,
 )
 from metasim.scenario.scene import SceneCfg
@@ -308,6 +309,7 @@ class FileDownloader:
         if (
             isinstance(obj, PrimitiveCubeCfg)
             or isinstance(obj, PrimitiveCylinderCfg)
+            or isinstance(obj, PrimitiveMultiBoxCfg)
             or (isinstance(obj, PrimitiveFrameCfg) and obj.file_name(self.scenario.simulator) is None)
             or isinstance(obj, PrimitiveSphereCfg)
         ):

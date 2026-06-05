@@ -288,6 +288,46 @@ class PrimitiveCylinderCfg(_PrimitiveMixin, BaseRigidObjCfg):
         return math.pi * self.radius**2 * self.height
 
 
+@configclass
+class PrimitiveMultiBoxCfg(BaseRigidObjCfg):
+    """A single rigid body composed of several box collision shapes at local offsets.
+
+    For compound primitive geometry that a single box can't express — an L-shaped tool, a
+    box-with-a-hole frame, a multi-prong plug — without needing a mesh asset. Each entry of
+    :attr:`boxes` is ``{"half_size": [hx, hy, hz], "pos": [x, y, z], "quat": [w, x, y, z]}``
+    (``pos``/``quat`` default to the body origin / identity). ``mass`` sets the total mass and is
+    distributed as a uniform density across the boxes so the inertia is consistent.
+
+    Backend support: SAPIEN 3. Other backends that don't implement it skip the object (same as any
+    unsupported asset). Default ``fix_base_link=False`` builds a dynamic body; ``True`` builds it
+    kinematic (e.g. a fixed frame).
+    """
+
+    boxes: list = MISSING
+    """List of box shape dicts: ``{"half_size": [3], "pos": [3] (opt), "quat": [4] wxyz (opt)}``."""
+
+    mass: float = 0.1
+    """Total mass (kg); spread as uniform density over the boxes."""
+
+    color: list[float] = MISSING
+    """Visual colour in RGB."""
+
+    @property
+    def total_volume(self) -> float:
+        """Sum of the box volumes (m^3)."""
+        v = 0.0
+        for b in self.boxes:
+            hs = b["half_size"]
+            v += 8.0 * hs[0] * hs[1] * hs[2]
+        return v
+
+    @property
+    def density(self) -> float:
+        """Uniform density (kg/m^3) implied by the total mass and box volumes."""
+        vol = self.total_volume
+        return self.mass / vol if vol > 0 else 0.0
+
+
 ##################################################
 # Other objects
 ##################################################

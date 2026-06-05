@@ -26,6 +26,7 @@ from metasim.scenario.objects import (
     ArticulationObjCfg,
     NonConvexRigidObjCfg,
     PrimitiveCubeCfg,
+    PrimitiveMultiBoxCfg,
     PrimitiveSphereCfg,
     RigidObjCfg,
 )
@@ -396,6 +397,33 @@ class Sapien3Handler(BaseSimHandler):
                 #     sphere.lock_motion()
                 # agent.instance = sphere
                 self.object_ids[object.name] = sphere
+                self.object_joint_order[object.name] = []
+
+            elif isinstance(object, PrimitiveMultiBoxCfg):
+                # One rigid body from several box collision shapes at local offsets (compound
+                # primitive — L-tool, box-with-hole, plug). Uniform density so total mass + inertia
+                # are consistent. Kinematic when fix_base_link (a fixed frame), else dynamic.
+                actor_builder = self.scene.create_actor_builder()
+                density = object.density
+                for box in object.boxes:
+                    local_pose = sapien_core.Pose(
+                        p=np.array(box.get("pos", [0.0, 0.0, 0.0])),
+                        q=np.array(box.get("quat", [1.0, 0.0, 0.0, 0.0])),
+                    )
+                    actor_builder.add_box_collision(pose=local_pose, half_size=box["half_size"], density=density)
+                    actor_builder.add_box_visual(
+                        pose=local_pose,
+                        half_size=box["half_size"],
+                        material=sapien_core.render.RenderMaterial(
+                            base_color=list(object.color[:3]) + [1] if object.color else [0.7, 0.7, 0.7, 1.0]
+                        ),
+                    )
+                if getattr(object, "fix_base_link", False):
+                    multibox = actor_builder.build_kinematic(name=object.name)
+                else:
+                    multibox = actor_builder.build(name=object.name)
+                multibox.set_pose(_load_init_pose(object))
+                self.object_ids[object.name] = multibox
                 self.object_joint_order[object.name] = []
 
             elif isinstance(object, NonConvexRigidObjCfg):
