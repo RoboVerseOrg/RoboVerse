@@ -13,6 +13,16 @@ handler and reproduces robosuite's task natively:
 Constants (Panda rest pose, table height) are plain numbers lifted from robosuite
 once — not a runtime dependency. With a vendored bundle present, ``robosuite`` can
 be uninstalled and these tasks still run (see ``verify_robosuite_free.py``).
+
+### Title
+Robosuite (robosuite-free)
+
+### Platforms
+- mujoco
+
+### Description
+robosuite tasks reproduced natively with robosuite uninstalled — native OSC_POSE
+controller, sampler, success and reward, running on MetaSim's MujocoHandler.
 """
 
 from __future__ import annotations

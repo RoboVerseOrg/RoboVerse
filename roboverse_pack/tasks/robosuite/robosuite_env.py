@@ -22,6 +22,16 @@ robosuite mutates the *compiled* model's ``body_pos`` for welded objects (e.g.
 the Door) at reset — ``get_xml()`` omits that — so we re-apply ``body_pos`` /
 ``body_quat`` to the handler model on every reset. Free-joint objects place via
 ``qpos`` and ride along with the state sync.
+
+### Title
+Robosuite (native, MuJoCo)
+
+### Platforms
+- mujoco
+
+### Description
+robosuite tasks (Lift / Stack / Door / …) on MetaSim's MujocoHandler, physics
+bit-for-bit identical to robosuite's native MjSim (qpos/qvel max-abs diff 0.0).
 """
 
 from __future__ import annotations

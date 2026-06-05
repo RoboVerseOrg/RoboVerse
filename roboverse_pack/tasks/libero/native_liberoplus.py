@@ -16,6 +16,17 @@ Bundles (``native_bundles_plus/<dim>__<suite>__<stem>/``) are built by
 against raw MuJoCo by ``tools/libero_integration/verify_liberoplus.py``. The
 perturbed mesh/texture assets are data, like base LIBERO's: point
 ``LIBERO_PLUS_ASSETS`` at the LIBERO-plus ``libero/libero/assets`` overlay.
+
+### Title
+LIBERO-plus (native, perturbations)
+
+### Platforms
+- mujoco
+
+### Description
+LIBERO-plus perturbed scenes (lighting / distractors / textures / language) as
+native MetaSim tasks (``libero_plus_native.*``), engine-bitwise on MuJoCo and
+runnable with libero/robosuite uninstalled.
 """
 
 from __future__ import annotations

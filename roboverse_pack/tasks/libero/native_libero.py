@@ -13,6 +13,16 @@ A bundle dir (``native_bundles/<task>/``) holds the static, libero-free inputs:
 ``init.npz`` (a demo's initial qpos/qvel). Build them with
 ``tools/libero_integration/vendor_native_libero.py``. Mesh assets are data
 (LIBERO + robosuite trees, like roboverse_data); point ``LIBERO_ASSETS`` at them.
+
+### Title
+LIBERO (native, all 130)
+
+### Platforms
+- mujoco
+
+### Description
+All 130 LIBERO benchmark tasks as first-class MetaSim tasks (``libero_native.*``),
+bitwise 1:1 with LIBERO and runnable with libero/robosuite uninstalled.
 """
 
 from __future__ import annotations

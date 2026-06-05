@@ -147,20 +147,25 @@ def generate_md(tid: str, meta: dict) -> str:
 def discover_all_tasks():
     task_meta = {}
     for py_path in glob.glob(os.path.join(TASK_CFG_ROOT, "*", "*.py")):
-        if os.path.basename(py_path).startswith("__"):
-            continue  # pass __init__.py
+        if os.path.basename(py_path).startswith("_"):
+            continue  # skip __init__.py and private helper modules (_osc, _native_util, ...)
 
         try:
             with open(py_path) as f:
                 doc = f.read()
             tree = ast.parse(doc)
 
-            # docstring
+            # docstring: prefer the task ``...Cfg`` class, else fall back to the
+            # module docstring (modules that register tasks programmatically — e.g.
+            # the native robosuite/LIBERO ports — carry their ``### Title`` /
+            # ``### Platforms`` metadata at module level).
             docstring = ""
             for node in tree.body:
                 if isinstance(node, ast.ClassDef) and node.name.endswith("Cfg"):
                     docstring = ast.get_docstring(node)
                     break
+            if not docstring:
+                docstring = ast.get_docstring(tree)
 
             meta = parse_docstring_metadata(docstring or "")
 
