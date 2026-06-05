@@ -44,7 +44,18 @@ PRIMITIVE_TASKS = [
     "PullCubeTool-v1",
     "PegInsertionSide-v1",
     "StackPyramid-v1",
+    "PlugCharger-v1",
 ]
+
+# Known limitations of the generic harness (honest coverage notes):
+#  - The vendored controller assumes the panda layout (7 arm + 1 mimic gripper).
+#    Robots without a gripper (PushT's stick, DrawTriangle's pusher) use a
+#    different action width and need a per-task controller spec.
+#  - Multi-agent tasks (TwoRobot*) expose ``agent`` as a MultiAgent, not a single
+#    robot — needs per-agent capture/replay.
+#  - Mesh-asset objects (PickSingleYCB foam brick) come out near-bitwise (~1e-5)
+#    because the convex collision hull is rebuilt from captured vertices rather
+#    than the exact source mesh.
 
 # Default control mode per task (all panda tabletop tasks share the same one).
 DEFAULT_CONTROL_MODE = "pd_joint_delta_pos"
