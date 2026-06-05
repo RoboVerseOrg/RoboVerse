@@ -551,6 +551,29 @@ class Sapien3Handler(BaseSimHandler):
                 joint.set_drive_velocity_target(vel_action[joint.get_name()])
         # instance.set_drive_target(action)
 
+    def get_pairwise_contact_force(self, component_a, component_b) -> np.ndarray:
+        """Net contact force (N) on ``component_a`` from ``component_b`` this step.
+
+        Sums the contact-point impulses between the two PhysX rigid components (rigid-dynamic actor
+        bodies or articulation links) over the CPU scene's contact list and divides by the timestep,
+        mirroring ManiSkill's ``get_pairwise_contact_force``. Returns a length-3 force vector (zeros
+        if the pair isn't in contact). Force on ``a`` is positive; SAPIEN reports impulses on the
+        first body of each contact, so the sign is flipped when ``a`` is the second body.
+        """
+        total = np.zeros(3, dtype=np.float64)
+        dt = self.scene.get_timestep()
+        for contact in self.scene.get_contacts():
+            b0, b1 = contact.bodies
+            if b0 is component_a and b1 is component_b:
+                sign = 1.0
+            elif b0 is component_b and b1 is component_a:
+                sign = -1.0
+            else:
+                continue
+            for pt in contact.points:
+                total += sign * np.asarray(pt.impulse, dtype=np.float64)
+        return total / dt if dt > 0 else total
+
     def _set_dof_targets(self, targets: CompatActionInput):
         targets = adapt_actions_to_dict(self, targets)
 
