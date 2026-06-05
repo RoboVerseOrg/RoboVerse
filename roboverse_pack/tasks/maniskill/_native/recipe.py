@@ -53,8 +53,16 @@ def panda_urdf_path() -> str:
     return os.path.join(os.path.dirname(mani_skill.__file__), "assets", "robots", "panda", "panda_v2.urdf")
 
 
-def maniskill_panda_cfg(name: str = "panda") -> RobotCfg:
-    """The ManiSkill Panda as a RobotCfg with ManiSkill's exact drive gains."""
+# ManiSkill mounts the panda at the table edge (TableSceneBuilder); a few tasks rotate it.
+PANDA_BASE_DEFAULT = ((-0.615, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0))
+
+
+def maniskill_panda_cfg(
+    name: str = "panda",
+    base_position: tuple[float, float, float] = PANDA_BASE_DEFAULT[0],
+    base_orientation: tuple[float, float, float, float] = PANDA_BASE_DEFAULT[1],
+) -> RobotCfg:
+    """The ManiSkill Panda as a RobotCfg with ManiSkill's exact drive gains + mount pose."""
     actuators = {
         j: BaseActuatorCfg(stiffness=1000.0, damping=100.0, effort_limit_sim=100.0)
         for j in (_ARM_JOINTS + _FINGER_JOINTS)
@@ -66,9 +74,8 @@ def maniskill_panda_cfg(name: str = "panda") -> RobotCfg:
         default_joint_positions=dict(_REST_QPOS),
     )
     robot.urdf_path = panda_urdf_path()
-    # ManiSkill mounts the panda at the table edge (TableSceneBuilder), not the origin.
-    robot.default_position = (-0.615, 0.0, 0.0)
-    robot.default_orientation = (1.0, 0.0, 0.0, 0.0)
+    robot.default_position = tuple(base_position)
+    robot.default_orientation = tuple(base_orientation)
     return robot
 
 
