@@ -235,11 +235,15 @@ def _eval_one(
         try:
             import sapien
 
-            pos = np.array([0.0, 0.6, 1.35]); look = np.array([0.0, -0.3, 0.78])
-            fwd = look - pos; fwd /= np.linalg.norm(fwd) + 1e-9
-            left = np.cross([0.0, 0.0, 1.0], fwd); left /= np.linalg.norm(left) + 1e-9
+            pos = np.array([0.0, 0.6, 1.35])
+            look = np.array([0.0, -0.3, 0.78])
+            fwd = look - pos
+            fwd /= np.linalg.norm(fwd) + 1e-9
+            left = np.cross([0.0, 0.0, 1.0], fwd)
+            left /= np.linalg.norm(left) + 1e-9
             up = np.cross(fwd, left)
-            mat = np.eye(4); mat[:3, 0], mat[:3, 1], mat[:3, 2], mat[:3, 3] = fwd, left, up, pos
+            mat = np.eye(4)
+            mat[:3, 0], mat[:3, 1], mat[:3, 2], mat[:3, 3] = fwd, left, up, pos
             _vcam = env.scene.add_camera(name="diag", width=512, height=512, fovy=np.deg2rad(55), near=0.05, far=100)
             _vcam.entity.set_pose(sapien.Pose(mat))
         except Exception as e:

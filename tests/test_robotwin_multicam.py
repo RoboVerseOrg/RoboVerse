@@ -34,14 +34,16 @@ def _load(mod_name: str, rel_path: str):
 def _fake_bridge(n: int = 6) -> dict:
     """A minimal bridge with 14-D vectors + 4 camera RGB streams (tiny 8x8 frames)."""
     rng = np.arange(n * 14, dtype=float).reshape(n, 14)
-    cams = {c: (np.arange(n * 8 * 8 * 3).reshape(n, 8, 8, 3) % 255).astype(np.uint8) for c in
-            ("head_camera", "left_camera", "right_camera", "front_camera")}
+    cams = {
+        c: (np.arange(n * 8 * 8 * 3).reshape(n, 8, 8, 3) % 255).astype(np.uint8)
+        for c in ("head_camera", "left_camera", "right_camera", "front_camera")
+    }
     return {"vectors": rng, "real_vectors": rng + 0.5, "rgb": cams, "task": "unit", "seed": 0}
 
 
 def test_robotwin_to_demo_single_camera_default(tmp_path):
     """Default (no --cameras) writes exactly the legacy rgb.mp4 -- single-view unchanged."""
-    imageio = pytest.importorskip("imageio")  # noqa: F841
+    imageio = pytest.importorskip("imageio")
     rtd = _load("rtd_single", "robotwin_to_demo.py")
     demo = str(tmp_path / "demo_0000")
     t = rtd._convert_one(_fake_bridge(), demo, "head_camera")
@@ -71,8 +73,7 @@ def test_robotwin_to_demo_missing_camera_skips(tmp_path):
     rtd = _load("rtd_miss", "robotwin_to_demo.py")
     br = _fake_bridge()
     del br["rgb"]["right_camera"]
-    t = rtd._convert_one(br, str(tmp_path / "demo_0000"), "head_camera",
-                         cameras=["head_camera", "right_camera"])
+    t = rtd._convert_one(br, str(tmp_path / "demo_0000"), "head_camera", cameras=["head_camera", "right_camera"])
     assert t == 0  # skipped
 
 
