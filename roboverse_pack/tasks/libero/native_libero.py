@@ -37,15 +37,16 @@ from metasim.task.registry import register_task
 from roboverse_pack.tasks.robosuite._osc import NativeOSC
 from roboverse_pack.tasks.robosuite.robosuite_env import _GroundlessMujocoHandler
 
-from ._native_util import check_bddl_success, remap_libero_model
+from ._native_util import check_bddl_success, remap_libero_model, roboverse_data_assets
 
 _PANDA_INIT = np.array([0.0, 0.19635, 0.0, -2.61799, 0.0, 2.94159, 0.7854])
 _BUNDLES = Path(__file__).resolve().parent / "native_bundles"
-_DEFAULT_ASSETS = Path(__file__).resolve().parents[3] / "third_party/LIBERO/libero/libero/assets"
 
 
 def _libero_assets() -> str:
-    return os.environ.get("LIBERO_ASSETS", str(_DEFAULT_ASSETS))
+    # vendored roboverse_data tree by default (no local LIBERO checkout needed);
+    # LIBERO_ASSETS overrides to a local LIBERO ``.../libero/assets`` dir.
+    return os.environ.get("LIBERO_ASSETS") or os.path.join(roboverse_data_assets(), "libero")
 
 
 class NativeLiberoEnv(BaseTaskEnv):

@@ -41,8 +41,9 @@ import h5py
 import mujoco
 import numpy as np
 
+from roboverse_pack.tasks.libero._native_util import _robosuite_assets, roboverse_data_assets
+
 _LIBERO_ASSETS = Path(__file__).resolve().parents[2] / "third_party/LIBERO/libero/libero/assets"
-_RS_ASSETS = "/venv/roboverse/lib/python3.11/site-packages/robosuite/models/assets"
 _COLLECTOR_LIBERO = "/Users/yifengz/workspace/libero-dev/chiliocosm/assets"
 _COLLECTOR_RS = "/Users/yifengz/workspace/robosuite-master/robosuite/models/assets"
 
@@ -55,12 +56,15 @@ def remap_libero_model(model_file: str, libero_assets: str | Path | None = None)
     (``…/chiliocosm/assets`` → LIBERO, ``…/robosuite*/…/models/assets`` → robosuite)
     rather than a fixed prefix.
     """
-    lib = str(libero_assets or _LIBERO_ASSETS)
+    lib = str(
+        libero_assets
+        or (_LIBERO_ASSETS if _LIBERO_ASSETS.exists() else os.path.join(roboverse_data_assets(), "libero"))
+    )
     xml = model_file
     # any path ending in /chiliocosm/assets -> local LIBERO assets
     xml = re.sub(r'file="[^"]*?/chiliocosm/assets', f'file="{lib}', xml)
-    # any robosuite assets root (robosuite-master or robosuite) -> installed robosuite
-    xml = re.sub(r'file="[^"]*?/robosuite[^"]*?/(?:robosuite/)?models/assets', f'file="{_RS_ASSETS}', xml)
+    # any robosuite assets root (robosuite-master or robosuite) -> resolved robosuite assets
+    xml = re.sub(r'file="[^"]*?/robosuite[^"]*?/(?:robosuite/)?models/assets', f'file="{_robosuite_assets()}', xml)
     xml = re.sub(r'<default class="main"\s*/>', "", xml)  # implicit main default in dm_control
     for ref in sorted(set(re.findall(r'file="([^"]+)"', xml))):
         if not os.path.exists(ref):

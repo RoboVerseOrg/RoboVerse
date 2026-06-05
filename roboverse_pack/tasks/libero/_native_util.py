@@ -14,8 +14,59 @@ import re
 import mujoco
 import numpy as np
 
-_RS_ASSETS = "/venv/roboverse/lib/python3.11/site-packages/robosuite/models/assets"
-# LIBERO articulated-object open ranges (libero/.../articulated_objects.py)
+
+def roboverse_data_assets() -> str:
+    """Locate the vendored ``roboverse_data/libero/assets`` tree (clone or HF cache).
+
+    The native LIBERO meshes/textures are vendored (deduplicated) to the HF dataset
+    ``RoboVerseOrg/roboverse_data`` under ``libero/assets/{robosuite,libero}/`` — so a
+    machine with the ``libero``/``robosuite`` *packages* uninstalled still resolves
+    them. Prefers ``ROBOVERSE_DATA_DIR`` / a local clone; else the metasim HF cache
+    dir (assets download on demand, see :func:`ensure_local_assets`).
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    cands = []
+    env = os.environ.get("ROBOVERSE_DATA_DIR")
+    if env:
+        cands.append(os.path.join(os.path.expanduser(env), "libero", "assets"))
+    cands += [
+        os.path.join(os.getcwd(), "roboverse_data", "libero", "assets"),
+        os.path.join(here, "..", "..", "..", "roboverse_data", "libero", "assets"),
+        os.path.join(here, "..", "..", "..", "..", "roboverse_data", "libero", "assets"),
+    ]
+    for c in cands:
+        if os.path.isdir(c):
+            return os.path.abspath(c)
+    try:  # cold machine: metasim's HF cache root (download lands here)
+        from metasim.utils.hf_util import LOCAL_DIR
+
+        return os.path.join(LOCAL_DIR, "libero", "assets")
+    except Exception:
+        return os.path.abspath(cands[-1])
+
+
+def _robosuite_assets() -> str:
+    return os.environ.get("ROBOSUITE_ASSETS") or os.path.join(roboverse_data_assets(), "robosuite")
+
+
+def ensure_local_assets(xml: str) -> None:
+    """Download any ``file=`` ref missing locally from HF (no-op when a clone exists)."""
+    missing = [r for r in set(re.findall(r'file="([^"]+)"', xml)) if not os.path.exists(r)]
+    if not missing:
+        return
+    try:
+        from metasim.utils.hf_util import check_and_download_single
+
+        for ref in sorted(missing):
+            check_and_download_single(ref)
+    except Exception:
+        pass  # offline / no HF -> let MuJoCo raise a clear missing-asset error on load
+
+
+# LIBERO articulated-object thresholds (libero/.../articulated_objects.py). Open and
+# close are NOT complements -- each has its own range, with a dead zone between, and
+# open is satisfied if ANY joint passes while close needs ALL joints (same for
+# turn_on/turn_off). ``"lt"`` => pass if ``qpos < max(range)``; ``"gt"`` => ``> min``.
 _OPEN_RANGES = {
     "wooden_cabinet": ([-0.16, -0.14], "lt"),
     "white_cabinet": ([-0.16, -0.14], "lt"),
@@ -25,19 +76,35 @@ _OPEN_RANGES = {
     "microwave": ([-2.094, -1.3], "lt"),
     "flat_stove": ([-2.094, -1.3], "lt"),
 }
+_CLOSE_RANGES = {
+    "wooden_cabinet": ([0.0, 0.005], "gt"),
+    "white_cabinet": ([0.0, 0.005], "gt"),
+    "short_cabinet": ([-0.005, 0.0], "lt"),
+    "short_fridge": ([-0.005, 0.0], "lt"),
+    "window": ([-0.005, 0.0], "lt"),
+    "microwave": ([-0.005, 0.0], "gt"),
+}
 
 
-def remap_libero_model(model_file: str, libero_assets: str) -> str:
-    """Rebase by asset-root suffix (collector machine varies) + dm_control-safe."""
+def remap_libero_model(model_file: str, libero_assets: str | None = None) -> str:
+    """Rebase a bundle's embedded MJCF onto portable local asset roots + dm_control-safe.
+
+    Both the LIBERO (``chiliocosm/assets``) and robosuite (``models/assets``) roots are
+    rebased onto the vendored ``roboverse_data`` tree by default (overridable with
+    ``LIBERO_ASSETS`` / ``ROBOSUITE_ASSETS``), and any still-missing ref is fetched from
+    HuggingFace — so the task loads with the ``libero``/``robosuite`` packages absent.
+    """
+    libero_assets = libero_assets or os.path.join(roboverse_data_assets(), "libero")
     xml = model_file
     xml = re.sub(r'file="[^"]*?/chiliocosm/assets', f'file="{libero_assets}', xml)
-    xml = re.sub(r'file="[^"]*?/robosuite[^"]*?/(?:robosuite/)?models/assets', f'file="{_RS_ASSETS}', xml)
+    xml = re.sub(r'file="[^"]*?/robosuite[^"]*?/(?:robosuite/)?models/assets', f'file="{_robosuite_assets()}', xml)
     xml = re.sub(r'<default class="main"\s*/>', "", xml)
     for ref in sorted(set(re.findall(r'file="([^"]+)"', xml))):
         if not os.path.exists(ref):
             cand = ref.replace("/mounts/", "/bases/")
             if os.path.exists(cand):
                 xml = xml.replace(ref, cand)
+    ensure_local_assets(xml)
     return xml
 
 
@@ -73,9 +140,13 @@ def _in_region(model, data, obj: str, region: str) -> bool:
     bid = _bid(model, obj if _bid(model, obj) >= 0 else obj + "_main")
     if sid < 0 or bid < 0:
         return False
+    # LIBERO SiteObject.in_box: total=|mat@size|; ub=pos+total; lb=pos-total; lb[2]-=0.01
     sp = data.site_xpos[sid]
-    half = np.abs(data.site_xmat[sid].reshape(3, 3) @ model.site_size[sid])
-    return bool(np.all(np.abs(data.xpos[bid] - sp) < half))
+    total = np.abs(data.site_xmat[sid].reshape(3, 3) @ model.site_size[sid])
+    other = data.xpos[bid]
+    lb = sp - total
+    lb[2] -= 0.01
+    return bool(np.all(other > lb) and np.all(other < sp + total))
 
 
 # turn-on/off ranges (FlatStove etc.): turn_on if qpos >= min(range); off if < max(off)
@@ -111,8 +182,10 @@ def _artic_qpos(model, data, region: str):
 
 
 def _is_open(model, data, region: str) -> bool:
-    base = _region_base(region)
-    cls = next((k for k in _OPEN_RANGES if k in base.lower()), None)
+    # match the object class against the FULL region string: ``_region_base`` over-strips
+    # multi-word classes (``white_cabinet_1_bottom_region`` -> ``white``) and would miss
+    # the class -> wrong default threshold.
+    cls = next((k for k in _OPEN_RANGES if k in region.lower()), None)
     rng, direction = _OPEN_RANGES.get(cls, ([-0.14, -0.14], "lt"))
     for q in _artic_qpos(model, data, region):
         if (q < max(rng)) if direction == "lt" else (q > min(rng)):
@@ -120,11 +193,29 @@ def _is_open(model, data, region: str) -> bool:
     return False
 
 
+def _is_close(model, data, region: str) -> bool:
+    # LIBERO is_close: every joint must satisfy the object's own close threshold
+    # (NOT ``not is_open`` -- there is a dead zone between the open and close ranges).
+    cls = next((k for k in _CLOSE_RANGES if k in region.lower()), None)
+    rng, direction = _CLOSE_RANGES.get(cls, ([0.0, 0.005], "gt"))
+    qs = _artic_qpos(model, data, region)
+    if not qs:
+        return False
+    return all((q > min(rng)) if direction == "gt" else (q < max(rng)) for q in qs)
+
+
 def _turn_on(model, data, region: str) -> bool:
-    base = _region_base(region)
-    cls = next((k for k in _TURNON_RANGES if k in base.lower()), None)
+    cls = next((k for k in _TURNON_RANGES if k in region.lower()), None)
     rng = _TURNON_RANGES.get(cls, [0.5, 2.1])
     return any(q >= min(rng) for q in _artic_qpos(model, data, region))
+
+
+def _turn_off(model, data, region: str) -> bool:
+    # LIBERO turn_off: every joint qpos < max(turnoff_range=[-0.005, 0.0]) (all joints).
+    qs = _artic_qpos(model, data, region)
+    if not qs:
+        return False
+    return all(q < 0.0 for q in qs)
 
 
 def _contact(model, data, body_a: int, body_b: int) -> bool:
@@ -134,6 +225,52 @@ def _contact(model, data, body_a: int, body_b: int) -> bool:
         c = data.contact[i]
         ba, bb = model.geom_bodyid[c.geom1], model.geom_bodyid[c.geom2]
         if {ba, bb} == {body_a, body_b}:
+            return True
+    return False
+
+
+def _object_root(model, bid: int) -> int:
+    """The ancestor of ``bid`` that is a direct child of worldbody (the object root)."""
+    p = bid
+    while p > 0 and int(model.body_parentid[p]) != 0:
+        p = int(model.body_parentid[p])
+    return p
+
+
+def _subtree_bodies(model, root: int) -> set:
+    bodies = {root}
+    for b in range(model.nbody):
+        p = b
+        while p > 0:
+            if p == root:
+                bodies.add(b)
+                break
+            p = int(model.body_parentid[p])
+    return bodies
+
+
+def _is_registered_object(model, root: int) -> bool:
+    """A registered object/fixture vs the arena table/floor, by LIBERO's naming.
+
+    LIBERO's ``On(obj, region-site)`` requires contact with the region's parent only
+    when ``get_object(parent_name)`` is a real object/fixture. Every registered object
+    carries an instance index (``<class>_<n>_main`` — e.g. ``flat_stove_1``,
+    ``wooden_two_layer_shelf_1``, ``wine_rack_1``), whereas the arena table/floor is
+    named without one (``kitchen_table``, ``living_room_table``, ``floor``). Some
+    registered fixtures are jointless (a shelf/rack), so the index — not a joint — is
+    the reliable signal.
+    """
+    name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, root) or ""
+    return bool(re.search(r"_\d", name))
+
+
+def _contact_subtree(model, data, root: int, other: int) -> bool:
+    """Contact between any body in ``root``'s subtree and body ``other`` (the object)."""
+    bodies = _subtree_bodies(model, root)
+    for i in range(data.ncon):
+        c = data.contact[i]
+        ba, bb = int(model.geom_bodyid[c.geom1]), int(model.geom_bodyid[c.geom2])
+        if (ba in bodies and bb == other) or (bb in bodies and ba == other):
             return True
     return False
 
@@ -154,7 +291,20 @@ def _on(model, data, a: str, b: str) -> bool:
             return False
         size = model.site_size[sid]
         delta = data.site_xmat[sid].reshape(3, 3) @ (data.xpos[bid] - data.site_xpos[sid])
-        return bool(size[2] - 0.005 < delta[2] < size[2] + 0.10 and abs(delta[0]) < size[0] and abs(delta[1]) < size[1])
+        under = bool(
+            size[2] - 0.005 < delta[2] < size[2] + 0.10 and abs(delta[0]) < size[0] and abs(delta[1]) < size[1]
+        )
+        if not under:
+            return False
+        # LIBERO SiteObjectState.check_ontop also requires contact with the region's
+        # parent object (``under() AND (parent is None OR contact(parent, a))``) -- but
+        # only when that parent is a queryable object/fixture, not the arena table. The
+        # region site lives on a sub-body (e.g. a stove burner), so climb to the object
+        # root and test contact against its whole subtree.
+        root = _object_root(model, int(model.site_bodyid[sid]))
+        if root == 0 or not _is_registered_object(model, root):
+            return True
+        return _contact_subtree(model, data, root, bid)
     ba = _bid(model, a) if _bid(model, a) >= 0 else _bid(model, a + "_main")
     bb = _bid(model, b) if _bid(model, b) >= 0 else _bid(model, b + "_main")
     if ba < 0 or bb < 0:
@@ -175,11 +325,11 @@ def check_bddl_success(model, data, goal_terms) -> bool:
         elif p == "open" and len(args) == 1:
             ok = _is_open(model, data, args[0])
         elif p == "close" and len(args) == 1:
-            ok = not _is_open(model, data, args[0])
+            ok = _is_close(model, data, args[0])
         elif p == "turnon" and len(args) == 1:
             ok = _turn_on(model, data, args[0])
         elif p == "turnoff" and len(args) == 1:
-            ok = not _turn_on(model, data, args[0])
+            ok = _turn_off(model, data, args[0])
         else:
             return False
         if not ok:

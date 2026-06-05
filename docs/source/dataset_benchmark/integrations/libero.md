@@ -18,12 +18,13 @@ the scene into MetaSim's own MuJoCo handler) and a **bitwise OSC_POSE controller
 port** so LIBERO EE-delta policies can run *inside* MetaSim.
 
 Beyond passthrough (which still imports the upstream library), the
-`roboverse_pack.tasks.libero_native` pack runs **all 130 base LIBERO tasks with
-zero `libero` / `robosuite` import** — the scene (a portable MJCF + deduplicated
-shared assets vendored to HuggingFace `RoboVerseOrg/roboverse_data`), the BDDL
-success checker, the OSC_POSE controller and the renderer all run on MuJoCo +
-NumPy alone. A fresh machine with the upstream packages **deleted** resolves each
-task's MJCF and meshes from HF on demand and runs it; verified bitwise on all 130
+`roboverse_pack.tasks.libero.native_libero` pack runs **all 130 base LIBERO tasks
+with zero `libero` / `robosuite` import at runtime** — each task loads its own
+compiled scene MJCF onto MetaSim's MuJoCo handler, with a robosuite-free OSC
+controller and a native BDDL success checker. Mesh assets are resolved from the
+deduplicated tree on HuggingFace `RoboVerseOrg/roboverse_data`, so a machine with the
+upstream packages **uninstalled** still loads and runs them; the checker is verified
+bitwise (0 mismatch vs `env._check_success`) on all 130
 (see [Native MetaSim tasks](#native-metasim-tasks-run-and-delete-libero)).
 
 ## Status
@@ -37,8 +38,8 @@ task's MJCF and meshes from HF on demand and runs it; verified bitwise on all 13
 | MetaSim MuJoCo migration | 6/6 dims: state-set Δ=0, **engine Δ=0** | `scripts/migrate_liberoplus_metasim.py` |
 | OSC_POSE port | **bitwise** — per-state joint-torque Δ = 5.55e-15 N·m | `scripts/osc/` |
 | BC policy (closed-loop) | clean 100 % / light 0 % / camera 50 % / noise 75 %; passthrough==native Δ=0 | `scripts/policy/` |
-| **Native tasks (no libero/robosuite)** | **130 / 130** base tasks: ported BDDL checker bitwise (0 mismatch vs `env._check_success`), render bitwise (state-replay); **discoverable via `get_task_class("libero_native/...")`** | `roboverse_pack/tasks/libero_native/` |
-| **Vendored assets (library-deletable)** | 130 portable MJCF + **193 deduped assets / 265 MB** on HF; fresh-machine model fields **130/130** exact (max\|Δ\|=0), checker **130/130** | `RoboVerseOrg/roboverse_data` `libero/` |
+| **Native tasks (no libero/robosuite)** | **130 / 130** base tasks: ported BDDL checker bitwise (0 mismatch vs `env._check_success` over state-replay); `BaseTaskEnv` on MetaSim's handler, discoverable via `get_task_class("libero_native.<task>")` | `roboverse_pack/tasks/libero/native_libero.py` |
+| **Vendored assets (library-deletable)** | deduped meshes (~265 MB, shared Franka/arena) on HF; native task loads with `libero`/`robosuite` uninstalled | `RoboVerseOrg/roboverse_data` `libero/assets/` |
 
 MetaSim core changes: **0** (the passthrough reuses the unmodified upstream env;
 the MetaSim handler loads the scene MJCF verbatim).
@@ -81,77 +82,54 @@ obs, reward, done, info = env.step([0.0] * 7)   # native legacy-gym 4-tuple (kep
 ## Native MetaSim tasks — run (and delete) LIBERO
 
 The passthrough is bitwise but still *imports* `libero` / `robosuite`. The
-`roboverse_pack.tasks.libero_native` pack removes that dependency: a LIBERO task's
-**scene, success checker, controller and renderer** all run on `mujoco` + `numpy`.
-
-```python
-from roboverse_pack.tasks.libero_native.native_task import LiberoNativeTask
-
-# Resolves the portable MJCF + every mesh/texture from a local roboverse_data
-# clone, or downloads them from HF on demand. No `libero` / `robosuite` import.
-task = LiberoNativeTask.from_vendored("libero_object",
-                                      "pick_up_the_alphabet_soup_and_place_it_in_the_basket")
-task.reset(state)            # set a flat [time, qpos, qvel] state
-task.success()               # ported BDDL goal checker (bitwise vs env._check_success)
-task.render()                # agentview RGB (geom-group matched to robosuite)
-task.step(action, grip)      # one OSC_POSE policy step (inlined controller)
-```
-
-All 130 base tasks are also **registered**, so they are discoverable through the
-task registry exactly like the other RoboVerse tasks — and resolve and run even
-with `libero` / `robosuite` uninstalled:
+`roboverse_pack.tasks.libero.native_libero` pack removes that dependency: each task
+loads its **own** compiled scene MJCF onto MetaSim's groundless `MujocoHandler`,
+drives it with a robosuite-free OSC controller, and judges success natively from the
+BDDL goal — with **no `import libero` / `import robosuite` at runtime**. All 130 base
+tasks are registered, so they're discoverable through the task registry like any
+other RoboVerse task and run with `libero`/`robosuite` uninstalled:
 
 ```python
 from metasim.task.registry import get_task_class
 
-Task = get_task_class("libero_native/libero_object/pick_up_the_alphabet_soup_and_place_it_in_the_basket")
+Task = get_task_class("libero_native.10__KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it")
 env = Task()                                   # loads the vendored scene; no libero
-obs = env.reset()                              # deterministic seed=0 BDDL reset state
-obs, reward, success, time_out, _ = env.step([0, 0, -0.1, 0, 0, 0, -1])  # OSC delta + gripper
+obs, info = env.reset()
+obs, reward, terminated, time_out, info = env.step(action)   # 7-D OSC delta + gripper
 ```
 
-Registration is cheap (the task list is shipped; the scene/assets load lazily on
-first instantiation), and `success` uses the **bitwise** ported BDDL checker.
+Each task is a first-class `BaseTaskEnv` (`NativeLiberoEnv`); a static bundle under
+`roboverse_pack/tasks/libero/native_bundles/<task>/` holds the libero-free inputs —
+`model.xml` (the demo's embedded MJCF), `goal.json` (parsed BDDL `:goal`), `init.npz`
+(a demo's initial qpos/qvel). What makes it 1:1:
 
-What was ported, and how it stays 1:1:
+- **Scene / physics** — the demo's own robosuite-compiled MJCF runs on MetaSim's
+  dm_control handler (the same MuJoCo substrate LIBERO uses); engine step is
+  bit-for-bit identical and state-replay reproduces the recorded success.
+- **BDDL success checker** (`_native_util.check_bddl_success`) — every goal predicate
+  reduced to a MuJoCo-state test: `In` = `SiteObject.in_box` (with LIBERO's
+  `lb[2]-=0.01` floor slack); `On`(object) = above + contact + xy-aligned;
+  `On`(region-site) = `SiteObject.under` **and** contact with the region's parent
+  *object* (climbing to the object root; arena-table regions are parentless →
+  containment only); `Open`/`Close`/`TurnOn`/`TurnOff` use each object's own
+  threshold ranges (open and close are **not** complements — there is a dead zone —
+  and close/turn-off require **all** joints). **Verified 0 mismatch vs
+  `env._check_success` over demo state-replay on all 130 base tasks.**
+- **Control** — `roboverse_pack.tasks.robosuite._osc.NativeOSC`, robosuite's OSC_POSE
+  math reimplemented in NumPy (arm + parallel-jaw gripper).
 
-- **BDDL success checker** (`checker.py`) — every goal predicate reduced to a
-  MuJoCo-state test: `In`=oriented-box containment, `On`(object)=`check_ontop`
-  with exact `contact_geoms`, `On`(region-site)=`SiteObject.under` + parent
-  contact, `Open/Close/TurnOn/TurnOff`=articulated-joint thresholds (any/all).
-  Thresholds are recovered at export by probing the live object's own method, so
-  they are exactly faithful. **0 mismatch vs `env._check_success` on all 130.**
-- **OSC_POSE** (`osc.py`) — robosuite's operational-space control math inlined as
-  pure NumPy; per-step joint torque Δ = 1.8e-14 vs robosuite.
-- **Scene** — each task ships as a portable MJCF whose `file=` paths are vendored
-  asset relpaths; the loader re-applies robosuite's runtime fixture placement
-  (`body_pos/quat`, captured with `seed=0`) so the compiled model is
-  **field-for-field identical** (`max|Δ| = 0`).
-- **Render** — `mujoco.Renderer`'s geom-group mask is matched to robosuite's
-  offscreen `vopt` so a state-replay render is pixel-identical.
+### Vendored assets (library-deletable)
 
-### Vendored assets on HuggingFace (library-deletable)
-
-`scripts/native/migrate_libero_assets.py` exports all 130 tasks to a deduplicated
-tree (193 unique files / 265 MB — the Franka/arena meshes are shared by every
-task) published to the
+A bundle's `model.xml` references mesh/texture files by path; those are resolved from
+the deduplicated tree published to the
 [`RoboVerseOrg/roboverse_data`](https://huggingface.co/datasets/RoboVerseOrg/roboverse_data/tree/main/libero)
-dataset under `libero/`:
-
-```
-libero/
-  manifest.json
-  assets/robosuite/<...>           # shared Franka / gripper / arena meshes
-  assets/libero/<...>              # per-scene objects, textures, meshes
-  tasks/<suite>/<task>.xml         # portable MJCF (file= are asset relpaths)
-  tasks/<suite>/<task>.goal.json   # resolved BDDL goal + OSC cfg + body_pos/quat
-```
-
-`_locator.py` resolves these from a local `roboverse_data` clone or HuggingFace on
-demand — so on a machine where `libero` and `robosuite` are **uninstalled**, the
-native task still loads and runs. Verified across all 130: model fields exact
-**130/130** (`max|Δ| = 0`), ported checker **130/130** (0 mismatch). Use
-`ROBOVERSE_DATA_DIR` to point at a shared cache.
+dataset under `libero/assets/{robosuite,libero}/` (the Franka/arena meshes are shared
+by every task — ~265 MB total, not per-task copies). `remap_libero_model` rebases the
+roots onto that tree and downloads any missing file from HuggingFace on demand, so on
+a machine with `libero`/`robosuite` **uninstalled** the task still loads. Build the
+tree with `tools/libero_integration/vendor_shared_assets.py`; override the roots with
+`ROBOVERSE_DATA_DIR`, or `LIBERO_ASSETS` / `ROBOSUITE_ASSETS` to point at local
+installs.
 
 ## Reproduce — run commands
 
@@ -187,15 +165,14 @@ LIBERO_CONFIG_PATH=$HOME/.libero_plus MUJOCO_GL=egl \
   python -m scripts.policy.eval_bc_liberoplus --ckpt scripts/policy/ckpt/bc.pt \
   --base <task> --suite libero_object --episodes 8
 
-# --- native tasks (no libero/robosuite): vendor assets -> verify -> side-by-side ---
-ROBOVERSE_DATA_DIR=/path/to/roboverse_data MUJOCO_GL=egl LIBERO_CONFIG_PATH=$HOME/.libero_plus \
-  python -m scripts.native.migrate_libero_assets      # 130 tasks -> roboverse_data/libero
-ROBOVERSE_DATA_DIR=/path/to/roboverse_data MUJOCO_GL=egl LIBERO_CONFIG_PATH=$HOME/.libero_plus \
-  python -m scripts.native.verify_vendored            # all 130: model fields + checker 1:1
+# --- native tasks (no libero/robosuite): vendor shared assets + build bundles ---
 MUJOCO_GL=egl LIBERO_CONFIG_PATH=$HOME/.libero_plus \
-  python -m scripts.native.sweep_all_native           # per-task side-by-side + checker + OSC
-# unit tests (assert the native task imports/runs with NO libero/robosuite):
-python -m pytest tests/test_libero_native.py -v       # in liberoplus
+  python -m tools.libero_integration.vendor_shared_assets  # dedup meshes -> roboverse_data/libero/assets
+MUJOCO_GL=egl LIBERO_CONFIG_PATH=$HOME/.libero_plus \
+  python -m tools.libero_integration.vendor_native_libero --hdf5 <demo.hdf5> --bddl <task.bddl> --name <task>
+# unit tests (checker semantics + a native task runs with NO libero/robosuite):
+ROBOVERSE_DATA_DIR=/path/to/roboverse_data MUJOCO_GL=egl \
+  python -m pytest tests/test_libero_native.py -v       # in liberoplus
 ```
 
 ## Side-by-side: native LIBERO-plus vs MetaSim
