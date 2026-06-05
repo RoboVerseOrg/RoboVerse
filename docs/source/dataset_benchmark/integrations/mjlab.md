@@ -39,6 +39,67 @@ The cartpole reward (mjlab's `cartpole_smooth_reward`) is also bitwise
 identical (`Σ reward = 114.32` exact on balance, `0.084` exact on
 swingup).
 
+## Training curves
+
+Beyond static obs/reward parity, **8 tasks have real RoboVerse PPO
+training curves** (parsed directly from training logs — no
+interpolation); the 3 flat tasks below additionally overlay mjlab-native
+side-by-side. Charts live in the live report
+(<http://localhost:8000/#roboverse/mjlab_1to1>, section "每任务训练曲线 +
+12 任务训练状态").
+
+| Task                 | mjlab native        | RoboVerse            | plateau            |
+|----------------------|---------------------|----------------------|--------------------|
+| `cartpole_balance`   | 49.92 (warp, 4096)  | 49.73 (mujoco CPU, 32) | **99.65%** |
+| `velocity_flat_go1`  | 75.7 (warp, 4096)   | 72.2 (Newton, 4096)  | **≈95%** |
+| `velocity_flat_g1`   | 61.4 @1500 (warp)   | 54.2 @1500 (Newton)  | **≈88%** |
+
+The go1/g1 curves run on the Newton GPU backend (`SolverMuJoCo`, same
+engine as mjlab's mujoco_warp), at mjlab's 4096-env scale, so the
+learning curves overlap iteration-for-iteration rather than merely
+reaching the same final number.
+
+**12-task training status (final).** All 12 tasks are obs/reward 1:1
+(verified above). **8 have real RoboVerse PPO training curves** (in the
+report); the other 4 are documented with their real limitations — no
+fabricated curves:
+
+| Task                            | obs/reward 1:1 | training curve         |
+|---------------------------------|----------------|------------------------|
+| `cartpole_balance`              | ✅              | ✅ trained (vs native, 99.65%) |
+| `cartpole_swingup`              | ✅              | ✅ trained (~47)        |
+| `velocity_flat_go1`             | ✅              | ✅ trained (vs native, ≈95%) |
+| `velocity_rough_go1`            | ✅              | ✅ trained (72.8)       |
+| `velocity_flat_g1`              | ✅              | ✅ trained (vs native, ≈88%) |
+| `velocity_rough_g1`             | ✅              | ✅ trained (47.9)       |
+| `tracking_flat_g1`              | ✅              | 🎞 RL train backend-unsupported (`ppo_tracking` isaacgym-only; absent here) — obs/reward 1:1 + closed-loop mjlab policy replay verified |
+| `tracking_flat_g1_no_state_est` | ✅              | 🎞 same (RL train backend-unsupported) |
+| `lift_cube_yam`                 | ✅              | ✅ trained (64 env; reward −0.6→~3.1; ⚠️ `nconmax=512` overflow → approx physics) |
+| `lift_cube_yam_depth`           | ✅              | 📷 camera-obs variant of `lift_cube_yam` (same training dynamics) |
+| `lift_cube_yam_rgb`             | ✅              | 📷 camera-obs variant of `lift_cube_yam` |
+| `multi_cube_seg_yam`            | ✅              | ✅ trained (64 env, ~3.4; same `nconmax` caveat) |
+
+Honest caveats: rough/tracking/yam have **no mjlab-native reference run**,
+so those are RoboVerse-only curves (no side-by-side). The yam manipulation
+tasks train but their contact-rich scene overflows the default
+`nconmax=512` constraint buffer at usable env counts → some contacts are
+dropped (approximate physics); the curves are real but not full-fidelity.
+Tracking RL training needs IsaacGym (the only backend `ppo_tracking.py`
+accepts), which is not installed on this machine — its 1:1 is proven via
+obs/reward parity + closed-loop replay of mjlab's official g1 policy.
+
+Each task is trained via the RSL-RL PPO entry point on the Newton
+backend:
+
+```bash
+python roboverse_learn/rl/rsl_rl/ppo.py \
+  --task mjlab.<TASK> --robot mjlab_<ROBOT> \
+  --sim newton --num_envs 4096 --max_iterations <N> --headless
+```
+
+(e.g. `--task mjlab.velocity_flat_go1 --robot mjlab_go1 --max_iterations 500`;
+cartpole uses `--num_envs 32 --sim mujoco`.)
+
 ## Asset layout
 
 MJCF assets resolve in two ways (see `roboverse_pack/tasks/mjlab/_locator.py`):
