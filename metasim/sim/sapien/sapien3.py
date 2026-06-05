@@ -151,6 +151,46 @@ class Sapien3Handler(BaseSimHandler):
         self.headless = scenario.headless
         self._actions_cache: CompatActionInput = []
 
+    @staticmethod
+    def _apply_global_physx(sp) -> None:
+        """Apply the full PhysX config globally, mirroring ManiSkill's ``BaseEnv._set_scene_config``.
+
+        Opt-in via ``sim_params.sapien_apply_global_physx``. Only fields that are set take effect;
+        the rest fall back to the existing ``SimParamCfg`` physics defaults. This is what lets a
+        sapien3 task reproduce native ManiSkill (physx_cpu) dynamics bit-for-bit on object state.
+        """
+        import sapien.physx as physx
+
+        physx.set_shape_config(contact_offset=sp.contact_offset, rest_offset=sp.rest_offset)
+        body_kwargs = dict(
+            solver_position_iterations=sp.num_position_iterations,
+            solver_velocity_iterations=sp.num_velocity_iterations,
+        )
+        if sp.sapien_sleep_threshold is not None:
+            body_kwargs["sleep_threshold"] = sp.sapien_sleep_threshold
+        physx.set_body_config(**body_kwargs)
+        scene_kwargs = {}
+        if sp.sapien_bounce_threshold is not None:
+            scene_kwargs["bounce_threshold"] = sp.sapien_bounce_threshold
+        if sp.sapien_enable_pcm is not None:
+            scene_kwargs["enable_pcm"] = sp.sapien_enable_pcm
+        if sp.sapien_enable_tgs is not None:
+            scene_kwargs["enable_tgs"] = sp.sapien_enable_tgs
+        if sp.sapien_enable_ccd is not None:
+            scene_kwargs["enable_ccd"] = sp.sapien_enable_ccd
+        if sp.sapien_enable_enhanced_determinism is not None:
+            scene_kwargs["enable_enhanced_determinism"] = sp.sapien_enable_enhanced_determinism
+        if sp.sapien_enable_friction_every_iteration is not None:
+            scene_kwargs["enable_friction_every_iteration"] = sp.sapien_enable_friction_every_iteration
+        if scene_kwargs:
+            physx.set_scene_config(**scene_kwargs)
+        if sp.sapien_default_static_friction is not None and sp.sapien_default_dynamic_friction is not None:
+            physx.set_default_material(
+                sp.sapien_default_static_friction,
+                sp.sapien_default_dynamic_friction,
+                sp.sapien_default_restitution if sp.sapien_default_restitution is not None else 0.0,
+            )
+
     def _build_sapien(self):
         self.engine = sapien_core.Engine()  # Create a physical simulation engine
         self.renderer = sapien_core.SapienRenderer()  # Create a renderer
@@ -160,20 +200,30 @@ class Sapien3Handler(BaseSimHandler):
         # Optional PhysX SceneConfig overrides (default None = keep SAPIEN defaults, so
         # existing tasks are unchanged); mirrors the sapien2 handler for upstream-faithful ports.
         sp = self.scenario.sim_params
-        if getattr(sp, "sapien_enable_tgs", None) is not None:
-            scene_config.enable_tgs = sp.sapien_enable_tgs
-        if getattr(sp, "sapien_enable_pcm", None) is not None:
-            scene_config.enable_pcm = sp.sapien_enable_pcm
-        if getattr(sp, "sapien_default_static_friction", None) is not None:
-            scene_config.default_static_friction = sp.sapien_default_static_friction
-        if getattr(sp, "sapien_default_dynamic_friction", None) is not None:
-            scene_config.default_dynamic_friction = sp.sapien_default_dynamic_friction
-        if getattr(sp, "sapien_default_restitution", None) is not None:
-            scene_config.default_restitution = sp.sapien_default_restitution
-        if getattr(sp, "sapien_apply_scene_solver", None):
-            scene_config.contact_offset = sp.contact_offset
-            scene_config.solver_iterations = sp.num_position_iterations
-            scene_config.solver_velocity_iterations = sp.num_velocity_iterations
+        # Legacy SceneConfig overrides. Skipped when the global-physx path is on, which owns the
+        # full config (and some of these attributes — friction / solver_iterations — don't exist on
+        # the SAPIEN-3 PhysxSceneConfig anyway, so they must not run there).
+        if not getattr(sp, "sapien_apply_global_physx", None):
+            if getattr(sp, "sapien_enable_tgs", None) is not None:
+                scene_config.enable_tgs = sp.sapien_enable_tgs
+            if getattr(sp, "sapien_enable_pcm", None) is not None:
+                scene_config.enable_pcm = sp.sapien_enable_pcm
+            if getattr(sp, "sapien_default_static_friction", None) is not None:
+                scene_config.default_static_friction = sp.sapien_default_static_friction
+            if getattr(sp, "sapien_default_dynamic_friction", None) is not None:
+                scene_config.default_dynamic_friction = sp.sapien_default_dynamic_friction
+            if getattr(sp, "sapien_default_restitution", None) is not None:
+                scene_config.default_restitution = sp.sapien_default_restitution
+            if getattr(sp, "sapien_apply_scene_solver", None):
+                scene_config.contact_offset = sp.contact_offset
+                scene_config.solver_iterations = sp.num_position_iterations
+                scene_config.solver_velocity_iterations = sp.num_velocity_iterations
+
+        # Optionally apply the full ManiSkill-faithful PhysX config globally (correct SAPIEN-3 path:
+        # solver iterations / offsets / sleep / determinism live on shape+body+scene config, not on
+        # the legacy SceneConfig). Must run before create_scene. Opt-in, so legacy tasks are untouched.
+        if getattr(sp, "sapien_apply_global_physx", None):
+            self._apply_global_physx(sp)
 
         self.engine.set_renderer(self.renderer)
         self.scene = self.engine.create_scene(scene_config)
@@ -181,7 +231,8 @@ class Sapien3Handler(BaseSimHandler):
         ground_material = self.renderer.create_material()
         ground_material.base_color = np.array([202, 164, 114, 256]) / 256
         ground_material.specular = 0.5
-        self.scene.add_ground(altitude=0, render_material=ground_material)
+        ground_altitude = sp.sapien_ground_altitude if getattr(sp, "sapien_ground_altitude", None) is not None else 0
+        self.scene.add_ground(altitude=ground_altitude, render_material=ground_material)
 
         self.loader = self.scene.create_urdf_loader()
 
@@ -258,7 +309,22 @@ class Sapien3Handler(BaseSimHandler):
                         stiffness = actuator.stiffness
                         damping = actuator.damping
                         if stiffness is not None and damping is not None:
-                            joint.set_drive_property(stiffness, damping)
+                            # Opt-in: pass the actuator's effort limit + drive mode so the joint
+                            # drive matches ManiSkill (force_limit + mode="force"). Default path is
+                            # unchanged — set_drive_property(stiffness, damping) only.
+                            if getattr(sp, "sapien_drive_force_mode", None) and actuator.effort_limit_sim is not None:
+                                joint.set_drive_property(
+                                    stiffness, damping,
+                                    force_limit=actuator.effort_limit_sim,
+                                    mode=sp.sapien_drive_force_mode,
+                                )
+                            else:
+                                joint.set_drive_property(stiffness, damping)
+                    # Opt-in: disable gravity on every robot link (ManiSkill's approach; the
+                    # handler then also skips its passive-force gravity compensation in _apply_action).
+                    if getattr(sp, "sapien_disable_robot_gravity", None):
+                        for link in curr_id.get_links():
+                            link.disable_gravity = True
                 else:
                     active_joints = curr_id.get_active_joints()
                     for id, joint in enumerate(active_joints):
@@ -293,17 +359,17 @@ class Sapien3Handler(BaseSimHandler):
                         base_color=list(object.color[:3]) + [1] if object.color else [1.0, 1.0, 0.0, 1.0]
                     ),
                 )
-                box = actor_builder.build(name="box")  # Add a box
+                # Honor fix_base_link: a fixed cube (e.g. a ManiSkill table-workspace box) becomes a
+                # static actor instead of a falling dynamic body. Default fix_base_link=False keeps
+                # the historical dynamic build.
+                if getattr(object, "fix_base_link", False):
+                    # Kinematic (not static) so it is immovable yet still participates in the
+                    # dynamic-solver contact set exactly like ManiSkill's table-workspace box —
+                    # static bodies solve contacts slightly differently (~1e-6 drift).
+                    box = actor_builder.build_kinematic(name=object.name)
+                else:
+                    box = actor_builder.build(name=object.name)  # Add a box
                 box.set_pose(_load_init_pose(object))
-                # box.set_damping(agent.rigid_shape_property.linear_damping, agent.rigid_shape_property.angular_damping)
-                # if agent.vel:
-                #     box.set_velocity(agent.vel)
-                # if agent.ang_vel:
-                #     box.set_angular_velocity(agent.ang_vel)
-                # box.set_damping(agent.rigid_shape_property.linear_damping, agent.rigid_shape_property.angular_damping)
-                # if agent.fix_base_link:
-                #     box.lock_motion()
-                # agent.instance = box
                 self.object_ids[object.name] = box
                 self.object_joint_order[object.name] = []
 
@@ -443,8 +509,12 @@ class Sapien3Handler(BaseSimHandler):
             camera_id.take_picture()
 
     def _apply_action(self, instance: sapien_core.physx.PhysxArticulation, pos_action=None, vel_action=None):
-        qf = instance.compute_passive_force(gravity=True, coriolis_and_centrifugal=True)
-        instance.set_qf(qf)
+        # When robot-link gravity is disabled (ManiSkill-faithful mode) the joint drives hold the
+        # arm directly, exactly as ManiSkill does — so skip the gravity-comp passive force, which
+        # would otherwise double-count and break dynamics parity. Default path is unchanged.
+        if not getattr(self.scenario.sim_params, "sapien_disable_robot_gravity", None):
+            qf = instance.compute_passive_force(gravity=True, coriolis_and_centrifugal=True)
+            instance.set_qf(qf)
         if pos_action is not None:
             for joint in instance.get_active_joints():
                 joint.set_drive_target(pos_action[joint.get_name()])

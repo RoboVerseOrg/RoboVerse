@@ -61,6 +61,29 @@ class SimParamCfg:
     # split into several convex pieces (e.g. the SimplerEnv google_robot). Default None = legacy.
     sapien_load_multiple_collisions: bool | None = None
 
+    # --- ManiSkill-faithful PhysX recipe (all None/False = legacy, existing tasks unaffected) ---
+    # When True, the sapien3 handler applies the FULL PhysX config globally (physx.set_shape_config /
+    # set_body_config / set_scene_config / set_default_material) before creating the scene, mirroring
+    # ManiSkill's BaseEnv._set_scene_config. This is the correct SAPIEN-3 path (the legacy
+    # SceneConfig.solver_iterations attribute no longer exists); it reads contact_offset, rest_offset,
+    # num_position_iterations, num_velocity_iterations from this cfg plus the fields below.
+    sapien_apply_global_physx: bool | None = None
+    sapien_sleep_threshold: float | None = None
+    sapien_bounce_threshold: float | None = None
+    sapien_enable_ccd: bool | None = None
+    sapien_enable_enhanced_determinism: bool | None = None
+    sapien_enable_friction_every_iteration: bool | None = None
+    # When True, the handler disables gravity on every robot link (link.disable_gravity=True) and
+    # skips its built-in gravity-compensation passive force. This is how ManiSkill holds the arm and
+    # is required for dynamics parity with it. Default None/False keeps the passive-force behaviour.
+    sapien_disable_robot_gravity: bool | None = None
+    # Altitude of the auto-added ground plane. None keeps the historical 0.0. ManiSkill puts the
+    # ground far below a kinematic table box, e.g. -0.9196429.
+    sapien_ground_altitude: float | None = None
+    # When set (e.g. "force"), robot joint drives are created with this drive mode and the actuator's
+    # effort_limit_sim as the force limit. None keeps the legacy set_drive_property(stiffness, damping).
+    sapien_drive_force_mode: str | None = None
+
     ## MJX, Newton specific parameters
     nconmax: int | None = 512
     njmax: int | None = None
