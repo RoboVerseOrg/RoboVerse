@@ -83,3 +83,91 @@ def lift_peg_upright(*, peg_rot_mat, peg_pos, tcp_pos, is_grasped, peg_half_leng
     reaching = 1.0 if is_grasped else (1.0 - _tanh(5 * to_grip))
     reward += reaching / 5.0
     return float(reward / 2.2) if normalized else float(reward)
+
+
+def stack_cube(*, tcp_pos, cubeA_pos, cubeB_pos, cube_half_size_z, finger_qpos, gripper_width,
+               cubeA_linvel, cubeA_angvel, is_cubeA_grasped, is_cubeA_on_cubeB, success,
+               normalized=False) -> float:
+    """ManiSkill StackCube-v1 ``compute_dense_reward`` (max 8)."""
+    cubeA_to_tcp = float(np.linalg.norm(np.asarray(tcp_pos, np.float32) - np.asarray(cubeA_pos, np.float32)))
+    reward = 2.0 * (1.0 - _tanh(5 * cubeA_to_tcp))
+    goal_xyz = np.array([cubeB_pos[0], cubeB_pos[1], cubeB_pos[2] + cube_half_size_z * 2], np.float32)
+    place_reward = 1.0 - _tanh(5.0 * float(np.linalg.norm(goal_xyz - np.asarray(cubeA_pos, np.float32))))
+    if is_cubeA_grasped:
+        reward = 4.0 + place_reward
+    ungrasp_reward = float(np.sum(np.asarray(finger_qpos))) / gripper_width
+    if not is_cubeA_grasped:
+        ungrasp_reward = 1.0
+    static_reward = 1.0 - _tanh(float(np.linalg.norm(cubeA_linvel)) * 10 + float(np.linalg.norm(cubeA_angvel)))
+    if is_cubeA_on_cubeB:
+        reward = 6.0 + (ungrasp_reward + static_reward) / 2.0
+    if success:
+        reward = 8.0
+    return float(reward / 8.0) if normalized else float(reward)
+
+
+def poke_cube(*, tcp_pos, peg_pos, angle_diff, head_to_cube_dist, is_peg_grasped, goal_pos, cube_pos,
+              is_peg_cube_fit, is_cube_placed, qvel_arm, success, normalized=False) -> float:
+    """ManiSkill PokeCube-v1 ``compute_dense_reward`` (max 10)."""
+    tcp_to_peg = float(np.linalg.norm(np.asarray(tcp_pos, np.float32) - np.asarray(peg_pos, np.float32)))
+    reached = tcp_to_peg < 0.01
+    reward = 2.0 * (1.0 - _tanh(5.0 * tcp_to_peg))
+    align = 1.0 - _tanh(5.0 * float(angle_diff))
+    close = 1.0 - _tanh(5.0 * float(head_to_cube_dist))
+    peg_grasped = bool(is_peg_grasped) and reached
+    if peg_grasped:
+        reward = 4.0 + close + align
+    place = 1.0 - _tanh(5 * float(np.linalg.norm(np.asarray(goal_pos, np.float32) - np.asarray(cube_pos, np.float32))))
+    peg_cube_fit = bool(is_peg_cube_fit) and peg_grasped
+    if peg_cube_fit:
+        reward = 7.0 + place
+    static = 1.0 - _tanh(5 * float(np.linalg.norm(np.asarray(qvel_arm, np.float32))))
+    if is_cube_placed:
+        reward += static
+    if success:
+        reward = 10.0
+    return float(reward / 10.0) if normalized else float(reward)
+
+
+def place_sphere(*, tcp_pos, obj_pos, bin_pos, block_half_size0, radius, finger_qpos, gripper_width,
+                 obj_linvel, obj_angvel, robot_is_static, is_obj_grasped, is_obj_on_bin, success,
+                 normalized=False) -> float:
+    """ManiSkill PlaceSphere-v1 ``compute_dense_reward`` (max 13)."""
+    obj_to_tcp = float(np.linalg.norm(np.asarray(tcp_pos, np.float32) - np.asarray(obj_pos, np.float32)))
+    reward = 2.0 * (1.0 - _tanh(5 * obj_to_tcp))
+    bin_top = np.asarray(bin_pos, np.float32).copy()
+    bin_top[2] = bin_top[2] + block_half_size0 + radius
+    place_reward = 1.0 - _tanh(5.0 * float(np.linalg.norm(bin_top - np.asarray(obj_pos, np.float32))))
+    if is_obj_grasped:
+        reward = 4.0 + place_reward
+    ungrasp_reward = float(np.sum(np.asarray(finger_qpos))) / gripper_width
+    if not is_obj_grasped:
+        ungrasp_reward = 16.0
+    static_reward = 1.0 - _tanh(float(np.linalg.norm(obj_linvel)) * 10 + float(np.linalg.norm(obj_angvel)))
+    if is_obj_on_bin:
+        reward = 6.0 + (ungrasp_reward + static_reward + float(robot_is_static)) / 3.0
+    if success:
+        reward = 13.0
+    return float(reward / 13.0) if normalized else float(reward)
+
+
+def roll_ball(*, tcp_pos, ball_pos, goal_pos, ball_radius, reached_status, success, normalized=False):
+    """ManiSkill RollBall-v1 ``compute_dense_reward`` (max 30). Stateful: pass ``reached_status`` in.
+
+    Returns ``(reward, reached_status)``; ``reached_status`` is sticky (latches to 1.0).
+    """
+    ball = np.asarray(ball_pos, np.float32)
+    goal = np.asarray(goal_pos, np.float32)
+    unit = ball - goal
+    unit = unit / np.linalg.norm(unit)
+    tcp_hit = ball + unit * (ball_radius + 0.05)
+    tcp_to_hit = float(np.linalg.norm(tcp_hit - np.asarray(tcp_pos, np.float32)))
+    if tcp_to_hit < 0.04:
+        reached_status = 1.0
+    reaching = 1.0 - _tanh(2 * tcp_to_hit)
+    obj_to_goal = float(np.linalg.norm(ball[:2] - goal[:2]))
+    reached_reward = 1.0 - _tanh(obj_to_goal)
+    reward = 20 * reached_reward * reached_status + reaching * (1 - reached_status) + reached_status
+    if success:
+        reward = 30.0
+    return (float(reward / 30.0) if normalized else float(reward)), reached_status
