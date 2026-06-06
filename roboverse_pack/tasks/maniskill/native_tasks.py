@@ -8,12 +8,10 @@ its own module; this module covers the rest of the single-primitive suite.
 
 from __future__ import annotations
 
-import torch
 
 from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveMultiBoxCfg, PrimitiveSphereCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.utils.state import TensorState
 
 from ._native.base import ManiSkillNativeTask
 from ._native.recipe import maniskill_panda_cfg, table_workspace_cfg
@@ -41,7 +39,7 @@ def _make_task_cls(task_key: str, spec: dict):
         objects=objects,
     )
     object_names = [o[0] for o in spec["objects"]]
-    success_fn = spec["success"]
+    geom_success = spec["success"]
     max_steps = spec["max_steps"]
 
     class _Task(ManiSkillNativeTask):
@@ -50,11 +48,20 @@ def _make_task_cls(task_key: str, spec: dict):
     _Task.scenario = scenario
     _Task.max_episode_steps = max_steps
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        poses = {n: self.handler.object_ids[n].get_pose().p for n in object_names}
-        return torch.tensor([bool(success_fn(poses))] * self.num_envs, dtype=torch.bool)
+    # Prefer a fully-ported, native-1:1 success/reward/goal when the spec provides them
+    # (ManiSkill evaluate() + compute_dense_reward + reset goal sampling); otherwise fall back to the
+    # simple geometric success proxy that reads object positions.
+    if "success_full" in spec:
+        _Task.success_fn = staticmethod(spec["success_full"])
+    else:
+        def _proxy_success(task, _fn=geom_success, _names=object_names):
+            return _fn({n: task.obj_pos(n) for n in _names})
+        _Task.success_fn = staticmethod(_proxy_success)
+    if "reward" in spec:
+        _Task.reward_fn = staticmethod(spec["reward"])
+    if "goal" in spec:
+        _Task.goal_sampler = staticmethod(spec["goal"])
 
-    _Task._terminated = _terminated
     _Task.__name__ = "".join(p.capitalize() for p in task_key.split("_")) + "NativeTask"
     _Task.__qualname__ = _Task.__name__
     return _Task

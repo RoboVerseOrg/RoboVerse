@@ -12,6 +12,9 @@ porting ManiSkill's exact goal-site + robot-static success and the dense rewards
 
 from __future__ import annotations
 
+from . import rewards as RW
+from . import success as SU
+
 # Default panda mount (table edge); RollBall rotates it.
 _BASE = ((-0.615, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0))
 _CUBE = [0.04, 0.04, 0.04]
@@ -35,18 +38,61 @@ def _moved(name, spawn, dist=0.05):
     return lambda p: ((p[name][0] - sx) ** 2 + (p[name][1] - sy) ** 2) ** 0.5 > dist
 
 
+# --- fully-ported (native 1:1) reset / reward / success for the wired tasks ---
+def _set_cube(task, name, x, y, z):
+    import sapien
+
+    task.handler.object_ids[name].set_pose(sapien.Pose([float(x), float(y), float(z)], [1.0, 0.0, 0.0, 0.0]))
+
+
+def _pick_cube_reset(task, rng):
+    """ManiSkill PickCube reset: cube XY ∈ U(±0.1); goal XY ∈ U(±0.1), Z = U(0,0.3)+0.02."""
+    cx, cy = rng.uniform(-0.1, 0.1, 2)
+    _set_cube(task, "cube", cx, cy, 0.02)
+    gx, gy = rng.uniform(-0.1, 0.1, 2)
+    return [gx, gy, float(rng.uniform(0, 0.3)) + 0.02]
+
+
+def _pick_cube_reward(task):
+    return RW.pick_cube(cube_pos=task.obj_pos("cube"), tcp_pos=task.tcp_pos(), goal_pos=task.goal_pos,
+                        qvel_arm=task.qvel_arm(), is_grasped=task.is_grasped("cube"),
+                        is_robot_static=task.is_robot_static())
+
+
+def _pick_cube_success(task):
+    return SU.pick_cube(cube_pos=task.obj_pos("cube"), goal_pos=task.goal_pos,
+                        is_robot_static=task.is_robot_static())
+
+
+def _push_cube_reset(task, rng):
+    """ManiSkill PushCube reset: cube XY ∈ U(±0.1); goal = cube + [0.2, 0, 0] (goal_radius 0.1)."""
+    cx, cy = rng.uniform(-0.1, 0.1, 2)
+    _set_cube(task, "cube", cx, cy, 0.02)
+    return [cx + 0.2, cy, 1e-3]
+
+
+def _push_cube_reward(task):
+    return RW.push_cube(cube_pos=task.obj_pos("cube"), tcp_pos=task.tcp_pos(), goal_pos=task.goal_pos)
+
+
+def _push_cube_success(task):
+    return SU.push_cube(cube_pos=task.obj_pos("cube"), goal_pos=task.goal_pos)
+
+
 # name -> spec. ``objects``: list of (name, kind, geom, mass, color, pos, kinematic).
 #   box geom = full size [x,y,z]; sphere geom = radius.
 TASK_SPECS: dict[str, dict] = {
     "pick_cube": {
         "gym_id": "PickCube-v1", "base": _BASE, "max_steps": 50,
         "objects": [("cube", "box", _CUBE, 0.064, _RED, (-0.0007, 0.0536, 0.02), False)],
-        "success": _lifted("cube"),
+        "success": _lifted("cube"),  # fallback proxy (unused — success_full set below)
+        "goal": _pick_cube_reset, "reward": _pick_cube_reward, "success_full": _pick_cube_success,
     },
     "push_cube": {
         "gym_id": "PushCube-v1", "base": _BASE, "max_steps": 50,
         "objects": [("cube", "box", _CUBE, 0.064, _MSBLUE, (-0.0007, 0.0536, 0.02), False)],
         "success": _moved("cube", (-0.0007, 0.0536)),
+        "goal": _push_cube_reset, "reward": _push_cube_reward, "success_full": _push_cube_success,
     },
     "pull_cube": {
         "gym_id": "PullCube-v1", "base": _BASE, "max_steps": 50,

@@ -81,14 +81,60 @@ class ManiSkillNativeTask(BaseTaskEnv):
         """Accept the native ManiSkill action; convert via the vendored controller, then step."""
         return super().step(self._targets_from_action(actions))
 
-    # -- checker plumbing (subclasses set ``checker``) -----------------------
+    # -- handler-reading helpers (used by the ported reward/success fns) ------
+    def obj_pos(self, name):
+        """World position (3,) of object ``name``."""
+        return np.asarray(self.handler.object_ids[name].get_pose().p, dtype=np.float64)
+
+    def obj_quat(self, name):
+        """World quaternion (wxyz) of object ``name``."""
+        return np.asarray(self.handler.object_ids[name].get_pose().q, dtype=np.float64)
+
+    def tcp_pos(self):
+        """World position of the panda ``panda_hand_tcp`` link."""
+        for link in self.handler.object_ids[self.robot_name].get_links():
+            if link.get_name() == "panda_hand_tcp":
+                return np.asarray(link.get_pose().p, dtype=np.float64)
+        raise RuntimeError("panda_hand_tcp link not found")
+
+    def robot_qvel(self):
+        return np.asarray(self.handler.object_ids[self.robot_name].get_qvel(), dtype=np.float64).ravel()
+
+    def qvel_arm(self):
+        """Robot qvel with the 2 finger DOFs dropped (panda)."""
+        return self.robot_qvel()[:-2]
+
+    def is_robot_static(self, threshold: float = 0.2) -> bool:
+        return bool(np.max(np.abs(self.qvel_arm())) <= threshold)
+
+    def is_grasped(self, name: str) -> bool:
+        from .grasp import is_grasped as _is_grasped
+
+        return _is_grasped(self.handler, name)
+
+    # -- reward / success / goal wiring (set by the factory from the spec) ----
+    reward_fn = None  # callable(task) -> float
+    success_fn = None  # callable(task) -> bool
+    goal_sampler = None  # callable(task, rng) -> np.ndarray (stored as self.goal_pos)
+    goal_pos = None
+
+    def _reward(self, states):
+        if self.reward_fn is None:
+            return super()._reward(states)
+        return torch.tensor([float(self.reward_fn(self))] * self.num_envs, dtype=torch.float32)
+
     def _terminated(self, states):
-        if getattr(self, "checker", None) is None:
-            return super()._terminated(states)
-        return self.checker.check(self.handler, states)
+        if self.success_fn is not None:
+            return torch.tensor([bool(self.success_fn(self))] * self.num_envs, dtype=torch.bool)
+        if getattr(self, "checker", None) is not None:
+            return self.checker.check(self.handler, states)
+        return super()._terminated(states)
 
     def reset(self, states=None, env_ids=None, seed=None):
         out = super().reset(states, env_ids, seed)
+        if self.goal_sampler is not None:
+            rng = np.random.RandomState(0 if seed is None else seed)
+            self.goal_pos = np.asarray(self.goal_sampler(self, rng), dtype=np.float64)
         if getattr(self, "checker", None) is not None:
             self.checker.reset(self.handler, env_ids=env_ids)
         return out
