@@ -45,12 +45,11 @@ PRIMITIVE_TASKS = [
     "PegInsertionSide-v1",
     "StackPyramid-v1",
     "PlugCharger-v1",
+    "PushT-v1",  # panda_stick (7-dim arm-only) — action-level 1:1
+    "DrawTriangle-v1",  # panda_stick (7-dim arm-only)
 ]
 
 # Known limitations of the generic harness (honest coverage notes):
-#  - The vendored controller assumes the panda layout (7 arm + 1 mimic gripper).
-#    Robots without a gripper (PushT's stick, DrawTriangle's pusher) use a
-#    different action width and need a per-task controller spec.
 #  - Multi-agent tasks (TwoRobot*) expose ``agent`` as a MultiAgent, not a single
 #    robot — needs per-agent capture/replay.
 #  - Mesh-asset objects (PickSingleYCB foam brick) come out near-bitwise (~1e-5)
@@ -60,19 +59,19 @@ PRIMITIVE_TASKS = [
 # Default control mode per task (all panda tabletop tasks share the same one).
 DEFAULT_CONTROL_MODE = "pd_joint_delta_pos"
 
-# Joint-layout assumption for the panda: 7 arm + 2 mimic-gripper fingers.
-ARM_DOF = 7
-ARM_DELTA = (-0.1, 0.1)
-GRIPPER_RANGE = (-0.01, 0.04)
 
+def _make_controller(action_dim: int, n_active_joints: int):
+    """Build the pd_joint_delta_pos controller matching the robot's action layout.
 
-def _controller_targets(qpos: np.ndarray, action: np.ndarray) -> np.ndarray:
-    """ManiSkill ``pd_joint_delta_pos`` + mimic-gripper → absolute drive targets."""
-    target = qpos.astype(np.float32).copy()
-    target[:ARM_DOF] = qpos[:ARM_DOF] + R.clip_and_scale(action[:ARM_DOF], *ARM_DELTA)
-    grip = R.clip_and_scale(action[ARM_DOF], *GRIPPER_RANGE)
-    target[ARM_DOF:] = grip
-    return target
+    A mimic gripper adds one extra active DOF beyond the action width (the panda's two fingers
+    against one gripper action), so ``n_active == action_dim + 1`` ⇒ arm + gripper; ``==`` ⇒ arm-only
+    (panda_stick / pusher robots).
+    """
+    from roboverse_pack.tasks.maniskill._native.control import PDJointDeltaPos
+
+    gripper = n_active_joints == action_dim + 1
+    arm_dof = action_dim - 1 if gripper else action_dim
+    return PDJointDeltaPos(arm_dof=arm_dof, gripper=gripper)
 
 
 def run_task(task_id: str, steps: int, seed: int, control_mode: str = DEFAULT_CONTROL_MODE) -> dict:
@@ -107,9 +106,10 @@ def run_task(task_id: str, steps: int, seed: int, control_mode: str = DEFAULT_CO
     rep_qpos = []
     rep_actors = {name: [] for name in actor_objs}
     ajoints = robot.get_active_joints()
+    controller = _make_controller(adim, len(ajoints))
     for a in actions:
         q = robot.get_qpos().astype(np.float32).copy()
-        target = _controller_targets(q, a)
+        target = controller.compute_targets(q, a)
         for k, j in enumerate(ajoints):
             j.set_drive_target(float(target[k]))
         for _ in range(decim):
