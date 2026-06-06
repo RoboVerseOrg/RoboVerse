@@ -238,6 +238,30 @@ def _roll_ball_success(task):
     return SU.roll_ball(ball_pos=task.obj_pos("ball"), goal_pos=task.goal_pos)
 
 
+def _pull_cube_tool_reset(task, rng):
+    """ManiSkill PullCubeTool reset: tool XY ∈ [-0.3,-0.1]; cube x = arm_reach+rand*0.2-0.3, y ∈ ±0.15."""
+    import sapien
+
+    tx = float(-rng.uniform(0, 0.2) - 0.1); ty = float(-rng.uniform(0, 0.2) - 0.1)
+    task.handler.object_ids["l_shape_tool"].set_pose(sapien.Pose([tx, ty, 0.025], [1, 0, 0, 0]))
+    cx = 0.35 + float(rng.uniform(0, 0.2)) - 0.3
+    cy = float(rng.uniform(0, 0.3) - 0.15)
+    _set_cube(task, "cube", cx, cy, 0.02)
+    return [0.0, 0.0, 0.0]
+
+
+def _pull_cube_tool_reward(task):
+    return RW.pull_cube_tool(
+        tcp_pos=task.tcp_pos(), cube_pos=task.obj_pos("cube"), tool_pos=task.obj_pos("l_shape_tool"),
+        robot_base_pos=task.robot_base_pos(), is_grasping=task.is_grasped("l_shape_tool", max_angle=20),
+        success=SU.pull_cube_tool(cube_pos=task.obj_pos("cube"), robot_base_pos=task.robot_base_pos()),
+        hook_length=0.05, cube_half_size=0.02, arm_reach=0.35, cube_size=0.02)
+
+
+def _pull_cube_tool_success(task):
+    return SU.pull_cube_tool(cube_pos=task.obj_pos("cube"), robot_base_pos=task.robot_base_pos())
+
+
 def _stack_pyramid_reset(task, rng):
     """ManiSkill StackPyramid reset: 3 cubes in [-0.1,0.1]x[-0.2,0.2] (collision-avoided)."""
     import sapien
@@ -339,6 +363,7 @@ TASK_SPECS: dict[str, dict] = {
             ], 0.5, _RED, (-0.1993, -0.2536, 0.025), False),
         ],
         "success": _moved("cube", (0.0677, -0.2104)),
+        "goal": _pull_cube_tool_reset, "reward": _pull_cube_tool_reward, "success_full": _pull_cube_tool_success,
     },
     "peg_insertion_side": {
         "gym_id": "PegInsertionSide-v1", "base": _BASE, "max_steps": 50,

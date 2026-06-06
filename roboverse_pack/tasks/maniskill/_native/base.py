@@ -97,6 +97,10 @@ class ManiSkillNativeTask(BaseTaskEnv):
                 return np.asarray(link.get_pose().p, dtype=np.float64)
         raise RuntimeError("panda_hand_tcp link not found")
 
+    def robot_base_pos(self):
+        """World position of the robot root link (links[0])."""
+        return np.asarray(self.handler.object_ids[self.robot_name].get_links()[0].get_pose().p, dtype=np.float64)
+
     def robot_qvel(self):
         return np.asarray(self.handler.object_ids[self.robot_name].get_qvel(), dtype=np.float64).ravel()
 
@@ -107,10 +111,10 @@ class ManiSkillNativeTask(BaseTaskEnv):
     def is_robot_static(self, threshold: float = 0.2) -> bool:
         return bool(np.max(np.abs(self.qvel_arm())) <= threshold)
 
-    def is_grasped(self, name: str) -> bool:
+    def is_grasped(self, name: str, max_angle: float = 85.0) -> bool:
         from .grasp import is_grasped as _is_grasped
 
-        return _is_grasped(self.handler, name)
+        return _is_grasped(self.handler, name, max_angle=max_angle)
 
     def _rigid_body(self, name):
         import sapien.physx as physx

@@ -171,3 +171,29 @@ def roll_ball(*, tcp_pos, ball_pos, goal_pos, ball_radius, reached_status, succe
     if success:
         reward = 30.0
     return (float(reward / 30.0) if normalized else float(reward)), reached_status
+
+
+def pull_cube_tool(*, tcp_pos, cube_pos, tool_pos, robot_base_pos, is_grasping, success,
+                   hook_length=0.05, cube_half_size=0.02, arm_reach=0.35, cube_size=0.02,
+                   normalized=False) -> float:
+    """ManiSkill PullCubeTool-v1 ``compute_dense_reward`` (staged tool-use)."""
+    tool_grasp = np.asarray(tool_pos, np.float64) + np.array([0.02, 0, 0])
+    tcp_to_tool = float(np.linalg.norm(np.asarray(tcp_pos, np.float64) - tool_grasp))
+    reaching = 2.0 * (1.0 - _tanh(5.0 * tcp_to_tool))
+    grasping_reward = 2.0 * (1.0 if is_grasping else 0.0)
+    ideal_hook = np.asarray(cube_pos, np.float64) + np.array([-(hook_length + cube_half_size), -0.067, 0])
+    tool_pos_dist = float(np.linalg.norm(np.asarray(tool_pos, np.float64) - ideal_hook))
+    positioning = 1.5 * (1.0 - _tanh(3.0 * tool_pos_dist))
+    positioned = tool_pos_dist < 0.05
+    workspace_target = np.asarray(robot_base_pos, np.float64) + np.array([0.05, 0, 0])
+    cube_to_ws = float(np.linalg.norm(np.asarray(cube_pos, np.float64) - workspace_target))
+    initial_dist = float(np.linalg.norm(np.array([arm_reach + 0.1, 0, cube_size / 2]) - workspace_target))
+    pulling_progress = (initial_dist - cube_to_ws) / initial_dist
+    pulling = 3.0 * pulling_progress * (1.0 if positioned else 0.0)
+    g = 1.0 if is_grasping else 0.0
+    reward = reaching + grasping_reward + positioning * g + pulling * g
+    if float(cube_pos[0]) > (arm_reach + 0.15):
+        reward -= 2.0
+    if success:
+        reward += 5.0
+    return float(reward)
