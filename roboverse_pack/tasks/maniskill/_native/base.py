@@ -112,6 +112,29 @@ class ManiSkillNativeTask(BaseTaskEnv):
 
         return _is_grasped(self.handler, name)
 
+    def _rigid_body(self, name):
+        import sapien.physx as physx
+
+        return self.handler.object_ids[name].find_component_by_type(physx.PhysxRigidDynamicComponent)
+
+    def obj_linvel(self, name):
+        b = self._rigid_body(name)
+        return np.zeros(3) if b is None else np.asarray(b.linear_velocity, dtype=np.float64).ravel()
+
+    def obj_angvel(self, name):
+        b = self._rigid_body(name)
+        return np.zeros(3) if b is None else np.asarray(b.angular_velocity, dtype=np.float64).ravel()
+
+    def obj_is_static(self, name, lin_thresh: float = 1e-2, ang_thresh: float = 0.5) -> bool:
+        return bool(np.linalg.norm(self.obj_linvel(name)) <= lin_thresh
+                    and np.linalg.norm(self.obj_angvel(name)) <= ang_thresh)
+
+    def finger_qpos(self):
+        return np.asarray(self.handler.object_ids[self.robot_name].get_qpos(), dtype=np.float64).ravel()[-2:]
+
+    # Panda finger upper limit (0.04) * 2 — ManiSkill's gripper_width = qlimits[0, -1, 1] * 2.
+    GRIPPER_WIDTH = 0.08
+
     # -- reward / success / goal wiring (set by the factory from the spec) ----
     reward_fn = None  # callable(task) -> float
     success_fn = None  # callable(task) -> bool

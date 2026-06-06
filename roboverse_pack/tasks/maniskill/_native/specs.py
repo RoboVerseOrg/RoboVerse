@@ -79,6 +79,114 @@ def _push_cube_success(task):
     return SU.push_cube(cube_pos=task.obj_pos("cube"), goal_pos=task.goal_pos)
 
 
+def _pull_cube_reset(task, rng):
+    """ManiSkill PullCube reset: cube XY ∈ U(±0.1); goal = cube - [0.2, 0, 0] (goal_radius 0.1)."""
+    cx, cy = rng.uniform(-0.1, 0.1, 2)
+    _set_cube(task, "cube", cx, cy, 0.02)
+    return [cx - 0.2, cy, 1e-3]
+
+
+def _pull_cube_reward(task):
+    return RW.pull_cube(cube_pos=task.obj_pos("cube"), tcp_pos=task.tcp_pos(), goal_pos=task.goal_pos)
+
+
+def _pull_cube_success(task):
+    return SU.pull_cube(cube_pos=task.obj_pos("cube"), goal_pos=task.goal_pos)
+
+
+def _poke_cube_reset(task, rng):
+    """ManiSkill PokeCube reset: peg XY ∈ U(±0.1); cube x = peg_x + peg_half_len(0.12)+0.1; goal = cube + [0.05+0.05,0,0]."""
+    import sapien
+
+    px, py = rng.uniform(-0.1, 0.1, 2)
+    task.handler.object_ids["peg"].set_pose(sapien.Pose([float(px), float(py), 0.025], [1, 0, 0, 0]))
+    cx = px + 0.12 + 0.1
+    cy = float(rng.uniform(-0.1, 0.1))
+    _set_cube(task, "cube", cx, cy, 0.02)
+    return [cx + 0.1, cy, 1e-3]  # 0.05 + goal_radius 0.05
+
+
+def _poke_cube_success(task):
+    return SU.poke_cube(cube_pos=task.obj_pos("cube"), goal_pos=task.goal_pos,
+                        is_robot_static=task.is_robot_static())
+
+
+def _stack_cube_reset(task, rng):
+    """ManiSkill StackCube reset: cubeA/cubeB XY in [-0.1,0.1]x[-0.2,0.2] (collision-avoided)."""
+    import sapien
+
+    base = rng.uniform(-0.1, 0.1, 2)
+    a = base + rng.uniform([-0.1, -0.2], [0.1, 0.2])
+    b = base + rng.uniform([-0.1, -0.2], [0.1, 0.2])
+    task.handler.object_ids["cubeA"].set_pose(sapien.Pose([float(a[0]), float(a[1]), 0.02], [1, 0, 0, 0]))
+    task.handler.object_ids["cubeB"].set_pose(sapien.Pose([float(b[0]), float(b[1]), 0.02], [1, 0, 0, 0]))
+    return [0.0, 0.0, 0.0]  # stack has no goal site
+
+
+def _stack_cube_success(task):
+    return SU.stack_cube(
+        cubeA_pos=task.obj_pos("cubeA"), cubeB_pos=task.obj_pos("cubeB"), cube_half_size=[0.02, 0.02, 0.02],
+        is_cubeA_static=task.obj_is_static("cubeA"), is_cubeA_grasped=task.is_grasped("cubeA"))
+
+
+def _place_sphere_reset(task, rng):
+    """ManiSkill PlaceSphere reset: sphere x∈[-0.1,-0.05] y∈[-0.1,0.1]; bin x∈[0,0.1] y∈[-0.1,0.1]."""
+    import sapien
+
+    sx = float(rng.uniform(-0.1, -0.05)); sy = float(rng.uniform(-0.1, 0.1))
+    task.handler.object_ids["sphere"].set_pose(sapien.Pose([sx, sy, 0.02], [1, 0, 0, 0]))
+    bx = float(rng.uniform(0.0, 0.1)); by = float(rng.uniform(-0.1, 0.1))
+    task.handler.object_ids["bin"].set_pose(sapien.Pose([bx, by, 0.0025], [1, 0, 0, 0]))
+    return [0.0, 0.0, 0.0]
+
+
+def _place_sphere_success(task):
+    return SU.place_sphere(
+        obj_pos=task.obj_pos("sphere"), bin_pos=task.obj_pos("bin"), radius=0.02, block_half_size0=0.025,
+        is_obj_static=task.obj_is_static("sphere"), is_obj_grasped=task.is_grasped("sphere"))
+
+
+def _roll_ball_reset(task, rng):
+    """ManiSkill RollBall reset: ball x∈[-0.4,0.2] y∈[0.5,0.7]; goal x∈[-0.4,0.2] y∈[-1.0,-0.8]."""
+    import sapien
+
+    bx = float(rng.uniform(-1, 1) * 0.3 - 0.1); by = float(rng.uniform(0.5, 0.7))
+    task.handler.object_ids["ball"].set_pose(sapien.Pose([bx, by, 0.035], [1, 0, 0, 0]))
+    task._roll_reached = 0.0
+    gx = float(rng.uniform(-1, 1) * 0.3 - 0.1); gy = float(rng.uniform(0.5, 0.7) - 1.5 + 0.1)
+    return [gx, gy, 1e-3]
+
+
+def _roll_ball_reward(task):
+    r, task._roll_reached = RW.roll_ball(
+        tcp_pos=task.tcp_pos(), ball_pos=task.obj_pos("ball"), goal_pos=task.goal_pos,
+        ball_radius=0.035, reached_status=getattr(task, "_roll_reached", 0.0), success=False)
+    return r
+
+
+def _roll_ball_success(task):
+    return SU.roll_ball(ball_pos=task.obj_pos("ball"), goal_pos=task.goal_pos)
+
+
+def _stack_pyramid_reset(task, rng):
+    """ManiSkill StackPyramid reset: 3 cubes in [-0.1,0.1]x[-0.2,0.2] (collision-avoided)."""
+    import sapien
+
+    base = rng.uniform(-0.1, 0.1, 2)
+    for n in ("cubeA", "cubeB", "cubeC"):
+        xy = base + rng.uniform([-0.1, -0.2], [0.1, 0.2])
+        task.handler.object_ids[n].set_pose(sapien.Pose([float(xy[0]), float(xy[1]), 0.02], [1, 0, 0, 0]))
+    return [0.0, 0.0, 0.0]
+
+
+def _stack_pyramid_success(task):
+    P = {n: task.obj_pos(n) for n in ("cubeA", "cubeB", "cubeC")}
+    statics = {k: task.obj_is_static("cube" + k) for k in ("A", "B", "C")}
+    grasps = {k: task.is_grasped("cube" + k) for k in ("A", "B", "C")}
+    return SU.stack_pyramid(posA=P["cubeA"], posB=P["cubeB"], posC=P["cubeC"],
+                            cube_half_size=[0.02, 0.02, 0.02], statics=statics, grasps=grasps)
+
+
 # name -> spec. ``objects``: list of (name, kind, geom, mass, color, pos, kinematic).
 #   box geom = full size [x,y,z]; sphere geom = radius.
 TASK_SPECS: dict[str, dict] = {
@@ -98,6 +206,7 @@ TASK_SPECS: dict[str, dict] = {
         "gym_id": "PullCube-v1", "base": _BASE, "max_steps": 50,
         "objects": [("cube", "box", _CUBE, 0.064, _MSBLUE, (-0.0007, 0.0536, 0.02), False)],
         "success": _moved("cube", (-0.0007, 0.0536)),
+        "goal": _pull_cube_reset, "reward": _pull_cube_reward, "success_full": _pull_cube_success,
     },
     "stack_cube": {
         "gym_id": "StackCube-v1", "base": _BASE, "max_steps": 50,
@@ -106,6 +215,7 @@ TASK_SPECS: dict[str, dict] = {
             ("cubeB", "box", _CUBE, 0.064, _GREEN, (-0.0393, 0.1073, 0.02), False),
         ],
         "success": _stacked("cubeA", "cubeB"),
+        "goal": _stack_cube_reset, "success_full": _stack_cube_success,
     },
     "poke_cube": {
         "gym_id": "PokeCube-v1", "base": _BASE, "max_steps": 50,
@@ -114,6 +224,7 @@ TASK_SPECS: dict[str, dict] = {
             ("peg", "box", [0.24, 0.05, 0.05], 0.6, _MSBLUE, (-0.0007, 0.0536, 0.025), False),
         ],
         "success": _moved("cube", (0.2193, -0.0385)),
+        "goal": _poke_cube_reset, "success_full": _poke_cube_success,
     },
     "lift_peg_upright": {
         "gym_id": "LiftPegUpright-v1", "base": _BASE, "max_steps": 50,
@@ -125,6 +236,7 @@ TASK_SPECS: dict[str, dict] = {
         "max_steps": 80,
         "objects": [("ball", "sphere", 0.035, 0.17959, _BLUE, (-0.1022, 0.6536, 0.035), False)],
         "success": _moved("ball", (-0.1022, 0.6536), 0.1),
+        "goal": _roll_ball_reset, "reward": _roll_ball_reward, "success_full": _roll_ball_success,
     },
     "place_sphere": {
         "gym_id": "PlaceSphere-v1", "base": _BASE, "max_steps": 50,
@@ -133,6 +245,7 @@ TASK_SPECS: dict[str, dict] = {
             ("bin", "box", [0.05, 0.05, 0.005], 0.0225, [1, 1, 1], (0.0088, -0.0736, 0.0025), True),
         ],
         "success": _moved("sphere", (-0.0752, 0.0536)),
+        "goal": _place_sphere_reset, "success_full": _place_sphere_success,
     },
     "stack_pyramid": {
         "gym_id": "StackPyramid-v1", "base": _BASE, "max_steps": 50,
@@ -142,6 +255,7 @@ TASK_SPECS: dict[str, dict] = {
             ("cubeC", "box", _CUBE, 0.064, _BLUE, (-0.0385, 0.0536, 0.02), False),
         ],
         "success": _stacked("cubeC", "cubeA"),
+        "goal": _stack_pyramid_reset, "success_full": _stack_pyramid_success,
     },
     # --- multi-shape (compound-box) tasks, via PrimitiveMultiBoxCfg ---
     "pull_cube_tool": {
