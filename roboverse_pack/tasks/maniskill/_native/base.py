@@ -135,6 +135,17 @@ class ManiSkillNativeTask(BaseTaskEnv):
     # Panda finger upper limit (0.04) * 2 — ManiSkill's gripper_width = qlimits[0, -1, 1] * 2.
     GRIPPER_WIDTH = 0.08
 
+    def obj_euler_z(self, name) -> float:
+        """Z (yaw) Euler angle from the object quaternion, matching pytorch3d ``euler_angles XYZ``.
+
+        For R = Rx(a)Ry(b)Rz(c): euler_z = atan2(-R[0,1], R[0,0]). Pure numpy (no mani_skill dep);
+        verified vs pytorch3d to ~1.6e-6 over random rotations.
+        """
+        w, x, y, z = self.obj_quat(name)
+        r00 = 1 - 2 * (y * y + z * z)
+        r01 = 2 * (x * y - w * z)
+        return float(np.arctan2(-r01, r00))
+
     # -- reward / success / goal wiring (set by the factory from the spec) ----
     reward_fn = None  # callable(task) -> float
     success_fn = None  # callable(task) -> bool

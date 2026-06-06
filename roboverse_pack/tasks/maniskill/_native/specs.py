@@ -12,6 +12,8 @@ porting ManiSkill's exact goal-site + robot-static success and the dense rewards
 
 from __future__ import annotations
 
+import numpy as np
+
 from . import rewards as RW
 from . import success as SU
 
@@ -111,6 +113,33 @@ def _poke_cube_success(task):
                         is_robot_static=task.is_robot_static())
 
 
+def _lift_peg_reset(task, rng):
+    """ManiSkill LiftPegUpright reset: peg XY ∈ U(±0.1), z = peg_half_width(0.025), lying (euler(π/2,0,0))."""
+    import sapien
+    from transforms3d.euler import euler2quat
+
+    px, py = rng.uniform(-0.1, 0.1, 2)
+    q = euler2quat(np.pi / 2, 0, 0)
+    task.handler.object_ids["peg"].set_pose(sapien.Pose([float(px), float(py), 0.025], [float(v) for v in q]))
+    return [0.0, 0.0, 0.0]
+
+
+def _lift_peg_reward(task):
+    w, x, y, z = task.obj_quat("peg")
+    R = np.array([
+        [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+        [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+        [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)],
+    ], dtype=np.float64)
+    return RW.lift_peg_upright(peg_rot_mat=R, peg_pos=task.obj_pos("peg"), tcp_pos=task.tcp_pos(),
+                               is_grasped=task.is_grasped("peg"), peg_half_length=0.12)
+
+
+def _lift_peg_success(task):
+    return SU.lift_peg_upright(peg_euler_z=task.obj_euler_z("peg"),
+                              peg_z=float(task.obj_pos("peg")[2]), peg_half_length=0.12)
+
+
 def _stack_cube_reset(task, rng):
     """ManiSkill StackCube reset: cubeA/cubeB XY in [-0.1,0.1]x[-0.2,0.2] (collision-avoided)."""
     import sapien
@@ -121,6 +150,28 @@ def _stack_cube_reset(task, rng):
     task.handler.object_ids["cubeA"].set_pose(sapien.Pose([float(a[0]), float(a[1]), 0.02], [1, 0, 0, 0]))
     task.handler.object_ids["cubeB"].set_pose(sapien.Pose([float(b[0]), float(b[1]), 0.02], [1, 0, 0, 0]))
     return [0.0, 0.0, 0.0]  # stack has no goal site
+
+
+def _on_cube_geom(a, b, hs=(0.02, 0.02, 0.02)):
+    """Geometric is-A-on-B (ManiSkill xy + z flags), without the static/grasp parts."""
+    import numpy as _np
+
+    off = _np.asarray(a, _np.float64) - _np.asarray(b, _np.float64)
+    xy = _np.linalg.norm(off[:2]) <= _np.linalg.norm(_np.asarray(hs)[:2]) + 0.005
+    z = abs(off[2] - hs[2] * 2) <= 0.005
+    return bool(xy and z)
+
+
+def _stack_cube_reward(task):
+    A, B = task.obj_pos("cubeA"), task.obj_pos("cubeB")
+    grasped = task.is_grasped("cubeA")
+    on = _on_cube_geom(A, B)
+    success = on and task.obj_is_static("cubeA") and not grasped
+    return RW.stack_cube(
+        tcp_pos=task.tcp_pos(), cubeA_pos=A, cubeB_pos=B, cube_half_size_z=0.02,
+        finger_qpos=task.finger_qpos(), gripper_width=task.GRIPPER_WIDTH,
+        cubeA_linvel=task.obj_linvel("cubeA"), cubeA_angvel=task.obj_angvel("cubeA"),
+        is_cubeA_grasped=grasped, is_cubeA_on_cubeB=on, success=success)
 
 
 def _stack_cube_success(task):
@@ -138,6 +189,25 @@ def _place_sphere_reset(task, rng):
     bx = float(rng.uniform(0.0, 0.1)); by = float(rng.uniform(-0.1, 0.1))
     task.handler.object_ids["bin"].set_pose(sapien.Pose([bx, by, 0.0025], [1, 0, 0, 0]))
     return [0.0, 0.0, 0.0]
+
+
+def _on_bin_geom(obj, bin_pos, radius=0.02, block0=0.025):
+    import numpy as _np
+
+    off = _np.asarray(obj, _np.float64) - _np.asarray(bin_pos, _np.float64)
+    return bool(_np.linalg.norm(off[:2]) <= 0.005 and abs(off[2] - radius - block0) <= 0.005)
+
+
+def _place_sphere_reward(task):
+    obj, binp = task.obj_pos("sphere"), task.obj_pos("bin")
+    grasped = task.is_grasped("sphere")
+    on_bin = _on_bin_geom(obj, binp)
+    success = on_bin and task.obj_is_static("sphere") and not grasped
+    return RW.place_sphere(
+        tcp_pos=task.tcp_pos(), obj_pos=obj, bin_pos=binp, block_half_size0=0.025, radius=0.02,
+        finger_qpos=task.finger_qpos(), gripper_width=task.GRIPPER_WIDTH,
+        obj_linvel=task.obj_linvel("sphere"), obj_angvel=task.obj_angvel("sphere"),
+        robot_is_static=task.is_robot_static(), is_obj_grasped=grasped, is_obj_on_bin=on_bin, success=success)
 
 
 def _place_sphere_success(task):
@@ -215,7 +285,7 @@ TASK_SPECS: dict[str, dict] = {
             ("cubeB", "box", _CUBE, 0.064, _GREEN, (-0.0393, 0.1073, 0.02), False),
         ],
         "success": _stacked("cubeA", "cubeB"),
-        "goal": _stack_cube_reset, "success_full": _stack_cube_success,
+        "goal": _stack_cube_reset, "reward": _stack_cube_reward, "success_full": _stack_cube_success,
     },
     "poke_cube": {
         "gym_id": "PokeCube-v1", "base": _BASE, "max_steps": 50,
@@ -230,6 +300,7 @@ TASK_SPECS: dict[str, dict] = {
         "gym_id": "LiftPegUpright-v1", "base": _BASE, "max_steps": 50,
         "objects": [("peg", "box", [0.24, 0.05, 0.05], 0.6, [0.69, 0.055, 0.055], (-0.0007, 0.0536, 0.025), False)],
         "success": _lifted("peg", 0.1),
+        "goal": _lift_peg_reset, "reward": _lift_peg_reward, "success_full": _lift_peg_success,
     },
     "roll_ball": {
         "gym_id": "RollBall-v1", "base": ((-0.10, 1.0, 0.0), (0.7071068, 0.0, 0.0, -0.7071068)),
@@ -245,7 +316,7 @@ TASK_SPECS: dict[str, dict] = {
             ("bin", "box", [0.05, 0.05, 0.005], 0.0225, [1, 1, 1], (0.0088, -0.0736, 0.0025), True),
         ],
         "success": _moved("sphere", (-0.0752, 0.0536)),
-        "goal": _place_sphere_reset, "success_full": _place_sphere_success,
+        "goal": _place_sphere_reset, "reward": _place_sphere_reward, "success_full": _place_sphere_success,
     },
     "stack_pyramid": {
         "gym_id": "StackPyramid-v1", "base": _BASE, "max_steps": 50,
