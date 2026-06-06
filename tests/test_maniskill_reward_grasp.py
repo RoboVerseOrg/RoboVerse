@@ -21,22 +21,11 @@ pytest.importorskip("mani_skill")
 pytest.importorskip("sapien")
 
 
-def test_pick_cube_dense_reward_bitwise():
-    import gymnasium as gym
-    import mani_skill.envs  # noqa: F401
-    import torch
+def _extract(task_key, u, info):
+    from roboverse_pack.tasks.maniskill._native import rewards as RW
 
-    from roboverse_pack.tasks.maniskill._native.rewards import pick_cube
-
-    env = gym.make("PickCube-v1", num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos",
-                   sim_backend="physx_cpu", reward_mode="dense")
-    u = env.unwrapped
-    env.reset(seed=0)
-    rng = np.random.RandomState(3)
-    max_delta = 0.0
-    for a in rng.uniform(-1, 1, size=(30, 8)).astype(np.float32):
-        _, rew, _, _, info = env.step(torch.tensor(a).unsqueeze(0))
-        ours = pick_cube(
+    if task_key == "pick_cube":
+        return RW.pick_cube, dict(
             cube_pos=u.cube.pose.p.cpu().numpy().ravel(),
             tcp_pos=u.agent.tcp_pose.p.cpu().numpy().ravel(),
             goal_pos=u.goal_site.pose.p.cpu().numpy().ravel(),
@@ -44,9 +33,48 @@ def test_pick_cube_dense_reward_bitwise():
             is_grasped=bool(info["is_grasped"].item()),
             is_robot_static=bool(info["is_robot_static"].item()),
         )
-        max_delta = max(max_delta, abs(float(rew.item()) - ours))
+    if task_key in ("push_cube", "pull_cube"):
+        fn = RW.push_cube if task_key == "push_cube" else RW.pull_cube
+        return fn, dict(
+            cube_pos=u.obj.pose.p.cpu().numpy().ravel(),
+            tcp_pos=u.agent.tcp.pose.p.cpu().numpy().ravel(),
+            goal_pos=u.goal_region.pose.p.cpu().numpy().ravel(),
+            cube_half_size=float(u.cube_half_size),
+        )
+    if task_key == "lift_peg_upright":
+        from mani_skill.utils.geometry import rotation_conversions as RC
+
+        return RW.lift_peg_upright, dict(
+            peg_rot_mat=RC.quaternion_to_matrix(u.peg.pose.q).cpu().numpy().reshape(3, 3),
+            peg_pos=u.peg.pose.p.cpu().numpy().ravel(),
+            tcp_pos=u.agent.tcp.pose.p.cpu().numpy().ravel(),
+            is_grasped=bool(u.agent.is_grasping(u.peg).item()),
+            peg_half_length=float(u.peg_half_length),
+        )
+    raise ValueError(task_key)
+
+
+@pytest.mark.parametrize("task_key,gym_id", [
+    ("pick_cube", "PickCube-v1"), ("push_cube", "PushCube-v1"),
+    ("pull_cube", "PullCube-v1"), ("lift_peg_upright", "LiftPegUpright-v1"),
+])
+def test_dense_reward_bitwise(task_key, gym_id):
+    import gymnasium as gym
+    import mani_skill.envs  # noqa: F401
+    import torch
+
+    env = gym.make(gym_id, num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos",
+                   sim_backend="physx_cpu", reward_mode="dense")
+    u = env.unwrapped
+    env.reset(seed=0)
+    rng = np.random.RandomState(3)
+    max_delta = 0.0
+    for a in rng.uniform(-1, 1, size=(30, 8)).astype(np.float32):
+        _, rew, _, _, info = env.step(torch.tensor(a).unsqueeze(0))
+        fn, kw = _extract(task_key, u, info)
+        max_delta = max(max_delta, abs(float(rew.item()) - fn(**kw)))
     env.close()
-    assert max_delta < 1e-6, f"PickCube dense reward delta vs native too large: {max_delta:.3e}"
+    assert max_delta < 1e-6, f"{task_key} dense reward delta vs native too large: {max_delta:.3e}"
 
 
 def test_is_grasped_matches_native():
