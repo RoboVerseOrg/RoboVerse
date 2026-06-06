@@ -1,95 +1,109 @@
-# ManiSkill ↔ MetaSim / Sapien integration
+# ManiSkill ↔ MetaSim / SAPIEN3 integration (native 1:1)
 
 [ManiSkill3](https://github.com/haosulab/ManiSkill) is a SAPIEN-backed
-manipulation benchmark with dozens of tabletop tasks. RoboVerse's
-MetaSim already speaks SAPIEN3, so the integration goal is task-level
-parity: a `roboverse_pack.tasks.maniskill.*` task should behave like
-the ManiSkill `gym.make("...-v1")` env it mirrors.
+manipulation benchmark. RoboVerse ships **MetaSim-native** ManiSkill
+tabletop tasks that reproduce the native ManiSkill (`physx_cpu`) rollout
+**1:1** through the standard `BaseTaskEnv` + SAPIEN3 handler path — no
+runtime `mani_skill` import, so the clone is deletable.
 
-Live report (with embedded videos and gap analysis):
+Live report (videos + measured parity):
 <http://localhost:8000/#roboverse/maniskill_integration>.
 
-## Status
+## What "1:1" means here
 
-- **Harness**: `tools/maniskill_integration/` mirrors the mjlab harness
-  layout — `inventory.py` catalogs 4 tabletop tasks; `maniskill_rollout.py`
-  drives `gym.make` and captures actions / reward / success flags /
-  qpos / qvel / object pose / goal pose / TCP / rgb frames;
-  `run_sweep.py` writes per-task `runs/<task>/maniskill.{npz,mp4}` and
-  `summary.json`.
-- **MetaSim side**: the existing `roboverse_pack.tasks.maniskill.
-  pick_cube.PickCubeTask` instantiates + steps on Sapien3 (`nq=9`,
-  `T=20`, `final_cube_z=0.0198 m` under zero-delta target). It is a
-  RoboVerse-flavored task, not a 1:1 reimplementation of PickCube-v1.
-- **Gap to numeric parity**: 10 items, all localised to one task
-  module. See the [gap analysis section](maniskill-gap-analysis)
-  below.
+Native ManiSkill on `sim_backend="physx_cpu"` is bit-deterministic, so a
+clean SAPIEN3 scene can reproduce it exactly. The reproduction recipe
+(all opt-in `SimParamCfg` knobs on the SAPIEN3 handler, default-off so
+existing tasks are byte-identical):
 
-## Coverage
+1. **Disable gravity on every robot link** (`sapien_disable_robot_gravity`)
+   — how ManiSkill holds the arm; the single biggest dynamics factor.
+2. **Full PhysX config set globally** before scene creation
+   (`sapien_apply_global_physx`): solver iters, PCM/TGS, contact/rest
+   offset, sleep/bounce thresholds, default material — mirrors
+   `BaseEnv._set_scene_config`.
+3. **Drive** with `force_limit` + `mode="force"` (`sapien_drive_force_mode`).
+4. **Table** as a kinematic box with the ground plane far below
+   (`sapien_ground_altitude`); `PrimitiveCubeCfg`/`PrimitiveMultiBoxCfg`
+   honor `fix_base_link` (kinematic).
+5. **Controller** = ManiSkill `pd_joint_delta_pos` + gripper mimic
+   (vendored in `_native/control.py`), decimation `sim_freq // control_freq`.
 
-| Gym ID        | Notes                                       |
-|---------------|---------------------------------------------|
-| `PickCube-v1` | Lift a 4 cm cube into a 2.5 cm goal sphere |
-| `PushCube-v1` | Push a cube to a target region              |
-| `StackCube-v1`| Stack red cube on green cube                |
-| `PullCube-v1` | Pull a cube to a target zone                |
+## Shipped tasks
 
-All four roll out + render under the harness; zero-action reward sums
-range 2.3–5.4 (no task is succeeded by a stationary robot, as expected).
+`import roboverse_pack.tasks.maniskill` registers 12 tabletop tasks as
+`maniskill.<name>_native` (also `<name>_native`):
 
-(maniskill-gap-analysis)=
-## What it takes to reach 1:1 parity
+| Task | object pose Δ vs native | dense reward | success |
+| --- | --- | --- | --- |
+| `pick_cube` | 4.7e-6 | bitwise (5.96e-8) | ✓ |
+| `push_cube` | 2.3e-7 | bitwise | ✓ |
+| `pull_cube` | 2.3e-7 | bitwise | ✓ |
+| `stack_cube` | 1.5e-6 | bitwise | ✓ |
+| `poke_cube` | 2.9e-7 | — | ✓ |
+| `lift_peg_upright` | 3.0e-7 | bitwise | ✓ |
+| `roll_ball` | 1.2e-7 | bitwise | ✓ |
+| `place_sphere` | 1.2e-7 | bitwise | ✓ |
+| `stack_pyramid` | 8.4e-7 | (no native dense) | ✓ |
+| `pull_cube_tool` | 2.8e-7 | bitwise | ✓ |
+| `peg_insertion_side` | 4.8e-5 | (todo) | proxy |
+| `plug_charger` | 5.4e-7 | (no native dense) | proxy |
 
-`roboverse_pack/tasks/maniskill/pick_cube.py` needs:
+Object pose tracks native to PhysX float32 roundoff (1.2e-7–4.8e-5 over
+aggressive random steps; ~1e-6 under demo-like motion). Dense rewards
+match native `compute_dense_reward` to float32 epsilon (8/10 tasks with a
+native dense reward done); `is_grasped` matches `Panda.is_grasping`
+(18/18, contact forces ~0.01 N) via the new sapien3
+`get_pairwise_contact_force`. Reset uses ManiSkill's spawn + goal
+distribution.
 
-1. **Cube** — change `size=(0.04,0.04,0.04)` to `size=(0.02,0.02,0.02)`
-   (PickCube uses *half-size* 0.02 → 4 cm box overall). Drop the
-   explicit mass and let SAPIEN's default density govern.
-2. **Goal sphere** — add a kinematic `PrimitiveSphereCfg("goal",
-   radius=0.025, no collision)`. Reset position to
-   `cube.pos + (0, 0, U(0, 0.3))`.
-3. **Robot** — fork the Franka asset into `panda_v2` with finger
-   friction 2.0 (ManiSkill's custom Panda).
-4. **Initial qpos** — override `default_joint_positions` to ManiSkill's
-   pose (joint2 = π/8, joint4 = −5π/8, joint6 = 3π/4). Add `N(0, 0.02²)`
-   noise inside `_get_initial_states`.
-5. **Controller** — implement `pd_joint_delta_pos`: 7-D arm delta
-   (clipped to ±1, scaled by 0.1) + 1-D gripper mimic.
-6. **Reset distribution** — sample cube XY in `U([-0.1, 0.1]²)`,
-   z-only rotation; goal Z in `cube.z + U(0, 0.3)`. Seed from `env.reset()`.
-7. **Dense reward** — port the `reaching + grasp + place·grasp +
-   static·placed` formula. `is_grasped` needs SAPIEN contact queries;
-   the handler lacks a public method but the underlying scene exposes
-   `get_contacts()` — encapsulate inside the task module per the
-   no-framework-edits rule.
-8. **Success** — `(cube → goal ≤ 0.025) AND (max|qvel[:-2]| < 0.2)`;
-   grasping NOT required at success.
-9. **Episode length** — 50 steps, not 250.
-
-Each item ≈ 30–90 min of focused edit; ≈ 1 day total for PickCube-v1.
-
-## Known Sapien3 handler gaps
-
-(Pulled forward from the [recon report](http://localhost:8000/#roboverse/maniskill_sapien_repro_2026_05_16).)
-
-- No contact-force query on `BaseSimHandler` — ManiSkill's `is_grasped`
-  needs pairwise contacts at both finger pads.
-- Single-env only; `env_ids` silently ignored.
-- No seeding hook; task layer must seed numpy + sapien scene in
-  `reset()`.
-- Scenario lights ignored (hard-coded ambient + 3 point lights).
-
-## How to reproduce
+## Run
 
 ```bash
-conda activate roboverse
-pip install mani_skill  # 3.0.1
+conda activate maniskill1to1   # roboverse env + mani_skill + sapien3
 
-cd "$ROBOVERSE"  # repo root
-PYTHONPATH="$ROBOVERSE:$METASIM" \
-  python -m tools.maniskill_integration.run_sweep --n-steps 50 --seed 0
+# instantiate a shipped native task (standard registry path)
+python -c "
+import roboverse_pack.tasks.maniskill, copy, torch
+from metasim.task.registry import get_task_class
+cls = get_task_class('maniskill.pick_cube_native')
+sc = copy.deepcopy(cls.scenario); sc.simulator='sapien3'; sc.num_envs=1; sc.headless=True; sc.cameras=[]
+env = cls(sc); env.reset(seed=0)
+for _ in range(50): obs, rew, term, trunc, info = env.step(torch.zeros((1,8)))
+"
+
+# measure native<->recipe parity for any task
+SAPIEN_HEADLESS=1 python -m tools.maniskill_integration.parity_native --all --steps 30
+
+# render a side-by-side 1:1 video (native | shipped task | diff)
+SAPIEN_HEADLESS=1 python -m tools.maniskill_integration.render_parity \
+    --task PickCube-v1 --shipped pick_cube --steps 60
+
+# regression tests
+python -m pytest tests/test_maniskill_native_task.py \
+    tests/test_maniskill_reward_grasp.py tests/test_maniskill_success.py
 ```
 
-Artefacts: `reports/maniskill_integration/`
-(`maniskill_summary.json`, plus `runs/<task>/maniskill.{npz,mp4}` and
-`summary.json`).
+## Assets
+
+The ManiSkill Panda (`panda_v2.urdf` + `franka_description` meshes) is
+vendored under `roboverse_data/robots/maniskill_panda/` (HuggingFace-backed,
+like the other integrations); the locator (`_native/recipe.panda_urdf_path`)
+prefers the vendored copy and falls back to the installed `mani_skill`
+package.
+
+## Backward compatibility
+
+All MetaSim-side changes are opt-in (`SimParamCfg` knobs default to
+`None`/`False`; the new `PrimitiveMultiBoxCfg` and
+`get_pairwise_contact_force` are additive) — existing SAPIEN3 tasks are
+byte-identical (417 sapien3 + general MetaSim tests pass). The RoboVerse
+side is purely additive (new `_native/` package + tasks + tools + tests).
+
+## Remaining
+
+`peg_insertion_side` / `plug_charger` success use ManiSkill internal pose
+helpers (peg-in-hole / charger-to-goal) and are not yet ported (geometric
+proxy in place); their dense rewards (and demo-`.h5` replay, non-gripper
+robots like PushT/DrawTriangle, and multi-agent TwoRobot tasks) are
+tracked as follow-ups.
