@@ -315,7 +315,8 @@ class Sapien3Handler(BaseSimHandler):
                             # unchanged — set_drive_property(stiffness, damping) only.
                             if getattr(sp, "sapien_drive_force_mode", None) and actuator.effort_limit_sim is not None:
                                 joint.set_drive_property(
-                                    stiffness, damping,
+                                    stiffness,
+                                    damping,
                                     force_limit=actuator.effort_limit_sim,
                                     mode=sp.sapien_drive_force_mode,
                                 )
