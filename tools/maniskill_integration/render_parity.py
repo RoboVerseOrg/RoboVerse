@@ -47,15 +47,84 @@ def _to_img(fr) -> np.ndarray:
     return arr.reshape(arr.shape[-3], arr.shape[-2], arr.shape[-1])[..., :3].astype(np.uint8)
 
 
-def run(task_id: str, steps: int, seed: int, amp: float, out_path: Path) -> dict:
+def _replica_states(cap, actions, actor_names):
+    """State trajectory from the raw reproduction recipe (recipe.build_replica)."""
+    scene, robot, actor_objs = R.build_replica(cap)
+    ajoints = robot.get_active_joints()
+    rep_qpos, rep_qvel, rep_actor = [], [], {n: [] for n in actor_names}
+    for a in actions:
+        q = robot.get_qpos().astype(np.float32).copy()
+        target = _controller_targets(q, a)
+        for k, j in enumerate(ajoints):
+            j.set_drive_target(float(target[k]))
+        for _ in range(cap.sim.decimation):
+            scene.step()
+        rep_qpos.append(robot.get_qpos().copy())
+        rep_qvel.append(robot.get_qvel().copy())
+        for n in actor_names:
+            obj = actor_objs[n]
+            comp = next((c for c in obj.get_components() if hasattr(c, "linear_velocity")), None)
+            p = obj.get_pose()
+            lin = np.asarray(comp.linear_velocity).ravel() if comp is not None else np.zeros(3)
+            ang = np.asarray(comp.angular_velocity).ravel() if comp is not None else np.zeros(3)
+            rep_actor[n].append(np.concatenate([p.p, p.q, lin, ang]))
+    return rep_qpos, rep_qvel, rep_actor
+
+
+def _shipped_states(task_key, cap, actions, actor_names):
+    """State trajectory from the SHIPPED maniskill.<key>_native task (standard handler path)."""
+    import copy
+
+    import torch
+
+    import roboverse_pack.tasks.maniskill  # noqa: F401 — registers tasks
+    from metasim.task.registry import get_task_class
+
+    cls = get_task_class(f"maniskill.{task_key}_native")
+    sc = copy.deepcopy(cls.scenario)
+    sc.simulator = "sapien3"
+    sc.num_envs = 1
+    sc.headless = True
+    sc.cameras = []
+    task = cls(sc)
+    task.reset()
+    # Match the native reset state.
+    task.handler.object_ids["panda"].set_qpos(cap.robot.qpos.astype(np.float32))
+    task.handler.object_ids["panda"].set_qvel(cap.robot.qvel.astype(np.float32))
+    import sapien
+
+    for s in cap.actors:
+        task.handler.object_ids[s.name].set_pose(sapien.Pose(s.pose_p, s.pose_q))
+    robot = task.handler.object_ids["panda"]
+    rep_qpos, rep_qvel, rep_actor = [], [], {n: [] for n in actor_names}
+    for a in actions:
+        task.step(torch.tensor(a).unsqueeze(0))
+        rep_qpos.append(np.asarray(robot.get_qpos()).ravel().copy())
+        rep_qvel.append(np.asarray(robot.get_qvel()).ravel().copy())
+        for n in actor_names:
+            obj = task.handler.object_ids[n]
+            comp = next((c for c in obj.get_components() if hasattr(c, "linear_velocity")), None)
+            p = obj.get_pose()
+            lin = np.asarray(comp.linear_velocity).ravel() if comp is not None else np.zeros(3)
+            ang = np.asarray(comp.angular_velocity).ravel() if comp is not None else np.zeros(3)
+            rep_actor[n].append(np.concatenate([p.p, p.q, lin, ang]))
+    task.close()
+    return rep_qpos, rep_qvel, rep_actor
+
+
+def run(task_id: str, steps: int, seed: int, amp: float, out_path: Path, shipped_task_key: str | None = None) -> dict:
     import gymnasium as gym
     import mani_skill.envs  # noqa: F401
     import torch
 
     # ---- 1. native rollout: frames + captured scene ------------------------
     env = gym.make(
-        task_id, num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos",
-        sim_backend="physx_cpu", render_mode="rgb_array",
+        task_id,
+        num_envs=1,
+        obs_mode="state",
+        control_mode="pd_joint_delta_pos",
+        sim_backend="physx_cpu",
+        render_mode="rgb_array",
     )
     u = env.unwrapped
     env.reset(seed=seed)
@@ -67,25 +136,12 @@ def run(task_id: str, steps: int, seed: int, amp: float, out_path: Path) -> dict
         env.step(torch.tensor(a).unsqueeze(0))
         native_frames.append(_to_img(env.render()))
 
-    # ---- 2. recipe replica: record computed state per step -----------------
-    scene, robot, actor_objs = R.build_replica(cap)
-    ajoints = robot.get_active_joints()
-    rep_qpos, rep_qvel, rep_actor = [], [], {n: [] for n in actor_objs}
-    for a in actions:
-        q = robot.get_qpos().astype(np.float32).copy()
-        target = _controller_targets(q, a)
-        for k, j in enumerate(ajoints):
-            j.set_drive_target(float(target[k]))
-        for _ in range(cap.sim.decimation):
-            scene.step()
-        rep_qpos.append(robot.get_qpos().copy())
-        rep_qvel.append(robot.get_qvel().copy())
-        for n, obj in actor_objs.items():
-            comp = next((c for c in obj.get_components() if hasattr(c, "linear_velocity")), None)
-            p = obj.get_pose()
-            lin = np.asarray(comp.linear_velocity).ravel() if comp is not None else np.zeros(3)
-            ang = np.asarray(comp.angular_velocity).ravel() if comp is not None else np.zeros(3)
-            rep_actor[n].append(np.concatenate([p.p, p.q, lin, ang]))
+    # ---- 2. record the MetaSim-computed state per step ---------------------
+    actor_names = [s.name for s in cap.actors]
+    if shipped_task_key is not None:
+        rep_qpos, rep_qvel, rep_actor = _shipped_states(shipped_task_key, cap, actions, actor_names)
+    else:
+        rep_qpos, rep_qvel, rep_actor = _replica_states(cap, actions, actor_names)
 
     # ---- 3. render the recipe state inside ManiSkill's own scene -----------
     env.reset(seed=seed)
@@ -129,9 +185,14 @@ def main(argv=None):
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--amp", type=float, default=0.25)
     ap.add_argument("--out", default=None)
+    ap.add_argument(
+        "--shipped",
+        default=None,
+        help="drive the shipped maniskill.<key>_native task (e.g. pick_cube) instead of the recipe replica",
+    )
     args = ap.parse_args(argv)
     out = Path(args.out) if args.out else Path(f"runs/{args.task}/side_by_side.mp4")
-    r = run(args.task, args.steps, args.seed, args.amp, out)
+    r = run(args.task, args.steps, args.seed, args.amp, out, shipped_task_key=args.shipped)
     print(f"{r['task']}: mean_pixel_diff={r['mean_pixel_diff']:.4f}/255  ->  {r['out']}")
     return 0
 

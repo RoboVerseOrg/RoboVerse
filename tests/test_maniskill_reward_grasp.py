@@ -56,45 +56,75 @@ def _extract(task_key, u, info):
     if task_key == "stack_cube":
         return RW.stack_cube, dict(
             tcp_pos=u.agent.tcp.pose.p.cpu().numpy().ravel(),
-            cubeA_pos=u.cubeA.pose.p.cpu().numpy().ravel(), cubeB_pos=u.cubeB.pose.p.cpu().numpy().ravel(),
-            cube_half_size_z=float(u.cube_half_size[2]), finger_qpos=fq, gripper_width=gw,
+            cubeA_pos=u.cubeA.pose.p.cpu().numpy().ravel(),
+            cubeB_pos=u.cubeB.pose.p.cpu().numpy().ravel(),
+            cube_half_size_z=float(u.cube_half_size[2]),
+            finger_qpos=fq,
+            gripper_width=gw,
             cubeA_linvel=u.cubeA.linear_velocity.cpu().numpy().ravel(),
             cubeA_angvel=u.cubeA.angular_velocity.cpu().numpy().ravel(),
             is_cubeA_grasped=bool(info["is_cubeA_grasped"].item()),
-            is_cubeA_on_cubeB=bool(info["is_cubeA_on_cubeB"].item()), success=bool(info["success"].item()))
+            is_cubeA_on_cubeB=bool(info["is_cubeA_on_cubeB"].item()),
+            success=bool(info["success"].item()),
+        )
     if task_key == "poke_cube":
         return RW.poke_cube, dict(
-            tcp_pos=u.agent.tcp.pose.p.cpu().numpy().ravel(), peg_pos=u.peg.pose.p.cpu().numpy().ravel(),
-            angle_diff=float(info["angle_diff"].item()), head_to_cube_dist=float(info["head_to_cube_dist"].item()),
-            is_peg_grasped=bool(info["is_peg_grasped"].item()), goal_pos=u.goal_region.pose.p.cpu().numpy().ravel(),
-            cube_pos=u.cube.pose.p.cpu().numpy().ravel(), is_peg_cube_fit=bool(info["is_peg_cube_fit"].item()),
+            tcp_pos=u.agent.tcp.pose.p.cpu().numpy().ravel(),
+            peg_pos=u.peg.pose.p.cpu().numpy().ravel(),
+            angle_diff=float(info["angle_diff"].item()),
+            head_to_cube_dist=float(info["head_to_cube_dist"].item()),
+            is_peg_grasped=bool(info["is_peg_grasped"].item()),
+            goal_pos=u.goal_region.pose.p.cpu().numpy().ravel(),
+            cube_pos=u.cube.pose.p.cpu().numpy().ravel(),
+            is_peg_cube_fit=bool(info["is_peg_cube_fit"].item()),
             is_cube_placed=bool(info["is_cube_placed"].item()),
-            qvel_arm=u.agent.robot.get_qvel().cpu().numpy().ravel()[:-2], success=bool(info["success"].item()))
+            qvel_arm=u.agent.robot.get_qvel().cpu().numpy().ravel()[:-2],
+            success=bool(info["success"].item()),
+        )
     if task_key == "place_sphere":
         return RW.place_sphere, dict(
-            tcp_pos=u.agent.tcp.pose.p.cpu().numpy().ravel(), obj_pos=u.obj.pose.p.cpu().numpy().ravel(),
-            bin_pos=u.bin.pose.p.cpu().numpy().ravel(), block_half_size0=float(u.block_half_size[0]),
-            radius=float(u.radius), finger_qpos=fq, gripper_width=gw,
+            tcp_pos=u.agent.tcp.pose.p.cpu().numpy().ravel(),
+            obj_pos=u.obj.pose.p.cpu().numpy().ravel(),
+            bin_pos=u.bin.pose.p.cpu().numpy().ravel(),
+            block_half_size0=float(u.block_half_size[0]),
+            radius=float(u.radius),
+            finger_qpos=fq,
+            gripper_width=gw,
             obj_linvel=u.obj.linear_velocity.cpu().numpy().ravel(),
             obj_angvel=u.obj.angular_velocity.cpu().numpy().ravel(),
-            robot_is_static=bool(u.agent.is_static(0.2).item()), is_obj_grasped=bool(info["is_obj_grasped"].item()),
-            is_obj_on_bin=bool(info["is_obj_on_bin"].item()), success=bool(info["success"].item()))
+            robot_is_static=bool(u.agent.is_static(0.2).item()),
+            is_obj_grasped=bool(info["is_obj_grasped"].item()),
+            is_obj_on_bin=bool(info["is_obj_on_bin"].item()),
+            success=bool(info["success"].item()),
+        )
     raise ValueError(task_key)
 
 
-@pytest.mark.parametrize("task_key,gym_id", [
-    ("pick_cube", "PickCube-v1"), ("push_cube", "PushCube-v1"),
-    ("pull_cube", "PullCube-v1"), ("lift_peg_upright", "LiftPegUpright-v1"),
-    ("stack_cube", "StackCube-v1"), ("poke_cube", "PokeCube-v1"),
-    ("place_sphere", "PlaceSphere-v1"),
-])
+@pytest.mark.parametrize(
+    "task_key,gym_id",
+    [
+        ("pick_cube", "PickCube-v1"),
+        ("push_cube", "PushCube-v1"),
+        ("pull_cube", "PullCube-v1"),
+        ("lift_peg_upright", "LiftPegUpright-v1"),
+        ("stack_cube", "StackCube-v1"),
+        ("poke_cube", "PokeCube-v1"),
+        ("place_sphere", "PlaceSphere-v1"),
+    ],
+)
 def test_dense_reward_bitwise(task_key, gym_id):
     import gymnasium as gym
     import mani_skill.envs  # noqa: F401
     import torch
 
-    env = gym.make(gym_id, num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos",
-                   sim_backend="physx_cpu", reward_mode="dense")
+    env = gym.make(
+        gym_id,
+        num_envs=1,
+        obs_mode="state",
+        control_mode="pd_joint_delta_pos",
+        sim_backend="physx_cpu",
+        reward_mode="dense",
+    )
     u = env.unwrapped
     env.reset(seed=0)
     rng = np.random.RandomState(3)
@@ -114,8 +144,14 @@ def test_roll_ball_dense_reward_bitwise():
 
     from roboverse_pack.tasks.maniskill._native.rewards import roll_ball
 
-    env = gym.make("RollBall-v1", num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos",
-                   sim_backend="physx_cpu", reward_mode="dense")
+    env = gym.make(
+        "RollBall-v1",
+        num_envs=1,
+        obs_mode="state",
+        control_mode="pd_joint_delta_pos",
+        sim_backend="physx_cpu",
+        reward_mode="dense",
+    )
     u = env.unwrapped
     env.reset(seed=0)
     rng = np.random.RandomState(3)
@@ -126,7 +162,9 @@ def test_roll_ball_dense_reward_bitwise():
             tcp_pos=u.agent.tcp.pose.p.cpu().numpy().ravel(),
             ball_pos=u.ball.pose.p.cpu().numpy().ravel(),
             goal_pos=u.goal_region.pose.p.cpu().numpy().ravel(),
-            ball_radius=float(u.ball_radius), reached_status=rs, success=bool(info["success"].item()),
+            ball_radius=float(u.ball_radius),
+            reached_status=rs,
+            success=bool(info["success"].item()),
         )
         max_delta = max(max_delta, abs(float(rew.item()) - ours))
     env.close()
@@ -147,8 +185,9 @@ def test_is_grasped_matches_native():
     acts = np.zeros((T, 8), dtype=np.float32)
     acts[:, 7] = -1.0  # close gripper
 
-    env = gym.make("PickCube-v1", num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos",
-                   sim_backend="physx_cpu")
+    env = gym.make(
+        "PickCube-v1", num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos", sim_backend="physx_cpu"
+    )
     u = env.unwrapped
     env.reset(seed=0)
     q0 = u.agent.robot.get_qpos().cpu().numpy().ravel().astype(np.float32)

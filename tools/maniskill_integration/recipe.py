@@ -307,9 +307,7 @@ def build_replica(cap: SceneCapture):
             elif sh.kind == "sphere":
                 b.add_sphere_collision(pose=pose, radius=sh.radius, material=mat)
             elif sh.kind == "capsule":
-                b.add_capsule_collision(
-                    pose=pose, radius=sh.radius, half_length=sh.half_length, material=mat
-                )
+                b.add_capsule_collision(pose=pose, radius=sh.radius, half_length=sh.half_length, material=mat)
             elif sh.kind == "convex":
                 # Rebuild a convex hull from the captured (scaled) vertices when
                 # the builder supports it; otherwise fall back to its bbox.

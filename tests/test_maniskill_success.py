@@ -18,27 +18,48 @@ import pytest
 pytest.importorskip("mani_skill")
 pytest.importorskip("sapien")
 
-from roboverse_pack.tasks.maniskill._native import success as SU  # noqa: E402
+from roboverse_pack.tasks.maniskill._native import success as SU
 
 
 def _native_success(info):
     return bool(info["success"].item())
 
 
-@pytest.mark.parametrize("gym_id,fn", [
-    ("PushCube-v1", lambda u, i: SU.push_cube(
-        cube_pos=u.obj.pose.p.cpu().numpy().ravel(), goal_pos=u.goal_region.pose.p.cpu().numpy().ravel(),
-        cube_half_size=float(u.cube_half_size))),
-    ("PullCube-v1", lambda u, i: SU.pull_cube(
-        cube_pos=u.obj.pose.p.cpu().numpy().ravel(), goal_pos=u.goal_region.pose.p.cpu().numpy().ravel())),
-    ("RollBall-v1", lambda u, i: SU.roll_ball(
-        ball_pos=u.ball.pose.p.cpu().numpy().ravel(), goal_pos=u.goal_region.pose.p.cpu().numpy().ravel())),
-    ("StackCube-v1", lambda u, i: SU.stack_cube(
-        cubeA_pos=u.cubeA.pose.p.cpu().numpy().ravel(), cubeB_pos=u.cubeB.pose.p.cpu().numpy().ravel(),
-        cube_half_size=u.cube_half_size.cpu().numpy().ravel(),
-        is_cubeA_static=bool(u.cubeA.is_static(1e-2, 0.5).item()),
-        is_cubeA_grasped=bool(i["is_cubeA_grasped"].item()))),
-])
+@pytest.mark.parametrize(
+    "gym_id,fn",
+    [
+        (
+            "PushCube-v1",
+            lambda u, i: SU.push_cube(
+                cube_pos=u.obj.pose.p.cpu().numpy().ravel(),
+                goal_pos=u.goal_region.pose.p.cpu().numpy().ravel(),
+                cube_half_size=float(u.cube_half_size),
+            ),
+        ),
+        (
+            "PullCube-v1",
+            lambda u, i: SU.pull_cube(
+                cube_pos=u.obj.pose.p.cpu().numpy().ravel(), goal_pos=u.goal_region.pose.p.cpu().numpy().ravel()
+            ),
+        ),
+        (
+            "RollBall-v1",
+            lambda u, i: SU.roll_ball(
+                ball_pos=u.ball.pose.p.cpu().numpy().ravel(), goal_pos=u.goal_region.pose.p.cpu().numpy().ravel()
+            ),
+        ),
+        (
+            "StackCube-v1",
+            lambda u, i: SU.stack_cube(
+                cubeA_pos=u.cubeA.pose.p.cpu().numpy().ravel(),
+                cubeB_pos=u.cubeB.pose.p.cpu().numpy().ravel(),
+                cube_half_size=u.cube_half_size.cpu().numpy().ravel(),
+                is_cubeA_static=bool(u.cubeA.is_static(1e-2, 0.5).item()),
+                is_cubeA_grasped=bool(i["is_cubeA_grasped"].item()),
+            ),
+        ),
+    ],
+)
 def test_success_negative_agreement(gym_id, fn):
     import gymnasium as gym
     import mani_skill.envs  # noqa: F401
@@ -59,8 +80,9 @@ def test_success_positive_firing():
     import mani_skill.envs  # noqa: F401
     import torch
 
-    env = gym.make("PushCube-v1", num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos",
-                   sim_backend="physx_cpu")
+    env = gym.make(
+        "PushCube-v1", num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos", sim_backend="physx_cpu"
+    )
     u = env.unwrapped
     env.reset(seed=0)
     goal = u.goal_region.pose.p.cpu().numpy().ravel()
@@ -71,6 +93,8 @@ def test_success_positive_firing():
     sd["actors"]["cube"] = cs
     u.set_state_dict(sd)
     info = u.evaluate()
-    ours = SU.push_cube(cube_pos=u.obj.pose.p.cpu().numpy().ravel(), goal_pos=goal, cube_half_size=float(u.cube_half_size))
+    ours = SU.push_cube(
+        cube_pos=u.obj.pose.p.cpu().numpy().ravel(), goal_pos=goal, cube_half_size=float(u.cube_half_size)
+    )
     env.close()
     assert _native_success(info) is True and ours is True

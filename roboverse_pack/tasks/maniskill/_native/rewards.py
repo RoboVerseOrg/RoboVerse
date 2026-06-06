@@ -20,8 +20,9 @@ def _dist(a, b):
     return float(np.linalg.norm(np.asarray(a, dtype=np.float32) - np.asarray(b, dtype=np.float32)))
 
 
-def pick_cube(*, cube_pos, tcp_pos, goal_pos, qvel_arm, is_grasped, goal_thresh=0.025,
-              is_robot_static, normalized=False) -> float:
+def pick_cube(
+    *, cube_pos, tcp_pos, goal_pos, qvel_arm, is_grasped, goal_thresh=0.025, is_robot_static, normalized=False
+) -> float:
     """ManiSkill PickCube-v1 ``compute_dense_reward`` (max 5).
 
     ``qvel_arm`` = robot qvel with the two finger DOFs dropped (panda). ``is_robot_static`` is the
@@ -85,9 +86,21 @@ def lift_peg_upright(*, peg_rot_mat, peg_pos, tcp_pos, is_grasped, peg_half_leng
     return float(reward / 2.2) if normalized else float(reward)
 
 
-def stack_cube(*, tcp_pos, cubeA_pos, cubeB_pos, cube_half_size_z, finger_qpos, gripper_width,
-               cubeA_linvel, cubeA_angvel, is_cubeA_grasped, is_cubeA_on_cubeB, success,
-               normalized=False) -> float:
+def stack_cube(
+    *,
+    tcp_pos,
+    cubeA_pos,
+    cubeB_pos,
+    cube_half_size_z,
+    finger_qpos,
+    gripper_width,
+    cubeA_linvel,
+    cubeA_angvel,
+    is_cubeA_grasped,
+    is_cubeA_on_cubeB,
+    success,
+    normalized=False,
+) -> float:
     """ManiSkill StackCube-v1 ``compute_dense_reward`` (max 8)."""
     cubeA_to_tcp = float(np.linalg.norm(np.asarray(tcp_pos, np.float32) - np.asarray(cubeA_pos, np.float32)))
     reward = 2.0 * (1.0 - _tanh(5 * cubeA_to_tcp))
@@ -106,8 +119,21 @@ def stack_cube(*, tcp_pos, cubeA_pos, cubeB_pos, cube_half_size_z, finger_qpos, 
     return float(reward / 8.0) if normalized else float(reward)
 
 
-def poke_cube(*, tcp_pos, peg_pos, angle_diff, head_to_cube_dist, is_peg_grasped, goal_pos, cube_pos,
-              is_peg_cube_fit, is_cube_placed, qvel_arm, success, normalized=False) -> float:
+def poke_cube(
+    *,
+    tcp_pos,
+    peg_pos,
+    angle_diff,
+    head_to_cube_dist,
+    is_peg_grasped,
+    goal_pos,
+    cube_pos,
+    is_peg_cube_fit,
+    is_cube_placed,
+    qvel_arm,
+    success,
+    normalized=False,
+) -> float:
     """ManiSkill PokeCube-v1 ``compute_dense_reward`` (max 10)."""
     tcp_to_peg = float(np.linalg.norm(np.asarray(tcp_pos, np.float32) - np.asarray(peg_pos, np.float32)))
     reached = tcp_to_peg < 0.01
@@ -129,9 +155,23 @@ def poke_cube(*, tcp_pos, peg_pos, angle_diff, head_to_cube_dist, is_peg_grasped
     return float(reward / 10.0) if normalized else float(reward)
 
 
-def place_sphere(*, tcp_pos, obj_pos, bin_pos, block_half_size0, radius, finger_qpos, gripper_width,
-                 obj_linvel, obj_angvel, robot_is_static, is_obj_grasped, is_obj_on_bin, success,
-                 normalized=False) -> float:
+def place_sphere(
+    *,
+    tcp_pos,
+    obj_pos,
+    bin_pos,
+    block_half_size0,
+    radius,
+    finger_qpos,
+    gripper_width,
+    obj_linvel,
+    obj_angvel,
+    robot_is_static,
+    is_obj_grasped,
+    is_obj_on_bin,
+    success,
+    normalized=False,
+) -> float:
     """ManiSkill PlaceSphere-v1 ``compute_dense_reward`` (max 13)."""
     obj_to_tcp = float(np.linalg.norm(np.asarray(tcp_pos, np.float32) - np.asarray(obj_pos, np.float32)))
     reward = 2.0 * (1.0 - _tanh(5 * obj_to_tcp))
@@ -173,9 +213,20 @@ def roll_ball(*, tcp_pos, ball_pos, goal_pos, ball_radius, reached_status, succe
     return (float(reward / 30.0) if normalized else float(reward)), reached_status
 
 
-def pull_cube_tool(*, tcp_pos, cube_pos, tool_pos, robot_base_pos, is_grasping, success,
-                   hook_length=0.05, cube_half_size=0.02, arm_reach=0.35, cube_size=0.02,
-                   normalized=False) -> float:
+def pull_cube_tool(
+    *,
+    tcp_pos,
+    cube_pos,
+    tool_pos,
+    robot_base_pos,
+    is_grasping,
+    success,
+    hook_length=0.05,
+    cube_half_size=0.02,
+    arm_reach=0.35,
+    cube_size=0.02,
+    normalized=False,
+) -> float:
     """ManiSkill PullCubeTool-v1 ``compute_dense_reward`` (staged tool-use)."""
     tool_grasp = np.asarray(tool_pos, np.float64) + np.array([0.02, 0, 0])
     tcp_to_tool = float(np.linalg.norm(np.asarray(tcp_pos, np.float64) - tool_grasp))

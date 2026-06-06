@@ -151,12 +151,9 @@ def _fmt(r: dict) -> str:
     parts = []
     for n, o in r["objects"].items():
         tag = "Δ=0" if o["bitwise"] else "{:.2e}".format(o["delta_max"])
-        parts.append("{}:{}".format(n, tag))
+        parts.append(f"{n}:{tag}")
     objs = "  ".join(parts)
-    return (
-        f"{r['task']:20s} qpos_max={r['qpos_delta_max']:.2e} "
-        f"(step0={r['qpos_delta_step0']:.2e})  objects[{objs}]"
-    )
+    return f"{r['task']:20s} qpos_max={r['qpos_delta_max']:.2e} (step0={r['qpos_delta_step0']:.2e})  objects[{objs}]"
 
 
 def main(argv=None):
@@ -176,7 +173,7 @@ def main(argv=None):
             r = run_task(t, args.steps, args.seed, args.control_mode)
             results.append(r)
             print(_fmt(r))
-        except Exception as e:  # noqa: BLE001 — report and continue the sweep
+        except Exception as e:
             print(f"{t:20s} ERROR: {type(e).__name__}: {e}")
             results.append({"task": t, "error": f"{type(e).__name__}: {e}"})
 

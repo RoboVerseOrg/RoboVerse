@@ -130,8 +130,9 @@ class ManiSkillNativeTask(BaseTaskEnv):
         return np.zeros(3) if b is None else np.asarray(b.angular_velocity, dtype=np.float64).ravel()
 
     def obj_is_static(self, name, lin_thresh: float = 1e-2, ang_thresh: float = 0.5) -> bool:
-        return bool(np.linalg.norm(self.obj_linvel(name)) <= lin_thresh
-                    and np.linalg.norm(self.obj_angvel(name)) <= ang_thresh)
+        return bool(
+            np.linalg.norm(self.obj_linvel(name)) <= lin_thresh and np.linalg.norm(self.obj_angvel(name)) <= ang_thresh
+        )
 
     def finger_qpos(self):
         return np.asarray(self.handler.object_ids[self.robot_name].get_qpos(), dtype=np.float64).ravel()[-2:]

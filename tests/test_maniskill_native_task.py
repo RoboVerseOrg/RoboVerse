@@ -17,7 +17,7 @@ import pytest
 pytest.importorskip("mani_skill")
 pytest.importorskip("sapien")
 
-from roboverse_pack.tasks.maniskill._native.specs import TASK_SPECS  # noqa: E402
+from roboverse_pack.tasks.maniskill._native.specs import TASK_SPECS
 
 _T = 15
 
@@ -27,8 +27,7 @@ def _native_reference(gym_id, names, seed):
     import mani_skill.envs  # noqa: F401
     import torch
 
-    env = gym.make(gym_id, num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos",
-                   sim_backend="physx_cpu")
+    env = gym.make(gym_id, num_envs=1, obs_mode="state", control_mode="pd_joint_delta_pos", sim_backend="physx_cpu")
     u = env.unwrapped
     env.reset(seed=seed)
     qpos = u.agent.robot.get_qpos().cpu().numpy().ravel().astype(np.float32)

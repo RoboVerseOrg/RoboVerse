@@ -8,7 +8,6 @@ its own module; this module covers the rest of the single-primitive suite.
 
 from __future__ import annotations
 
-
 from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveMultiBoxCfg, PrimitiveSphereCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
@@ -54,8 +53,10 @@ def _make_task_cls(task_key: str, spec: dict):
     if "success_full" in spec:
         _Task.success_fn = staticmethod(spec["success_full"])
     else:
+
         def _proxy_success(task, _fn=geom_success, _names=object_names):
             return _fn({n: task.obj_pos(n) for n in _names})
+
         _Task.success_fn = staticmethod(_proxy_success)
     if "reward" in spec:
         _Task.reward_fn = staticmethod(spec["reward"])

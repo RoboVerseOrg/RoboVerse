@@ -45,8 +45,9 @@ def grasp_forces(handler, object_name: str, robot_name: str = "panda"):
     return lf, rf, f1, f2
 
 
-def is_grasped(handler, object_name: str, robot_name: str = "panda",
-               min_force: float = _MIN_FORCE, max_angle: float = _MAX_ANGLE) -> bool:
+def is_grasped(
+    handler, object_name: str, robot_name: str = "panda", min_force: float = _MIN_FORCE, max_angle: float = _MAX_ANGLE
+) -> bool:
     """True when the Panda is grasping ``object_name`` (ManiSkill criterion)."""
     lf, rf, f1, f2 = grasp_forces(handler, object_name, robot_name)
     ldir = f1.get_pose().to_transformation_matrix()[:3, 1]
