@@ -16,6 +16,10 @@ import numpy as np
 
 from . import rewards as RW
 from . import success as SU
+from .control import PDJointDeltaPos
+
+# panda_stick (PushT / DrawTriangle): 7-dof arm, no gripper.
+_STICK_CONTROLLER = PDJointDeltaPos(arm_dof=7, gripper=False)
 
 # Default panda mount (table edge); RollBall rotates it.
 _BASE = ((-0.615, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0))
@@ -539,5 +543,55 @@ TASK_SPECS: dict[str, dict] = {
             ),
         ],
         "success": _moved("charger", (-0.0496, 0.1661)),
+    },
+    # --- panda_stick (arm-only, 7-dim) tasks ---
+    "push_t": {
+        "gym_id": "PushT-v1",
+        "base": _BASE,
+        "max_steps": 100,
+        "robot": "panda_stick",
+        "controller": _STICK_CONTROLLER,
+        "rest_qpos": {
+            "panda_joint1": 0.659,
+            "panda_joint2": 0.2099,
+            "panda_joint3": 0.0942,
+            "panda_joint4": -2.6821,
+            "panda_joint5": -0.0859,
+            "panda_joint6": 2.9132,
+            "panda_joint7": 1.6754,
+        },
+        "objects": [
+            (
+                "Tee",
+                "multibox",
+                [
+                    {"half_size": [0.10, 0.025, 0.02], "pos": [0.0, -0.0375, 0.0]},
+                    {"half_size": [0.025, 0.075, 0.02], "pos": [0.0, 0.0625, 0.0]},
+                ],
+                0.7,
+                [0.761, 0.075, 0.086],
+                (-0.1567, 0.0305, 0.021),
+                False,
+            )
+        ],
+        "success": _moved("Tee", (-0.1567, 0.0305)),
+    },
+    "draw_triangle": {
+        "gym_id": "DrawTriangle-v1",
+        "base": _BASE,
+        "max_steps": 50,
+        "robot": "panda_stick",
+        "controller": _STICK_CONTROLLER,
+        "rest_qpos": {
+            "panda_joint1": 0.0,
+            "panda_joint2": 0.3927,
+            "panda_joint3": 0.0,
+            "panda_joint4": -1.9635,
+            "panda_joint5": 0.0,
+            "panda_joint6": 2.3562,
+            "panda_joint7": 0.7854,
+        },
+        "objects": [("canvas", "box", [0.8, 1.2, 0.02], 1.0, [1, 1, 1], (-0.1, 0.0, 0.01), True)],
+        "success": lambda p: False,  # ManiSkill DrawTriangle success = drawn-path match (not ported)
     },
 }

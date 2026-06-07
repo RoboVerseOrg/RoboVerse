@@ -13,7 +13,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
 
 from ._native.base import ManiSkillNativeTask
-from ._native.recipe import maniskill_panda_cfg, table_workspace_cfg
+from ._native.recipe import maniskill_panda_cfg, maniskill_panda_stick_cfg, table_workspace_cfg
 from ._native.specs import TASK_SPECS
 
 
@@ -33,10 +33,13 @@ def _build_object(name, kind, geom, mass, color, pos, kinematic):
 def _make_task_cls(task_key: str, spec: dict):
     objects = [table_workspace_cfg()] + [_build_object(*o) for o in spec["objects"]]
     base_pos, base_quat = spec["base"]
-    scenario = ScenarioCfg(
-        robots=[maniskill_panda_cfg(base_position=base_pos, base_orientation=base_quat)],
-        objects=objects,
-    )
+    if spec.get("robot") == "panda_stick":
+        robot = maniskill_panda_stick_cfg(
+            base_position=base_pos, base_orientation=base_quat, rest_qpos=spec.get("rest_qpos")
+        )
+    else:
+        robot = maniskill_panda_cfg(base_position=base_pos, base_orientation=base_quat)
+    scenario = ScenarioCfg(robots=[robot], objects=objects)
     object_names = [o[0] for o in spec["objects"]]
     geom_success = spec["success"]
     max_steps = spec["max_steps"]
@@ -62,6 +65,8 @@ def _make_task_cls(task_key: str, spec: dict):
         _Task.reward_fn = staticmethod(spec["reward"])
     if "goal" in spec:
         _Task.goal_sampler = staticmethod(spec["goal"])
+    if "controller" in spec:
+        _Task.controller = spec["controller"]
 
     _Task.__name__ = "".join(p.capitalize() for p in task_key.split("_")) + "NativeTask"
     _Task.__qualname__ = _Task.__name__

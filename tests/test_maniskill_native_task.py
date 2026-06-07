@@ -34,7 +34,8 @@ def _native_reference(gym_id, names, seed):
     qvel = u.agent.robot.get_qvel().cpu().numpy().ravel().astype(np.float32)
     init = {n: u.scene.actors[n].pose.raw_pose.cpu().numpy().ravel().copy() for n in names}
     rng = np.random.RandomState(seed + 1)
-    actions = rng.uniform(-1, 1, size=(_T, 8)).astype(np.float32)
+    adim = env.action_space.shape[-1]  # 8 (panda) or 7 (panda_stick)
+    actions = rng.uniform(-1, 1, size=(_T, adim)).astype(np.float32)
     traj = {n: [] for n in names}
     for a in actions:
         env.step(torch.tensor(a).unsqueeze(0))

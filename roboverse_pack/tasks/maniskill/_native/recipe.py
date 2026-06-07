@@ -57,6 +57,33 @@ def panda_urdf_path() -> str:
 PANDA_BASE_DEFAULT = ((-0.615, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0))
 
 
+def panda_stick_urdf_path() -> str:
+    """Resolve ManiSkill's ``panda_stick.urdf`` (arm + fixed stick, no gripper): vendored else pkg."""
+    here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+    vendored = os.path.join(here, "roboverse_data", "robots", "maniskill_panda", "panda_stick.urdf")
+    if os.path.exists(vendored):
+        return vendored
+    import mani_skill
+
+    return os.path.join(os.path.dirname(mani_skill.__file__), "assets", "robots", "panda", "panda_stick.urdf")
+
+
+def maniskill_panda_stick_cfg(
+    name: str = "panda",
+    base_position: tuple[float, float, float] = PANDA_BASE_DEFAULT[0],
+    base_orientation: tuple[float, float, float, float] = PANDA_BASE_DEFAULT[1],
+    rest_qpos: dict | None = None,
+) -> RobotCfg:
+    """ManiSkill PandaStick (7-dof arm, fixed stick end-effector, NO gripper)."""
+    actuators = {j: BaseActuatorCfg(stiffness=1000.0, damping=100.0, effort_limit_sim=100.0) for j in _ARM_JOINTS}
+    default = rest_qpos if rest_qpos is not None else {j: _REST_QPOS[j] for j in _ARM_JOINTS}
+    robot = RobotCfg(name=name, actuators=actuators, fix_base_link=True, default_joint_positions=dict(default))
+    robot.urdf_path = panda_stick_urdf_path()
+    robot.default_position = tuple(base_position)
+    robot.default_orientation = tuple(base_orientation)
+    return robot
+
+
 def maniskill_panda_cfg(
     name: str = "panda",
     base_position: tuple[float, float, float] = PANDA_BASE_DEFAULT[0],
