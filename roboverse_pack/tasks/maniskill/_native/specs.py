@@ -323,6 +323,24 @@ def _pull_cube_tool_success(task):
     return SU.pull_cube_tool(cube_pos=task.obj_pos("cube"), robot_base_pos=task.robot_base_pos())
 
 
+def _peg_insertion_success(task):
+    """ManiSkill PegInsertionSide ``has_peg_inserted``: peg head inside the box hole.
+
+    box_hole_pose = box.pose * [0, 0.0087, 0.0038]; peg_head_pose = peg.pose * [0.10695, 0, 0]
+    (captured ManiSkill offsets). Inserted when the peg head, in the hole frame, has x >= -0.015 and
+    |y|,|z| <= box_hole_radii (0.02515).
+    """
+    import sapien
+
+    box = task.handler.object_ids["box_with_hole_0"].get_pose()
+    peg = task.handler.object_ids["peg_0"].get_pose()
+    box_hole = box * sapien.Pose([0.0, 0.0087, 0.0038], [1, 0, 0, 0])
+    peg_head = peg * sapien.Pose([0.10695, 0.0, 0.0], [1, 0, 0, 0])
+    pp = (box_hole.inv() * peg_head).p
+    r = 0.02515
+    return bool(pp[0] >= -0.015 and abs(pp[1]) <= r and abs(pp[2]) <= r)
+
+
 def _stack_pyramid_reset(task, rng):
     """ManiSkill StackPyramid reset: 3 cubes in [-0.1,0.1]x[-0.2,0.2] (collision-avoided)."""
     import sapien
@@ -507,6 +525,8 @@ TASK_SPECS: dict[str, dict] = {
             ),
         ],
         "success": _moved("peg_0", (-0.0007, -0.0695)),
+        "orientations": {"box_with_hole_0": [0.6694, 0.0, 0.0, 0.7429], "peg_0": [0.8344, 0.0, 0.0, 0.5511]},
+        "success_full": _peg_insertion_success,
     },
     "plug_charger": {
         "gym_id": "PlugCharger-v1",

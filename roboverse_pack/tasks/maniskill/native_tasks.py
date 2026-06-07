@@ -32,6 +32,12 @@ def _build_object(name, kind, geom, mass, color, pos, kinematic):
 
 def _make_task_cls(task_key: str, spec: dict):
     objects = [table_workspace_cfg()] + [_build_object(*o) for o in spec["objects"]]
+    # Optional per-object default orientation (wxyz) — e.g. PegInsertionSide's rotated box/peg so the
+    # shipped scene geometry is coherent for the ported success.
+    orientations = spec.get("orientations", {})
+    for obj in objects:
+        if obj.name in orientations:
+            obj.default_orientation = tuple(orientations[obj.name])
     base_pos, base_quat = spec["base"]
     if spec.get("robot") == "panda_stick":
         robot = maniskill_panda_stick_cfg(
