@@ -323,6 +323,30 @@ def _pull_cube_tool_success(task):
     return SU.pull_cube_tool(cube_pos=task.obj_pos("cube"), robot_base_pos=task.robot_base_pos())
 
 
+def _peg_insertion_reward(task):
+    import numpy as _np
+    import sapien
+
+    box = task.handler.object_ids["box_with_hole_0"].get_pose()
+    peg = task.handler.object_ids["peg_0"].get_pose()
+    goal = box * sapien.Pose([-0.10695, 0.0087, 0.0038], [1, 0, 0, 0])
+    ph = peg * sapien.Pose([0.10695, 0.0, 0.0], [1, 0, 0, 0])
+    bh = box * sapien.Pose([0.0, 0.0087, 0.0038], [1, 0, 0, 0])
+    tgt = peg * sapien.Pose([-0.06, 0.0, 0.0], [1, 0, 0, 0])
+    gtp = float(_np.linalg.norm(task.tcp_pos() - _np.asarray(tgt.p)))
+    yz1 = float(_np.linalg.norm(_np.asarray((goal.inv() * ph).p)[1:]))
+    yz2 = float(_np.linalg.norm(_np.asarray((goal.inv() * peg).p)[1:]))
+    hd = float(_np.linalg.norm(_np.asarray((bh.inv() * ph).p)))
+    return RW.peg_insertion_side(
+        gripper_to_peg=gtp,
+        is_grasped=task.is_grasped("peg_0", max_angle=20),
+        yz1=yz1,
+        yz2=yz2,
+        hole_dist=hd,
+        success=_peg_insertion_success(task),
+    )
+
+
 def _peg_insertion_success(task):
     """ManiSkill PegInsertionSide ``has_peg_inserted``: peg head inside the box hole.
 
@@ -545,6 +569,7 @@ TASK_SPECS: dict[str, dict] = {
         "success": _moved("peg_0", (-0.0007, -0.0695)),
         "orientations": {"box_with_hole_0": [0.6694, 0.0, 0.0, 0.7429], "peg_0": [0.8344, 0.0, 0.0, 0.5511]},
         "success_full": _peg_insertion_success,
+        "reward": _peg_insertion_reward,
     },
     "plug_charger": {
         "gym_id": "PlugCharger-v1",

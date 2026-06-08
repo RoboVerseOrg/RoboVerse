@@ -248,3 +248,21 @@ def pull_cube_tool(
     if success:
         reward += 5.0
     return float(reward)
+
+
+def peg_insertion_side(*, gripper_to_peg, is_grasped, yz1, yz2, hole_dist, success, normalized=False) -> float:
+    """ManiSkill PegInsertionSide-v1 ``compute_dense_reward`` (max 10).
+
+    Scalars are computed by the caller from poses (gripper→peg distance; yz1/yz2 = |yz| of peg-head /
+    peg-center in goal frame; hole_dist = |peg head in box-hole frame|; is_grasped at max_angle=20).
+    """
+    reward = 1.0 - _tanh(4.0 * gripper_to_peg)
+    reward += 1.0 if is_grasped else 0.0
+    pre = 3.0 * (1.0 - _tanh(0.5 * (yz1 + yz2) + 4.5 * max(yz1, yz2)))
+    reward += pre * (1.0 if is_grasped else 0.0)
+    pre_inserted = yz1 < 0.01 and yz2 < 0.01
+    insertion = 5.0 * (1.0 - _tanh(5.0 * hole_dist))
+    reward += insertion * (1.0 if (is_grasped and pre_inserted) else 0.0)
+    if success:
+        reward = 10.0
+    return float(reward / 10.0) if normalized else float(reward)
