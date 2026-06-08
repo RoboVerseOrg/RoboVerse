@@ -46,16 +46,22 @@ def _moved(name, spawn, dist=0.05):
 
 
 # --- fully-ported (native 1:1) reset / reward / success for the wired tasks ---
-def _set_cube(task, name, x, y, z):
+def _yaw_quat(rng, lo=-np.pi, hi=np.pi):
+    """Random yaw-only quaternion (wxyz), matching ManiSkill random_quaternions(lock_x, lock_y)."""
+    yaw = float(rng.uniform(lo, hi))
+    return [float(np.cos(yaw / 2)), 0.0, 0.0, float(np.sin(yaw / 2))]
+
+
+def _set_cube(task, name, x, y, z, quat=(1.0, 0.0, 0.0, 0.0)):
     import sapien
 
-    task.handler.object_ids[name].set_pose(sapien.Pose([float(x), float(y), float(z)], [1.0, 0.0, 0.0, 0.0]))
+    task.handler.object_ids[name].set_pose(sapien.Pose([float(x), float(y), float(z)], [float(q) for q in quat]))
 
 
 def _pick_cube_reset(task, rng):
     """ManiSkill PickCube reset: cube XY ∈ U(±0.1); goal XY ∈ U(±0.1), Z = U(0,0.3)+0.02."""
     cx, cy = rng.uniform(-0.1, 0.1, 2)
-    _set_cube(task, "cube", cx, cy, 0.02)
+    _set_cube(task, "cube", cx, cy, 0.02, _yaw_quat(rng))
     gx, gy = rng.uniform(-0.1, 0.1, 2)
     return [gx, gy, float(rng.uniform(0, 0.3)) + 0.02]
 
@@ -113,7 +119,7 @@ def _poke_cube_reset(task, rng):
     task.handler.object_ids["peg"].set_pose(sapien.Pose([float(px), float(py), 0.025], [1, 0, 0, 0]))
     cx = px + 0.12 + 0.1
     cy = float(rng.uniform(-0.1, 0.1))
-    _set_cube(task, "cube", cx, cy, 0.02)
+    _set_cube(task, "cube", cx, cy, 0.02, _yaw_quat(rng, -np.pi / 6, np.pi / 6))
     return [cx + 0.1, cy, 1e-3]  # 0.05 + goal_radius 0.05
 
 
@@ -164,8 +170,8 @@ def _stack_cube_reset(task, rng):
     base = rng.uniform(-0.1, 0.1, 2)
     a = base + rng.uniform([-0.1, -0.2], [0.1, 0.2])
     b = base + rng.uniform([-0.1, -0.2], [0.1, 0.2])
-    task.handler.object_ids["cubeA"].set_pose(sapien.Pose([float(a[0]), float(a[1]), 0.02], [1, 0, 0, 0]))
-    task.handler.object_ids["cubeB"].set_pose(sapien.Pose([float(b[0]), float(b[1]), 0.02], [1, 0, 0, 0]))
+    task.handler.object_ids["cubeA"].set_pose(sapien.Pose([float(a[0]), float(a[1]), 0.02], _yaw_quat(rng)))
+    task.handler.object_ids["cubeB"].set_pose(sapien.Pose([float(b[0]), float(b[1]), 0.02], _yaw_quat(rng)))
     return [0.0, 0.0, 0.0]  # stack has no goal site
 
 
@@ -390,7 +396,7 @@ def _stack_pyramid_reset(task, rng):
     base = rng.uniform(-0.1, 0.1, 2)
     for n in ("cubeA", "cubeB", "cubeC"):
         xy = base + rng.uniform([-0.1, -0.2], [0.1, 0.2])
-        task.handler.object_ids[n].set_pose(sapien.Pose([float(xy[0]), float(xy[1]), 0.02], [1, 0, 0, 0]))
+        task.handler.object_ids[n].set_pose(sapien.Pose([float(xy[0]), float(xy[1]), 0.02], _yaw_quat(rng)))
     return [0.0, 0.0, 0.0]
 
 

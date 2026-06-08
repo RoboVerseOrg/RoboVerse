@@ -172,8 +172,11 @@ class ManiSkillNativeTask(BaseTaskEnv):
     def reset(self, states=None, env_ids=None, seed=None):
         out = super().reset(states, env_ids, seed)
         if self.goal_sampler is not None:
-            rng = np.random.RandomState(0 if seed is None else seed)
-            self.goal_pos = np.asarray(self.goal_sampler(self, rng), dtype=np.float64)
+            # Persistent RNG so consecutive resets give *different* episodes (ManiSkill behaviour);
+            # an explicit seed reseeds for reproducibility.
+            if seed is not None or getattr(self, "_reset_rng", None) is None:
+                self._reset_rng = np.random.RandomState(seed if seed is not None else 0)
+            self.goal_pos = np.asarray(self.goal_sampler(self, self._reset_rng), dtype=np.float64)
         if getattr(self, "checker", None) is not None:
             self.checker.reset(self.handler, env_ids=env_ids)
         return out
