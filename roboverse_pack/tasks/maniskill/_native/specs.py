@@ -389,6 +389,14 @@ def _plug_charger_success(task):
     return bool(dist <= 5e-3 and angle <= 0.2)
 
 
+def _push_t_reset(task, rng):
+    """ManiSkill PushT reset: Tee XY = goal_offset(-0.156,-0.10) + U([0,0.2],[0,0.3]) - (0.1,0.1); full yaw."""
+    x = -0.156 + float(rng.uniform(0, 0.2)) - 0.1
+    y = -0.10 + float(rng.uniform(0, 0.3)) - 0.1
+    _set_cube(task, "Tee", x, y, 0.021, _yaw_quat(rng, 0.0, 2 * np.pi))
+    return [0.0, 0.0, 0.0]
+
+
 def _stack_pyramid_reset(task, rng):
     """ManiSkill StackPyramid reset: 3 cubes in [-0.1,0.1]x[-0.2,0.2] (collision-avoided)."""
     import sapien
@@ -646,6 +654,7 @@ TASK_SPECS: dict[str, dict] = {
             )
         ],
         "success": _moved("Tee", (-0.1567, 0.0305)),
+        "goal": _push_t_reset,
     },
     "draw_triangle": {
         "gym_id": "DrawTriangle-v1",

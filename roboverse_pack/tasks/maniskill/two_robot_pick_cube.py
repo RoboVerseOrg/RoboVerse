@@ -58,6 +58,23 @@ class TwoRobotPickCubeNativeTask(ManiSkillMultiRobotTask):
     )
     max_episode_steps = 100
 
+    @staticmethod
+    def goal_sampler(task, rng):
+        """ManiSkill TwoRobotPickCube reset: cube X=U(-0.05,0.05) Y=-0.15-U(0,0.1)+0.05; goal in air."""
+        import numpy as np
+        import sapien
+
+        cx = float(rng.uniform(-0.05, 0.05))
+        cy = -0.15 - float(rng.uniform(0, 0.1)) + 0.05
+        yaw = float(rng.uniform(-np.pi, np.pi))
+        task.handler.object_ids["cube"].set_pose(
+            sapien.Pose([cx, cy, 0.02], [float(np.cos(yaw / 2)), 0.0, 0.0, float(np.sin(yaw / 2))])
+        )
+        gx = float(rng.uniform(-0.05, 0.05))
+        gy = 0.15 + float(rng.uniform(0, 0.1)) - 0.05
+        gz = float(rng.uniform(0, 0.3)) + 0.02
+        return [gx, gy, gz]
+
     def _terminated(self, states: TensorState) -> torch.Tensor:
         # Proxy success: cube handed up off the table (full ManiSkill success uses a goal site +
         # per-arm reach conditions — a follow-up).
