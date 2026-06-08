@@ -37,20 +37,45 @@ _REST_QPOS = {
 }
 
 
-def panda_urdf_path() -> str:
-    """Resolve ManiSkill's ``panda_v2.urdf``: a vendored copy if present, else the installed package.
-
-    Vendoring to ``roboverse_data/robots/maniskill_panda/`` (HF-backed, like the other integrations)
-    is the follow-up that makes this fully clone-deletable; until then we fall back to the installed
-    ``mani_skill`` asset so the task runs in the maniskill env.
-    """
+def _maniskill_panda_dir() -> str:
     here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-    vendored = os.path.join(here, "roboverse_data", "robots", "maniskill_panda", "panda_v2.urdf")
+    return os.path.join(here, "roboverse_data", "robots", "maniskill_panda")
+
+
+def _resolve_panda_asset(urdf_basename: str) -> str:
+    """Resolve a vendored ManiSkill panda URDF, downloading the asset folder from HF if missing.
+
+    Prefers the local ``roboverse_data/robots/maniskill_panda/`` copy; if absent, fetches it
+    token-free from the public ``RoboVerseOrg/roboverse_data`` dataset (snapshot_download, the same
+    HF-backed pattern as the other integrations) so the clone needs no ``mani_skill`` install; only
+    then falls back to the installed ``mani_skill`` package.
+    """
+    vendored = os.path.join(_maniskill_panda_dir(), urdf_basename)
     if os.path.exists(vendored):
         return vendored
-    import mani_skill  # local import — only needed for the fallback path
+    try:
+        from huggingface_hub import snapshot_download
 
-    return os.path.join(os.path.dirname(mani_skill.__file__), "assets", "robots", "panda", "panda_v2.urdf")
+        here = os.path.dirname(_maniskill_panda_dir())  # .../roboverse_data/robots
+        root = os.path.dirname(os.path.dirname(here))  # repo root
+        snapshot_download(
+            repo_id="RoboVerseOrg/roboverse_data",
+            repo_type="dataset",
+            allow_patterns="robots/maniskill_panda/*",
+            local_dir=os.path.join(root, "roboverse_data"),
+        )
+        if os.path.exists(vendored):
+            return vendored
+    except Exception:
+        pass
+    import mani_skill  # last-resort fallback — requires a mani_skill install
+
+    return os.path.join(os.path.dirname(mani_skill.__file__), "assets", "robots", "panda", urdf_basename)
+
+
+def panda_urdf_path() -> str:
+    """ManiSkill ``panda_v2.urdf`` (vendored / HF / pkg)."""
+    return _resolve_panda_asset("panda_v2.urdf")
 
 
 # ManiSkill mounts the panda at the table edge (TableSceneBuilder); a few tasks rotate it.
@@ -58,14 +83,8 @@ PANDA_BASE_DEFAULT = ((-0.615, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0))
 
 
 def panda_stick_urdf_path() -> str:
-    """Resolve ManiSkill's ``panda_stick.urdf`` (arm + fixed stick, no gripper): vendored else pkg."""
-    here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-    vendored = os.path.join(here, "roboverse_data", "robots", "maniskill_panda", "panda_stick.urdf")
-    if os.path.exists(vendored):
-        return vendored
-    import mani_skill
-
-    return os.path.join(os.path.dirname(mani_skill.__file__), "assets", "robots", "panda", "panda_stick.urdf")
+    """ManiSkill ``panda_stick.urdf`` (arm + fixed stick, no gripper) — vendored / HF / pkg."""
+    return _resolve_panda_asset("panda_stick.urdf")
 
 
 def maniskill_panda_stick_cfg(
@@ -85,14 +104,8 @@ def maniskill_panda_stick_cfg(
 
 
 def panda_v3_urdf_path() -> str:
-    """Resolve ManiSkill's ``panda_v3.urdf`` (panda_wristcam — arm + gripper + wrist camera)."""
-    here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-    vendored = os.path.join(here, "roboverse_data", "robots", "maniskill_panda", "panda_v3.urdf")
-    if os.path.exists(vendored):
-        return vendored
-    import mani_skill
-
-    return os.path.join(os.path.dirname(mani_skill.__file__), "assets", "robots", "panda", "panda_v3.urdf")
+    """ManiSkill ``panda_v3.urdf`` (panda_wristcam) — vendored / HF / pkg."""
+    return _resolve_panda_asset("panda_v3.urdf")
 
 
 def maniskill_panda_wristcam_cfg(name, base_position, base_orientation, rest_qpos=None) -> RobotCfg:
