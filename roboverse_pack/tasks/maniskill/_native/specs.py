@@ -341,6 +341,24 @@ def _peg_insertion_success(task):
     return bool(pp[0] >= -0.015 and abs(pp[1]) <= r and abs(pp[2]) <= r)
 
 
+def _plug_charger_success(task):
+    """ManiSkill PlugCharger ``_compute_distance`` success: charger plugged into the receptacle.
+
+    goal_pose = receptacle.pose * Pose(q=[0,0,0,-1]) (180deg z); success when the charger is within
+    5e-3 m and 0.2 rad of goal_pose. Angle = 2*acos(|w|) of goal_pose.inv() * charger.pose.
+    """
+    import numpy as _np
+    import sapien
+
+    rec = task.handler.object_ids["receptacle"].get_pose()
+    goal = rec * sapien.Pose([0.0, 0.0, 0.0], [0.0, 0.0, 0.0, -1.0])
+    ch = task.handler.object_ids["charger"].get_pose()
+    dist = float(_np.linalg.norm(_np.asarray(goal.p) - _np.asarray(ch.p)))
+    rel = goal.inv() * ch
+    angle = 2.0 * float(_np.arccos(min(1.0, abs(float(rel.q[0])))))
+    return bool(dist <= 5e-3 and angle <= 0.2)
+
+
 def _stack_pyramid_reset(task, rng):
     """ManiSkill StackPyramid reset: 3 cubes in [-0.1,0.1]x[-0.2,0.2] (collision-avoided)."""
     import sapien
@@ -563,6 +581,8 @@ TASK_SPECS: dict[str, dict] = {
             ),
         ],
         "success": _moved("charger", (-0.0496, 0.1661)),
+        "orientations": {"charger": [0.9964, 0.0, 0.0, -0.0843], "receptacle": [0.0497, 0.0, 0.0, 0.9988]},
+        "success_full": _plug_charger_success,
     },
     # --- panda_stick (arm-only, 7-dim) tasks ---
     "push_t": {
