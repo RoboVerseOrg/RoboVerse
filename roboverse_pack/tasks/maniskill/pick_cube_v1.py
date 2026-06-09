@@ -24,9 +24,9 @@ phase):
 - Robot-static success criterion (`max|qvel[:-2]| < 0.2`) is not yet
   evaluated
 
-These are tracked items 3/4/5/7/8 of the parity recipe in the
-integration report:
-<http://localhost:8000/#roboverse/maniskill_integration>.
+This legacy demo-data task is superseded by the native-1:1 suite
+(``maniskill.pick_cube_native``); see
+``docs/source/dataset_benchmark/integrations/maniskill.md``.
 """
 
 from __future__ import annotations

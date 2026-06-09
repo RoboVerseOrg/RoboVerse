@@ -5,8 +5,8 @@ benchmark. RoboVerse ships **MetaSim-native** ManiSkill tasks that reproduce the
 native ManiSkill (`physx_cpu`) rollout **1:1** through the standard `BaseTaskEnv` +
 SAPIEN3 handler path — no runtime `mani_skill` import, so the clone is deletable.
 
-Live report (videos + measured parity):
-<http://localhost:8000/#roboverse/maniskill_integration>.
+This page is self-contained: the reproduction recipe, the per-task measured parity, and
+the run/verify commands are all below.
 
 ## What "1:1" means here
 
