@@ -62,6 +62,125 @@ byte-identical):
 - **Reset distribution** matches ManiSkill's per-episode spawn/goal sampling (a persistent
   RNG advances across resets; an explicit seed is reproducible).
 
+## Side-by-side 1:1 videos
+
+Each clip is three panels: **left** = native ManiSkill (`physx_cpu`), **middle** = the shipped
+`maniskill.<name>_native` task driven through the SAPIEN3 handler, **right** = the amplified pixel
+difference. Both panels are rendered in ManiSkill's own scene (identical assets/lighting/camera), so
+the only variable is the physics state — the diff panel is near-black (mean pixel diff 0.003–0.4 / 255
+over 60 steps), which *is* the picture of 1:1.
+
+```{video} ../../_static/integrations/maniskill/pick_cube.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pick_cube — native | shipped maniskill.pick_cube_native | diff×8 (pixel diff 0.0035/255)
+```
+
+```{video} ../../_static/integrations/maniskill/push_cube.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: push_cube — native | shipped | diff×8 (0.0034/255)
+```
+
+```{video} ../../_static/integrations/maniskill/pull_cube.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pull_cube — native | shipped | diff×8 (0.0034/255)
+```
+
+```{video} ../../_static/integrations/maniskill/stack_cube.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: stack_cube — native | shipped | diff×8
+```
+
+```{video} ../../_static/integrations/maniskill/poke_cube.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: poke_cube — native | shipped | diff×8
+```
+
+```{video} ../../_static/integrations/maniskill/lift_peg_upright.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: lift_peg_upright — native | shipped | diff×8 (0.0034/255)
+```
+
+```{video} ../../_static/integrations/maniskill/roll_ball.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: roll_ball — native | shipped | diff×8 (0.0030/255)
+```
+
+```{video} ../../_static/integrations/maniskill/place_sphere.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: place_sphere — native | shipped | diff×8 (0.0060/255)
+```
+
+```{video} ../../_static/integrations/maniskill/peg_insertion_side.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: peg_insertion_side — native | shipped | diff×8
+```
+
+```{video} ../../_static/integrations/maniskill/stack_pyramid.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: stack_pyramid — native | shipped | diff×8
+```
+
+```{video} ../../_static/integrations/maniskill/pull_cube_tool.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: pull_cube_tool — native | shipped | diff×8 (0.0035/255)
+```
+
+```{video} ../../_static/integrations/maniskill/plug_charger.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: plug_charger — native | shipped | diff×8
+```
+
+Regenerate any clip with
+`python -m tools.maniskill_integration.render_parity --task PickCube-v1 --shipped pick_cube`.
+
 ## Demo replay
 
 Official ManiSkill `pd_joint_delta_pos` demos replay through the shipped tasks
