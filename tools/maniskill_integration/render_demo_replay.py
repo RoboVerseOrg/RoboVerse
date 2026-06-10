@@ -72,22 +72,25 @@ def _native_action(env, a):
 def _native_rollout(env, g, render: bool, track: str | None = None):
     """Replay a demo episode in the native env from its initial state.
 
-    Returns ``(frames, success, track_positions)`` — ``track_positions`` is the per-step world
-    position of actor ``track`` (for native-vs-shipped agreement ranking) or ``None``.
+    Returns ``(frames, success_step, track_positions)`` — ``success_step`` is the index of the first
+    step at which the task's success predicate fires (``None`` if it never does), used both as the
+    both-success gate and to truncate the clip at task completion. ``track_positions`` is the per-step
+    world position of actor ``track`` (for native-vs-shipped agreement ranking) or ``None``.
     """
     u = env.unwrapped
     env.reset(seed=0)
     u.set_state_dict(_demo_initial_state_dict(g))
     actions = np.asarray(g["actions"])
-    frames, success, track_pos = [], False, ([] if track else None)
-    for a in actions:
+    frames, success_step, track_pos = [], None, ([] if track else None)
+    for i, a in enumerate(actions):
         _, _, _, _, info = env.step(_native_action(env, a))
-        success = success or bool(np.asarray(info["success"]).reshape(-1)[0])
+        if success_step is None and bool(np.asarray(info["success"]).reshape(-1)[0]):
+            success_step = i
         if render:
             frames.append(_to_img(env.render()))
         if track is not None:
             track_pos.append(np.asarray(u.get_state_dict()["actors"][track]).ravel()[:3].copy())
-    return frames, success, track_pos
+    return frames, success_step, track_pos
 
 
 def _demo_robot_key(g) -> str:
@@ -204,7 +207,9 @@ def _manipuland_motion(g, scene_objs) -> float:
     return float(np.linalg.norm(traj - traj[0], axis=1).max())
 
 
-def _rank_episodes(env, task, traj_keys, f, goal_actor, scene_objs, max_scan, actor_remap=None, rank_by="agreement"):
+def _rank_episodes(
+    env, task, traj_keys, f, goal_actor, scene_objs, max_scan, actor_remap=None, rank_by="agreement", truncate_buffer=8
+):
     """Rank demo-success episodes where BOTH native and shipped reach success.
 
     Scans the first ``max_scan`` demo-success episodes, keeps those where native *and* shipped both
@@ -224,8 +229,8 @@ def _rank_episodes(env, task, traj_keys, f, goal_actor, scene_objs, max_scan, ac
         if not bool(np.asarray(g["success"])[-1]):
             continue
         obj = _primary_manipuland(g, scene_objs)
-        _, nat_ok, nat_track = _native_rollout(env, g, render=False, track=obj)
-        if not nat_ok:
+        _, nat_step, nat_track = _native_rollout(env, g, render=False, track=obj)
+        if nat_step is None:
             continue
         _, shp_ok, shp_track = _shipped_rollout(
             task, g, goal_actor, scene_objs, record_state=False, actor_remap=actor_remap, track=obj
@@ -233,7 +238,10 @@ def _rank_episodes(env, task, traj_keys, f, goal_actor, scene_objs, max_scan, ac
         if not shp_ok:
             continue
         if rank_by == "agreement" and nat_track and shp_track:
-            n = min(len(nat_track), len(shp_track))
+            # Score the divergence only over the *shown* window — up to task completion (+buffer) —
+            # since the clip is truncated there. A demo that keeps fidgeting the manipuland for dozens
+            # of post-success steps must not be penalised for drift the viewer never sees.
+            n = min(len(nat_track), len(shp_track), nat_step + 1 + truncate_buffer)
             divergence = float(np.linalg.norm(np.asarray(nat_track[:n]) - np.asarray(shp_track[:n]), axis=1).max())
             candidates.append((divergence, tk))  # ascending → tightest first
         else:
@@ -252,6 +260,7 @@ def run(
     render_attempts=4,
     actor_remap=None,
     rank_by="agreement",
+    truncate_buffer=8,
 ) -> dict:
     import copy
 
@@ -288,7 +297,16 @@ def run(
         [episode]
         if episode
         else _rank_episodes(
-            env, task, traj_keys, f, goal_actor, scene_objs, max_scan, actor_remap=actor_remap, rank_by=rank_by
+            env,
+            task,
+            traj_keys,
+            f,
+            goal_actor,
+            scene_objs,
+            max_scan,
+            actor_remap=actor_remap,
+            rank_by=rank_by,
+            truncate_buffer=truncate_buffer,
         )
     )
     if not candidates:
@@ -303,22 +321,30 @@ def run(
     chosen = None
     for tk in candidates[:render_attempts]:
         g = f[tk]
-        native_frames, nat_ok, _ = _native_rollout(env, g, render=True)
+        native_frames, nat_step, _ = _native_rollout(env, g, render=True)
         shipped_states, shp_ok, _ = _shipped_rollout(
             task, g, goal_actor, scene_objs, record_state=True, actor_remap=actor_remap
         )
-        if nat_ok and shp_ok:
-            chosen = (tk, native_frames, shipped_states)
+        if nat_step is not None and shp_ok:
+            chosen = (tk, native_frames, shipped_states, nat_step)
             break
     if chosen is None:
         env.close()
         task.close()
         f.close()
         raise RuntimeError(f"{task_id}: no candidate confirmed both-success on render in {render_attempts} attempts")
-    tk, native_frames, shipped_states = chosen
+    tk, native_frames, shipped_states, nat_step = chosen
     nat_ok = shp_ok = True
     g = f[tk]
     task.close()
+
+    # Truncate the clip at task completion (+buffer): the demo keeps running long after success, and
+    # those post-success steps are where a contact-rich task (PushT) accumulates drift the viewer
+    # never needs to see. The shown window is the actual 1:1 completion.
+    if truncate_buffer is not None and nat_step is not None:
+        cut = min(len(native_frames), nat_step + 1 + truncate_buffer)
+        native_frames = native_frames[:cut]
+        shipped_states = shipped_states[:cut]
 
     # render the shipped state inside ManiSkill's own scene for a pixel-identical comparison
     env.reset(seed=0)
@@ -360,6 +386,7 @@ def run(
         "task": task_id,
         "episode": tk,
         "steps": len(comp),
+        "success_step": nat_step,
         "native_success": nat_ok,
         "shipped_success": shp_ok,
         "mean_pixel_diff": float(np.mean(diffs)),
@@ -388,6 +415,12 @@ def main(argv=None):
         help="episode pick: 'agreement' = tightest native-vs-shipped tracking (cleanest 1:1); "
         "'motion' = largest manipuland displacement (most dramatic)",
     )
+    ap.add_argument(
+        "--truncate-buffer",
+        type=int,
+        default=8,
+        help="end the clip this many frames after the task first succeeds (-1 = show the full demo)",
+    )
     ap.add_argument("--out", default=None)
     args = ap.parse_args(argv)
     out = Path(args.out) if args.out else Path(f"runs/demo/{args.task}.mp4")
@@ -403,10 +436,11 @@ def main(argv=None):
         render_attempts=args.render_attempts,
         actor_remap=remap,
         rank_by=args.rank_by,
+        truncate_buffer=None if args.truncate_buffer < 0 else args.truncate_buffer,
     )
     print(
-        f"{r['task']} [{r['episode']}]: native_success={r['native_success']} shipped_success={r['shipped_success']} "
-        f"steps={r['steps']} mean_pixel_diff={r['mean_pixel_diff']:.4f}/255 -> {r['out']}"
+        f"{r['task']} [{r['episode']}]: success@{r['success_step']} steps={r['steps']} "
+        f"mean_pixel_diff={r['mean_pixel_diff']:.4f}/255 -> {r['out']}"
     )
     return 0
 
