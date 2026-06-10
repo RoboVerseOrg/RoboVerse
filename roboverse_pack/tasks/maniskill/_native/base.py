@@ -23,7 +23,7 @@ import torch
 from metasim.task.base import BaseTaskEnv
 
 from .control import PandaPDJointDeltaPos
-from .recipe import DECIMATION, apply_maniskill_gripper_friction, maniskill_sim_params
+from .recipe import DECIMATION, apply_maniskill_gripper_friction, apply_object_friction, maniskill_sim_params
 
 
 class ManiSkillNativeTask(BaseTaskEnv):
@@ -169,6 +169,10 @@ class ManiSkillNativeTask(BaseTaskEnv):
             return self.checker.check(self.handler, states)
         return super()._terminated(states)
 
+    # Per-object contact materials a ManiSkill task sets in code (e.g. PushT's Tee at friction 3.0):
+    # ``{object_name: (static_friction, dynamic_friction[, restitution])}``. Default empty → no-op.
+    object_frictions: dict = {}
+
     def _apply_gripper_friction(self) -> None:
         """Set ManiSkill's high-friction grasp material on every robot's fingers (once, idempotent).
 
@@ -187,9 +191,28 @@ class ManiSkillNativeTask(BaseTaskEnv):
                 apply_maniskill_gripper_friction(robot)
         self._gripper_friction_done = True
 
+    def _apply_object_frictions(self) -> None:
+        """Set the per-object contact materials a ManiSkill task customizes in code (once, idempotent).
+
+        Mirrors task-build code that gives an object a non-default ``PhysxMaterial`` (e.g. PushT's Tee
+        at friction 3.0); without it the sapien3 load leaves it at the scene default and long-horizon
+        contact diverges. No-op when ``object_frictions`` is empty.
+        """
+        if not self.object_frictions or getattr(self, "_object_friction_done", False):
+            return
+        for name, mat in self.object_frictions.items():
+            try:
+                obj = self.handler.object_ids[name]
+            except (KeyError, TypeError):
+                continue
+            if obj is not None:
+                apply_object_friction(obj, *mat)
+        self._object_friction_done = True
+
     def reset(self, states=None, env_ids=None, seed=None):
         out = super().reset(states, env_ids, seed)
         self._apply_gripper_friction()
+        self._apply_object_frictions()
         if self.goal_sampler is not None:
             # Persistent RNG so consecutive resets give *different* episodes (ManiSkill behaviour);
             # an explicit seed reseeds for reproducibility.

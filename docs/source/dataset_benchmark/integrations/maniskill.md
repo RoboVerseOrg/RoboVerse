@@ -30,6 +30,15 @@ byte-identical):
    not in the URDF, so a plain load leaves them at the scene-default 0.3 and the grasped object
    slips ~1 cm during a lift. Replicating it pulls the contact-phase object trajectory back to the
    PhysX CPU/CUDA noise floor (~2e-4) and is what makes demo action-replay reproduce success.
+7. **Per-object contact material** (`recipe.apply_object_friction`, declared via a task's
+   `object_frictions`) — some tasks build an object with a custom material *in code* too: PushT's Tee
+   is friction **3.0** (`push_t.py`). Without it the long-horizon push slides the Tee off the
+   demonstrated path; with it (and picking the tightest-tracking demo episode) the PushT diff drops
+   from 6.5 to 0.87 / 255. The remaining PushT residual is the genuine cross-implementation
+   contact-solver floor: with everything physical matched (geometry, materials, solver iters 15/1,
+   global PhysX flags) the divergence is born at the *impulsive first stick–Tee contact* and
+   accumulates — `enable_enhanced_determinism=False` (ManiSkill's own default) lets contact-resolution
+   order depend on body-creation order, which two independently-built scenes cannot share.
 
 ## Shipped tasks (15)
 
@@ -77,7 +86,10 @@ sweep. Three panels: **left** = native ManiSkill (`physx_cpu`), **middle** = the
 through the SAPIEN3 handler with the identical actions, **right** = the amplified pixel difference.
 Both panels are rendered in ManiSkill's own scene (identical assets/lighting/camera), so the only
 variable on screen is the physics state — the diff panel stays near-black, which *is* the picture of
-1:1. Each caption gives the demo episode, step count, and mean pixel diff.
+1:1. Each caption gives the demo episode, step count, and mean pixel diff. Among the episodes where
+both sides succeed, the renderer picks the **tightest-tracking** one (`--rank-by agreement`), so the
+clip shown is the cleanest honest 1:1 — every both-success episode still completes the task, since
+the success predicate itself requires the manipuland to reach its goal.
 
 Regenerate any clip with
 `python -m tools.maniskill_integration.render_demo_replay --task PickCube-v1 --shipped pick_cube
@@ -89,7 +101,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: pick_cube (PickCube-v1, traj_18, 50 steps) — both reach success; diff×8, 0.029/255
+:caption: pick_cube (PickCube-v1, traj_13, 50 steps) — both reach success; diff×8, 0.020/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/push_cube.mp4
@@ -98,7 +110,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: push_cube (PushCube-v1, traj_9, 23 steps) — both reach success; diff×8, 0.071/255
+:caption: push_cube (PushCube-v1, traj_14, 20 steps) — both reach success; diff×8, 0.033/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/pull_cube.mp4
@@ -107,7 +119,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: pull_cube (PullCube-v1, traj_0, 26 steps) — both reach success; diff×8, 0.111/255
+:caption: pull_cube (PullCube-v1, traj_2, 23 steps) — both reach success; diff×8, 0.020/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/stack_cube.mp4
@@ -116,7 +128,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: stack_cube (StackCube-v1, traj_17, 50 steps) — both reach success; diff×8, 0.46/255
+:caption: stack_cube (StackCube-v1, traj_8, 39 steps) — both reach success; diff×8, 0.102/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/poke_cube.mp4
@@ -125,7 +137,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: poke_cube (PokeCube-v1, traj_7, 50 steps) — both reach success; diff×8, 0.104/255
+:caption: poke_cube (PokeCube-v1, traj_1, 46 steps) — both reach success; diff×8, 0.034/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/lift_peg_upright.mp4
@@ -134,7 +146,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: lift_peg_upright (LiftPegUpright-v1, traj_7, 43 steps) — both reach success; diff×8, 0.065/255
+:caption: lift_peg_upright (LiftPegUpright-v1, traj_18, 44 steps) — both reach success; diff×8, 0.046/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/roll_ball.mp4
@@ -143,7 +155,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: roll_ball (RollBall-v1, traj_3, 55 steps) — both reach success; diff×8, 0.082/255
+:caption: roll_ball (RollBall-v1, traj_11, 61 steps) — both reach success; diff×8, 0.084/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/pull_cube_tool.mp4
@@ -152,7 +164,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: pull_cube_tool (PullCubeTool-v1, traj_15, 302 steps) — both reach success; diff×8, 0.184/255
+:caption: pull_cube_tool (PullCubeTool-v1, traj_0, 234 steps) — both reach success; diff×8, 0.087/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/stack_pyramid.mp4
@@ -161,7 +173,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: stack_pyramid (StackPyramid-v1, traj_10, 234 steps) — both reach success; diff×8, 0.111/255
+:caption: stack_pyramid (StackPyramid-v1, traj_14, 212 steps) — both reach success; diff×8, 0.159/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/push_t.mp4
@@ -170,7 +182,7 @@ Regenerate any clip with
 :muted:
 :playsinline:
 :width: 100%
-:caption: push_t (PushT-v1, traj_6, 100 steps, panda_stick) — both reach success; diff×8, 6.5/255 (long-horizon T-push accumulates contact divergence)
+:caption: push_t (PushT-v1, traj_11, 100 steps, panda_stick) — both reach success; diff×8, 0.87/255 (Tee friction-3.0 fix + tightest-tracking episode)
 ```
 
 ```{video} ../../_static/integrations/maniskill/two_robot_pick_cube.mp4

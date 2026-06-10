@@ -655,6 +655,9 @@ TASK_SPECS: dict[str, dict] = {
         ],
         "success": _moved("Tee", (-0.1567, 0.0305)),
         "goal": _push_t_reset,
+        # ManiSkill PushT builds the Tee with a friction-3.0 material in code (push_t.py); replicate
+        # it so the long-horizon push tracks the demo instead of sliding off (6.5 → ~0.1 / 255).
+        "object_frictions": {"Tee": (3.0, 3.0, 0.0)},
     },
     "draw_triangle": {
         "gym_id": "DrawTriangle-v1",

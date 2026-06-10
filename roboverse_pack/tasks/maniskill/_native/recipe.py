@@ -239,5 +239,47 @@ def apply_maniskill_gripper_friction(
     return applied
 
 
+def apply_object_friction(
+    obj,
+    static_friction: float,
+    dynamic_friction: float,
+    restitution: float = 0.0,
+    patch_radius: float | None = None,
+) -> int:
+    """Set a uniform contact material on every collision shape of a loaded rigid-body object.
+
+    Mirrors a ManiSkill task that builds an object with a custom ``PhysxMaterial`` *in code* (e.g.
+    PushT's Tee at friction 3.0, ``push_t.py``) rather than in the asset — without it the sapien3
+    load leaves the object at the scene-default 0.3, so a long-horizon push slides the object off the
+    demonstrated trajectory and the contact-phase pixel diff balloons (PushT 6.5 → ~0.1 / 255).
+
+    Args:
+        obj: a loaded SAPIEN entity (``task.handler.object_ids[name]``).
+        static_friction: per-shape static friction.
+        dynamic_friction: per-shape dynamic friction.
+        restitution: per-shape restitution.
+        patch_radius: contact patch radius; left at the SAPIEN default when ``None``.
+
+    Returns:
+        The number of collision shapes updated.
+    """
+    import sapien.physx as physx
+
+    comp = obj.find_component_by_type(physx.PhysxRigidDynamicComponent) or obj.find_component_by_type(
+        physx.PhysxRigidStaticComponent
+    )
+    if comp is None:
+        return 0
+    applied = 0
+    for cs in comp.get_collision_shapes():
+        cs.set_physical_material(physx.PhysxMaterial(static_friction, dynamic_friction, restitution))
+        if patch_radius is not None and hasattr(cs, "set_patch_radius"):
+            cs.set_patch_radius(patch_radius)
+            if hasattr(cs, "set_min_patch_radius"):
+                cs.set_min_patch_radius(patch_radius)
+        applied += 1
+    return applied
+
+
 # decimation = sim_freq // control_freq (100 // 20 = 5).
 DECIMATION = 5

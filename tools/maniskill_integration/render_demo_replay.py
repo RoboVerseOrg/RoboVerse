@@ -69,19 +69,25 @@ def _native_action(env, a):
     return torch.tensor(a).unsqueeze(0)
 
 
-def _native_rollout(env, g, render: bool):
-    """Replay a demo episode in the native env from its initial state; return (frames, success)."""
+def _native_rollout(env, g, render: bool, track: str | None = None):
+    """Replay a demo episode in the native env from its initial state.
+
+    Returns ``(frames, success, track_positions)`` — ``track_positions`` is the per-step world
+    position of actor ``track`` (for native-vs-shipped agreement ranking) or ``None``.
+    """
     u = env.unwrapped
     env.reset(seed=0)
     u.set_state_dict(_demo_initial_state_dict(g))
     actions = np.asarray(g["actions"])
-    frames, success = [], False
+    frames, success, track_pos = [], False, ([] if track else None)
     for a in actions:
         _, _, _, _, info = env.step(_native_action(env, a))
         success = success or bool(np.asarray(info["success"]).reshape(-1)[0])
         if render:
             frames.append(_to_img(env.render()))
-    return frames, success
+        if track is not None:
+            track_pos.append(np.asarray(u.get_state_dict()["actors"][track]).ravel()[:3].copy())
+    return frames, success, track_pos
 
 
 def _demo_robot_key(g) -> str:
@@ -102,14 +108,16 @@ def _robot_map(task, g):
     return list(zip(demo_keys, shipped_names))
 
 
-def _shipped_rollout(task, g, goal_actor, scene_objs, record_state: bool, actor_remap=None):
+def _shipped_rollout(task, g, goal_actor, scene_objs, record_state: bool, actor_remap=None, track: str | None = None):
     """Replay a demo episode through the shipped task from the demo initial state (1 or N robots).
 
-    Returns ``(states, success)`` where each ``states`` entry is ``({demo_robot_key: (qpos, qvel)},
-    {actor: 13-vec})`` — generalized over the robot count so the same path renders single-robot and
-    multi-robot (TwoRobotPickCube) tasks. ``actor_remap`` maps a demo actor name to the shipped
-    object name when they differ (e.g. ``box_with_hole`` → ``box_with_hole_0``); recorded states stay
-    keyed by the *demo* name so they inject back into ManiSkill's own scene.
+    Returns ``(states, success, track_positions)`` where each ``states`` entry is
+    ``({demo_robot_key: (qpos, qvel)}, {actor: 13-vec})`` — generalized over the robot count so the
+    same path renders single-robot and multi-robot (TwoRobotPickCube) tasks. ``actor_remap`` maps a
+    demo actor name to the shipped object name when they differ (e.g. ``box_with_hole`` →
+    ``box_with_hole_0``); recorded states stay keyed by the *demo* name so they inject back into
+    ManiSkill's own scene. ``track_positions`` is the per-step world position of demo actor ``track``
+    (for agreement ranking) or ``None``.
     """
     import sapien
     import sapien.physx as physx
@@ -147,10 +155,13 @@ def _shipped_rollout(task, g, goal_actor, scene_objs, record_state: bool, actor_
 
     actor_pairs = [(n, shipped_obj(n)) for n in g["env_states"]["actors"]]
     actor_pairs = [(demo_n, ship_n) for demo_n, ship_n in actor_pairs if ship_n is not None]
-    states, success = [], False
+    track_ship = shipped_obj(track) if track is not None else None
+    states, success, track_pos = [], False, ([] if track is not None else None)
     for a in np.asarray(g["actions"]):
         out = task.step(torch.tensor(a, dtype=torch.float32).unsqueeze(0))
         success = success or bool(out[2].reshape(-1)[0])
+        if track_ship is not None:
+            track_pos.append(np.asarray(task.handler.object_ids[track_ship].get_pose().p).ravel().copy())
         if record_state:
             robot_states = {}
             for demo_key, rname in robot_map:
@@ -168,41 +179,66 @@ def _shipped_rollout(task, g, goal_actor, scene_objs, record_state: bool, actor_
                 ang = np.asarray(comp.angular_velocity).ravel() if comp is not None else np.zeros(3)
                 actor_states[demo_n] = np.concatenate([pose.p, pose.q, lin, ang])
             states.append((robot_states, actor_states))
-    return states, success
+    return states, success, track_pos
 
 
-def _manipuland_motion(g, scene_objs) -> float:
-    """Peak displacement of the most-moved task object over the demo (visual-salience score)."""
-    best = 0.0
+def _primary_manipuland(g, scene_objs) -> str | None:
+    """Name of the most-moved task object over the demo (the thing the task acts on)."""
+    best_name, best = None, 0.0
     for name in g["env_states"]["actors"]:
         if name not in scene_objs or "table" in name or "goal" in name:
             continue
         traj = np.asarray(g["env_states"]["actors"][name])[:, :3]
-        best = max(best, float(np.linalg.norm(traj - traj[0], axis=1).max()))
-    return best
+        d = float(np.linalg.norm(traj - traj[0], axis=1).max())
+        if d >= best:
+            best_name, best = name, d
+    return best_name
 
 
-def _rank_episodes(env, task, traj_keys, f, goal_actor, scene_objs, max_scan, actor_remap=None):
-    """Rank demo-success episodes where BOTH native and shipped reach success, by manipuland motion.
+def _manipuland_motion(g, scene_objs) -> float:
+    """Peak displacement of the most-moved task object over the demo (visual-salience score)."""
+    name = _primary_manipuland(g, scene_objs)
+    if name is None:
+        return 0.0
+    traj = np.asarray(g["env_states"]["actors"][name])[:, :3]
+    return float(np.linalg.norm(traj - traj[0], axis=1).max())
+
+
+def _rank_episodes(env, task, traj_keys, f, goal_actor, scene_objs, max_scan, actor_remap=None, rank_by="agreement"):
+    """Rank demo-success episodes where BOTH native and shipped reach success.
 
     Scans the first ``max_scan`` demo-success episodes, keeps those where native *and* shipped both
-    reach the task's success predicate under pure action replay, and returns the survivors sorted by
-    largest manipuland displacement first (the clearest pick/push/place on screen). The caller
-    render-verifies the top survivors in order, which matters for chaotic tasks (e.g. a rolling ball)
-    where a single contact-sensitive episode can sit on the success boundary.
+    reach the task's success predicate under pure action replay, and orders the survivors by:
+
+    * ``"agreement"`` (default) — *lowest* native-vs-shipped manipuland trajectory divergence first,
+      i.e. the cleanest 1:1 clip. For contact-sensitive tasks (PushT, RollBall) the most aggressive
+      push tracks worst, so picking the tightest-tracking completion gives an honestly cleaner video.
+    * ``"motion"`` — *largest* manipuland displacement first (most visually dramatic).
+
+    The caller render-verifies the survivors in order, which also guards chaotic tasks where a
+    marginal episode can sit on the success boundary.
     """
     candidates = []
     for tk in traj_keys[:max_scan]:
         g = f[tk]
         if not bool(np.asarray(g["success"])[-1]):
             continue
-        _, nat_ok = _native_rollout(env, g, render=False)
+        obj = _primary_manipuland(g, scene_objs)
+        _, nat_ok, nat_track = _native_rollout(env, g, render=False, track=obj)
         if not nat_ok:
             continue
-        _, shp_ok = _shipped_rollout(task, g, goal_actor, scene_objs, record_state=False, actor_remap=actor_remap)
-        if shp_ok:
-            candidates.append((_manipuland_motion(g, scene_objs), tk))
-    return [tk for _, tk in sorted(candidates, key=lambda c: c[0], reverse=True)]
+        _, shp_ok, shp_track = _shipped_rollout(
+            task, g, goal_actor, scene_objs, record_state=False, actor_remap=actor_remap, track=obj
+        )
+        if not shp_ok:
+            continue
+        if rank_by == "agreement" and nat_track and shp_track:
+            n = min(len(nat_track), len(shp_track))
+            divergence = float(np.linalg.norm(np.asarray(nat_track[:n]) - np.asarray(shp_track[:n]), axis=1).max())
+            candidates.append((divergence, tk))  # ascending → tightest first
+        else:
+            candidates.append((-_manipuland_motion(g, scene_objs), tk))  # ascending of negative → largest first
+    return [tk for _, tk in sorted(candidates, key=lambda c: c[0])]
 
 
 def run(
@@ -215,6 +251,7 @@ def run(
     episode=None,
     render_attempts=4,
     actor_remap=None,
+    rank_by="agreement",
 ) -> dict:
     import copy
 
@@ -250,7 +287,9 @@ def run(
     candidates = (
         [episode]
         if episode
-        else _rank_episodes(env, task, traj_keys, f, goal_actor, scene_objs, max_scan, actor_remap=actor_remap)
+        else _rank_episodes(
+            env, task, traj_keys, f, goal_actor, scene_objs, max_scan, actor_remap=actor_remap, rank_by=rank_by
+        )
     )
     if not candidates:
         env.close()
@@ -264,8 +303,8 @@ def run(
     chosen = None
     for tk in candidates[:render_attempts]:
         g = f[tk]
-        native_frames, nat_ok = _native_rollout(env, g, render=True)
-        shipped_states, shp_ok = _shipped_rollout(
+        native_frames, nat_ok, _ = _native_rollout(env, g, render=True)
+        shipped_states, shp_ok, _ = _shipped_rollout(
             task, g, goal_actor, scene_objs, record_state=True, actor_remap=actor_remap
         )
         if nat_ok and shp_ok:
@@ -342,6 +381,13 @@ def main(argv=None):
         default=None,
         help="comma-separated demo:shipped actor renames, e.g. box_with_hole:box_with_hole_0,peg:peg_0",
     )
+    ap.add_argument(
+        "--rank-by",
+        default="agreement",
+        choices=["agreement", "motion"],
+        help="episode pick: 'agreement' = tightest native-vs-shipped tracking (cleanest 1:1); "
+        "'motion' = largest manipuland displacement (most dramatic)",
+    )
     ap.add_argument("--out", default=None)
     args = ap.parse_args(argv)
     out = Path(args.out) if args.out else Path(f"runs/demo/{args.task}.mp4")
@@ -356,6 +402,7 @@ def main(argv=None):
         episode=args.episode,
         render_attempts=args.render_attempts,
         actor_remap=remap,
+        rank_by=args.rank_by,
     )
     print(
         f"{r['task']} [{r['episode']}]: native_success={r['native_success']} shipped_success={r['shipped_success']} "

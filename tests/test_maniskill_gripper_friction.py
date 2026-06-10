@@ -80,3 +80,37 @@ def test_no_op_for_gripperless_robot():
     n = apply_maniskill_gripper_friction(t.handler.object_ids["panda"])
     t.close()
     assert n == 0
+
+
+def _obj_static_friction(obj):
+    from sapien import physx
+
+    comp = obj.find_component_by_type(physx.PhysxRigidDynamicComponent) or obj.find_component_by_type(
+        physx.PhysxRigidStaticComponent
+    )
+    return comp.get_collision_shapes()[0].get_physical_material().get_static_friction()
+
+
+def test_pusht_tee_has_friction_3():
+    """After reset, the shipped PushT Tee carries ManiSkill's friction-3.0 material, not the default 0.3.
+
+    ManiSkill builds the Tee with a friction-3.0 PhysxMaterial in code (push_t.py); without it the
+    long-horizon push slides the Tee off the demonstrated trajectory.
+    """
+    t = _task("maniskill.push_t_native")
+    t.reset(seed=0)
+    mu = _obj_static_friction(t.handler.object_ids["Tee"])
+    t.close()
+    assert abs(mu - 3.0) < 1e-4, f"Tee friction {mu} != 3.0 (object_frictions not applied)"
+
+
+def test_object_frictions_default_empty_and_no_op():
+    """Tasks without a custom object material leave their objects at the scene default (no-op path)."""
+    from roboverse_pack.tasks.maniskill._native.base import ManiSkillNativeTask
+
+    assert ManiSkillNativeTask.object_frictions == {}
+    t = _task("maniskill.pick_cube_native")
+    t.reset(seed=0)
+    mu = _obj_static_friction(t.handler.object_ids["cube"])
+    t.close()
+    assert abs(mu - 0.3) < 1e-4, f"pick_cube cube friction {mu} should stay at scene default 0.3"

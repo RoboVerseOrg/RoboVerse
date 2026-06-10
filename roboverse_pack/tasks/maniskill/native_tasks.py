@@ -73,6 +73,8 @@ def _make_task_cls(task_key: str, spec: dict):
         _Task.goal_sampler = staticmethod(spec["goal"])
     if "controller" in spec:
         _Task.controller = spec["controller"]
+    if "object_frictions" in spec:
+        _Task.object_frictions = spec["object_frictions"]
 
     _Task.__name__ = "".join(p.capitalize() for p in task_key.split("_")) + "NativeTask"
     _Task.__qualname__ = _Task.__name__
