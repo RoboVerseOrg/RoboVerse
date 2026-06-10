@@ -25,6 +25,11 @@ byte-identical):
    `PrimitiveCubeCfg` / `PrimitiveMultiBoxCfg` honor `fix_base_link` (kinematic).
 5. **Controller** = ManiSkill `pd_joint_delta_pos` (`_native/control.py`,
    parametric over arm DOF + optional mimic gripper), decimation `sim_freq // control_freq`.
+6. **Gripper grasp material** (`recipe.apply_maniskill_gripper_friction`) — ManiSkill sets the
+   panda fingers to friction **2.0** + contact-patch radius 0.1 *in code* (`Panda.urdf_config`),
+   not in the URDF, so a plain load leaves them at the scene-default 0.3 and the grasped object
+   slips ~1 cm during a lift. Replicating it pulls the contact-phase object trajectory back to the
+   PhysX CPU/CUDA noise floor (~2e-4) and is what makes demo action-replay reproduce success.
 
 ## Shipped tasks (15)
 
@@ -62,13 +67,21 @@ byte-identical):
 - **Reset distribution** matches ManiSkill's per-episode spawn/goal sampling (a persistent
   RNG advances across resets; an explicit seed is reproducible).
 
-## Side-by-side 1:1 videos
+## Side-by-side videos — demo action-replay, 1:1 task completion
 
-Each clip is three panels: **left** = native ManiSkill (`physx_cpu`), **middle** = the shipped
-`maniskill.<name>_native` task driven through the SAPIEN3 handler, **right** = the amplified pixel
-difference. Both panels are rendered in ManiSkill's own scene (identical assets/lighting/camera), so
-the only variable is the physics state — the diff panel is near-black (mean pixel diff 0.003–0.4 / 255
-over 60 steps), which *is* the picture of 1:1.
+Each clip replays an **official ManiSkill demonstration** (the recorded `pd_joint_delta_pos` action
+sequence) from the demo's initial state through **both** native ManiSkill and the shipped
+`maniskill.<name>_native` task, and only an episode where **both sides reach the task's success
+predicate** is shown — so every clip is a genuine end-to-end task completion, not a synthetic action
+sweep. Three panels: **left** = native ManiSkill (`physx_cpu`), **middle** = the shipped task driven
+through the SAPIEN3 handler with the identical actions, **right** = the amplified pixel difference.
+Both panels are rendered in ManiSkill's own scene (identical assets/lighting/camera), so the only
+variable on screen is the physics state — the diff panel stays near-black, which *is* the picture of
+1:1. Each caption gives the demo episode, step count, and mean pixel diff.
+
+Regenerate any clip with
+`python -m tools.maniskill_integration.render_demo_replay --task PickCube-v1 --shipped pick_cube
+--demo <path-to-pd_joint_delta_pos-demo.h5> --goal-actor goal_site`.
 
 ```{video} ../../_static/integrations/maniskill/pick_cube.mp4
 :autoplay:
@@ -76,7 +89,7 @@ over 60 steps), which *is* the picture of 1:1.
 :muted:
 :playsinline:
 :width: 100%
-:caption: pick_cube — native | shipped maniskill.pick_cube_native | diff×8 (pixel diff 0.0035/255)
+:caption: pick_cube (PickCube-v1, traj_18, 50 steps) — both reach success; diff×8, 0.029/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/push_cube.mp4
@@ -85,7 +98,7 @@ over 60 steps), which *is* the picture of 1:1.
 :muted:
 :playsinline:
 :width: 100%
-:caption: push_cube — native | shipped | diff×8 (0.0034/255)
+:caption: push_cube (PushCube-v1, traj_9, 23 steps) — both reach success; diff×8, 0.071/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/pull_cube.mp4
@@ -94,7 +107,7 @@ over 60 steps), which *is* the picture of 1:1.
 :muted:
 :playsinline:
 :width: 100%
-:caption: pull_cube — native | shipped | diff×8 (0.0034/255)
+:caption: pull_cube (PullCube-v1, traj_0, 26 steps) — both reach success; diff×8, 0.111/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/stack_cube.mp4
@@ -103,7 +116,7 @@ over 60 steps), which *is* the picture of 1:1.
 :muted:
 :playsinline:
 :width: 100%
-:caption: stack_cube — native | shipped | diff×8
+:caption: stack_cube (StackCube-v1, traj_17, 50 steps) — both reach success; diff×8, 0.46/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/poke_cube.mp4
@@ -112,7 +125,7 @@ over 60 steps), which *is* the picture of 1:1.
 :muted:
 :playsinline:
 :width: 100%
-:caption: poke_cube — native | shipped | diff×8
+:caption: poke_cube (PokeCube-v1, traj_7, 50 steps) — both reach success; diff×8, 0.104/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/lift_peg_upright.mp4
@@ -121,7 +134,7 @@ over 60 steps), which *is* the picture of 1:1.
 :muted:
 :playsinline:
 :width: 100%
-:caption: lift_peg_upright — native | shipped | diff×8 (0.0034/255)
+:caption: lift_peg_upright (LiftPegUpright-v1, traj_7, 43 steps) — both reach success; diff×8, 0.065/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/roll_ball.mp4
@@ -130,34 +143,7 @@ over 60 steps), which *is* the picture of 1:1.
 :muted:
 :playsinline:
 :width: 100%
-:caption: roll_ball — native | shipped | diff×8 (0.0030/255)
-```
-
-```{video} ../../_static/integrations/maniskill/place_sphere.mp4
-:autoplay:
-:loop:
-:muted:
-:playsinline:
-:width: 100%
-:caption: place_sphere — native | shipped | diff×8 (0.0060/255)
-```
-
-```{video} ../../_static/integrations/maniskill/peg_insertion_side.mp4
-:autoplay:
-:loop:
-:muted:
-:playsinline:
-:width: 100%
-:caption: peg_insertion_side — native | shipped | diff×8
-```
-
-```{video} ../../_static/integrations/maniskill/stack_pyramid.mp4
-:autoplay:
-:loop:
-:muted:
-:playsinline:
-:width: 100%
-:caption: stack_pyramid — native | shipped | diff×8
+:caption: roll_ball (RollBall-v1, traj_3, 55 steps) — both reach success; diff×8, 0.082/255
 ```
 
 ```{video} ../../_static/integrations/maniskill/pull_cube_tool.mp4
@@ -166,30 +152,46 @@ over 60 steps), which *is* the picture of 1:1.
 :muted:
 :playsinline:
 :width: 100%
-:caption: pull_cube_tool — native | shipped | diff×8 (0.0035/255)
+:caption: pull_cube_tool (PullCubeTool-v1, traj_15, 302 steps) — both reach success; diff×8, 0.184/255
 ```
 
-```{video} ../../_static/integrations/maniskill/plug_charger.mp4
+```{video} ../../_static/integrations/maniskill/stack_pyramid.mp4
 :autoplay:
 :loop:
 :muted:
 :playsinline:
 :width: 100%
-:caption: plug_charger — native | shipped | diff×8
+:caption: stack_pyramid (StackPyramid-v1, traj_10, 234 steps) — both reach success; diff×8, 0.111/255
 ```
 
-Regenerate any clip with
-`python -m tools.maniskill_integration.render_parity --task PickCube-v1 --shipped pick_cube`.
+```{video} ../../_static/integrations/maniskill/push_t.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: push_t (PushT-v1, traj_6, 100 steps, panda_stick) — both reach success; diff×8, 6.5/255 (long-horizon T-push accumulates contact divergence)
+```
+
+```{video} ../../_static/integrations/maniskill/two_robot_pick_cube.mp4
+:autoplay:
+:loop:
+:muted:
+:playsinline:
+:width: 100%
+:caption: two_robot_pick_cube (TwoRobotPickCube-v1, traj_16, 100 steps, 2× panda — 16-dim handover) — both reach success; diff×8, 0.031/255
+```
 
 ## Demo replay
 
 Official ManiSkill `pd_joint_delta_pos` demos replay through the shipped tasks
-(`tools/maniskill_integration/replay_demo.py`): seeding each episode's initial state +
-goal and replaying the recorded actions reproduces the demonstrated success — **21/25
-PickCube demos** (native `physx_cpu` itself reproduces ~24/25 open-loop; the gap is the
-~1e-4 CPU-handler residual near the 0.025 m boundary). Action replay is deterministic: an
-identical grasp+lift sequence keeps the cube within ~1e-4 m of native through the
-contact-rich phase.
+(`tools/maniskill_integration/replay_demo.py`): seeding each episode's initial state + goal and
+replaying the recorded actions reproduces the demonstrated success — **22/25 PickCube demos** (native
+`physx_cpu` itself reproduces 24/25 open-loop on these `physx_cuda`-recorded demos; shipped agrees
+with native on 23/25 — the gap is the ~2e-4 contact residual near the 0.025 m goal boundary). Pure
+action replay is deterministic: an identical grasp+lift sequence keeps the cube within ~2e-4 m of
+native through the contact-rich phase, **once the gripper grasp material (friction 2.0) is applied** —
+without it the cube slips ~1 cm and success flips (8/12 → 22/25).
 
 ## Run
 
@@ -210,8 +212,10 @@ for _ in range(50): obs, rew, term, trunc, info = env.step(torch.zeros((1,8)))
 SAPIEN_HEADLESS=1 python -m tools.maniskill_integration.parity_native --all --steps 30
 SAPIEN_HEADLESS=1 python -m tools.maniskill_integration.parity_multi_agent --task TwoRobotPickCube-v1
 
-# side-by-side 1:1 video (native | shipped task | diff)
-SAPIEN_HEADLESS=1 python -m tools.maniskill_integration.render_parity --task PickCube-v1 --shipped pick_cube
+# side-by-side demo action-replay video (native | shipped task | diff), 1:1 task completion
+SAPIEN_HEADLESS=1 python -m tools.maniskill_integration.render_demo_replay \
+    --task PickCube-v1 --shipped pick_cube --goal-actor goal_site \
+    --demo ~/.maniskill/demos/PickCube-v1/rl/trajectory.none.pd_joint_delta_pos.physx_cuda.h5
 
 # replay official ManiSkill demos through the shipped task
 SAPIEN_HEADLESS=1 python -m tools.maniskill_integration.replay_demo --task pick_cube --episodes 25
@@ -219,7 +223,8 @@ SAPIEN_HEADLESS=1 python -m tools.maniskill_integration.replay_demo --task pick_
 # regression tests
 python -m pytest tests/test_maniskill_native_task.py tests/test_maniskill_reward_grasp.py \
     tests/test_maniskill_success.py tests/test_maniskill_action_levels.py \
-    tests/test_maniskill_reset.py tests/test_maniskill_demo_replay.py
+    tests/test_maniskill_reset.py tests/test_maniskill_demo_replay.py \
+    tests/test_maniskill_gripper_friction.py
 ```
 
 ## Assets
@@ -241,10 +246,21 @@ All MetaSim-side changes are opt-in (`SimParamCfg` knobs default to `None`/`Fals
 (`_native/` package + tasks + tools + tests). Both MetaSim and RoboVerse changes are merged
 to their respective public `main` branches.
 
-## Remaining
+## Demo-replay completion coverage
 
-`peg_insertion_side` and `plug_charger` randomize their **internal geometry** per episode
-(the box-hole position / charger prong layout). Their success/reward formulas are exact
-and their part *poses* randomize per episode, but reproducing the per-episode internal
-geometry would require rebuilding the multi-box collision actor each reset (framework-
-atypical); it's left as a follow-up to preserve backward compatibility.
+**11 tasks** have a verified side-by-side clip above where native ManiSkill *and* the shipped task
+both reach success under pure action-replay of an official demo: `pick_cube`, `push_cube`,
+`pull_cube`, `stack_cube`, `poke_cube`, `lift_peg_upright`, `roll_ball`, `pull_cube_tool`,
+`stack_pyramid`, `push_t` (panda_stick), and `two_robot_pick_cube` (dual-arm, 16-dim). This spans
+all three robot layouts.
+
+Four tasks are not shown as demo-replay completions, honestly:
+
+- `peg_insertion_side` and `plug_charger` randomize their **internal geometry** per episode (the
+  box-hole position / charger prong layout). The shipped task uses a fixed peg/hole, so a demo whose
+  hole sits elsewhere cannot be inserted by pure open-loop replay — and high-precision insertion does
+  not reproduce open-loop even on native `physx_cpu` without per-step env-state injection. Their
+  success/reward *formulas* are still ported bitwise; only the per-episode geometry is unreproduced.
+- `draw_triangle` has only a *proxy* success (canvas-trace overlap) that does not fire under replay of
+  a demo authored against a different target triangle.
+- `place_sphere` has no upstream ManiSkill demo dataset.

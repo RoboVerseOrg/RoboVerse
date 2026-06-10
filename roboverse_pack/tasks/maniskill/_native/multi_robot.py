@@ -17,7 +17,7 @@ import torch
 from metasim.task.base import BaseTaskEnv
 
 from .control import PandaPDJointDeltaPos
-from .recipe import DECIMATION, maniskill_sim_params
+from .recipe import DECIMATION, apply_maniskill_gripper_friction, maniskill_sim_params
 
 
 class ManiSkillMultiRobotTask(BaseTaskEnv):
@@ -101,8 +101,22 @@ class ManiSkillMultiRobotTask(BaseTaskEnv):
             return torch.tensor([bool(self.success_fn(self))] * self.num_envs, dtype=torch.bool)
         return super()._terminated(states)
 
+    def _apply_gripper_friction(self) -> None:
+        """Apply ManiSkill's gripper grasp material to every robot's fingers (once, idempotent)."""
+        if getattr(self, "_gripper_friction_done", False):
+            return
+        for r in self.scenario.robots:
+            try:
+                robot = self.handler.object_ids[r.name]
+            except (KeyError, TypeError):
+                continue
+            if robot is not None:
+                apply_maniskill_gripper_friction(robot)
+        self._gripper_friction_done = True
+
     def reset(self, states=None, env_ids=None, seed=None):
         out = super().reset(states, env_ids, seed)
+        self._apply_gripper_friction()
         if self.goal_sampler is not None:
             if seed is not None or getattr(self, "_reset_rng", None) is None:
                 self._reset_rng = np.random.RandomState(seed if seed is not None else 0)

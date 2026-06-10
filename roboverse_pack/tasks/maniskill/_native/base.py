@@ -23,7 +23,7 @@ import torch
 from metasim.task.base import BaseTaskEnv
 
 from .control import PandaPDJointDeltaPos
-from .recipe import DECIMATION, maniskill_sim_params
+from .recipe import DECIMATION, apply_maniskill_gripper_friction, maniskill_sim_params
 
 
 class ManiSkillNativeTask(BaseTaskEnv):
@@ -169,8 +169,27 @@ class ManiSkillNativeTask(BaseTaskEnv):
             return self.checker.check(self.handler, states)
         return super()._terminated(states)
 
+    def _apply_gripper_friction(self) -> None:
+        """Set ManiSkill's high-friction grasp material on every robot's fingers (once, idempotent).
+
+        ManiSkill applies this material in code rather than in the URDF, so without it the sapien3
+        loader leaves the fingers at the scene-default friction and grasps slip. Applied after the
+        handler is live; a no-op for grippers-less robots (e.g. ``panda_stick``).
+        """
+        if getattr(self, "_gripper_friction_done", False):
+            return
+        for r in self.scenario.robots:
+            try:
+                robot = self.handler.object_ids[r.name]
+            except (KeyError, TypeError):
+                continue
+            if robot is not None:
+                apply_maniskill_gripper_friction(robot)
+        self._gripper_friction_done = True
+
     def reset(self, states=None, env_ids=None, seed=None):
         out = super().reset(states, env_ids, seed)
+        self._apply_gripper_friction()
         if self.goal_sampler is not None:
             # Persistent RNG so consecutive resets give *different* episodes (ManiSkill behaviour);
             # an explicit seed reseeds for reproducibility.

@@ -182,5 +182,62 @@ def maniskill_sim_params(sim_freq: int = 100, control_freq: int = 20) -> SimPara
     )
 
 
+# ManiSkill Panda gripper contact material (Panda.urdf_config._materials["gripper"]). ManiSkill
+# applies this *in code*, not in the URDF, so a plain URDF load leaves the fingers at the scene
+# default (0.3) and grasps slip — the cube drifts ~0.01 m during lift and success flips near the
+# 0.025 m goal threshold. Replicating it pulls the contact-phase cube trajectory back to the PhysX
+# CPU/CUDA noise floor (~2e-4).
+GRIPPER_FRICTION = 2.0
+GRIPPER_PATCH_RADIUS = 0.1
+GRIPPER_FINGER_LINKS = ("panda_leftfinger", "panda_rightfinger")
+
+
+def apply_maniskill_gripper_friction(
+    robot,
+    finger_links: tuple[str, ...] = GRIPPER_FINGER_LINKS,
+    static_friction: float = GRIPPER_FRICTION,
+    dynamic_friction: float = GRIPPER_FRICTION,
+    restitution: float = 0.0,
+    patch_radius: float = GRIPPER_PATCH_RADIUS,
+    min_patch_radius: float = GRIPPER_PATCH_RADIUS,
+) -> int:
+    """Set the high-friction grasp material on a loaded panda articulation's finger links.
+
+    Mirrors ManiSkill's ``Panda.urdf_config`` gripper material (``static_friction = dynamic_friction
+    = 2.0``, ``restitution = 0``) plus the contact-patch radii (``0.1``). A fresh ``PhysxMaterial``
+    is assigned per collision shape so a shared default material is never mutated. No-op for robots
+    without these finger links (e.g. ``panda_stick``).
+
+    Args:
+        robot: a loaded SAPIEN articulation (raw ``PhysxArticulation`` or a mani_skill link struct).
+        finger_links: link names to receive the gripper material.
+        static_friction: per-shape static friction.
+        dynamic_friction: per-shape dynamic friction.
+        restitution: per-shape restitution.
+        patch_radius: contact patch radius (skipped if the SAPIEN build lacks the setter).
+        min_patch_radius: minimum contact patch radius.
+
+    Returns:
+        The number of collision shapes updated.
+    """
+    import sapien.physx as physx
+
+    applied = 0
+    for link in robot.get_links():
+        name = link.get_name() if hasattr(link, "get_name") else link.name
+        if name not in finger_links:
+            continue
+        raw = link._objs[0] if hasattr(link, "_objs") else link
+        shapes = getattr(raw, "collision_shapes", None) or raw.get_collision_shapes()
+        for cs in shapes:
+            cs.set_physical_material(physx.PhysxMaterial(static_friction, dynamic_friction, restitution))
+            if hasattr(cs, "set_patch_radius"):
+                cs.set_patch_radius(patch_radius)
+            if hasattr(cs, "set_min_patch_radius"):
+                cs.set_min_patch_radius(min_patch_radius)
+            applied += 1
+    return applied
+
+
 # decimation = sim_freq // control_freq (100 // 20 = 5).
 DECIMATION = 5
