@@ -66,3 +66,39 @@ def test_create_indices_runs_without_numba():
     assert len(indices) > 0
     # buffer windows never exceed the data length.
     assert indices[:, 1].max() <= episode_ends[-1]
+
+
+@pytest.mark.general
+def test_get_val_mask_selects_n_val_episodes():
+    """Regression: the validation split must select ~val_ratio episodes, not just one.
+
+    The real selection was commented out and replaced with ``val_idxs = -1`` so
+    the val set was always exactly the last episode regardless of val_ratio/seed.
+    """
+    from roboverse_learn.il.utils.sampler import get_val_mask
+
+    n_episodes, val_ratio = 10, 0.2
+    mask = get_val_mask(n_episodes, val_ratio, seed=0)
+    assert mask.sum() == 2, f"expected round(10*0.2)=2 val episodes, got {int(mask.sum())}"
+    # Not degenerate-to-last: with seed=0 the chosen set must not be only the last index.
+    assert not (mask[-1] and mask.sum() == 1)
+
+    # Reproducible under a fixed seed.
+    assert np.array_equal(mask, get_val_mask(n_episodes, val_ratio, seed=0))
+    # val_ratio <= 0 -> empty val set (unchanged contract).
+    assert get_val_mask(n_episodes, 0.0).sum() == 0
+
+
+@pytest.mark.general
+def test_create_indices_asserts_shape_mismatch():
+    """Regression: the shape precondition must actually assert (it was a no-op expr).
+
+    With episode_mask longer than episode_ends, the pre-fix code silently ran to
+    completion; the restored ``assert`` makes it fail fast.
+    """
+    from roboverse_learn.il.utils.sampler import create_indices
+
+    episode_ends = np.array([5, 10], dtype=np.int64)
+    episode_mask = np.ones(3, dtype=bool)  # deliberately mismatched (len 3 vs 2)
+    with pytest.raises(AssertionError):
+        create_indices(episode_ends, sequence_length=3, episode_mask=episode_mask, debug=False)
