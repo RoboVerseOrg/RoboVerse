@@ -68,9 +68,12 @@ class ContactData(BaseQueryType):
                     con.geom1 == self._geom2_id and con.geom2 == self._geom1_id
                 ):
                     if con.dist < 1e-6:
-                        has_contact = True
+                        has_contact[0] = True
                         break
 
-            return torch.tensor(has_contact, dtype=torch.float32, device=self.handler.device)
+            # Keep the per-env array shape (num_envs,) to match the MJX branch.
+            # Rebinding ``has_contact`` to a bare ``True`` produced a 0-d tensor,
+            # diverging from MJX's (num_env,) output for the same query.
+            return torch.from_numpy(has_contact).to(dtype=torch.float32, device=self.handler.device)
 
         raise ValueError(f"Unsupported handler type: {type(self.handler)} for ContactData query")
