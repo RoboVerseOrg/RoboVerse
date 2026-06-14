@@ -9,7 +9,7 @@ from metasim.task.registry import register_task
 from .libero_base import LiberoBaseTask
 
 
-@register_task("libero.orange_juice", "pick_orange_juice")
+@register_task("libero.pick_orange_juice", "pick_orange_juice")
 class LiberoPickOrangeJuiceCfg(LiberoBaseTask):
     """Configuration for the Libero pick orange juice task.
 
