@@ -159,6 +159,17 @@ if __name__ == "__main__":
     obs, _ = envs.reset(seed=args.seed)
     obs = obs.to(device)
     global_step = 0
+    # Counts gradient-update iterations (one per training step past learning_starts).
+    # The delayed policy/target update must be gated on this, NOT on global_step:
+    # global_step advances by num_envs each loop, so `global_step % policy_frequency`
+    # is constant (always 0 when policy_frequency divides num_envs) and the TD3
+    # delayed-update mechanism never actually delays.
+    update_count = 0
+    # actor_loss is only assigned when the (now correctly delayed) policy gate
+    # fires; the %100 logging below runs on a different cadence, so seed it to
+    # None and guard the log to avoid an UnboundLocalError before the first
+    # actor update (e.g. when num_envs is a multiple of 100).
+    actor_loss = None
 
     # Initialize episode tracker
     episode_tracker = EpisodeTracker(args.num_envs, device)
@@ -189,6 +200,7 @@ if __name__ == "__main__":
 
         # ALGO LOGIC: training.
         if global_step > args.learning_starts:
+            update_count += 1
             data = rb.sample(args.batch_size)
             with torch.no_grad():
                 clipped_noise = (torch.randn_like(data.actions, device=device) * args.policy_noise).clamp(
@@ -214,7 +226,7 @@ if __name__ == "__main__":
             qf_loss.backward()
             q_optimizer.step()
 
-            if global_step % args.policy_frequency == 0:
+            if update_count % args.policy_frequency == 0:
                 actor_loss = -qf1(data.observations, actor(data.observations)).mean()
                 actor_optimizer.zero_grad()
                 actor_loss.backward()
@@ -234,7 +246,8 @@ if __name__ == "__main__":
                 writer.add_scalar("losses/qf1_loss", qf1_loss.item(), global_step)
                 writer.add_scalar("losses/qf2_loss", qf2_loss.item(), global_step)
                 writer.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, global_step)
-                writer.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
+                if actor_loss is not None:
+                    writer.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
 
                 # Log episode statistics
                 avg_return, avg_length = episode_tracker.get_stats()
