@@ -119,7 +119,7 @@ class LiftPegUprightDenseTask(DenseRLResetMixin, LiftPegUprightTask):
 
         to_grip = torch.linalg.norm(peg - tcp, dim=-1)
         reaching = 1.0 - torch.tanh(5.0 * to_grip)
-        gripper_width = rs.joint_pos[:, 7:9].sum(dim=-1)
+        gripper_width = rs.joint_pos[:, 0:2].sum(dim=-1)
         is_grasping = (to_grip < 0.04) & (gripper_width < 0.07)
         reaching = torch.where(is_grasping, torch.ones_like(reaching), reaching)
         reaching = reaching / 5.0
