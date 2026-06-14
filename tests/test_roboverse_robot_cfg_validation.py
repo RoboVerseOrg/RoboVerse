@@ -205,3 +205,21 @@ def test_known_gap_dicts_match_actual_failures():
             f"_KNOWN_DEFAULT_POS_OUT_OF_RANGE_GAPS[{name!r}] lists this as a gap ({reason!r}) but "
             f"all defaults are now inside limits — remove the entry."
         )
+
+
+@pytest.mark.general
+def test_g1_tracking_resolves_mjx_mjcf_path():
+    """Regression: G1TrackingCfg.__post_init__ must chain to super().
+
+    The base ArticulationObjCfg.__post_init__ defaults ``mjx_mjcf_path`` to
+    ``mjcf_path`` when None. G1TrackingCfg computed its actuators but never called
+    super(), so ``mjx_mjcf_path`` stayed None and the MJX backend got no path.
+    """
+    from roboverse_pack.robots.g1_tracking import G1TrackingCfg
+
+    cfg = G1TrackingCfg()
+    assert cfg.mjcf_path is not None
+    assert cfg.mjx_mjcf_path == cfg.mjcf_path, "mjx_mjcf_path should default to mjcf_path via super().__post_init__()"
+    # The actuator/action_scale computation must be preserved (not clobbered by super).
+    assert len(cfg.actuators) > 0
+    assert len(cfg.action_scale) == len(cfg.actuators)
