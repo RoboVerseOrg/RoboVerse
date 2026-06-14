@@ -223,3 +223,20 @@ def test_g1_tracking_resolves_mjx_mjcf_path():
     # The actuator/action_scale computation must be preserved (not clobbered by super).
     assert len(cfg.actuators) > 0
     assert len(cfg.action_scale) == len(cfg.actuators)
+
+
+@pytest.mark.general
+def test_anymal_default_orientation_is_wxyz_identity():
+    """Regression: ANYmal's default_orientation must be wxyz identity [1,0,0,0].
+
+    Handlers consume default_orientation as wxyz (mujoco.py reads qw,qx,qy,qz;
+    isaacgym reorders wxyz->xyzw). The value was [0,0,0,1] (the xyzw identity),
+    which under wxyz is a 180 degree yaw — ANYmal would spawn facing backwards.
+    """
+    from roboverse_pack.robots.anymal_cfg import AnymalCfg
+
+    cfg = AnymalCfg()
+    assert cfg.default_orientation == [1.0, 0.0, 0.0, 0.0], (
+        f"expected wxyz identity [1,0,0,0], got {cfg.default_orientation} "
+        f"(w must be the largest component for an identity quaternion)"
+    )
