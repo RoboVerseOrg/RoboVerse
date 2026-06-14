@@ -99,6 +99,14 @@ class RobotImageDataset(BaseImageDataset):
             episode_mask=~self.train_mask,
         )
         val_set.train_mask = ~self.train_mask
+        # copy.copy is shallow, so the val set would otherwise share the train
+        # set's IO buffers — the in-place destination of the ndarray-index
+        # __getitem__ fast path. Give val its own buffers so a val pass cannot
+        # scribble over a train batch (and vice-versa).
+        val_set.buffers = {k: v.copy() for k, v in self.buffers.items()}
+        val_set.buffers_torch = {k: torch.from_numpy(v) for k, v in val_set.buffers.items()}
+        for v in val_set.buffers_torch.values():
+            v.pin_memory()
         return val_set
 
     def get_normalizer(self, mode="limits", **kwargs):
