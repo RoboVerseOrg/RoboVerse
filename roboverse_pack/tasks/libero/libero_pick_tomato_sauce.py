@@ -67,7 +67,8 @@ class LiberoPickTomatoSauceTask(LiberoBaseTask):
                 urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
             ),
-        ]
+        ],
+        robots=["franka"],
     )
 
     # task horizon

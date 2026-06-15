@@ -67,7 +67,8 @@ class LiberoPickChocolatePuddingCfg(LiberoBaseTask):
                 urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/alphabet_soup/urdf/alphabet_soup.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/alphabet_soup/mjcf/alphabet_soup.xml",
             ),
-        ]
+        ],
+        robots=["franka"],
     )
     objects = [
         RigidObjCfg(

@@ -51,3 +51,28 @@ def test_libero_pick_registration_ids_are_correct():
     juice = (_LIBERO / "libero_pick_orange_juice.py").read_text()
     assert '"libero.orange_juice"' not in juice, "primary id is missing the 'pick_' prefix"
     assert '"libero.pick_orange_juice", "pick_orange_juice"' in juice
+
+
+@pytest.mark.general
+def test_all_libero_pick_tasks_have_a_robot():
+    """Every ``libero_pick_*`` task is a "pick up X and place in basket" task and
+    therefore MUST declare a robot arm. Previously 9 of 10 omitted
+    ``robots=["franka"]`` (only butter had it), so the scenario instantiated with
+    an empty robot list — a robotless pick task can never succeed and eval scores
+    a silent 0%. This pins every sibling to declare a robot.
+    """
+    import importlib
+
+    pick_files = sorted(_LIBERO.glob("libero_pick_*.py"))
+    assert pick_files, "no libero_pick_* task files found"
+    missing = []
+    for f in pick_files:
+        mod = importlib.import_module(f"roboverse_pack.tasks.libero.{f.stem}")
+        # the task class defines a class-level ScenarioCfg
+        for obj in vars(mod).values():
+            scen = getattr(obj, "scenario", None)
+            if scen is not None and hasattr(scen, "robots"):
+                if not scen.robots:
+                    missing.append(f.stem)
+                break
+    assert not missing, f"libero_pick tasks with no robot (robotless pick can never succeed): {missing}"
