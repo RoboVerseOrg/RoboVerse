@@ -371,7 +371,7 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
         log.info(f"Loaded {len(initial_states)} initial states from {self.state_file_path}")
         return initial_states
 
-    def reset(self, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
         """Reset environment, keeping object grasped."""
         if env_ids is None or self._last_action is None:
             self._last_action = self._initial_states.robots[self.robot_name].joint_pos[:, :]
@@ -393,7 +393,7 @@ class PickPlaceTrackScrewDriver(PickPlaceBase):
 
         self.object_grasped[env_ids_tensor] = True
 
-        obs, info = super(PickPlaceBase, self).reset(env_ids=env_ids)
+        obs, info = super(PickPlaceBase, self).reset(states=states, env_ids=env_ids, seed=seed)
 
         states = self.handler.get_states(mode="tensor")
         if env_ids is None:

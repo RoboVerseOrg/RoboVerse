@@ -298,7 +298,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
 
         return states
 
-    def reset(self, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
         """Reset environment and last actions."""
         if env_ids is None or self._last_action is None:
             self._last_action = self._initial_states.robots[self.robot_name].joint_pos[:, :]
@@ -317,7 +317,7 @@ class TrajectoryTrackingTaskBase(RLTaskEnv):
         self.prev_distance_to_waypoint[env_ids_tensor] = 0.0
         self.object_grasped[env_ids_tensor] = False
 
-        obs, info = super().reset(env_ids=env_ids)
+        obs, info = super().reset(states=states, env_ids=env_ids, seed=seed)
 
         states = self.handler.get_states(mode="tensor")
 
