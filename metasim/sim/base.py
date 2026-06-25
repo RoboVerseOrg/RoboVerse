@@ -458,7 +458,22 @@ class BaseSimHandler(ABC):
         Maintains independent tensor and dict caches so alternating modes does not
         destroy either representation. A cache miss on the requested mode is filled
         lazily by converting from the other cache.
+
+        Subset requests (``env_ids is not None``) bypass the cache entirely. The
+        shared cache holds the full env set; backends that honour ``env_ids``
+        (``ParallelHandler`` and mjx/genesis/newton) return a real subset, so
+        caching it would make a later full ``get_states()`` return the stale
+        subset (and vice versa). Subset callers already hit a fresh fetch today
+        (``reset`` invalidates first), so not caching them costs nothing.
         """
+        if env_ids is not None:
+            result = self._get_states(env_ids=env_ids)
+            if result is None:
+                return None
+            if mode == "tensor":
+                return result if isinstance(result, TensorState) else list_state_to_tensor(self, result)
+            return state_tensor_to_nested(self, result) if isinstance(result, TensorState) else result
+
         # Fetch fresh from sim only if both caches are stale.
         if self._tensor_state_cache is None and self._dict_state_cache is None:
             result = self._get_states(env_ids=env_ids)

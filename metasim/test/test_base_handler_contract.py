@@ -123,3 +123,112 @@ def test_class_docstring_lists_the_contract():
     for required_method in ("_set_states", "_set_dof_targets", "_get_states", "_simulate"):
         assert required_method in doc, f"contract summary missing reference to {required_method}"
     assert "Optional" in doc, "contract summary missing the 'optional / defaults' section"
+
+
+@pytest.mark.general
+def test_get_states_subset_does_not_poison_full_cache():
+    """``get_states(env_ids=subset)`` must not be cached as the full-env state.
+
+    Backends that honour ``env_ids`` (ParallelHandler, mjx/genesis/newton)
+    return a real subset. Previously the first ``get_states`` populated the
+    shared cache regardless of ``env_ids``, so a subset request poisoned a later
+    full request (it returned the stale subset) and vice-versa. The fix bypasses
+    the cache for subset requests.
+    """
+    from metasim.types import TensorState
+
+    class _EnvIdsHandler(BaseSimHandler):
+        """``_get_states`` honours env_ids; marks env count in ``extras``."""
+
+        def __init__(self):
+            self._tensor_state_cache = None
+            self._dict_state_cache = None
+            self.calls: list = []
+
+        def _set_states(self, states, env_ids=None):
+            return None
+
+        def _set_dof_targets(self, actions):
+            return None
+
+        def _simulate(self):
+            return None
+
+        def _get_states(self, env_ids=None):
+            self.calls.append(env_ids)
+            n = len(env_ids) if env_ids is not None else 99  # 99 == "all envs"
+            return TensorState(objects={}, robots={}, cameras={}, extras={"n": n})
+
+    h = _EnvIdsHandler()
+
+    # Subset request returns the subset and is NOT cached.
+    sub = h.get_states(env_ids=[0], mode="tensor")
+    assert sub.extras["n"] == 1
+
+    # Full request must refetch (env_ids=None), not return the stale subset.
+    full = h.get_states(mode="tensor")
+    assert full.extras["n"] == 99
+    assert h.calls == [[0], None]
+
+    # Full result IS cached now: a second full request does not refetch.
+    full2 = h.get_states(mode="tensor")
+    assert full2 is full
+    assert h.calls == [[0], None]
+
+    # A subset request after a full cache must still fetch a fresh subset,
+    # not return the cached full state.
+    sub2 = h.get_states(env_ids=[1, 2], mode="tensor")
+    assert sub2.extras["n"] == 2
+    assert h.calls == [[0], None, [1, 2]]
+
+
+@pytest.mark.general
+def test_get_states_dict_mode_subset_not_cached():
+    """Same anti-poisoning contract as the tensor case, for ``mode="dict"``.
+
+    Exercises the dict-mode subset branch (``state_tensor_to_nested`` on the
+    subset result) which the tensor-only test above does not cover.
+    """
+    import torch
+
+    from metasim.types import RobotState, TensorState
+
+    class _DictEnvIdsHandler(BaseSimHandler):
+        def __init__(self):
+            self._tensor_state_cache = None
+            self._dict_state_cache = None
+            self.calls: list = []
+
+        def _set_states(self, states, env_ids=None):
+            return None
+
+        def _set_dof_targets(self, actions):
+            return None
+
+        def _simulate(self):
+            return None
+
+        def _get_joint_names(self, obj_name, sort=True):
+            return ["j0"]
+
+        def _get_body_names(self, obj_name, sort=True):
+            return []
+
+        def _get_states(self, env_ids=None):
+            self.calls.append(env_ids)
+            n = len(env_ids) if env_ids is not None else 5  # 5 == "all envs"
+            robot = RobotState(
+                root_state=torch.zeros(n, 13), joint_pos=torch.zeros(n, 1), joint_vel=torch.zeros(n, 1)
+            )
+            return TensorState(objects={}, robots={"r0": robot}, cameras={})
+
+    h = _DictEnvIdsHandler()
+
+    sub = h.get_states(env_ids=[0], mode="dict")
+    assert len(sub) == 1  # one per-env dict
+    full = h.get_states(mode="dict")
+    assert len(full) == 5  # full set, not the stale 1-env subset
+    assert h.calls == [[0], None]
+    sub2 = h.get_states(env_ids=[1, 2], mode="dict")
+    assert len(sub2) == 2
+    assert h.calls == [[0], None, [1, 2]]
