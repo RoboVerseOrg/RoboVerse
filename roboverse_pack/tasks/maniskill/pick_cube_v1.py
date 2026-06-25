@@ -153,7 +153,7 @@ class PickCubeV1DenseTask(DenseRLResetMixin, PickCubeV1Task):
         reaching = 1.0 - torch.tanh(5.0 * tcp_to_obj)
         reward = reaching
 
-        finger_q = rs.joint_pos[:, 7:9]
+        finger_q = rs.joint_pos[:, 0:2]
         gripper_width = finger_q.sum(dim=-1)
         is_grasped = ((tcp_to_obj < 0.03) & (gripper_width < 0.07)).float()
         reward = reward + is_grasped
@@ -162,7 +162,7 @@ class PickCubeV1DenseTask(DenseRLResetMixin, PickCubeV1Task):
         place = 1.0 - torch.tanh(5.0 * obj_to_goal)
         reward = reward + place * is_grasped
 
-        arm_qvel = rs.joint_vel[:, :7]
+        arm_qvel = rs.joint_vel[:, 2:9]
         static = 1.0 - torch.tanh(5.0 * torch.linalg.norm(arm_qvel, dim=-1))
         is_obj_placed = (obj_to_goal <= _GOAL_THRESH).float()
         reward = reward + static * is_obj_placed
