@@ -265,3 +265,8 @@ class G1TrackingCfg(RobotCfg):
         self.actuators = {k: v for k, v in zip(name_list, value_list)}
         _, name_list, value_list = resolve_matching_names_values(action_scale, joint_names)
         self.action_scale = {k: v for k, v in zip(name_list, value_list)}
+
+        # Chain to the base __post_init__ so mjx_mjcf_path defaults to mjcf_path
+        # (and scale/fix_base_link are normalised). Without this the MJX backend
+        # gets mjx_mjcf_path=None for this robot. Mirrors g1_cfg.py.
+        return super().__post_init__()
