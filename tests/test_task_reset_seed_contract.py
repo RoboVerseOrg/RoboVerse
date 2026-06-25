@@ -1,4 +1,4 @@
-"""Backend-free conformance guardrail: every task ``reset`` must accept ``seed``.
+"""Backend-free conformance guardrail: every Tier-1 task ``reset`` accepts ``seed``.
 
 The gym bridge (``metasim.task.gym_registration``) forwards ``env.reset(seed=)``
 to a task only when the task's ``reset`` signature accepts it — tasks that
@@ -6,9 +6,20 @@ override ``reset`` without a ``seed`` parameter silently drop the seed, so
 rollouts are not reproducible on the simulator side.
 
 This test statically (no sim backend, no instantiation) scans every task file
-and asserts:
+and asserts the contract on **Tier-1 tasks only**:
 
-* no *new* ``reset`` override lacks ``seed`` beyond the known P1-cleanup
+* **Tier 1** — classes in the unified contract: they (transitively) subclass
+  ``BaseTaskEnv`` / ``RLTaskEnv`` / ``ManagerBasedRVEnv``. Only these are checked.
+* **Tier 3** — external/native passthrough adapters (modules under ``_native``/
+  ``_passthrough`` or classes named ``Native*``/``Passthrough*``) are an
+  explicitly-exempt compatibility tier and are skipped.
+* Non-task helpers (controllers, sensors, command/actuator managers, success
+  evaluators, sessions) are not in the inheritance graph to ``BaseTaskEnv`` and
+  are therefore ignored.
+
+Assertions:
+
+* no *new* Tier-1 ``reset`` override lacks ``seed`` beyond the P1-cleanup
   allowlist (ratchet: the set may only shrink);
 * the allowlist has no stale entries (forces it to shrink as P1 lands);
 * the unified family base classes already honor the contract.
@@ -26,6 +37,11 @@ import pytest
 
 _TASKS = pathlib.Path(__file__).resolve().parents[1] / "roboverse_pack" / "tasks"
 
+# Terminal in-contract roots: a class is Tier-1 if it transitively subclasses one
+# of these. BaseTaskEnv/RLTaskEnv live in MetaSim; ManagerBasedRVEnv in
+# roboverse_learn — they are not defined under tasks/, so they anchor the graph.
+_CONTRACT_ROOTS = {"BaseTaskEnv", "RLTaskEnv", "ManagerBasedRVEnv"}
+
 # Family base classes fixed in the reset(seed) unification — must stay conformant.
 _FIXED_BASES = {
     "libero/libero_base.py",
@@ -38,17 +54,11 @@ _FIXED_BASES = {
     "humanoid/base/base_legged_robot.py",
 }
 
-# P1 cleanup targets: task files whose ``reset`` override still drops ``seed``.
-# This list may only SHRINK. Remove an entry when you fix that file.
+# P1 cleanup targets: Tier-1 task files whose ``reset`` override still drops
+# ``seed``. This list may only SHRINK. Remove an entry when you fix that file.
 KNOWN_NO_SEED_RESET = frozenset({
-    "benchmark/base.py",
-    "beyondmimic/isaaclab/robots/actuator.py",
     "beyondmimic/metasim/envs/base_legged_robot.py",
-    "beyondmimic/metasim/mdp/commands.py",
-    "libero/native_libero.py",
     "mjlab/cartpole_train.py",
-    "mjlab/mdp/commands.py",
-    "mjlab/mdp/sensors.py",
     "mujoco_playground/handover.py",
     "mujoco_playground/open_cabinet.py",
     "mujoco_playground/pick.py",
@@ -59,47 +69,85 @@ KNOWN_NO_SEED_RESET = frozenset({
     "pick_place/track_banana.py",
     "pick_place/track_screwdriver.py",
     "pick_place/track_spoon.py",
-    "robosuite/native.py",
     "robosuite/robosuite_env.py",
-    "simpler_env/_native/control/base_controller.py",
-    "simpler_env/_native/control/pd_ee_pose.py",
-    "simpler_env/_native/control/pd_joint_pos.py",
-    "simpler_env/_native/grasp.py",
 })
 
 
-def _reset_methods_without_seed(path: pathlib.Path) -> bool:
-    """True if the file defines a class method ``reset`` lacking a ``seed`` arg."""
-    try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-    except (SyntaxError, UnicodeDecodeError):
-        return False
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or node.name != "reset":
+def _base_name(node: ast.expr) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def _build_class_graph() -> dict[str, set[str]]:
+    """Map every class defined under tasks/ to its (immediate) base-class names."""
+    graph: dict[str, set[str]] = {}
+    for path in _TASKS.rglob("*.py"):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
             continue
-        a = node.args
-        names = {p.arg for p in (*a.posonlyargs, *a.args, *a.kwonlyargs)}
-        if "seed" in names or a.kwarg is not None:  # explicit seed= or **kwargs
-            continue
+        for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
+            graph.setdefault(cls.name, set()).update(b for b in (_base_name(x) for x in cls.bases) if b is not None)
+    return graph
+
+
+def _in_contract(name: str, graph: dict[str, set[str]], seen: set[str] | None = None) -> bool:
+    """True if ``name`` transitively subclasses a contract root (Tier-1)."""
+    if name in _CONTRACT_ROOTS:
         return True
-    return False
+    seen = seen or set()
+    if name in seen or name not in graph:
+        return False
+    seen.add(name)
+    return any(_in_contract(b, graph, seen) for b in graph[name])
+
+
+def _is_tier3(rel_path: str, class_name: str) -> bool:
+    """Native/passthrough adapters are an explicitly-exempt compatibility tier."""
+    p = "/" + rel_path
+    if "/_native/" in p or "_passthrough" in rel_path:
+        return True
+    return class_name.startswith(("Native", "Passthrough"))
+
+
+def _reset_lacks_seed(fn: ast.FunctionDef) -> bool:
+    a = fn.args
+    names = {p.arg for p in (*a.posonlyargs, *a.args, *a.kwonlyargs)}
+    return "seed" not in names and a.kwarg is None  # no seed= and no **kwargs
 
 
 def _all_violators() -> set[str]:
-    out = set()
+    graph = _build_class_graph()
+    out: set[str] = set()
     for path in _TASKS.rglob("*.py"):
-        if _reset_methods_without_seed(path):
-            out.add(path.relative_to(_TASKS).as_posix())
+        rel = path.relative_to(_TASKS).as_posix()
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
+            if _is_tier3(rel, cls.name) or not _in_contract(cls.name, graph):
+                continue
+            for fn in cls.body:
+                if (
+                    isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and fn.name == "reset"
+                    and _reset_lacks_seed(fn)
+                ):
+                    out.add(rel)
     return out
 
 
 @pytest.mark.general
 def test_no_new_reset_without_seed():
-    """No task may add a ``reset`` override that drops ``seed`` (ratchet)."""
+    """No Tier-1 task may add a ``reset`` override that drops ``seed`` (ratchet)."""
     new = sorted(_all_violators() - KNOWN_NO_SEED_RESET)
     assert not new, (
-        "These task files override reset() without a seed parameter, breaking the "
-        "env.reset(seed=) contract. Add seed=None and forward it to super().reset:\n  " + "\n  ".join(new)
+        "These Tier-1 task files override reset() without a seed parameter, breaking "
+        "the env.reset(seed=) contract. Add seed=None and forward it to super().reset:\n  " + "\n  ".join(new)
     )
 
 
@@ -116,5 +164,11 @@ def test_reset_seed_allowlist_has_no_stale_entries():
 @pytest.mark.general
 def test_unified_bases_accept_seed():
     """The fixed family base classes must keep accepting seed (regression guard)."""
-    regressed = sorted(f for f in _FIXED_BASES if _reset_methods_without_seed(_TASKS / f))
-    assert not regressed, f"Base classes regressed to reset() without seed: {regressed}"
+    regressed = []
+    for rel in sorted(_FIXED_BASES):
+        tree = ast.parse((_TASKS / rel).read_text(encoding="utf-8"))
+        for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
+            for fn in cls.body:
+                if isinstance(fn, ast.FunctionDef) and fn.name == "reset" and _reset_lacks_seed(fn):
+                    regressed.append(rel)
+    assert not regressed, f"Base classes regressed to reset() without seed: {sorted(set(regressed))}"
