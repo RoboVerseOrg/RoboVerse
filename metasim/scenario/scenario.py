@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections import Counter
 from typing import Literal
 
@@ -125,8 +126,33 @@ class ScenarioCfg:
         FileDownloader(self).do_it()  # download any external assets
 
     def update(self, **kwargs):
-        """Patch fields then rerun post-init."""
+        """Patch fields then rerun post-init.
+
+        ``update`` is the public patch boundary — ``gym.make(id, **kwargs)``
+        / ``gym.make_vec`` forward their caller's kwargs straight here (see
+        ``gym_registration``). Previously every key was applied with a raw
+        ``setattr``, so a typo like ``num_env=4`` (for ``num_envs``) or
+        ``headles=True`` silently created a dead attribute, left the real
+        field at its default, and gave no feedback — the caller's intent was
+        dropped without a trace.
+
+        Unknown keys are now **warned and skipped** rather than set as dead
+        attributes. A warning (not a hard error) is deliberate: it mirrors
+        the existing ``_warn_duplicate_names`` boundary behaviour and avoids
+        breaking the several shipped scripts that pass a long-dead ``renderer=``
+        kwarg alongside their real ``simulator=`` — those keep working, but
+        the dead kwarg now surfaces instead of silently polluting the object.
+        """
+        valid_fields = {f.name for f in dataclasses.fields(self)}
+        unknown = [key for key in kwargs if key not in valid_fields]
+        if unknown:
+            log.warning(
+                f"ScenarioCfg.update() ignoring unknown field(s) {unknown} — "
+                f"they are not ScenarioCfg fields and will have no effect "
+                f"(check for a typo). Valid fields: {sorted(valid_fields)}."
+            )
         for key, value in kwargs.items():
-            setattr(self, key, value)
+            if key in valid_fields:
+                setattr(self, key, value)
         self.__post_init__()
         return self
