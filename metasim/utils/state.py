@@ -113,6 +113,26 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
     #         # Note: SensorState structure is not defined, so this is a placeholder
     #         rst.sensors[key] = sensor_states[0]  # This would need to be implemented based on SensorState structure
 
+    # Join extras. Only emit a key when EVERY joined state provides it as a
+    # tensor, so the concatenated length equals total num_envs (matching the
+    # objects/robots/cameras concat along dim 0) and satisfies
+    # TensorState.__post_init__'s extras[key].shape[0] == num_envs check. Without
+    # this, parallel get_states().extras was always empty while single-env
+    # backends populate it. Non-tensor extras (e.g. mjx 'sites' nested dicts,
+    # ContactForces query objects) are dropped here, exactly as the dict-mode
+    # round-trip already drops them in state_tensor_to_nested / list_state_to_tensor.
+    all_extra_keys: set[str] = set()
+    for state in tensor_states:
+        if isinstance(state.extras, dict):
+            all_extra_keys.update(state.extras.keys())
+
+    for key in all_extra_keys:
+        values = [
+            state.extras[key] for state in tensor_states if isinstance(state.extras, dict) and key in state.extras
+        ]
+        if len(values) == len(tensor_states) and all(isinstance(v, torch.Tensor) for v in values):
+            rst.extras[key] = torch.cat(values, dim=0)
+
     return rst
 
 
@@ -467,12 +487,20 @@ def list_state_to_tensor(
 
     # -------- cameras ---------------------------------------------
     for cam in cam_names:
-        rgb = torch.stack(
-            [es["cameras"][cam]["rgb"] for es in env_states if "cameras" in es and cam in es["cameras"]], dim=0
-        ).to(dev)
-        depth = torch.stack(
-            [es["cameras"][cam]["depth"] for es in env_states if "cameras" in es and cam in es["cameras"]], dim=0
-        ).to(dev)
+        # The write side (state_tensor_to_nested) only emits "rgb"/"depth" when
+        # the corresponding tensor is non-None, so a depth-only or rgb-only
+        # camera dict lacks the other key. Index each only when present and pass
+        # None otherwise (CameraState accepts None); the both-present path is
+        # unchanged.
+        cam_dicts = [es["cameras"][cam] for es in env_states if "cameras" in es and cam in es["cameras"]]
+        rgb = (
+            torch.stack([cd["rgb"] for cd in cam_dicts], dim=0).to(dev) if cam_dicts and "rgb" in cam_dicts[0] else None
+        )
+        depth = (
+            torch.stack([cd["depth"] for cd in cam_dicts], dim=0).to(dev)
+            if cam_dicts and "depth" in cam_dicts[0]
+            else None
+        )
         cameras[cam] = CameraState(rgb=rgb, depth=depth)
 
     # -------- extras ----------------------------------------------
