@@ -42,6 +42,11 @@ def get_traj_v2(traj_filepath, robot: RobotCfg):
         data = load_traj_file(path)[robot.name]
 
     ## Parse initial states
+    # Guard before indexing data[0]: an empty trajectory (filtered/failed
+    # collection) would otherwise raise IndexError, which escapes the
+    # (FileNotFoundError, KeyError, ValueError) set callers catch.
+    if not data:
+        raise ValueError(f"Trajectory for robot {robot.name!r} in '{traj_filepath}' is empty")
     if "init_state" in data[0]:
         init_states = [traj["init_state"] for traj in data]
     else:

@@ -53,7 +53,16 @@ def get_traj(
                 "The trajectory file does not exist, please check the path or convert the trajectory file to v2 format"
             )
     else:
-        log.warning("Reading trajectory using v1 data format, which is deprecated")
+        # The v1 format is no longer supported. Previously this branch only
+        # logged a warning and fell off the end, returning None — every caller
+        # unpacks a 3-tuple (`init_states, _, _ = get_traj(...)`), so they hit
+        # an opaque `TypeError: cannot unpack non-iterable NoneType` that is NOT
+        # in the (FileNotFoundError, KeyError, ValueError) set task base classes
+        # catch, masking the real cause (an unsupported/misnamed traj file).
+        raise ValueError(
+            f"Unsupported v1 trajectory format for '{traj_filepath}'. "
+            "Convert it to v2 (the filename must contain 'v2', e.g. '<robot>_v2.pkl.gz')."
+        )
 
 
 def _get_traj_multiagent(
