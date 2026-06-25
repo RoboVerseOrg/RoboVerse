@@ -94,6 +94,18 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
     """A parallel simulation handler that uses multiprocessing to run multiple simulations in parallel."""
 
     class ParallelHandler(BaseSimHandler):
+        # Workers receive states over the pipe as a per-env list of plain dicts
+        # (``set_states`` in ``_worker`` forwards ``data[0]`` straight to the
+        # single-env backend), and ``_set_states`` below indexes/len()s that
+        # list. So the wrapper must consume the *dict* batch form: declare it
+        # here so the base ``set_states`` normaliser converts a TensorState
+        # (e.g. RLTaskEnv's ``list_state_to_tensor`` output) into
+        # ``list[DictEnvState]`` BEFORE it reaches ``_set_states``. Without
+        # this, ``_set_states`` got a raw TensorState and died with
+        # ``TypeError: object of type 'TensorState' has no len()`` whenever
+        # num_envs>1 (the only case where this wrapper class is used).
+        _set_states_input_type = "dict"
+
         def __new__(cls, scenario: ScenarioCfg, extra_spec: dict[str, BaseQueryType] | None = None):
             """If num_envs is one, simply use the original single-thread class."""
             if scenario.num_envs == 1:

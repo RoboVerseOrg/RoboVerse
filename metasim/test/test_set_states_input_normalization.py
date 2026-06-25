@@ -110,6 +110,27 @@ def test_env_ids_pass_through_unchanged():
 
 
 @pytest.mark.general
+def test_parallel_wrapper_declares_dict_input_type():
+    """``ParallelSimWrapper`` workers receive a per-env list of dicts over the
+    pipe, and the wrapper's ``_set_states`` indexes/``len()``s that list. So
+    the generated ``ParallelHandler`` must declare ``"dict"`` — otherwise a
+    ``TensorState`` (e.g. from ``RLTaskEnv``'s ``list_state_to_tensor``) reaches
+    ``_set_states`` unconverted and crashes with
+    ``TypeError: object of type 'TensorState' has no len()`` at num_envs>1.
+
+    Checked at the class level (no worker processes spawned): the closure
+    class object carries the attribute regardless of instantiation.
+    """
+    from metasim.sim.parallel import ParallelSimWrapper
+
+    wrapped = ParallelSimWrapper(_Recorder)
+    assert wrapped._set_states_input_type == "dict", (
+        "ParallelHandler must consume the dict batch form so the base "
+        "normaliser converts TensorState before _set_states"
+    )
+
+
+@pytest.mark.general
 def test_known_dict_only_backends_declare_their_input_type():
     """Genesis / PyBullet / Sapien3 must declare ``"dict"`` so the base
     converts ``TensorState`` input for them."""
