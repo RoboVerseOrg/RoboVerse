@@ -500,6 +500,11 @@ def main() -> None:
 
         batch_size = cfg("batch_size") // cfg("num_envs")
         if global_step > cfg("learning_starts"):
+            # Freeze the running obs statistics while normalising *replayed* batches:
+            # forward() updates the stats when training, so normalising resampled
+            # (and next-) observations here would double-count them on top of the
+            # per-rollout update at line ~473 and fold next_obs into the input stats.
+            obs_normalizer.eval()
             for i in range(cfg("num_updates")):
                 data = rb.sample(batch_size)
                 data["observations"] = normalize_obs(data["observations"])
@@ -514,6 +519,8 @@ def main() -> None:
 
                 for param, target_param in zip(qnet.parameters(), qnet_target.parameters()):
                     target_param.data.copy_(cfg("tau") * param.data + (1 - cfg("tau")) * target_param.data)
+            # Restore training mode so the next rollout's normalize_obs updates stats.
+            obs_normalizer.train()
 
             if torch.cuda.is_available():
                 torch.cuda.synchronize(device)
