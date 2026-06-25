@@ -157,14 +157,14 @@ class PlaceSphereDenseTask(DenseRLResetMixin, PlaceSphereTask):
 
         o_to_bin = torch.linalg.norm(bin_top - obj, dim=-1)
         place = 1.0 - torch.tanh(5.0 * o_to_bin)
-        gripper_w = rs.joint_pos[:, 7:9].sum(dim=-1)
+        gripper_w = rs.joint_pos[:, 0:2].sum(dim=-1)
         is_grasped = (o_to_tcp < 0.03) & (gripper_w < 0.07)
         reward = torch.where(is_grasped, 4.0 + place, reward)
 
-        ungrasp = rs.joint_pos[:, 7:9].sum(dim=-1) / _PS_GRIPPER_WIDTH
+        ungrasp = rs.joint_pos[:, 0:2].sum(dim=-1) / _PS_GRIPPER_WIDTH
         ungrasp = torch.where(is_grasped, ungrasp, torch.full_like(ungrasp, 16.0))
         static = 1.0 - torch.tanh(torch.linalg.norm(obj_v, dim=-1) * 10.0 + torch.linalg.norm(obj_w, dim=-1))
-        arm_qvel = rs.joint_vel[:, :7]
+        arm_qvel = rs.joint_vel[:, 2:9]
         robot_static = (arm_qvel.abs().amax(dim=-1) < 0.2).float()
 
         off = obj - objs["bin"].root_state[:, :3]

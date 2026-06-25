@@ -195,7 +195,7 @@ class PokeCubeDenseTask(DenseRLResetMixin, PokeCubeCfg):
         h2c = torch.linalg.norm(peg_head[:, :2] - cube[:, :2], dim=-1)
         close = 1.0 - torch.tanh(5.0 * h2c)
 
-        gripper_w = rs.joint_pos[:, 7:9].sum(dim=-1)
+        gripper_w = rs.joint_pos[:, 0:2].sum(dim=-1)
         grasped = (tcp_to_peg < 0.04) & (gripper_w < 0.07) & reached
         reward = torch.where(grasped, 4.0 + close + align, reward)
 
@@ -203,7 +203,7 @@ class PokeCubeDenseTask(DenseRLResetMixin, PokeCubeCfg):
         fit = (angle < 0.05) & (h2c <= _PK_CUBE_HALF + 0.005) & grasped
         reward = torch.where(fit, 7.0 + place, reward)
 
-        arm_qvel = rs.joint_vel[:, :7]
+        arm_qvel = rs.joint_vel[:, 2:9]
         static = 1.0 - torch.tanh(5.0 * torch.linalg.norm(arm_qvel, dim=-1))
         cube_placed = torch.linalg.norm(cube[:, :2] - goal[:, :2], dim=-1) < _PK_GOAL_RADIUS
         reward = torch.where(cube_placed, reward + static, reward)

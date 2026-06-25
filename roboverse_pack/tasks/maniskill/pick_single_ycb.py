@@ -98,7 +98,7 @@ class PickSingleYcbDenseTask(DenseRLResetMixin, _PickSingleYcbBaseTask):
 
         tcp_to_obj = torch.linalg.norm(obj - tcp, dim=-1)
         reaching = 1.0 - torch.tanh(5.0 * tcp_to_obj)
-        gripper_w = rs.joint_pos[:, 7:9].sum(dim=-1)
+        gripper_w = rs.joint_pos[:, 0:2].sum(dim=-1)
         is_grasped = ((tcp_to_obj < 0.03) & (gripper_w < 0.07)).float()
         reward = reaching + is_grasped
 
@@ -109,7 +109,7 @@ class PickSingleYcbDenseTask(DenseRLResetMixin, _PickSingleYcbBaseTask):
         is_obj_placed = (obj_to_goal <= _YCB_GOAL_THRESH).float()
         reward = reward + is_obj_placed * is_grasped
 
-        arm_qvel = rs.joint_vel[:, :7]
+        arm_qvel = rs.joint_vel[:, 2:9]
         static = 1.0 - torch.tanh(5.0 * torch.linalg.norm(arm_qvel, dim=-1))
         reward = reward + static * is_obj_placed * is_grasped
 

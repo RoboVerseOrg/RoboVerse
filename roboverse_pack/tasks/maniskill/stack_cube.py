@@ -120,11 +120,11 @@ class StackCubeDenseTask(DenseRLResetMixin, StackCubeTask):
         a_to_goal = torch.linalg.norm(goal_xyz - cubeA, dim=-1)
         place = 1.0 - torch.tanh(5.0 * a_to_goal)
 
-        gripper_w = rs.joint_pos[:, 7:9].sum(dim=-1)
+        gripper_w = rs.joint_pos[:, 0:2].sum(dim=-1)
         is_grasped = (a_to_tcp < 0.03) & (gripper_w < 0.07)
         reward = torch.where(is_grasped, 4.0 + place, reward)
 
-        ungrasp = rs.joint_pos[:, 7:9].sum(dim=-1) / _SC_GRIPPER_WIDTH
+        ungrasp = rs.joint_pos[:, 0:2].sum(dim=-1) / _SC_GRIPPER_WIDTH
         ungrasp = torch.where(is_grasped, ungrasp, torch.ones_like(ungrasp))
         static = 1.0 - torch.tanh(torch.linalg.norm(cubeA_vel, dim=-1) * 10.0 + torch.linalg.norm(cubeA_ang, dim=-1))
 
