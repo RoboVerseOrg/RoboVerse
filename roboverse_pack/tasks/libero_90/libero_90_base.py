@@ -24,6 +24,11 @@ class Libero90BaseTask(BaseTaskEnv):
     checker = None
     traj_filepath = None
     decimation = 30
+    # Most libero_90 leaves intentionally skip the per-reset checker reset. Setting
+    # this True on a leaf reproduces the old ``reset`` override (which jumped to
+    # ``BaseTaskEnv.reset`` to bypass the checker reset) without overriding ``reset``
+    # — so the seed-aware base ``reset`` signature is inherited unchanged.
+    skip_checker_reset = False
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         check_and_download_single(self.traj_filepath)
@@ -35,9 +40,15 @@ class Libero90BaseTask(BaseTaskEnv):
         return self.checker.check(self.handler, states)
 
     def reset(self, states=None, env_ids=None, seed=None):
-        """Reset the checker. ``seed`` is forwarded to ``super().reset``."""
+        """Reset the env; reset the checker unless ``skip_checker_reset`` is set.
+
+        ``seed`` is forwarded to ``super().reset``. Leaves that set
+        ``skip_checker_reset = True`` get the old "skip checker reset" behaviour
+        without overriding ``reset`` (so the seed contract is preserved).
+        """
         states = super().reset(states, env_ids, seed)
-        self.checker.reset(self.handler, env_ids=env_ids)
+        if self.checker is not None and not self.skip_checker_reset:
+            self.checker.reset(self.handler, env_ids=env_ids)
         return states
 
     def _get_initial_states(self) -> list[dict] | None:

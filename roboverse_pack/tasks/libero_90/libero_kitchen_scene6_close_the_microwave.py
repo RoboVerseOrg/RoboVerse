@@ -62,7 +62,4 @@ class LiberoKitchenScene6CloseTheMicrowaveTask(Libero90BaseTask):
         closed = microjoint_pos > -0.01
         return closed
 
-    def reset(self, states=None, env_ids=None):
-        """Skip checker reset."""
-        states = super(Libero90BaseTask, self).reset(states, env_ids)
-        return states
+    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset

@@ -90,7 +90,4 @@ class LiberoLivingRoomScene1PickUpTomatoSauceAndPutItInTheBasketTask(Libero90Bas
         inside = (obj_local.abs() <= (half_size + 1e-6)).all(dim=-1)
         return inside
 
-    def reset(self, states=None, env_ids=None):
-        """Skip checker reset."""
-        states = super(Libero90BaseTask, self).reset(states, env_ids)
-        return states
+    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
