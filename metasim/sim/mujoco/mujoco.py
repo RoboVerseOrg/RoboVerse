@@ -177,6 +177,16 @@ class MujocoHandler(BaseSimHandler):
         return Ks, c2w
 
     def launch(self) -> None:
+        # dm_control's static ``sizes.array_sizes`` tables list MjModel/MjData
+        # fields (e.g. ``flex_bandwidth``) that newer MuJoCo builds renamed or
+        # removed. Without reconciling them, ``mjcf.Physics.from_mjcf_model``
+        # below dies with ``AttributeError: 'MjModel' object has no attribute
+        # 'flex_bandwidth'`` — i.e. every MuJoCo launch fails. The patch is a
+        # version-agnostic no-op when the fields already match (it only drops
+        # names the live struct lacks) and is idempotent, so call it here, at
+        # the single choke point before any dm_control physics is built.
+        apply_dm_control_struct_compat_patch()
+
         model = self._init_mujoco()
         self.physics = mjcf.Physics.from_mjcf_model(model)
         self.data = self.physics.data
