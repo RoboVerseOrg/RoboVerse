@@ -17,7 +17,7 @@ from metasim.utils import is_camel_case, is_snake_case, to_camel_case
 from metasim.utils.package_discovery import get_package_candidates
 
 
-def get_handler(scenario, device=None):
+def get_handler(scenario, optional_queries=None):
     """Get a launched simulator handler from scenario configuration.
 
     This function combines three steps into one:
@@ -27,7 +27,11 @@ def get_handler(scenario, device=None):
 
     Args:
         scenario: ScenarioCfg instance containing simulation configuration
-        device: current device
+        optional_queries: optional ``{name: BaseQueryType}`` dict bound to the
+            handler and exposed via ``handler.get_extra()``. (Each handler
+            derives its device internally; the previous ``device`` argument was
+            forwarded into this same constructor slot, so it was dead when None
+            and crashed ``launch()`` when a device string was passed.)
 
     Returns:
         Launched simulator handler ready for use
@@ -36,7 +40,7 @@ def get_handler(scenario, device=None):
     handler_class = get_sim_handler_class(SimType(scenario.simulator))
 
     # Step 2: Create handler instance
-    handler = handler_class(scenario, device)
+    handler = handler_class(scenario, optional_queries)
 
     # Step 3: Launch handler
     handler.launch()
