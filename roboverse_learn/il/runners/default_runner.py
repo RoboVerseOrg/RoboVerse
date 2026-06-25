@@ -320,7 +320,7 @@ class DefaultRunner(BaseRunner):
                             for batch_idx, batch in enumerate(tepoch):
                                 batch = dataset.postprocess(batch, device)
                                 loss = self.model.compute_loss(batch)
-                                val_losses.append(loss)
+                                val_losses.append(loss.item())
                                 if (
                                     cfg.train_config.training_params.max_val_steps
                                     is not None
@@ -329,7 +329,10 @@ class DefaultRunner(BaseRunner):
                                 ):
                                     break
                         if len(val_losses) > 0:
-                            val_loss = torch.mean(torch.tensor(val_losses)).item()
+                            # Mirror the train loop: accumulate python floats (loss.item())
+                            # and average with np.mean. torch.tensor(list_of_0d_tensors)
+                            # warns/copies and is fragile for CUDA/grad tensors.
+                            val_loss = np.mean(val_losses)
                             # log epoch average validation loss
                             step_log["val_loss"] = val_loss
 
