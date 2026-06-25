@@ -79,7 +79,7 @@ class AnymalCfg(RobotCfg):
 
     # Default base position
     default_position: list[float] = [0.0, 0.0, 0.62]
-    default_orientation: list[float] = [0.0, 0.0, 0.0, 1.0]  # quaternion
+    default_orientation: list[float] = [1.0, 0.0, 0.0, 0.0]  # quaternion (wxyz); identity
 
     # Observation configuration
     observe_base_position: bool = True
