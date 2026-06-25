@@ -71,7 +71,6 @@ KNOWN_STEP_OVERRIDES = frozenset({
     "beyondmimic/metasim/envs/base_legged_robot.py",
     "calvin/base_table.py",
     "humanoid/base/base_legged_robot.py",
-    "humanoid_bench/humanoid_env.py",
     "mjlab/cartpole_train.py",
     "mujoco_playground/handover.py",
     "mujoco_playground/open_cabinet.py",
