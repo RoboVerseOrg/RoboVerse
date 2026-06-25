@@ -27,7 +27,4 @@ class DrawTriangleTask(ManiskillBaseTask):
         return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
     # rewrite checker
-    def reset(self, states=None, env_ids=None):
-        """Skip checker reset."""
-        states = super(ManiskillBaseTask, self).reset(states, env_ids)
-        return states
+    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset

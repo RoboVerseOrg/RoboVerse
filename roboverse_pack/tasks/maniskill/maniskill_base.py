@@ -16,6 +16,10 @@ class ManiskillBaseTask(BaseTaskEnv):
     max_episode_steps = 250
     checker = None
     traj_filepath = None
+    # Some leaves (draw_svg/draw_triangle/lift_peg_upright) intentionally skip the
+    # per-reset checker reset. Set this True on a leaf instead of overriding reset,
+    # so the seed-aware base reset() is inherited unchanged.
+    skip_checker_reset = False
 
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         check_and_download_single(self.traj_filepath)
@@ -27,9 +31,13 @@ class ManiskillBaseTask(BaseTaskEnv):
         return self.checker.check(self.handler, states)
 
     def reset(self, states=None, env_ids=None, seed=None):
-        """Reset the checker. ``seed`` is forwarded to ``super().reset``."""
+        """Reset the env; reset the checker unless ``skip_checker_reset`` is set.
+
+        ``seed`` is forwarded to ``super().reset``.
+        """
         states = super().reset(states, env_ids, seed)
-        self.checker.reset(self.handler, env_ids=env_ids)
+        if self.checker is not None and not self.skip_checker_reset:
+            self.checker.reset(self.handler, env_ids=env_ids)
         return states
 
     def _get_initial_states(self) -> list[dict] | None:

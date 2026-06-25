@@ -120,9 +120,12 @@ class RollBallDenseTask(DenseRLResetMixin, RollBallCfg):
         if getattr(self, "_reached_status", None) is None or self._reached_status.shape[0] != n:
             self._reached_status = torch.zeros(n, device=device)
 
-    def reset(self, states=None, env_ids=None):
-        """Reset the env and clear cached reached status for the given env ids."""
-        out = super().reset(states, env_ids)
+    def reset(self, states=None, env_ids=None, seed=None):
+        """Reset the env and clear cached reached status for the given env ids.
+
+        ``seed`` is forwarded to ``super().reset``.
+        """
+        out = super().reset(states, env_ids, seed)
         if getattr(self, "_reached_status", None) is not None:
             if env_ids is None:
                 self._reached_status.zero_()
