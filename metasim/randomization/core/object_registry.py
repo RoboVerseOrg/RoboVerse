@@ -102,11 +102,8 @@ class ObjectRegistry:
         Args:
             metadata: Object metadata to register
         """
-        if metadata.name in self._registry:
-            # Update existing entry (for dynamic objects that may be recreated)
-            self._registry[metadata.name] = metadata
-        else:
-            self._registry[metadata.name] = metadata
+        # Insert or overwrite (dynamic objects may be recreated under the same name).
+        self._registry[metadata.name] = metadata
 
     def unregister(self, name: str):
         """Unregister an object from the registry.

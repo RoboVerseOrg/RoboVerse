@@ -37,7 +37,7 @@ class SimParamCfg:
     solver_type: int = 1
     substeps: int = 1  # for IsaacGym
     max_depenetration_velocity: float = 1.0
-    default_buffer_size_multiplier: int = 2.0
+    default_buffer_size_multiplier: int = 2
 
     ## SAPIEN-specific PhysX scene parameters.
     # All default to None = "leave the SAPIEN SceneConfig default untouched", so
