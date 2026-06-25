@@ -168,6 +168,10 @@ class RLTaskEnv(BaseTaskEnv):
         """One step with joint-space actions (auto-clamped)."""
         self._episode_steps += 1
 
+        # Sanctioned action-transform hook (default identity). Lets tasks apply
+        # delta control / unnormalisation here instead of overriding step().
+        actions = self._process_action(actions)
+
         if isinstance(actions, (torch.Tensor, np.ndarray)):
             if not isinstance(actions, torch.Tensor):
                 actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device)

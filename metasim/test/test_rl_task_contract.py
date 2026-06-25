@@ -99,6 +99,7 @@ def test_rl_task_env_exposes_robots_list_set_by_base(_stub_scenario, monkeypatch
     def _instantiate(self):
         self.handler = handler
         handler.launch()
+
     monkeypatch.setattr(RLTaskEnv, "_instantiate_env", _instantiate, raising=False)
 
     # If C1 regresses, this raises AttributeError on the
@@ -143,7 +144,9 @@ def test_rl_task_reward_terms_initialised_and_default_to_zeros():
     assigned: set[str] = set()
     for node in ast.walk(ast.parse(src)):
         # Plain ``self.x = ...`` (ast.Assign) and annotated ``self.x: T = ...`` (ast.AnnAssign).
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
+        targets = (
+            node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
+        )
         for tgt in targets:
             if isinstance(tgt, ast.Attribute) and isinstance(tgt.value, ast.Name) and tgt.value.id == "self":
                 assigned.add(tgt.attr)
@@ -170,3 +173,54 @@ def test_rl_task_env_robots_tolerates_empty_scenario(_stub_scenario):
     robot = robots[0] if robots else None
     assert robots == []
     assert robot is None
+
+
+@pytest.mark.general
+def test_process_action_default_is_identity():
+    """The sanctioned action hook defaults to identity on both bases, so adding
+    it is a no-op for every task that does not override it."""
+    from metasim.task.base import BaseTaskEnv
+
+    sentinel = object()
+    assert BaseTaskEnv.__new__(BaseTaskEnv)._process_action(sentinel) is sentinel
+    assert RLTaskEnv.__new__(RLTaskEnv)._process_action(sentinel) is sentinel
+
+
+@pytest.mark.general
+def test_rl_task_step_applies_process_action_hook():
+    """RLTaskEnv.step must run actions through ``_process_action`` before applying
+    them, so tasks can transform actions there instead of overriding ``step``."""
+    captured = {}
+
+    class _H:
+        num_envs = 1
+
+        def set_dof_targets(self, a):
+            captured["applied"] = a.clone()
+
+        def simulate(self):
+            return None
+
+        def get_states(self, mode="tensor"):
+            return None
+
+    env = RLTaskEnv.__new__(RLTaskEnv)
+    env.device = torch.device("cpu")
+    env.num_envs = 1
+    env.handler = _H()
+    env._episode_steps = torch.zeros(1, dtype=torch.int32)
+    env._action_low = torch.tensor([-10.0])
+    env._action_high = torch.tensor([10.0])
+    env._raw_observation_cache = torch.zeros(1, 1)
+    env._observation = lambda states: torch.zeros(1, 1)
+    env._privileged_observation = lambda states: torch.zeros(1, 1)
+    env._reward = lambda states: torch.zeros(1)
+    env._terminated = lambda states: torch.zeros(1, dtype=torch.bool)
+    env._time_out = lambda states: torch.zeros(1, dtype=torch.bool)
+    # Override the hook to add 1.0; the result (after clamping) must reach set_dof_targets.
+    env._process_action = lambda actions: actions + 1.0
+
+    RLTaskEnv.step(env, torch.tensor([2.0]))
+    assert torch.allclose(captured["applied"], torch.tensor([[3.0]])), (
+        f"_process_action not applied before set_dof_targets: got {captured.get('applied')}"
+    )

@@ -117,6 +117,16 @@ class BaseTaskEnv:
         """Get the action space of the environment."""
         return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(0,))
 
+    def _process_action(self, actions: CompatActionInput) -> CompatActionInput:
+        """Transform actions before they are applied to the handler (default: identity).
+
+        This is the sanctioned hook for action transforms (delta control,
+        unnormalisation, end-effector mapping, …). Override it instead of
+        overriding ``step`` — ``step`` calls it first, so the rest of the step
+        pipeline (callbacks, clamping, simulate) stays shared and uniform.
+        """
+        return actions
+
     def _extra_spec(self) -> dict[str, BaseQueryType]:
         """Get the extra spec of the environment."""
         return {}
@@ -156,6 +166,7 @@ class BaseTaskEnv:
         # }
 
         # return obs, reward, terminated, time_out, info
+        actions = self._process_action(actions)
         for callback in self.pre_physics_step_callback:
             callback(actions)
 
