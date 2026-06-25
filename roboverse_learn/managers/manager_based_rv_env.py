@@ -336,8 +336,18 @@ class ManagerBasedRVEnv(RLTaskEnv):
     # env api
     # ------------------------------------------------------------------
 
-    def reset(self, env_ids: Sequence[int] | None = None):
-        """Reset selected envs (or all)."""
+    def reset(self, env_ids: Sequence[int] | None = None, seed: int | None = None):
+        """Reset selected envs (or all).
+
+        ``seed`` is forwarded to the handler when supported, honoring the
+        ``env.reset(seed=)`` contract (this base reimplements ``reset`` and does
+        not call ``super().reset``). Without this, ``gym.make(...).reset(seed=)``
+        raised ``TypeError`` for every manager-based (mjlab v2) task.
+        """
+        if seed is not None:
+            set_seed = getattr(self.handler, "set_seed", None)
+            if callable(set_seed):
+                set_seed(seed)
         if env_ids is None:
             env_ids = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         elif not isinstance(env_ids, torch.Tensor):
