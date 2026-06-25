@@ -414,3 +414,39 @@ def _get_pbr_properties(randomizer: MaterialRandomizer) -> dict[str, Any]:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-k isaacsim"])
+
+
+@pytest.mark.general
+def test_material_physical_tensor_is_seed_reproducible():
+    """Regression: tensor-valued physical-material randomization honours the seed.
+
+    ``_torch_generator`` used to stay ``None`` (its init was a no-op default and
+    ``set_seed`` never touched it), so ``_generate_random_tensor`` built a fresh
+    *unseeded* ``torch.Generator()`` every call — identical seeds produced
+    different friction/restitution tensors. This needs no simulator handler.
+    """
+    from metasim.randomization.material_randomizer import PhysicalMaterialCfg
+
+    def make(seed):
+        return MaterialRandomizer(
+            MaterialRandomCfg(obj_name="cube", physical=PhysicalMaterialCfg(friction_range=(0.0, 1.0), enabled=True)),
+            seed=seed,
+        )
+
+    import torch
+
+    a = make(123)
+    b = make(123)
+    ta = a._generate_random_tensor(8, (0.0, 1.0), "uniform")
+    tb = b._generate_random_tensor(8, (0.0, 1.0), "uniform")
+    assert torch.equal(ta, tb)  # same seed -> identical
+    assert a._torch_generator is not None
+
+    c = make(999)
+    tc = c._generate_random_tensor(8, (0.0, 1.0), "uniform")
+    assert not torch.equal(ta, tc)  # different seed -> different
+
+    # set_seed must re-sync the generator so a later reseed is also reproducible.
+    a.set_seed(123)
+    ta2 = a._generate_random_tensor(8, (0.0, 1.0), "uniform")
+    assert torch.equal(ta, ta2)

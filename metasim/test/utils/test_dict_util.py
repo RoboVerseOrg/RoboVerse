@@ -173,3 +173,24 @@ def test_update_class_from_dict_with_none():
     update_class_from_dict(obj, data)
 
     assert obj.a is None
+
+
+@pytest.mark.general
+def test_update_class_from_dict_none_attr_set_to_list():
+    """Regression: updating a ``None``-defaulted attribute with a list.
+
+    Many core configs default list/tuple-typed fields to ``None``
+    (e.g. ``RobotCfg.joint_limits``, ``BaseCameraCfg.intrinsic``). The
+    length-check used to evaluate ``len(obj_mem)`` before the
+    ``obj_mem is not None`` guard, and the element-recursion loop did
+    ``range(len(obj_mem))`` unconditionally — both raised
+    ``TypeError: object of type 'NoneType' has no len()`` instead of
+    just assigning the value.
+    """
+    obj = SimpleClass()
+    obj.a = None  # field currently unset
+    data = {"a": [1, 2, 3]}
+
+    update_class_from_dict(obj, data)
+
+    assert obj.a == [1, 2, 3]

@@ -106,6 +106,32 @@ def test_defer_flag_is_present_on_every_handler():
 
 
 @pytest.mark.general
+def test_defer_flag_initialised_by_real_init():
+    """``__init__`` itself must set the flag — regression for the dead-code bug.
+
+    The init line previously lived *after* ``return`` inside the
+    ``actions_cache`` property, so it never ran and ``BaseSimHandler.__init__``
+    left the attribute undefined. ``_make_handler`` above masks that because it
+    sets the attribute by hand via ``__new__``; this test goes through the real
+    ``__init__`` with a minimal fake scenario so the dead code cannot hide.
+    """
+    from types import SimpleNamespace
+
+    scenario = SimpleNamespace(
+        robots=[],
+        cameras=[],
+        objects=[],
+        lights=[],
+        num_envs=1,
+        decimation=1,
+        headless=True,
+        check_assets=lambda: None,
+    )
+    h = _ConcreteHandler(scenario)
+    assert h._defer_all_visual_flushes is False
+
+
+@pytest.mark.general
 def test_defer_flag_round_trips():
     """DR manager toggles the flag around batch randomization; verify the
     write+read+reset path holds."""

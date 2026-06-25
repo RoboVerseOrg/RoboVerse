@@ -80,6 +80,11 @@ class BaseSimHandler(ABC):
         self._tensor_state_cache: TensorState | None = None
         self._dict_state_cache: DictStateBatch | None = None
         self._actions_cache: CompatActionInput | None = None
+        # When True, ``flush_visual_updates`` is deferred — the domain
+        # randomization pipeline sets this to batch many visual edits and
+        # flush once. Declared on the base so randomizers can set it
+        # uniformly regardless of backend.
+        self._defer_all_visual_flushes: bool = False
 
     @property
     def actions_cache(self) -> CompatActionInput | None:
@@ -94,12 +99,6 @@ class BaseSimHandler(ABC):
         cache on the base ensures every handler honours the contract.
         """
         return getattr(self, "_actions_cache", None)
-
-        # When True, ``flush_visual_updates`` is deferred — the domain
-        # randomization pipeline sets this to batch many visual edits and
-        # flush once. Declared on the base so randomizers can set it
-        # uniformly regardless of backend.
-        self._defer_all_visual_flushes: bool = False
 
     def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
         """Settle pending visual edits (no-op by default).

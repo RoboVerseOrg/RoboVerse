@@ -194,6 +194,13 @@ class ObjectRandomizer(BaseRandomizerType):
             else:
                 self._randomize_pose_dynamic(obj_meta, env_ids)
 
+        # Pose randomization writes directly to the simulator
+        # (write_root_state_to_sim), bypassing the handler's set_states path, so
+        # the handler's cached state would otherwise stay pre-randomization. Drop
+        # the cache so the next get_states() refetches the randomized root pose
+        # (see BaseSimHandler.invalidate_state_caches).
+        self._actual_handler.invalidate_state_caches()
+
     # -------------------------------------------------------------------------
     # Physics Randomization (Static Objects only, via Handler API)
     # -------------------------------------------------------------------------

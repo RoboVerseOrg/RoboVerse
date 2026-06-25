@@ -230,8 +230,20 @@ class MaterialRandomizer(BaseRandomizerType):
         # Sequential selection state
         self._sequential_index: int = 0
 
-        # Torch generator for tensor operations
-        self._torch_generator: torch.Generator | None = None
+        # Torch generator for tensor operations, kept in sync with the seed by
+        # ``set_seed``. ``super().__init__`` already called ``set_seed`` when a
+        # seed was provided, so initialise from the resolved seed here; without
+        # this the generator stayed ``None`` and ``_generate_random_tensor``
+        # built a fresh *unseeded* generator on every call, making tensor-valued
+        # material randomization ignore the seed (non-reproducible).
+        self._torch_generator: torch.Generator | None = (
+            torch.Generator().manual_seed(self._seed) if self._seed is not None else None
+        )
+
+    def set_seed(self, seed: int | None) -> None:
+        """Seed the base RNG and the torch generator together (reproducibility)."""
+        super().set_seed(seed)
+        self._torch_generator = torch.Generator().manual_seed(self._seed)
 
     def __call__(self):
         """Execute material randomization.

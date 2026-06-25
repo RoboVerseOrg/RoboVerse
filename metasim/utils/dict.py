@@ -100,14 +100,14 @@ def update_class_from_dict(obj, data: dict[str, Any], _ns: str = "") -> None:
                 continue
             if isinstance(value, Iterable) and not isinstance(value, str):
                 # check length of value to be safe
-                if len(obj_mem) != len(value) and obj_mem is not None:
+                if obj_mem is not None and len(obj_mem) != len(value):
                     raise ValueError(
                         f"[Config]: Incorrect length under namespace: {key_ns}."
                         f" Expected: {len(obj_mem)}, Received: {len(value)}."
                     )
                 if isinstance(obj_mem, tuple):
                     value = tuple(value)
-                else:
+                elif obj_mem is not None:
                     set_obj = True
                     # recursively call if iterable contains dictionaries
                     for i in range(len(obj_mem)):
