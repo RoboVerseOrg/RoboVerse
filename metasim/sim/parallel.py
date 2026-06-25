@@ -123,7 +123,16 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             for rank in range(self.num_envs):
                 work_remote = self.work_remotes[rank]
                 remote = self.remotes[rank]
-                args = (rank, work_remote, remote, self.error_queue, partial(base_cls, sub_scenario))
+                # Pass ``extra_spec`` into the worker handler so its
+                # ``optional_queries`` are populated. Without it the worker was
+                # built as ``base_cls(sub_scenario)`` with no queries, so every
+                # worker's ``get_extra()`` returned ``{}`` and ``state.extras``
+                # was always empty in parallel (num_envs>1) mode — i.e. site /
+                # contact / custom queries were silently dead in exactly the
+                # config used for eval. The query objects are unbound
+                # (``handler is None``) until each worker's ``launch()`` binds
+                # them, so they pickle cleanly into the worker here.
+                args = (rank, work_remote, remote, self.error_queue, partial(base_cls, sub_scenario, extra_spec))
                 # daemon=True: if the main process crashes, we should not cause things to hang
                 process = ctx.Process(target=_worker, args=args, daemon=True)  # pytype:disable=attribute-error
                 process.start()
