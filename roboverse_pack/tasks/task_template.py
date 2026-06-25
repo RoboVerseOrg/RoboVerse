@@ -120,9 +120,13 @@ class MinimalTask(BaseTaskEnv):
         """Transform actions before they are applied (the sanctioned action hook).
 
         Prefer this over overriding ``step``: ``step`` calls ``_process_action``
-        first, then runs the shared clamp / apply / simulate pipeline. Examples:
+        first, then runs the rest of the shared pipeline (for ``RLTaskEnv`` that
+        includes auto-clamping to joint limits). Example patterns to adapt:
         - unnormalisation:  ``return self.unnormalise_action(actions)``
+          (``unnormalise_action`` is provided by ``RLTaskEnv``; subclass that if
+          you need it — ``BaseTaskEnv`` does not define it)
         - delta control:    ``return self._last_action + actions * self._action_scale``
+          (define ``self._last_action`` / ``self._action_scale`` on your task)
         - end-effector / custom control mapping.
 
         Default is identity (no transform).
