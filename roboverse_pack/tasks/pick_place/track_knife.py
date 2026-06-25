@@ -172,9 +172,9 @@ class PickPlaceTrackKnife(PickPlaceBase):
                 scale=(1, 1, 1),
                 enabled_gravity=False,
                 physics=PhysicStateType.RIGIDBODY,
-                usd_path="roboverse_data/EmbodiedGenData/all_asset/ceramic_teapot/usd/ceramic_teapot.usd",
-                urdf_path="roboverse_data/EmbodiedGenData/all_asset/ceramic_teapot/ceramic_teapot.urdf",
-                mjcf_path="roboverse_data/EmbodiedGenData/all_asset/ceramic_teapot/mjcf/ceramic_teapot.xml",
+                usd_path="roboverse_data/EmbodiedGenData/all_asset/knife/usd/knife.usd",
+                urdf_path="roboverse_data/EmbodiedGenData/all_asset/knife/knife.urdf",
+                mjcf_path="roboverse_data/EmbodiedGenData/all_asset/knife/knife.xml",
             ),
             RigidObjCfg(
                 name="plate",
