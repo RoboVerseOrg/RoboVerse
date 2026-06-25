@@ -21,7 +21,7 @@ class PutBananaTask(EmbodiedGenBaseTask):
     The scene contains multiple objects on the table to make it more realistic and challenging.
     """
 
-    max_episode_steps = 250000
+    max_episode_steps = 250
 
     scenario = ScenarioCfg(
         objects=[
