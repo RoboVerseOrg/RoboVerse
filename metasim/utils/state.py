@@ -334,7 +334,7 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
     return env_states
 
 
-def _alloc_state_tensors(n_env: int, n_body: int | None = None, n_jnt: int | None = None, device="gpu"):
+def _alloc_state_tensors(n_env: int, n_body: int | None = None, n_jnt: int | None = None, device="cpu"):
     root = torch.zeros((n_env, 13), device=device)
 
     n_body = n_body or 0
@@ -402,7 +402,7 @@ def list_state_to_tensor(
                     if jn in s["dof_vel"]:
                         jvel[e, i] = s["dof_vel"][jn]
 
-        objects[name] = ObjectState(root_state=root, body_state=body, joint_pos=jpos, joint_vel=jvel)
+        objects[name] = ObjectState(root_state=root, body_names=bnames, body_state=body, joint_pos=jpos, joint_vel=jvel)
 
     # -------- robots ---------------------------------------------------
     for name in robot_names:
