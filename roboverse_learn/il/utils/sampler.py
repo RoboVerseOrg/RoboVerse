@@ -25,7 +25,7 @@ def create_indices(
     pad_after: int = 0,
     debug: bool = True,
 ) -> np.ndarray:
-    episode_mask.shape == episode_ends.shape
+    assert episode_mask.shape == episode_ends.shape
     pad_before = min(max(pad_before, 0), sequence_length - 1)
     pad_after = min(max(pad_after, 0), sequence_length - 1)
 
@@ -68,8 +68,7 @@ def get_val_mask(n_episodes, val_ratio, seed=0):
     # have at least 1 episode for validation, and at least 1 episode for train
     n_val = min(max(1, round(n_episodes * val_ratio)), n_episodes - 1)
     rng = np.random.default_rng(seed=seed)
-    # val_idxs = rng.choice(n_episodes, size=n_val, replace=False)
-    val_idxs = -1
+    val_idxs = rng.choice(n_episodes, size=n_val, replace=False)
     val_mask[val_idxs] = True
     return val_mask
 
