@@ -109,10 +109,14 @@ class BaseLocomotionEnv(RLTaskEnv):
         )
         super().__init__(scenario, device)
 
-    def step(self, actions):
-        """Step with unnomormalization."""
-        actions = self.unnormalise_action(actions)
-        return super().step(actions)
+    def _process_action(self, actions):
+        """Unnormalise actions from [-1, 1] to joint limits (sanctioned action hook).
+
+        Replaces the old ``step`` override: ``RLTaskEnv.step`` calls
+        ``_process_action`` before clamping/applying, so behaviour is identical
+        (unnormalise, then the shared clamp + simulate) without overriding step.
+        """
+        return self.unnormalise_action(actions)
 
     def _observation(self, states: TensorState) -> torch.Tensor:
         results_state = []
