@@ -88,7 +88,9 @@ class LiberoKitchenScene3TurnOnStoveTask(Libero90BaseTask):
         knob_index = 0  # 示例：第一个关节为旋钮
         threshold = 0.5  # 示例：大于 0.5 视为打开
         stove_joint_state = states.objects["flat_stove"].joint_pos[:, 0]  # (N,)
-        is_on = (stove_joint_state > threshold).all(dim=-1)  # (N,)
+        # joint_pos[:, 0] is already (N,); .all(dim=-1) collapsed it to a scalar
+        # (reducing over the batch). Compare element-wise to keep per-env shape.
+        is_on = stove_joint_state > threshold  # (N,)
         return is_on
 
     def reset(self, states=None, env_ids=None):
