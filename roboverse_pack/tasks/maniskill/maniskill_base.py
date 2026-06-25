@@ -26,9 +26,9 @@ class ManiskillBaseTask(BaseTaskEnv):
         """Task success when the cube has been lifted sufficiently along z from its reset height."""
         return self.checker.check(self.handler, states)
 
-    def reset(self, states=None, env_ids=None):
-        """Reset the checker."""
-        states = super().reset(states, env_ids)
+    def reset(self, states=None, env_ids=None, seed=None):
+        """Reset the checker. ``seed`` is forwarded to ``super().reset``."""
+        states = super().reset(states, env_ids, seed)
         self.checker.reset(self.handler, env_ids=env_ids)
         return states
 

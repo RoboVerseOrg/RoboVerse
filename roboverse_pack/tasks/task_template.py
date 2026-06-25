@@ -130,12 +130,14 @@ class MinimalTask(BaseTaskEnv):
 
         return super().step(actions)
 
-    def reset(self, states=None, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
         """Reset environment.
 
-        Use this to reset custom member variables.
+        Use this to reset custom member variables. Always keep ``seed`` in the
+        signature and forward it to ``super().reset`` so the
+        ``env.reset(seed=)`` reproducibility contract reaches the handler.
         """
-        states = super().reset(states, env_ids)
+        states = super().reset(states, env_ids, seed)
 
         # Reset custom variables， e.g.
         # if env_ids is None:
