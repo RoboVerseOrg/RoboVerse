@@ -205,3 +205,20 @@ def test_known_gap_dicts_match_actual_failures():
             f"_KNOWN_DEFAULT_POS_OUT_OF_RANGE_GAPS[{name!r}] lists this as a gap ({reason!r}) but "
             f"all defaults are now inside limits — remove the entry."
         )
+
+
+@pytest.mark.general
+def test_anymal_default_orientation_is_wxyz_identity():
+    """Regression: ANYmal's default_orientation must be wxyz identity [1,0,0,0].
+
+    Handlers consume default_orientation as wxyz (mujoco.py reads qw,qx,qy,qz;
+    isaacgym reorders wxyz->xyzw). The value was [0,0,0,1] (the xyzw identity),
+    which under wxyz is a 180 degree yaw — ANYmal would spawn facing backwards.
+    """
+    from roboverse_pack.robots.anymal_cfg import AnymalCfg
+
+    cfg = AnymalCfg()
+    assert cfg.default_orientation == [1.0, 0.0, 0.0, 0.0], (
+        f"expected wxyz identity [1,0,0,0], got {cfg.default_orientation} "
+        f"(w must be the largest component for an identity quaternion)"
+    )
