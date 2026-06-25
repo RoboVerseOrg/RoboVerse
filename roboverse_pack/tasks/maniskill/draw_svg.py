@@ -24,7 +24,7 @@ class DrawSvgTask(ManiskillBaseTask):
     # rewrite terminate
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """No terminate condition yet. Will terminate when time is up."""
-        return torch.tensor([False])
+        return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
     # rewrite checker
     def reset(self, states=None, env_ids=None):
