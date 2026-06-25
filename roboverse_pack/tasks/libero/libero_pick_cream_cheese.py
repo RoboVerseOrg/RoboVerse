@@ -67,7 +67,8 @@ class LiberoPickCreamCheeseTask(LiberoBaseTask):
                 urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/orange_juice/urdf/orange_juice.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/orange_juice/mjcf/orange_juice.xml",
             ),
-        ]
+        ],
+        robots=["franka"],
     )
 
     # task horizon
