@@ -126,7 +126,7 @@ class SitEnv(BaseLocomotionEnv):
         self.reward_functions = [SitReward(self.robot_name)]
         self.reward_weights = [1.0]
 
-    def extra_spec(self):
+    def _extra_spec(self):
         """Declare extra observations needed by SitReward."""
         return {
             "imu_pos": SitePos("imu"),

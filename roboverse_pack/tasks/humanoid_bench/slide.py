@@ -102,7 +102,7 @@ class SlideEnv(BaseLocomotionEnv):
         self.reward_functions = [SlideReward(self.robot_name)]
         self.reward_weights = [1.0]
 
-    def extra_spec(self):
+    def _extra_spec(self):
         """Declare extra observations needed by SlideReward."""
         return {
             "head_pos": SitePos("head"),
