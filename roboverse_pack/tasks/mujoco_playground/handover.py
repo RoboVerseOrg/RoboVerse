@@ -71,6 +71,12 @@ class HandOver(RLTaskEnv):
     )
     max_episode_steps = 250  # 5 seconds
 
+    # Gripper-finger columns in the sorted-joint-name order of joint_pos, resolved
+    # lazily in _observation. Declared at class level (not in __init__) because
+    # RLTaskEnv.__init__ probes _observation before __init__ finishes setting
+    # instance attributes, so this must already exist on first observation.
+    _finger_joint_idx: list[int] | None = None
+
     def __init__(self, scenario, device=None):
         self.robot_name = self.scenario.robots[0].name
         self._last_action = None
@@ -308,8 +314,15 @@ class HandOver(RLTaskEnv):
         if right_gripper_mat.dim() == 3:
             right_gripper_mat = right_gripper_mat.view(self.num_envs, -1)
 
-        # Finger joint positions (assuming finger joints are the last 4)
-        finger_joints = robot_joint_pos[:, -4:]  # [num_envs, 4]
+        # Finger joint positions. joint_pos is ordered by *sorted joint name*,
+        # which interleaves the two arms — ALOHA's four gripper fingers land at
+        # non-contiguous columns (left at 2-3, right at 10-11), NOT the last 4
+        # (which are right-arm shoulder/waist/wrist). Resolve them by name from
+        # the handler's sorted joint order so the obs matches joint_pos. Cached.
+        if self._finger_joint_idx is None:
+            joint_names = self.handler.get_joint_names(self.robot_name, sort=True)
+            self._finger_joint_idx = [i for i, n in enumerate(joint_names) if n.endswith("finger")]
+        finger_joints = robot_joint_pos[:, self._finger_joint_idx]  # [num_envs, 4]
         box_width = 0.04  # Box width for finger positioning
         finger_box_diff = finger_joints - box_width
 
