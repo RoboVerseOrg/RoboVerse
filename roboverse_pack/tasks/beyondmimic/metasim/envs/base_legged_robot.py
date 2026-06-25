@@ -130,8 +130,7 @@ class LeggedRobotTask(RLTaskEnv):
 
         # per-actuator action scale
         self.action_scale = (
-            torch
-            .tensor(list(self.robot.action_scale.values()), device=self.device)
+            torch.tensor(list(self.robot.action_scale.values()), device=self.device)
             .unsqueeze(0)
             .repeat(self.num_envs, 1)
         )
