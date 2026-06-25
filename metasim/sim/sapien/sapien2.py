@@ -531,9 +531,16 @@ class Sapien2Handler(BaseSimHandler):
             root_state = torch.cat([pos, rot, vel, ang_vel], dim=-1).unsqueeze(0)
             joint_reindex = self.get_joint_reindex(robot.name)
             link_names, link_state = self._get_link_states(robot.name)
-            pos_target = torch.tensor(self._previous_dof_pos_target[robot.name]).unsqueeze(0)
-            vel_target = torch.tensor(self._previous_dof_vel_target[robot.name]).unsqueeze(0)
-            effort_target = torch.tensor(self._previous_dof_torque_target[robot.name]).unsqueeze(0)
+            # ``_previous_dof_*_target`` are cached in native (object_joint_order)
+            # order because ``_apply_action`` drives the articulation in that
+            # order. ``joint_pos``/``joint_vel`` above are alphabetically sorted
+            # (``get_qpos()[joint_reindex]``), so the targets must be reindexed to
+            # match — otherwise target[i] and joint_pos[i] refer to different
+            # joints whenever the URDF order is not already alphabetical
+            # (parity with sapien3, which caches targets already sorted).
+            pos_target = torch.tensor(self._previous_dof_pos_target[robot.name][joint_reindex]).unsqueeze(0)
+            vel_target = torch.tensor(self._previous_dof_vel_target[robot.name][joint_reindex]).unsqueeze(0)
+            effort_target = torch.tensor(self._previous_dof_torque_target[robot.name][joint_reindex]).unsqueeze(0)
             state = RobotState(
                 root_state=root_state,
                 body_names=link_names,

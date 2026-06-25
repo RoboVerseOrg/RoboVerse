@@ -429,7 +429,13 @@ class GenesisHandler(BaseSimHandler):
         cache = self._actions_cache
         if not cache or isinstance(cache, (torch.Tensor, np.ndarray)):
             return None
-        joint_names = self._get_joint_names(robot_name, sort=False)
+        # Build in alphabetically-sorted joint order so the reported
+        # ``joint_pos_target`` aligns with ``joint_pos`` (which is
+        # ``get_dofs_position()[:, joint_reindex]``). Values are name-keyed, so
+        # iterating sorted names is sufficient; using sort=False produced a
+        # target vector misaligned with joint_pos whenever the sim joint order
+        # was not already alphabetical.
+        joint_names = self._get_joint_names(robot_name, sort=True)
         if not joint_names:
             return None
         targets_per_env: list[list[float]] = []
@@ -573,7 +579,9 @@ class GenesisHandler(BaseSimHandler):
         if not self._actions_cache or not self.robot:
             return None
 
-        joint_names = self._get_joint_names(self.robot.name, sort=False)
+        # Sorted order so joint_effort_target aligns with joint_pos/joint_vel
+        # (see _joint_pos_target_from_cache). Values are name-keyed.
+        joint_names = self._get_joint_names(self.robot.name, sort=True)
         effort_targets = []
         for action in self._actions_cache:
             if "dof_effort_target" in action[self.robot.name] and action[self.robot.name]["dof_effort_target"]:
