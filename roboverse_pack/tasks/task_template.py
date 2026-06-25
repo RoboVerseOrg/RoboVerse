@@ -114,21 +114,20 @@ class MinimalTask(BaseTaskEnv):
         return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
     # ========================================
-    # 4. (Optional) Override step and reset
+    # 4. (Optional) Transform actions, and reset custom state
     # ========================================
-    def step(self, actions: torch.Tensor):
-        """Execute one simulation step.
+    def _process_action(self, actions: torch.Tensor):
+        """Transform actions before they are applied (the sanctioned action hook).
 
-        Optional customizations:
-        - Action normalization/unnormalization
-        - End-effector control mapping
-        - Custom control logic
-        - Other logic
+        Prefer this over overriding ``step``: ``step`` calls ``_process_action``
+        first, then runs the shared clamp / apply / simulate pipeline. Examples:
+        - unnormalisation:  ``return self.unnormalise_action(actions)``
+        - delta control:    ``return self._last_action + actions * self._action_scale``
+        - end-effector / custom control mapping.
+
+        Default is identity (no transform).
         """
-        # Example: unnormalize actions from [-1,1] to joint limits
-        # actions = (actions + 1.0) / 2.0 * (action_high - action_low) + action_low
-
-        return super().step(actions)
+        return actions
 
     def reset(self, states=None, env_ids=None, seed=None):
         """Reset environment.

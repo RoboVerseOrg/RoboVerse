@@ -87,7 +87,6 @@ KNOWN_STEP_OVERRIDES = frozenset({
     "simpler_env/_metasim/base.py",
     "simpler_env/_metasim/coke_task.py",
     "simpler_env/_metasim/place_task.py",
-    "task_template.py",
 })
 KNOWN_CLOSE_OVERRIDES = frozenset({
     "robosuite/robosuite_env.py",
