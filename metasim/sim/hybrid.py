@@ -98,7 +98,12 @@ class HybridSimHandler(BaseSimHandler):
 
     def _set_states(self, states: TensorState, env_ids: list[int] | None = None) -> None:
         """Set states in both physics and render handlers."""
-        self.physics_handler._set_states(states, env_ids)
+        # Normalise per wrapped handler: the base ``set_states`` only normalised
+        # against the Hybrid handler's own (``"both"``) input type, so a wrapped
+        # ``"dict"`` backend (genesis/sapien3/pybullet) would otherwise receive an
+        # un-normalised ``TensorState`` it can't index. ``_normalise_set_states_input``
+        # is a no-op for ``"both"`` handlers.
+        self.physics_handler._set_states(self.physics_handler._normalise_set_states_input(states), env_ids)
         # Pull the physics-resolved tensor state (with body_state filled in by
         # whatever FK the physics handler runs) and forward that to the render
         # handler. Necessary for articulations: render handlers typically have
@@ -125,7 +130,7 @@ class HybridSimHandler(BaseSimHandler):
                 states_nested = state_tensor_to_nested(self.physics_handler, physics_states)
                 self.render_handler._set_states(states_nested, env_ids)
         else:
-            self.render_handler._set_states(states, env_ids)
+            self.render_handler._set_states(self.render_handler._normalise_set_states_input(states), env_ids)
 
     def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
         """Get states from physics handler and camera data from render handler."""
