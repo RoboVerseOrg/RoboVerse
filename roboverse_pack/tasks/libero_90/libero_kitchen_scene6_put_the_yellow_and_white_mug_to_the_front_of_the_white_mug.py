@@ -74,7 +74,4 @@ class LiberoKitchenScene6PutYellowWhiteMugFrontWhiteMugTask(Libero90BaseTask):
         success = x_in_range & y_in_range
         return success
 
-    def reset(self, states=None, env_ids=None):
-        """Skip checker reset."""
-        states = super(Libero90BaseTask, self).reset(states, env_ids)
-        return states
+    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset

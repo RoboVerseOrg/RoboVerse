@@ -90,7 +90,4 @@ class LiberoKitchenScene4CloseTheBottomDrawerOfTheCabinetTask(Libero90BaseTask):
         bottom_closed = cabinet_joint_pos[:, 0] > bottom_threshold  # (N,)
         return bottom_closed
 
-    def reset(self, states=None, env_ids=None):
-        """Skip checker reset."""
-        states = super(Libero90BaseTask, self).reset(states, env_ids)
-        return states
+    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
