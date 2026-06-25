@@ -89,8 +89,15 @@ def _extract_obj_dependencies(obj_file_path):
 
                     if os.path.exists(mtl_path):
                         dependencies.extend(_extract_mtl_textures(mtl_path))
-    except Exception:
-        pass
+    except OSError as err:
+        # Best-effort discovery: an I/O failure yields a PARTIAL dependency
+        # list, which later surfaces as a confusing missing-asset/black-material
+        # error at load time. Surface it here instead of silently swallowing.
+        # The file is opened with errors="replace" so decode errors never reach
+        # here; a genuinely unexpected exception should propagate as a real bug.
+        from loguru import logger as _log
+
+        _log.warning(f"Failed to read OBJ '{obj_file_path}' for dependencies: {err}")
 
     return dependencies
 
@@ -118,8 +125,12 @@ def _extract_mtl_textures(mtl_file_path):
                         texture_filename = parts[1].strip()
                         texture_path = os.path.normpath(os.path.join(mtl_dir, texture_filename))
                         textures.append(texture_path)
-    except Exception:
-        pass
+    except OSError as err:
+        # See _extract_obj_dependencies: surface I/O failures instead of
+        # silently returning a partial texture list.
+        from loguru import logger as _log
+
+        _log.warning(f"Failed to read MTL '{mtl_file_path}' for textures: {err}")
 
     return textures
 
