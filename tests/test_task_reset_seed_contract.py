@@ -17,15 +17,17 @@ and asserts the contract on **Tier-1 tasks only**:
   evaluators, sessions) are not in the inheritance graph to ``BaseTaskEnv`` and
   are therefore ignored.
 
-Assertions:
+Assertions (ratchets — each allowlist may only SHRINK, and may not go stale):
 
-* no *new* Tier-1 ``reset`` override lacks ``seed`` beyond the P1-cleanup
-  allowlist (ratchet: the set may only shrink);
-* the allowlist has no stale entries (forces it to shrink as P1 lands);
-* the unified family base classes already honor the contract.
+* ``reset`` — no *new* Tier-1 override drops ``seed`` (allowlist now empty →
+  zero-tolerance); the unified family base classes honor the contract.
+* ``step`` — no *new* Tier-1 override (action transforms belong in a pre-physics
+  action hook / ``pre_physics_step_callback``); current overrides are tracked
+  in ``KNOWN_STEP_OVERRIDES`` as P1-cleanup targets.
+* ``close`` — no *new* Tier-1 override (teardown belongs in ``close_callback``).
 
-When you fix a file's ``reset`` to accept ``seed`` (or stop overriding
-``reset``), delete it from ``KNOWN_NO_SEED_RESET`` below.
+When you fix a file (accept ``seed`` / drop the ``step``/``close`` override),
+delete it from the corresponding allowlist below.
 """
 
 from __future__ import annotations
@@ -59,6 +61,40 @@ _FIXED_BASES = {
 # so this is empty and the guardrail is zero-tolerance. It may only ever be
 # extended with a NEW genuine violator pending its fix; prefer fixing instead.
 KNOWN_NO_SEED_RESET = frozenset()
+
+# The BaseTaskEnv contract says tasks should NOT override step()/close() — action
+# transforms belong in a pre-physics action hook, teardown in close_callback. These
+# allowlists are the current P1-cleanup targets; they may only SHRINK. The ratchet
+# blocks any NEW Tier-1 step()/close() override so the architecture cannot degrade
+# while the existing ones are migrated. Remove an entry when you drop its override.
+KNOWN_STEP_OVERRIDES = frozenset({
+    "beyondmimic/metasim/envs/base_legged_robot.py",
+    "calvin/base_table.py",
+    "humanoid/base/base_legged_robot.py",
+    "humanoid_bench/humanoid_env.py",
+    "mjlab/cartpole_train.py",
+    "mujoco_playground/handover.py",
+    "mujoco_playground/open_cabinet.py",
+    "mujoco_playground/pick.py",
+    "pick_place/approach_grasp.py",
+    "pick_place/approach_grasp_ceramic_teapot.py",
+    "pick_place/approach_grasp_knife.py",
+    "pick_place/base.py",
+    "pick_place/hand_trajectory.py",
+    "pick_place/track_banana.py",
+    "pick_place/track_ceramic_teapot.py",
+    "pick_place/track_knife.py",
+    "pick_place/track_screwdriver.py",
+    "pick_place/track_spoon.py",
+    "robosuite/robosuite_env.py",
+    "simpler_env/_metasim/base.py",
+    "simpler_env/_metasim/coke_task.py",
+    "simpler_env/_metasim/place_task.py",
+    "task_template.py",
+})
+KNOWN_CLOSE_OVERRIDES = frozenset({
+    "robosuite/robosuite_env.py",
+})
 
 
 def _base_name(node: ast.expr) -> str | None:
@@ -129,6 +165,24 @@ def _all_violators() -> set[str]:
     return out
 
 
+def _files_overriding(method: str) -> set[str]:
+    """Tier-1 task files (Tier-3 exempt) that define a class method named ``method``."""
+    graph = _build_class_graph()
+    out: set[str] = set()
+    for path in _TASKS.rglob("*.py"):
+        rel = path.relative_to(_TASKS).as_posix()
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
+            if _is_tier3(rel, cls.name) or not _in_contract(cls.name, graph):
+                continue
+            if any(isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)) and fn.name == method for fn in cls.body):
+                out.add(rel)
+    return out
+
+
 @pytest.mark.general
 def test_no_new_reset_without_seed():
     """No Tier-1 task may add a ``reset`` override that drops ``seed`` (ratchet)."""
@@ -160,3 +214,40 @@ def test_unified_bases_accept_seed():
                 if isinstance(fn, ast.FunctionDef) and fn.name == "reset" and _reset_lacks_seed(fn):
                     regressed.append(rel)
     assert not regressed, f"Base classes regressed to reset() without seed: {sorted(set(regressed))}"
+
+
+@pytest.mark.general
+def test_no_new_step_override():
+    """No Tier-1 task may add a new step() override (ratchet; use the action hook)."""
+    new = sorted(_files_overriding("step") - KNOWN_STEP_OVERRIDES)
+    assert not new, (
+        "These Tier-1 task files add a step() override (discouraged — transform actions in a "
+        "pre-physics action hook / pre_physics_step_callback instead):\n  " + "\n  ".join(new)
+    )
+
+
+@pytest.mark.general
+def test_step_override_allowlist_has_no_stale_entries():
+    """Allowlisted step() overrides must still exist — forces the list to shrink."""
+    stale = sorted(KNOWN_STEP_OVERRIDES - _files_overriding("step"))
+    assert not stale, (
+        "These files no longer override step() — remove them from KNOWN_STEP_OVERRIDES:\n  " + "\n  ".join(stale)
+    )
+
+
+@pytest.mark.general
+def test_no_new_close_override():
+    """No Tier-1 task may add a new close() override (ratchet; use close_callback)."""
+    new = sorted(_files_overriding("close") - KNOWN_CLOSE_OVERRIDES)
+    assert not new, (
+        "These Tier-1 task files add a close() override (use close_callback for teardown):\n  " + "\n  ".join(new)
+    )
+
+
+@pytest.mark.general
+def test_close_override_allowlist_has_no_stale_entries():
+    """Allowlisted close() overrides must still exist — forces the list to shrink."""
+    stale = sorted(KNOWN_CLOSE_OVERRIDES - _files_overriding("close"))
+    assert not stale, (
+        "These files no longer override close() — remove them from KNOWN_CLOSE_OVERRIDES:\n  " + "\n  ".join(stale)
+    )
