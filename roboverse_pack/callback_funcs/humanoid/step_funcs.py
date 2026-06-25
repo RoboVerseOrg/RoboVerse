@@ -47,7 +47,10 @@ def resample_commands(env: EnvTypes, env_states: TensorState = None):
     # low_cmd_mask = torch.norm(cfg.value[env_ids, :2], dim=1) < 0.1
     random_mask = sample_uniform(0, 1, (len(env_ids),), device=env.device) <= cfg.rel_standing_envs
     final_env_ids = random_mask.nonzero(as_tuple=False).flatten()
-    cfg.value[env_ids][final_env_ids, :] = 0.0
+    # final_env_ids index INTO env_ids; cfg.value[env_ids] is advanced indexing
+    # (a copy), so the chained write was a silent no-op — the standing-command
+    # envs never had their velocity command zeroed. Index by absolute env id.
+    cfg.value[env_ids[final_env_ids], :] = 0.0
 
     if cfg.heading_command:
         env_states = env.get_states(mode="tensor") if env_states is None else env_states
