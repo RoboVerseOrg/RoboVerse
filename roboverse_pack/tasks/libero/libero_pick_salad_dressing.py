@@ -67,7 +67,8 @@ class LiberoPickSaladDressingTask(LiberoBaseTask):
                 urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/tomato_sauce/urdf/tomato_sauce.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/tomato_sauce/mjcf/tomato_sauce.xml",
             ),
-        ]
+        ],
+        robots=["franka"],
     )
 
     # task horizon
