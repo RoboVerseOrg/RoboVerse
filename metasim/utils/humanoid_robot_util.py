@@ -224,21 +224,21 @@ def torso_vertical_orientation(envstate, robot_name: str):
 
 
 def dof_pos_tensor(envstate, robot_name: str):
-    """Returns the pos."""
-    return (
-        envstate.robots[robot_name].joint_pos
-        if envstate.robots[robot_name].joint_pos is not None
-        else torch.zeros_like(envstate.robots[robot_name].joint_pos)
-    )
+    """Returns the joint positions, or None when the robot exposes none.
+
+    The previous ``else torch.zeros_like(...joint_pos)`` fell back on the very
+    ``None`` it guards against — ``zeros_like(None)`` raises ``TypeError``. There
+    is no shape to build zeros from when joint_pos is None, so return None.
+    """
+    return envstate.robots[robot_name].joint_pos
 
 
 def dof_vel_tensor(envstate, robot_name: str):
-    """Returns  the pos."""
-    return (
-        envstate.robots[robot_name].joint_vel
-        if envstate.robots[robot_name].joint_vel is not None
-        else torch.zeros_like(envstate.robots[robot_name].joint_vel)
-    )
+    """Returns the joint velocities, or None when the robot exposes none.
+
+    See :func:`dof_pos_tensor` — the old ``zeros_like(None)`` fallback crashed.
+    """
+    return envstate.robots[robot_name].joint_vel
 
 
 def last_dof_vel_tensor(envstate, robot_name: str):
@@ -293,10 +293,12 @@ def command_tensor(envstate, robot_name: str):
 
 def actuator_knee_pos_tensor(envstate, robot_name: str):
     """Returns  the knee pos."""
-    knee_pos = envstate.robots[robot_name].extra["knee_states"][:, :, :2]
-    if knee_pos is None:
-        raise ValueError(f"feet_pos is None for robot {robot_name}")
-    return knee_pos
+    # Check before slicing: indexing a None ``knee_states`` raises TypeError, so
+    # the post-slice ``is None`` guard was dead code.
+    knee_states = envstate.robots[robot_name].extra["knee_states"]
+    if knee_states is None:
+        raise ValueError(f"knee_states is None for robot {robot_name}")
+    return knee_states[:, :, :2]
 
 
 def actuator_forces(envstate, robot_name: str):

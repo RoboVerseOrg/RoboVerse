@@ -112,7 +112,8 @@ class PitCfg(BaseTerrainCfg):
     """Config for rectangular pits."""
 
     type: str = "pit"
-    position: list[float] = [0, 0]
+    # placement; the terrain builder reads config.origin (was 'position', silently ignored).
+    origin: list[float] = [0, 0]
     size: list[float] = [1.0, 1.0]
     depth: float = 1.0
     platform_size: float = 1.0
