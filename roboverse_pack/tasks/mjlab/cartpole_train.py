@@ -170,7 +170,11 @@ class _MjlabCartpoleTrainBase(BaseTaskEnv):
         info: dict[str, Any] = {}
         return obs, reward, terminated, timeout, info
 
-    def reset(self, states=None, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
+        if seed is not None:
+            set_seed = getattr(self.handler, "set_seed", None)
+            if callable(set_seed):
+                set_seed(seed)
         if env_ids is None:
             env_ids = list(range(self.num_envs))
         # dm_control's Physics has a reset() that calls mj_resetData internally.

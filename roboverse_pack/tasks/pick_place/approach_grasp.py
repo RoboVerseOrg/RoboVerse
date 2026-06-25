@@ -177,9 +177,9 @@ class PickPlaceApproachGraspSimple(PickPlaceBase):
         else:
             log.warning(f"Joint {self.joint2_name} not found, joint2 lift disabled")
 
-    def reset(self, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
         """Reset environment and tracking variables."""
-        obs, info = super().reset(env_ids=env_ids)
+        obs, info = super().reset(states=states, env_ids=env_ids, seed=seed)
 
         if env_ids is None:
             env_ids_tensor = torch.arange(self.num_envs, device=self.device)

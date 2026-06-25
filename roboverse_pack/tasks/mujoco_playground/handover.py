@@ -142,7 +142,7 @@ class HandOver(RLTaskEnv):
 
         return states
 
-    def reset(self, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
         """Reset environment and episode tracking."""
         if env_ids is None or self._last_action is None:
             # Initialize with home position
@@ -156,7 +156,7 @@ class HandOver(RLTaskEnv):
             self._prev_potential[env_ids] = 0.0
             self._last_action[env_ids] = self._initial_states.robots[self.robot_name].joint_pos[env_ids].clone()
 
-        return super().reset(env_ids=env_ids)
+        return super().reset(states=states, env_ids=env_ids, seed=seed)
 
     def step(self, actions):
         """Step with delta control and progress tracking."""

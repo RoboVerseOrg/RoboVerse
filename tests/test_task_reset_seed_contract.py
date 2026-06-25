@@ -55,22 +55,10 @@ _FIXED_BASES = {
 }
 
 # P1 cleanup targets: Tier-1 task files whose ``reset`` override still drops
-# ``seed``. This list may only SHRINK. Remove an entry when you fix that file.
-KNOWN_NO_SEED_RESET = frozenset({
-    "beyondmimic/metasim/envs/base_legged_robot.py",
-    "mjlab/cartpole_train.py",
-    "mujoco_playground/handover.py",
-    "mujoco_playground/open_cabinet.py",
-    "mujoco_playground/pick.py",
-    "pick_place/approach_grasp.py",
-    "pick_place/approach_grasp_ceramic_teapot.py",
-    "pick_place/approach_grasp_knife.py",
-    "pick_place/hand_trajectory.py",
-    "pick_place/track_banana.py",
-    "pick_place/track_screwdriver.py",
-    "pick_place/track_spoon.py",
-    "robosuite/robosuite_env.py",
-})
+# ``seed``. The contract is now COMPLETE — every Tier-1 task accepts ``seed`` —
+# so this is empty and the guardrail is zero-tolerance. It may only ever be
+# extended with a NEW genuine violator pending its fix; prefer fixing instead.
+KNOWN_NO_SEED_RESET = frozenset()
 
 
 def _base_name(node: ast.expr) -> str | None:

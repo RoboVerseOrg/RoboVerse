@@ -130,7 +130,8 @@ class LeggedRobotTask(RLTaskEnv):
 
         # per-actuator action scale
         self.action_scale = (
-            torch.tensor(list(self.robot.action_scale.values()), device=self.device)
+            torch
+            .tensor(list(self.robot.action_scale.values()), device=self.device)
             .unsqueeze(0)
             .repeat(self.num_envs, 1)
         )
@@ -184,8 +185,17 @@ class LeggedRobotTask(RLTaskEnv):
         # NOTE corresponds to action clipping in `RslRlVecEnvWrapper.step()` in Isaac Lab
         return torch.clip(actions, -self.action_clip, self.action_clip) if self.action_clip else actions
 
-    def reset(self, env_ids: Sequence[int] | None = None):
-        """Reset the specified environments. Only called once when the task class is initialized."""
+    def reset(self, env_ids: Sequence[int] | None = None, seed: int | None = None):
+        """Reset the specified environments.
+
+        ``seed`` is forwarded to the handler when supported (this base
+        reimplements ``reset`` and does not call ``super().reset``), honoring
+        the ``env.reset(seed=)`` contract.
+        """
+        if seed is not None:
+            set_seed = getattr(self.handler, "set_seed", None)
+            if callable(set_seed):
+                set_seed(seed)
         if env_ids is None:
             env_ids = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
 

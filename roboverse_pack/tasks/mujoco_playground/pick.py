@@ -115,7 +115,7 @@ class PandaPickCube(RLTaskEnv):
 
         return states
 
-    def reset(self, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
         """Reset environment and last actions."""
         # Initialize _last_action if not exists (first reset)
         # Reset last action for delta control
@@ -123,7 +123,7 @@ class PandaPickCube(RLTaskEnv):
             self._last_action = self._initial_states.robots[self.robot_name].joint_pos[:, :]
         else:
             self._last_action[env_ids] = self._initial_states.robots[self.robot_name].joint_pos[env_ids, :]
-        return super().reset(env_ids=env_ids)
+        return super().reset(states=states, env_ids=env_ids, seed=seed)
 
     def step(self, actions):
         """Step with delta control."""

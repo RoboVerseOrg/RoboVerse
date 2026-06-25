@@ -201,7 +201,11 @@ class RobosuiteEnv(BaseTaskEnv):
     def _to_obs_tensor(self, obs_dict: dict) -> torch.Tensor:
         return torch.from_numpy(self._obs_vector(obs_dict)).to(self.device).unsqueeze(0)
 
-    def reset(self, states=None, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
+        # Honor the env.reset(seed=) contract: robosuite's oracle is seeded via
+        # numpy's global RNG, so a passed seed updates the stored seed used here.
+        if seed is not None:
+            self._seed = seed
         np.random.seed(self._seed)
         obs_dict = self._oracle.reset()
         self._sync_oracle_to_handler()

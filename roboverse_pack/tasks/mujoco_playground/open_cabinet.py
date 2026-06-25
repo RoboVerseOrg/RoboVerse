@@ -121,7 +121,7 @@ class PandaOpenCabinet(RLTaskEnv):
 
         return states
 
-    def reset(self, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
         """Reset environment and last actions."""
         if env_ids is None or self._last_action is None:
             # mj: Set initial qpos. Arm joints only with perturbation
@@ -159,7 +159,7 @@ class PandaOpenCabinet(RLTaskEnv):
             # Reset latched gate for selected envs
             self._reached_handle[env_ids] = 0.0
 
-        return super().reset(env_ids=env_ids)
+        return super().reset(states=states, env_ids=env_ids, seed=seed)
 
     def step(self, actions):
         """Step with delta control."""
