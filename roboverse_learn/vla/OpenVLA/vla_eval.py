@@ -57,6 +57,12 @@ class OpenVLARunner:
         self.env = env
         self.scenario = scenario
         self.num_envs = num_envs
+        # predict_action only consumes env 0's image and emits a single action,
+        # so num_envs > 1 silently produces a wrong-shaped action. Fail fast
+        # (matches pi_eval). Placed before _init_policy so it raises without a
+        # model load.
+        if num_envs != 1:
+            raise ValueError("vla_eval currently supports num_envs == 1")
         self.device = device
         self.task_name = task_name
         self.robot_name = robot_name

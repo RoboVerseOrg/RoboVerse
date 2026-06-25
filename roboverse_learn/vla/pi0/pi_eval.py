@@ -251,8 +251,11 @@ def evaluate_episode(
 
         term = terminated.any().item() if hasattr(terminated, "any") else bool(terminated)
         trunc = truncated.any().item() if hasattr(truncated, "any") else bool(truncated)
-        if term or trunc:
+        # Only terminated=True is success; truncated=True is a timeout (failure).
+        if term:
             stats["success"] = True
+            break
+        elif trunc:
             break
 
     obs_saver.save()
