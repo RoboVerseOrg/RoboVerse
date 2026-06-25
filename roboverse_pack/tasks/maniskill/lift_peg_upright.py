@@ -52,10 +52,7 @@ class LiftPegUprightTask(ManiskillBaseTask):
         return pos_condition & quat_condition
 
     # rewrite checker
-    def reset(self, states=None, env_ids=None):
-        """Skip checker reset."""
-        states = super(ManiskillBaseTask, self).reset(states, env_ids)
-        return states
+    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
 
 
 # ---------------------------------------------------------------------------
