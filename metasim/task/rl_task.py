@@ -44,6 +44,14 @@ class RLTaskEnv(BaseTaskEnv):
         self._obs_buf = None
         self._priv_obs_buf = None
 
+        # Reward terms default to empty so the base ``_reward`` (which guards on
+        # ``len(self.reward_functions) == 0``) is self-consistent before a
+        # subclass assigns its terms. Subclasses set these *after*
+        # ``super().__init__()``; initialising here also keeps ``reset()`` /
+        # reward computation safe if triggered during construction.
+        self.reward_functions: list = []
+        self.reward_weights: list = []
+
         # convert list state to tensor state for reset acceleration
         self._initial_states = list_state_to_tensor(self.handler, self._get_initial_states(), self.device)
         # first reset

@@ -125,6 +125,42 @@ def test_rl_task_env_exposes_robots_list_set_by_base(_stub_scenario, monkeypatch
 
 
 @pytest.mark.general
+def test_rl_task_reward_terms_initialised_and_default_to_zeros():
+    """Base ``_reward`` must be self-consistent before a subclass sets terms.
+
+    ``_reward`` guards on ``len(self.reward_functions) == 0`` to return zeros,
+    but ``reward_functions``/``reward_weights`` were never initialised in
+    ``__init__`` — so a subclass that relied on the base ``_reward`` (and on the
+    documented "no terms -> zero reward" behaviour) hit ``AttributeError``. This
+    pins (a) that ``__init__`` assigns both attributes and (b) that the base
+    ``_reward`` returns zeros when no terms are set.
+    """
+    import ast
+    import inspect
+    import textwrap
+
+    src = textwrap.dedent(inspect.getsource(RLTaskEnv.__init__))
+    assigned: set[str] = set()
+    for node in ast.walk(ast.parse(src)):
+        # Plain ``self.x = ...`` (ast.Assign) and annotated ``self.x: T = ...`` (ast.AnnAssign).
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
+        for tgt in targets:
+            if isinstance(tgt, ast.Attribute) and isinstance(tgt.value, ast.Name) and tgt.value.id == "self":
+                assigned.add(tgt.attr)
+    assert "reward_functions" in assigned, "RLTaskEnv.__init__ must initialise self.reward_functions"
+    assert "reward_weights" in assigned, "RLTaskEnv.__init__ must initialise self.reward_weights"
+
+    # Behavioural: the base _reward returns zeros (not AttributeError/None) for empty terms.
+    env = RLTaskEnv.__new__(RLTaskEnv)
+    env.num_envs = 3
+    env.device = torch.device("cpu")
+    env.reward_functions = []
+    env.reward_weights = []
+    reward = RLTaskEnv._reward(env, None)
+    assert torch.equal(reward, torch.zeros(3))
+
+
+@pytest.mark.general
 def test_rl_task_env_robots_tolerates_empty_scenario(_stub_scenario):
     """RLTaskEnv should not crash when scenario.robots is empty (this happens
     for renderer-only or perception-only tasks)."""
