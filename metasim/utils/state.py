@@ -104,6 +104,18 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
                 intrinsics=torch.cat([cam.intrinsics for cam in camera_states], dim=0)
                 if camera_states[0].intrinsics is not None
                 else None,
+                # Segmentation was silently dropped here, so a backend that
+                # populates it (e.g. isaacsim) lost it the moment the state
+                # passed through a parallel join. The id2label maps are per-env
+                # identical (same label space across envs), so take the first.
+                instance_id_seg=torch.cat([cam.instance_id_seg for cam in camera_states], dim=0)
+                if camera_states[0].instance_id_seg is not None
+                else None,
+                instance_id_seg_id2label=camera_states[0].instance_id_seg_id2label,
+                instance_seg=torch.cat([cam.instance_seg for cam in camera_states], dim=0)
+                if camera_states[0].instance_seg is not None
+                else None,
+                instance_seg_id2label=camera_states[0].instance_seg_id2label,
             )
 
     # Join sensors (assuming similar structure to objects)
