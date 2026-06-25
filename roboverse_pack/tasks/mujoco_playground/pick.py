@@ -125,14 +125,18 @@ class PandaPickCube(RLTaskEnv):
             self._last_action[env_ids] = self._initial_states.robots[self.robot_name].joint_pos[env_ids, :]
         return super().reset(states=states, env_ids=env_ids, seed=seed)
 
-    def step(self, actions):
-        """Step with delta control."""
+    def _process_action(self, actions):
+        """Delta position control (sanctioned action hook).
+
+        Replaces the old ``step`` override: ``RLTaskEnv.step`` calls
+        ``_process_action`` before clamping/applying, so behaviour is identical
+        (delta + clamp, latch ``_last_action``) without overriding step.
+        """
         delta_actions = actions * self._action_scale
         new_actions = self._last_action + delta_actions
         real_actions = torch.maximum(torch.minimum(new_actions, self._action_high), self._action_low)
-        obs, reward, terminated, time_out, info = super().step(real_actions)
         self._last_action = real_actions
-        return obs, reward, terminated, time_out, info
+        return real_actions
 
     def _reward_box_target(self, env_states) -> torch.Tensor:
         """Reward for bringing box to target position and orientation."""

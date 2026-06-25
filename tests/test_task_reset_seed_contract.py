@@ -73,8 +73,6 @@ KNOWN_STEP_OVERRIDES = frozenset({
     "humanoid/base/base_legged_robot.py",
     "mjlab/cartpole_train.py",
     "mujoco_playground/handover.py",
-    "mujoco_playground/open_cabinet.py",
-    "mujoco_playground/pick.py",
     "pick_place/approach_grasp.py",
     "pick_place/approach_grasp_ceramic_teapot.py",
     "pick_place/approach_grasp_knife.py",
