@@ -15,10 +15,11 @@ def hsv_to_rgb(h: float, s: float, v: float) -> tuple[float, float, float]:
     """
     h, s, v = [float(x) for x in (h, s, v)]
 
-    hi = (h / 60) % 6
-    hi = round(hi)
-
-    f = (h / 60) - (h / 60)
+    # Sector index (floor, not round: round(5.5)=6 fell through every branch and
+    # returned None). f is the fractional part within the sector — the previous
+    # ``(h / 60) - (h / 60)`` was always 0, so intermediate hues came out wrong.
+    hi = int(h / 60) % 6
+    f = (h / 60) - int(h / 60)
     p = v * (1 - s)
     q = v * (1 - f * s)
     t = v * (1 - (1 - f) * s)
