@@ -365,8 +365,11 @@ def evaluate_episode(
         is_terminated = terminated.any().item() if isinstance(terminated, torch.Tensor) else terminated
         is_truncated = truncated.any().item() if isinstance(truncated, torch.Tensor) else truncated
 
-        if is_terminated or is_truncated:
+        # Only terminated=True is success; truncated=True is a timeout (failure).
+        if is_terminated:
             stats["success"] = True
+            break
+        elif is_truncated:
             break
 
     obs_saver.save()
