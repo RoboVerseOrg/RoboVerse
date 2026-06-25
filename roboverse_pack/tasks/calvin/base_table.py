@@ -190,7 +190,7 @@ class BaseCalvinTableTask(BaseTaskEnv):
 
         return True
 
-    def reset(self, states, env_ids=None):
+    def reset(self, states, env_ids=None, seed=None):
 
         if env_ids is None:
             env_ids = list(range(self.num_envs))
@@ -220,7 +220,7 @@ class BaseCalvinTableTask(BaseTaskEnv):
         for i, env_id in enumerate(env_ids):
             self.done_states[env_id] = incoming_done_states[i]
 
-        return super().reset(states=states, env_ids=env_ids)
+        return super().reset(states=states, env_ids=env_ids, seed=seed)
 
     def step(self, action):
         try:

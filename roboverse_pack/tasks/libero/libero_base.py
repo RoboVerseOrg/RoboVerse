@@ -30,16 +30,19 @@ class LiberoBaseTask(BaseTaskEnv):
         """Success when cube is detected in the bbox above base."""
         return self.checker.check(self.handler, states)
 
-    def reset(self, states=None, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
         """Reset the checker, then the environment.
 
         The checker is reset *before* ``super().reset()`` — super().reset()
         may invoke reset-callbacks that read termination state (computed
         via the checker), which would otherwise see stale checker state.
+
+        ``seed`` is forwarded to ``super().reset`` so the ``env.reset(seed=)``
+        contract reaches the handler (see ``BaseTaskEnv.reset``).
         """
         if self.checker is not None:
             self.checker.reset(self.handler, env_ids=env_ids)
-        return super().reset(states, env_ids)
+        return super().reset(states, env_ids, seed)
 
     def _get_initial_states(self) -> list[dict] | None:
         """Return per-env initial states sampled from the demo trajectory.

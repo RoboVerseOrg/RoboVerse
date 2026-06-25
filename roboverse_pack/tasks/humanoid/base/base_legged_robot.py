@@ -253,8 +253,17 @@ class LeggedRobotTask(AgentTask):
         effort = torch.clip(effort, -self.torque_limits, self.torque_limits)
         return effort.to(torch.float32)
 
-    def reset(self, env_ids: torch.Tensor | list[int] | None = None):
-        """Reset selected envs (defaults to all)."""
+    def reset(self, env_ids: torch.Tensor | list[int] | None = None, seed: int | None = None):
+        """Reset selected envs (defaults to all).
+
+        ``seed`` is forwarded to the handler when supported, so the
+        ``env.reset(seed=)`` contract reaches the simulator (this base
+        reimplements ``reset`` and does not call ``super().reset``).
+        """
+        if seed is not None:
+            set_seed = getattr(self.handler, "set_seed", None)
+            if callable(set_seed):
+                set_seed(seed)
         if env_ids is None:
             env_ids = torch.tensor(list(range(self.num_envs)), device=self.device)
 

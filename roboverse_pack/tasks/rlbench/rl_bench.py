@@ -40,8 +40,8 @@ class RLBenchTask(BaseTaskEnv):
         self._initial_states = initial_states[: self.num_envs]
         return self._initial_states
 
-    def reset(self, states=None, env_ids=None):
-        """Reset the checker."""
-        states = super().reset(states, env_ids)
+    def reset(self, states=None, env_ids=None, seed=None):
+        """Reset the checker. ``seed`` is forwarded to ``super().reset``."""
+        states = super().reset(states, env_ids, seed)
         self.checker.reset(self.handler, env_ids=env_ids)
         return states
