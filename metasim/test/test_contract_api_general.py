@@ -285,6 +285,55 @@ def test_isaacsim_world_state_to_env_local_does_not_mutate_source():
 
 
 @pytest.mark.general
+def test_render_cfg_mode_includes_realtime_pathtracing():
+    """RenderCfg.mode exposes the RTX Real-Time 2.0 value on its Literal surface.
+
+    AST/source assertion because ``configclass`` does not enforce ``Literal`` at runtime, so
+    constructing ``RenderCfg(mode=...)`` would not actually validate the accepted values.
+    """
+    module, source = _parse_module("metasim/scenario/render.py")
+    mode_field = _get_annotated_field(_get_class(module, "RenderCfg"), "mode")
+    annotation = _annotation_text(source, mode_field.annotation)
+    for value in ("rasterization", "raytracing", "pathtracing", "realtime_pathtracing"):
+        assert f'"{value}"' in annotation, annotation
+
+
+@pytest.mark.general
+def test_isaacsim_render_mode_to_rtx_rendermode_mapping():
+    """_load_render_settings maps the public modes to correctly-cased /rtx/rendermode tokens."""
+    _, source = _parse_module("metasim/sim/isaacsim/isaacsim.py")
+    # RTX - Real-Time 2.0
+    assert 'set_string("/rtx/rendermode", "RealTimePathTracing")' in source
+    # RTX - Real-Time (legacy), correctly cased: regression guard against "RayTracedLighting"
+    assert 'set_string("/rtx/rendermode", "RaytracedLighting")' in source
+    assert "RayTracedLighting" not in source
+    # offline path tracing left untouched
+    assert 'set_string("/rtx/rendermode", "PathTracing")' in source
+
+
+@pytest.mark.general
+def test_isaacsim_realtime_pathtracing_fails_fast_when_unavailable():
+    """The new mode reads back /rtx/rendermode and raises if the renderer did not accept it."""
+    _, source = _parse_module("metasim/sim/isaacsim/isaacsim.py")
+    assert 'applied = settings.get_as_string("/rtx/rendermode")' in source
+    assert 'if applied != "RealTimePathTracing":' in source
+
+
+@pytest.mark.general
+def test_isaacsim_bvh_refresh_covers_realtime_pathtracing():
+    """The stale-BVH-after-material-edit workaround also runs for RTX Real-Time 2.0."""
+    _, source = _parse_module("metasim/sim/isaacsim/isaacsim.py")
+    assert '("raytracing", "realtime_pathtracing")' in source
+
+
+@pytest.mark.general
+def test_dr_manager_groups_realtime_pathtracing_with_pathtracing():
+    """DR light-intensity ranges treat RTX Real-Time 2.0 like path tracing (brighter ranges)."""
+    _, source = _parse_module("metasim/randomization/dr_manager.py")
+    assert '("pathtracing", "realtime_pathtracing")' in source
+
+
+@pytest.mark.general
 def test_assert_close_accepts_tensor_expected_without_copy_warning():
     from metasim.test.test_utils import assert_close
 
