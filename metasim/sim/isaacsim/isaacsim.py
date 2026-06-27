@@ -1476,12 +1476,26 @@ class IsaacsimHandler(BaseSimHandler):
         settings = carb.settings.get_settings()
         if self.scenario.render.mode == "pathtracing":
             settings.set_string("/rtx/rendermode", "PathTracing")
+        elif self.scenario.render.mode == "realtime_pathtracing":
+            # RTX - Real-Time 2.0. The default renderer on recent Isaac Sim builds; on builds
+            # without it the read-back check below fails fast instead of silently falling back.
+            settings.set_string("/rtx/rendermode", "RealTimePathTracing")
         elif self.scenario.render.mode == "raytracing":
-            settings.set_string("/rtx/rendermode", "RayTracedLighting")
+            settings.set_string("/rtx/rendermode", "RaytracedLighting")
         elif self.scenario.render.mode == "rasterization":
             raise ValueError("Isaaclab does not support rasterization")
         else:
             raise ValueError(f"Unknown render mode: {self.scenario.render.mode}")
+
+        if self.scenario.render.mode == "realtime_pathtracing":
+            applied = settings.get_as_string("/rtx/rendermode")
+            if applied != "RealTimePathTracing":
+                raise RuntimeError(
+                    "RTX - Real-Time 2.0 (RealTimePathTracing) is unavailable in this Isaac Sim "
+                    f"build (got /rtx/rendermode={applied!r}). Use render.mode='raytracing' or "
+                    "'pathtracing', or launch with --/rtx/rendermode=RealTimePathTracing if your "
+                    "build supports it."
+                )
 
         log.info(f"Render mode: {settings.get_as_string('/rtx/rendermode')}")
         log.info(f"Render totalSpp: {settings.get('/rtx/pathtracing/totalSpp')}")
@@ -1945,7 +1959,7 @@ class IsaacsimHandler(BaseSimHandler):
     def _refresh_raytracing_acceleration(self) -> None:
         """Work around Isaac Sim 4.5 RTX BVH getting stale after material edits."""
         render_cfg = getattr(self.scenario, "render", None)
-        if render_cfg is None or getattr(render_cfg, "mode", None) != "raytracing":
+        if render_cfg is None or getattr(render_cfg, "mode", None) not in ("raytracing", "realtime_pathtracing"):
             return
 
         try:

@@ -15,16 +15,19 @@
 
 MetaSim supports multiple rendering techniques through Isaac Sim's rendering backend. Choose based on your quality vs performance requirements.
 
-| Technique | Quality | Speed | Use Case |
-|-----------|---------|-------|----------|
-| Rasterization | Good | Fast | Training, real-time |
-| Ray Tracing | Great | Medium | Validation, demos |
-| Path Tracing | Best | Slow | Final renders, sim2real |
+| Technique | `--render.mode` | Quality | Speed | Use Case |
+|-----------|-----------------|---------|-------|----------|
+| Rasterization | `rasterization` | Good | Fast | Training, real-time |
+| Ray Tracing (RTX Real-Time, legacy) | `raytracing` | Great | Medium | Validation, demos |
+| Real-Time Path Tracing (RTX Real-Time 2.0) | `realtime_pathtracing` | Great | Medium | Interactive path-traced rendering (recent Isaac Sim) |
+| Path Tracing (RTX Interactive) | `pathtracing` | Best | Slow | Final renders, sim2real |
+
+> `realtime_pathtracing` selects Isaac Sim's "RTX - Real-Time 2.0" renderer (`/rtx/rendermode=RealTimePathTracing`). It is only available on recent Isaac Sim builds; on older builds MetaSim raises an explicit error so you can fall back to `raytracing` or `pathtracing`.
 
 ## Running the Tutorial
 
 ```bash
-python get_started/6_advanced_rendering.py  --render.mode=[rasterization|raytracing|pathtracing]
+python get_started/6_advanced_rendering.py  --render.mode=[rasterization|raytracing|pathtracing|realtime_pathtracing]
 ```
 you can also render in the headless mode by adding `--headless` flag. By using this, there will be no window popping up and the rendering will also be faster.
 

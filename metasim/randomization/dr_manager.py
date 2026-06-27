@@ -343,8 +343,10 @@ class DomainRandomizationManager:
         if not lights:
             return
 
-        # Determine intensity ranges based on render mode
-        if self.render_cfg and hasattr(self.render_cfg, "mode") and self.render_cfg.mode == "pathtracing":
+        # Determine intensity ranges based on render mode. RealTimePathTracing (RTX - Real-Time
+        # 2.0) is a path tracer, so it shares the brighter pathtracing ranges, not the legacy
+        # raytracing ones.
+        if self.render_cfg and getattr(self.render_cfg, "mode", None) in ("pathtracing", "realtime_pathtracing"):
             main_range = (18000.0, 45000.0)
             corner_range = (8000.0, 20000.0)
         else:

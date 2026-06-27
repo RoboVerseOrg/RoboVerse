@@ -11,7 +11,15 @@ from metasim.utils.configclass import configclass
 class RenderCfg:
     """Render configuration."""
 
-    mode: Literal["rasterization", "raytracing", "pathtracing"] = "raytracing"
+    mode: Literal["rasterization", "raytracing", "pathtracing", "realtime_pathtracing"] = "raytracing"
+    """Rendering technique. Only the IsaacSim backend consumes this; it maps to the
+    Omniverse ``/rtx/rendermode`` setting:
+
+    - ``raytracing`` -> ``RaytracedLighting`` (RTX - Real-Time, legacy)
+    - ``pathtracing`` -> ``PathTracing`` (RTX - Interactive, offline path tracing)
+    - ``realtime_pathtracing`` -> ``RealTimePathTracing`` (RTX - Real-Time 2.0; requires a
+      recent Isaac Sim build where that renderer is available)
+    - ``rasterization`` is not supported by IsaacSim."""
     samples: int | None = None
     device: str = "AUTO"
     hdri_path: str | None = None

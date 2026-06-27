@@ -226,7 +226,7 @@ Random seed for reproducibility. All randomizers derive their seeds from this ba
 
 **--render_mode** (default: raytracing)
 
-Rendering quality. Choose `pathtracing` for higher quality at slower speed. This affects light intensity ranges automatically.
+Rendering quality. Choose `pathtracing` for higher quality at slower speed, or `realtime_pathtracing` (RTX Real-Time 2.0, recent Isaac Sim builds) for interactive path-traced rendering. This affects light intensity ranges automatically — `realtime_pathtracing` uses the same brighter ranges as `pathtracing`.
 
 ## Scene Modes in Detail
 
@@ -409,7 +409,7 @@ LightRandomCfg(
 - Warmer temperature range (2700K-5500K)
 - Positioned at room corners for even ambient coverage
 
-Intensity ranges automatically adjust based on `--render_mode`. PathTracing requires higher values (22K-40K for main light) compared to RayTracing (16K-30K).
+Intensity ranges automatically adjust based on `--render_mode`. PathTracing (and `realtime_pathtracing`) requires higher values (22K-40K for main light) compared to RayTracing (16K-30K).
 
 ### CameraRandomizer
 
