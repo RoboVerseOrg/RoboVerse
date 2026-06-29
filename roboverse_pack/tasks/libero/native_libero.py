@@ -165,7 +165,13 @@ class NativeLiberoEnv(BaseTaskEnv):
     def _get_initial_states(self):
         return None
 
-    def reset(self, states=None, env_ids=None):
+    def reset(self, states=None, env_ids=None, seed=None):
+        # Native LIBERO replay is deterministic (fixed qpos0/qvel0, no RNG); ``seed`` is
+        # accepted for the env.reset(seed=) contract and forwarded best-effort to the handler.
+        if seed is not None:
+            set_seed = getattr(self.handler, "set_seed", None)
+            if callable(set_seed):
+                set_seed(seed)
         nq, nv = self._m.nq, self._m.nv
         with self.handler.physics.reset_context():
             self._d.qpos[:] = self._qpos0[:nq]
