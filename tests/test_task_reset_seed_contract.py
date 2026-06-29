@@ -68,6 +68,8 @@ KNOWN_NO_SEED_RESET = frozenset()
 # blocks any NEW Tier-1 step()/close() override so the architecture cannot degrade
 # while the existing ones are migrated. Remove an entry when you drop its override.
 KNOWN_STEP_OVERRIDES = frozenset({
+    "mujoco_playground/open_cabinet.py",
+    "mujoco_playground/pick.py",
     "beyondmimic/metasim/envs/base_legged_robot.py",
     "calvin/base_table.py",
     "humanoid/base/base_legged_robot.py",
