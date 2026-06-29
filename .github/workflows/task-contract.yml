@@ -1,0 +1,28 @@
+name: Task contract guardrail
+
+# Enforces the backend-free task-architecture conformance guardrail
+# (tests/test_task_reset_seed_contract.py): no Tier-1 task may drop reset(seed)
+# or add a new step()/close() override beyond the shrink-only allowlists.
+# Pure-AST, no simulator/torch — fast and runs on every PR.
+
+on:
+  pull_request:
+    paths:
+      - "roboverse_pack/tasks/**"
+      - "tests/test_task_reset_seed_contract.py"
+      - ".github/workflows/task-contract.yml"
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  task-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip pytest
+      - name: Run task-contract guardrail
+        run: python -m pytest tests/test_task_reset_seed_contract.py -v

@@ -10,9 +10,10 @@ and asserts the contract on **Tier-1 tasks only**:
 
 * **Tier 1** — classes in the unified contract: they (transitively) subclass
   ``BaseTaskEnv`` / ``RLTaskEnv`` / ``ManagerBasedRVEnv``. Only these are checked.
-* **Tier 3** — external/native passthrough adapters (modules under ``_native``/
-  ``_passthrough`` or classes named ``Native*``/``Passthrough*``) are an
-  explicitly-exempt compatibility tier and are skipped.
+* **Tier 3** — external/native passthrough adapters under dedicated ``_native``/
+  ``_passthrough`` paths are an explicitly-exempt compatibility tier and skipped.
+  (Exemption is PATH-based only — a first-party in-contract task is checked even
+  if its class name starts with ``Native``; see ``_is_tier3``.)
 * Non-task helpers (controllers, sensors, command/actuator managers, success
   evaluators, sessions) are not in the inheritance graph to ``BaseTaskEnv`` and
   are therefore ignored.
@@ -68,6 +69,7 @@ KNOWN_NO_SEED_RESET = frozenset()
 # blocks any NEW Tier-1 step()/close() override so the architecture cannot degrade
 # while the existing ones are migrated. Remove an entry when you drop its override.
 KNOWN_STEP_OVERRIDES = frozenset({
+    "libero/native_libero.py",  # native LIBERO replay port (Tier-1 by base, kept explicit)
     "mujoco_playground/open_cabinet.py",
     "mujoco_playground/pick.py",
     "beyondmimic/metasim/envs/base_legged_robot.py",
@@ -91,6 +93,7 @@ KNOWN_STEP_OVERRIDES = frozenset({
     "simpler_env/_metasim/place_task.py",
 })
 KNOWN_CLOSE_OVERRIDES = frozenset({
+    "libero/native_libero.py",
     "robosuite/robosuite_env.py",
 })
 
@@ -128,11 +131,17 @@ def _in_contract(name: str, graph: dict[str, set[str]], seen: set[str] | None = 
 
 
 def _is_tier3(rel_path: str, class_name: str) -> bool:
-    """Native/passthrough adapters are an explicitly-exempt compatibility tier."""
+    """Native/passthrough adapters are an explicitly-exempt compatibility tier.
+
+    Exemption is PATH-based only (dedicated ``_native``/``_passthrough`` dirs/files).
+    A NAME-based exemption (``Native*``/``Passthrough*``) was removed: it let
+    first-party in-contract tasks (e.g. ``NativeLiberoEnv(BaseTaskEnv)``, which
+    lives in ``libero/native_libero.py`` — not a ``_native/`` dir) silently dodge
+    the contract. In-contract classes are now always checked regardless of name;
+    only genuine adapters under ``_native``/``_passthrough`` paths are exempt.
+    """
     p = "/" + rel_path
-    if "/_native/" in p or "_passthrough" in rel_path:
-        return True
-    return class_name.startswith(("Native", "Passthrough"))
+    return "/_native/" in p or "_passthrough" in rel_path
 
 
 def _reset_lacks_seed(fn: ast.FunctionDef) -> bool:
@@ -209,7 +218,11 @@ def test_unified_bases_accept_seed():
         tree = ast.parse((_TASKS / rel).read_text(encoding="utf-8"))
         for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
             for fn in cls.body:
-                if isinstance(fn, ast.FunctionDef) and fn.name == "reset" and _reset_lacks_seed(fn):
+                if (
+                    isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and fn.name == "reset"
+                    and _reset_lacks_seed(fn)
+                ):
                     regressed.append(rel)
     assert not regressed, f"Base classes regressed to reset() without seed: {sorted(set(regressed))}"
 
