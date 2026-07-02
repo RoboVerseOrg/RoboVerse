@@ -115,6 +115,12 @@ class USDAssetPoolCfg:
 
     Randomly selects one USD from a pool. Supports per-path configuration overrides.
 
+    Provide EITHER ``usd_paths`` (expanded into candidates, one per path, with optional
+    ``per_path_overrides``) OR an explicit ``candidates`` list (needed when the same USD appears
+    as several distinct poses, which the per-path expansion cannot express). If both are given,
+    ``candidates`` wins and ``usd_paths`` is ignored. An explicit empty ``candidates`` list is
+    an error.
+
     Attributes:
         name: Pool name
         usd_paths: List of USD file paths (will be converted to candidates)
@@ -141,8 +147,15 @@ class USDAssetPoolCfg:
     candidates: list[USDAssetCfg] | None = None  # Will be auto-generated
 
     def __post_init__(self):
+        # Explicit candidates bypass the usd_paths->candidate expansion. That expansion keys
+        # per-path overrides by USD path, so it cannot express several DISTINCT poses for the same
+        # USD (e.g. one apartment placed at multiple workcell placements); pass `candidates` for that.
+        if self.candidates is not None:
+            if not self.candidates:
+                raise ValueError(f"USDAssetPoolCfg '{self.name}': explicit candidates cannot be empty")
+            return
         if not self.usd_paths:
-            raise ValueError(f"USDAssetPoolCfg '{self.name}': usd_paths cannot be empty")
+            raise ValueError(f"USDAssetPoolCfg '{self.name}': provide usd_paths or candidates")
 
         # Convert usd_paths to candidates
         self.candidates = []
@@ -223,6 +236,36 @@ class SceneRandomCfg:
 # =============================================================================
 # Scene Randomizer Implementation
 # =============================================================================
+
+
+def _existing_xform_op_precision(prim, attr_name: str, default):
+    """Precision of an already-authored xformOp attribute on ``prim``, or ``default``.
+
+    ``ClearXformOpOrder`` resets only the op order; op attributes composed in from a referenced
+    asset survive it, and ``AddXformOp`` raises when re-adding an op whose surviving attribute
+    has a different precision than requested.
+
+    Args:
+        prim: USD prim to inspect.
+        attr_name: Full xformOp attribute name (e.g. ``"xformOp:orient"``).
+        default: ``UsdGeom.XformOp.Precision*`` to use when the attribute does not exist.
+
+    Returns:
+        The ``UsdGeom.XformOp`` precision matching the existing attribute, or ``default``.
+    """
+    from pxr import UsdGeom
+
+    attr = prim.GetAttribute(attr_name)
+    if not attr:
+        return default
+    type_name = str(attr.GetTypeName())
+    if type_name in ("double3", "quatd"):
+        return UsdGeom.XformOp.PrecisionDouble
+    if type_name in ("float3", "quatf"):
+        return UsdGeom.XformOp.PrecisionFloat
+    if type_name in ("half3", "quath"):
+        return UsdGeom.XformOp.PrecisionHalf
+    return default
 
 
 class SceneRandomizer(BaseRandomizerType):
@@ -583,8 +626,10 @@ class SceneRandomizer(BaseRandomizerType):
                 self._loaded_usds[prim_path] = element.usd_path
                 logger.info("USD replaced successfully")
             else:
-                # Same USD: skip (already loaded)
-                pass
+                # Same USD, but the placement (position/rotation/scale) may differ -- e.g. one
+                # apartment re-selected at a different workcell pose. Reapply the transform in place
+                # (a plain skip would leave the previous pose).
+                self._apply_transform(prim_path, element, z_offset)
         else:
             # First time: load
             self._load_usd(prim_path, element, z_offset)
@@ -599,8 +644,6 @@ class SceneRandomizer(BaseRandomizerType):
             z_offset: Z-axis offset
         """
         import os
-
-        from pxr import Gf, UsdGeom
 
         # Check for Kujiale path remapping (RoboVerse -> InteriorAgent folder)
         usd_to_load = element.usd_path
@@ -654,52 +697,62 @@ class SceneRandomizer(BaseRandomizerType):
                 # Use absolute path and don't specify defaultPrim (USD will auto-find)
                 ref_prim.GetReferences().AddReference(usd_path_abs)
 
-        # Set transform
+        # Apply the placement transform + disable physics.
+        self._apply_transform(prim_path, element, z_offset)
+
+    def _apply_transform(self, prim_path: str, element: USDAssetCfg, z_offset: float):
+        """Set the pool prim's [translate, orient, scale] transform from ``element``, idempotently.
+
+        Called on first load AND when the same USD is re-selected with a DIFFERENT placement (the
+        pool may place one apartment USD at several workcell poses; the switch path reapplies this
+        instead of skipping). The orient op is ALWAYS written -- including identity -- so (a) a scene
+        first placed at yaw=0 can still be rotated by a later placement, and (b) re-selecting resets
+        a stale rotation instead of leaving the previous pose. Op order is [translate, orient, scale]
+        (translate OUTERMOST): a candidate ``position`` is the apartment ``dp``, not ``scene_pos``.
+        """
+        from pxr import Gf, UsdGeom
+
         prim = self.stage.GetPrimAtPath(prim_path)
-        if prim and prim.IsValid():
-            xform = UsdGeom.Xformable(prim)
+        if not (prim and prim.IsValid()):
+            return
+        xform = UsdGeom.Xformable(prim)
+        pos = list(element.position)
+        pos[2] += z_offset
+        rot = element.rotation
 
-            # Check for existing xform ops (from converted USD)
-            existing_ops = xform.GetOrderedXformOps()
+        # Author a deterministic [translate, orient, scale] stack every time (the handler's scene-load
+        # path does the same). ClearXformOpOrder overrides whatever op stack the referenced asset
+        # composed in -- otherwise an asset root lacking an orient op (or using a single matrix op)
+        # would silently drop the placement yaw, and the order would not be the [T,O,S] the pool
+        # convention (translate OUTERMOST -> position = dp) requires. Idempotent: reapplying on a
+        # same-USD reselection re-clears and re-authors, so switching placements updates the pose.
+        #
+        # ClearXformOpOrder resets only the op ORDER; op attributes composed in from the asset
+        # survive it, and AddXxxOp raises if a surviving attribute's precision differs from the
+        # requested one -- so match the existing precision. Defaults for fresh attributes: double
+        # for translate/scale, float for orient (AddOrientOp's default, matching the handler
+        # _load_scene path, isaacsim.py: "USD expects float precision").
+        vec_of = {
+            UsdGeom.XformOp.PrecisionDouble: Gf.Vec3d,
+            UsdGeom.XformOp.PrecisionFloat: Gf.Vec3f,
+            UsdGeom.XformOp.PrecisionHalf: Gf.Vec3h,
+        }
+        quat_of = {
+            UsdGeom.XformOp.PrecisionDouble: Gf.Quatd,
+            UsdGeom.XformOp.PrecisionFloat: Gf.Quatf,
+            UsdGeom.XformOp.PrecisionHalf: Gf.Quath,
+        }
+        t_prec = _existing_xform_op_precision(prim, "xformOp:translate", UsdGeom.XformOp.PrecisionDouble)
+        o_prec = _existing_xform_op_precision(prim, "xformOp:orient", UsdGeom.XformOp.PrecisionFloat)
+        s_prec = _existing_xform_op_precision(prim, "xformOp:scale", UsdGeom.XformOp.PrecisionDouble)
 
-            if existing_ops:
-                # Update existing ops (preserve precision)
-                pos = list(element.position)
-                pos[2] += z_offset
+        xform.ClearXformOpOrder()
+        xform.AddTranslateOp(t_prec).Set(vec_of[t_prec](*pos))
+        xform.AddOrientOp(o_prec).Set(quat_of[o_prec](rot[0], rot[1], rot[2], rot[3]))
+        xform.AddScaleOp(s_prec).Set(vec_of[s_prec](*element.scale))
 
-                for op in existing_ops:
-                    op_name = op.GetOpName()
-                    if "translate" in op_name:
-                        if op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
-                            op.Set(Gf.Vec3d(*pos))
-                        else:
-                            op.Set(Gf.Vec3f(*pos))
-                    elif "scale" in op_name:
-                        if op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
-                            op.Set(Gf.Vec3d(*element.scale))
-                        else:
-                            op.Set(Gf.Vec3f(*element.scale))
-                    elif "orient" in op_name and element.rotation != (1.0, 0.0, 0.0, 0.0):
-                        if op.GetPrecision() == UsdGeom.XformOp.PrecisionDouble:
-                            op.Set(Gf.Quatd(element.rotation[0], Gf.Vec3d(*element.rotation[1:])))
-                        else:
-                            op.Set(Gf.Quatf(element.rotation[0], Gf.Vec3f(*element.rotation[1:])))
-            else:
-                # No existing ops, create new (use double for consistency with URDF converter)
-                xform.ClearXformOpOrder()
-                pos = list(element.position)
-                pos[2] += z_offset
-                xform.AddTranslateOp().Set(Gf.Vec3d(*pos))
-                if element.rotation != (1.0, 0.0, 0.0, 0.0):
-                    xform.AddOrientOp().Set(
-                        Gf.Quatd(
-                            element.rotation[0], Gf.Vec3d(element.rotation[1], element.rotation[2], element.rotation[3])
-                        )
-                    )
-                xform.AddScaleOp().Set(Gf.Vec3d(*element.scale))
-
-            # Disable physics (remove RigidBodyAPI, optionally keep CollisionAPI)
-            self._disable_physics_for_prim(prim, keep_collision=element.add_collision)
+        # Disable physics (remove RigidBodyAPI, optionally keep CollisionAPI)
+        self._disable_physics_for_prim(prim, keep_collision=element.add_collision)
 
     def _delete_usd(self, prim_path: str):
         """Delete USD prim.
