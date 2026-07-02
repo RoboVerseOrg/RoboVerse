@@ -756,6 +756,21 @@ paths, configs = SceneUSDCollections.my_custom_assets(return_configs=True)
 element = USDAssetPoolCfg(usd_paths=paths, per_path_overrides=configs)
 ```
 
+`per_path_overrides` is keyed by USD path, so it cannot express the same USD at several
+distinct poses. For that, pass an explicit `candidates` list instead of `usd_paths`
+(candidates win when both are given):
+
+```python
+apartment = "roboverse_data/assets/apartment.usd"
+element = USDAssetPoolCfg(
+    name="apartment_placements",
+    candidates=[
+        USDAssetCfg(name="pose0", usd_path=apartment, position=(0.0, 0.0, 0.0)),
+        USDAssetCfg(name="pose1", usd_path=apartment, position=(2.0, -1.0, 0.0), rotation=(0.0, 0.0, 0.0, 1.0)),
+    ],
+)
+```
+
 ## Troubleshooting
 
 ### Assets Not Downloading
