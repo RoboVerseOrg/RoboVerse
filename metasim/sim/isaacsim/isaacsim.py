@@ -66,6 +66,41 @@ def _primitive_frame_usd_path() -> str:
     return str(resources.files("metasim").joinpath("data/quick_start/assets/COMMON/frame/usd/frame.usd"))
 
 
+# RTX Real-Time 2.0 must be REGISTERED when Kit boots: the renderer only joins
+# the hydra render-mode list when ``/rtx-transient/rt2Enabled`` is on, and Kit
+# derives that at startup from the persistent preference
+# ``/persistent/rtx/modes/rt2/enabled`` (a transient-only CLI flag is clobbered
+# by that copy). Once registered, ``/rtx/rendermode`` switches in and out of
+# RealTimePathTracing at RUNTIME just fine (probed on Isaac Sim 5.0) — without
+# registration every write is silently refused, which is why a bare rendermode
+# set (runtime, Kit boot argv, or the SimulationApp ``renderer`` config) never
+# engages it.
+_BOOT_KIT_ARGS_BY_RENDER_MODE = {
+    "realtime_pathtracing": (
+        "--/persistent/rtx/modes/rt2/enabled=true",
+        "--/rtx-transient/rt2Enabled=true",
+    ),
+}
+
+
+def _kit_args_with_boot_render_mode(render_mode: str | None, existing_kit_args: str | None) -> str | None:
+    """AppLauncher ``kit_args`` engaging render modes that need boot-time registration.
+
+    Returns ``existing_kit_args`` unchanged when ``render_mode`` needs nothing at
+    boot; otherwise appends the missing registration flags (idempotent — flags
+    already present are not duplicated). AppLauncher space-splits the string into
+    ``sys.argv`` for Kit (``_resolve_kit_args``).
+    """
+    flags = _BOOT_KIT_ARGS_BY_RENDER_MODE.get(render_mode or "")
+    if not flags:
+        return existing_kit_args
+    present = set(existing_kit_args.split()) if existing_kit_args else set()
+    missing = [f for f in flags if f not in present]
+    if not missing:
+        return existing_kit_args
+    return " ".join(([existing_kit_args] if existing_kit_args else []) + missing)
+
+
 class IsaacsimHandler(BaseSimHandler):
     """
     Handler for Isaac Lab simulation environment.
@@ -130,6 +165,15 @@ class IsaacsimHandler(BaseSimHandler):
             args.enable_cameras = bool(self.cameras)
             args.headless = self.headless
             args.device = self._resolve_sim_device()
+            # Boot-time renderer REGISTRATION (RTX Real-Time 2.0): without the
+            # rt2 enable flags in Kit's boot argv the renderer is never
+            # registered and every /rtx/rendermode write is silently refused.
+            # Once registered, _load_render_settings' runtime write engages it.
+            kit_args = _kit_args_with_boot_render_mode(
+                getattr(self.scenario.render, "mode", None), getattr(args, "kit_args", None)
+            )
+            if kit_args:
+                args.kit_args = kit_args
             app_launcher = AppLauncher(args)
             self.simulation_app = app_launcher.app
             self._owns_simulation_app = True
@@ -1477,8 +1521,11 @@ class IsaacsimHandler(BaseSimHandler):
         if self.scenario.render.mode == "pathtracing":
             settings.set_string("/rtx/rendermode", "PathTracing")
         elif self.scenario.render.mode == "realtime_pathtracing":
-            # RTX - Real-Time 2.0. The default renderer on recent Isaac Sim builds; on builds
-            # without it the read-back check below fails fast instead of silently falling back.
+            # RTX - Real-Time 2.0: the renderer was registered at Kit boot
+            # (rt2 enable flags injected in _init_scene when this handler owns
+            # the app), so this runtime write actually engages it; without that
+            # registration the write is silently refused. The check below
+            # verifies engagement either way.
             settings.set_string("/rtx/rendermode", "RealTimePathTracing")
         elif self.scenario.render.mode == "raytracing":
             settings.set_string("/rtx/rendermode", "RaytracedLighting")
@@ -1490,11 +1537,22 @@ class IsaacsimHandler(BaseSimHandler):
         if self.scenario.render.mode == "realtime_pathtracing":
             applied = settings.get_as_string("/rtx/rendermode")
             if applied != "RealTimePathTracing":
+                if self._owns_simulation_app:
+                    hint = (
+                        "The rt2 registration flags were injected at Kit boot, so this Isaac Sim build "
+                        "most likely lacks RTX - Real-Time 2.0; use render.mode='raytracing' or "
+                        "'pathtracing'."
+                    )
+                else:
+                    hint = (
+                        "This handler received an already-running SimulationApp, and the RealTimePathTracing "
+                        "renderer must be REGISTERED at Kit boot — launch your app with "
+                        "--/persistent/rtx/modes/rt2/enabled=true --/rtx-transient/rt2Enabled=true in its "
+                        "Kit argv (without registration, /rtx/rendermode writes are silently refused)."
+                    )
                 raise RuntimeError(
-                    "RTX - Real-Time 2.0 (RealTimePathTracing) is unavailable in this Isaac Sim "
-                    f"build (got /rtx/rendermode={applied!r}). Use render.mode='raytracing' or "
-                    "'pathtracing', or launch with --/rtx/rendermode=RealTimePathTracing if your "
-                    "build supports it."
+                    f"RTX - Real-Time 2.0 (RealTimePathTracing) is not engaged (got /rtx/rendermode={applied!r}). "
+                    + hint
                 )
 
         log.info(f"Render mode: {settings.get_as_string('/rtx/rendermode')}")

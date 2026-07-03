@@ -22,7 +22,7 @@ MetaSim supports multiple rendering techniques through Isaac Sim's rendering bac
 | Real-Time Path Tracing (RTX Real-Time 2.0) | `realtime_pathtracing` | Great | Medium | Interactive path-traced rendering (recent Isaac Sim) |
 | Path Tracing (RTX Interactive) | `pathtracing` | Best | Slow | Final renders, sim2real |
 
-> `realtime_pathtracing` selects Isaac Sim's "RTX - Real-Time 2.0" renderer (`/rtx/rendermode=RealTimePathTracing`). It is only available on recent Isaac Sim builds; on older builds MetaSim raises an explicit error so you can fall back to `raytracing` or `pathtracing`.
+> `realtime_pathtracing` selects Isaac Sim's "RTX - Real-Time 2.0" renderer (`/rtx/rendermode=RealTimePathTracing`). The renderer must be **registered at Kit boot** — it only joins the render-mode list when `/rtx-transient/rt2Enabled` is on (derived at startup from the persistent preference `/persistent/rtx/modes/rt2/enabled`); without registration every `/rtx/rendermode` write is silently refused. MetaSim injects the registration flags into Kit's boot argv when it launches the SimulationApp itself, engages the mode, and verifies via readback (once registered, the mode also switches in/out at runtime). If you hand the handler an already-running `simulation_app`, launch it with `--/persistent/rtx/modes/rt2/enabled=true --/rtx-transient/rt2Enabled=true` yourself. On builds without RTX Real-Time 2.0 MetaSim raises an explicit error so you can fall back to `raytracing` or `pathtracing`.
 
 ## Running the Tutorial
 
