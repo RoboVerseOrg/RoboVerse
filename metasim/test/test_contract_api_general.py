@@ -327,6 +327,64 @@ def test_isaacsim_bvh_refresh_covers_realtime_pathtracing():
 
 
 @pytest.mark.general
+def test_isaacsim_boot_kit_args_helper_behavior():
+    """``_kit_args_with_boot_render_mode`` registers RT-PT at boot and is idempotent.
+
+    The helper is dependency-free by design, so it is extracted from the module AST and
+    executed directly — the module itself cannot be imported without isaacsim installed.
+    """
+    module, _ = _parse_module("metasim/sim/isaacsim/isaacsim.py")
+    wanted = {"_BOOT_KIT_ARGS_BY_RENDER_MODE", "_kit_args_with_boot_render_mode"}
+    nodes = [
+        n
+        for n in module.body
+        if (isinstance(n, ast.FunctionDef) and n.name in wanted)
+        or (isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id in wanted for t in n.targets))
+    ]
+    assert len(nodes) == 2, "boot-flag mapping + helper must both exist at module level"
+    future = ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0)
+    extracted = ast.Module(body=[future, *nodes], type_ignores=[])
+    ast.fix_missing_locations(extracted)
+    ns: dict = {}
+    exec(compile(extracted, "<isaacsim-extract>", "exec"), ns)
+    fn = ns["_kit_args_with_boot_render_mode"]
+
+    persistent = "--/persistent/rtx/modes/rt2/enabled=true"
+    transient = "--/rtx-transient/rt2Enabled=true"
+    assert fn("realtime_pathtracing", None) == f"{persistent} {transient}"
+    assert fn("realtime_pathtracing", "") == f"{persistent} {transient}"
+    assert fn("realtime_pathtracing", "--ext-folder=/x") == f"--ext-folder=/x {persistent} {transient}"
+    # idempotent: present flags are not duplicated, missing ones are appended
+    assert fn("realtime_pathtracing", f"{persistent} {transient}") == f"{persistent} {transient}"
+    assert fn("realtime_pathtracing", persistent) == f"{persistent} {transient}"
+    # runtime-switchable modes need no boot flags; existing kit_args pass through
+    assert fn("raytracing", None) is None
+    assert fn("pathtracing", "--ext-folder=/x") == "--ext-folder=/x"
+    assert fn(None, None) is None
+
+
+@pytest.mark.general
+def test_isaacsim_realtime_pathtracing_registered_at_kit_boot():
+    """``_init_scene`` injects the rt2 registration flags into AppLauncher kit_args.
+
+    The RealTimePathTracing renderer only joins the render-mode list when
+    ``/rtx-transient/rt2Enabled`` is on at Kit boot (derived from the persistent
+    ``/persistent/rtx/modes/rt2/enabled`` preference); without that registration every
+    ``/rtx/rendermode`` write — runtime, boot argv, or SimulationApp ``renderer``
+    config — is silently refused (probed on Isaac Sim 5.0). The runtime readback in
+    ``_load_render_settings`` remains as engagement verification.
+    """
+    module, source = _parse_module("metasim/sim/isaacsim/isaacsim.py")
+    init_scene = _get_function(_get_class(module, "IsaacsimHandler"), "_init_scene")
+    init_src = ast.get_source_segment(source, init_scene)
+    assert init_src is not None
+    assert "_kit_args_with_boot_render_mode(" in init_src
+    assert "args.kit_args" in init_src
+    # the injection must land in the namespace BEFORE AppLauncher(args) consumes it
+    assert init_src.index("args.kit_args") < init_src.index("AppLauncher(args)")
+
+
+@pytest.mark.general
 def test_dr_manager_groups_realtime_pathtracing_with_pathtracing():
     """DR light-intensity ranges treat RTX Real-Time 2.0 like path tracing (brighter ranges)."""
     _, source = _parse_module("metasim/randomization/dr_manager.py")
