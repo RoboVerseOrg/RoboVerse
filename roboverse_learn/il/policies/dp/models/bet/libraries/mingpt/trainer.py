@@ -1,3 +1,12 @@
+# Copyright (c) 2020 Andrej Karpathy
+# SPDX-License-Identifier: MIT
+#
+# Adapted from minGPT (https://github.com/karpathy/minGPT), vendored into RoboVerse via
+# diffusion_policy (https://github.com/real-stanford/diffusion_policy), which carries it at
+# diffusion_policy/model/bet/libraries/mingpt/.
+# Changes: import ordering and formatting only (ruff/isort); no functional changes.
+# Full license: roboverse_learn/il/policies/dp/models/bet/libraries/mingpt/LICENSE
+
 """
 Simple training loop; Boilerplate that could apply to any arbitrary neural network,
 so nothing in this file really has anything to do with GPT specifically.

@@ -1,3 +1,11 @@
+# Copyright (c) Facebook, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from DETR (https://github.com/facebookresearch/detr), file util/box_ops.py, via ACT
+# (https://github.com/tonyzhaozh/act).
+# Changes: none (vendored verbatim).
+# Full license: roboverse_learn/il/policies/act/detr/LICENSE
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 Utilities for bounding box manipulation and GIoU.

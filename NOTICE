@@ -1,0 +1,38 @@
+RoboVerse
+Copyright (c) 2024-2026 The RoboVerse Contributors
+
+This product includes software developed by third parties, used under their own
+licenses. The authoritative index of that software — the path in this repository,
+the upstream project, its license, and whether the code was vendored, adapted, or
+merely integrated — is THIRD_PARTY_NOTICES.md.
+
+Summary of third-party code included in this distribution:
+
+  FastTD3                    (MIT)           - github.com/younggyoseo/FastTD3
+  CleanRL                    (MIT)           - github.com/vwxyzjn/cleanrl
+  stable-baselines3          (MIT)           - github.com/DLR-RM/stable-baselines3
+  diffusion_policy           (MIT)           - github.com/real-stanford/diffusion_policy
+  robomimic                  (MIT)           - github.com/ARISE-Initiative/robomimic
+  robosuite                  (MIT)           - github.com/ARISE-Initiative/robosuite
+  ACT                        (MIT)           - github.com/tonyzhaozh/act
+  minGPT                     (MIT)           - github.com/karpathy/minGPT
+  pymunk                     (MIT)           - github.com/viblo/pymunk
+  rlds_dataset_builder       (MIT)           - github.com/kpertsch/rlds_dataset_builder
+  BeyondMimic                (MIT)           - github.com/HybridRobotics/whole_body_tracking
+  Pointnet2_PyTorch          (MIT)           - github.com/erikwijmans/Pointnet2_PyTorch
+  DETR                       (Apache-2.0)    - github.com/facebookresearch/detr
+  ManiSkill                  (Apache-2.0)    - github.com/haosulab/ManiSkill
+  ManiSkill2-real2sim        (Apache-2.0)    - github.com/simpler-env/ManiSkill2_real2sim
+  MuJoCo                     (Apache-2.0)    - github.com/google-deepmind/mujoco
+  MuJoCo Playground          (Apache-2.0)    - github.com/google-deepmind/mujoco_playground
+  mjlab                      (Apache-2.0)    - github.com/mujocolab/mjlab
+  Isaac Lab                  (BSD-3-Clause)  - github.com/isaac-sim/IsaacLab
+  rsl_rl                     (BSD-3-Clause)  - github.com/leggedrobotics/rsl_rl
+
+Three components have unresolved licensing and are listed under "Unresolved" in
+THIRD_PARTY_NOTICES.md. They must be settled before redistribution:
+
+  - scripts/advanced/isaacgym_animate.py  (NVIDIA Isaac Gym sample; proprietary)
+  - third_party/gsnet/                    (graspness upstream publishes no license)
+  - roboverse_pack/teleop/transforms.py, roboverse_pack/tasks/benchmark/cube_reach.py
+                                          ("BiDexBench" upstream could not be identified)

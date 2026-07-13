@@ -1,3 +1,12 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: Unitree Go1 walking scaffold on RoboVerse's `ManagerBasedRVEnv`; the 48-D observation and the reward
+#   set follow mjlab's `tasks/velocity/velocity_env_cfg.py` via the ported terms in `mdp/`, while the env plumbing
+#   and the direct-torque action (via `qfrc_applied`, since the raw mjlab MJCF defines no actuators) are
+#   RoboVerse's.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Minimal Go1 walking task scaffold on ManagerBasedRVEnv (Phase 3b smoke).
 
 Purpose: demonstrate that the manager-based pattern scales beyond cartpole

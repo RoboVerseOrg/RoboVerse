@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: Unitree G1 walking scaffold on RoboVerse's `ManagerBasedRVEnv`; the observation / reward / termination
+#   term set follows mjlab's `tasks/velocity/velocity_env_cfg.py` via the ported terms in `mdp/`, while the env
+#   plumbing, direct-torque action and scene-MJCF asset path are RoboVerse's.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Minimal G1 walking task scaffold on ManagerBasedRVEnv (Phase 4 / 12-task).
 
 Mirrors ``velocity_go1_v2.py``'s template but for the Unitree G1 humanoid

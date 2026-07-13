@@ -1,3 +1,12 @@
+# Copyright (c) 2023 Tony Z. Zhao
+# SPDX-License-Identifier: MIT
+#
+# Adapted from ACT (https://github.com/tonyzhaozh/act), file scripted_policy.py.
+# Changes: quaternion math moved from `pyquaternion.Quaternion` to numpy-quaternion
+#   (`quaternion.from_float_array` / `from_rotation_vector` / `as_float_array`); the scripted
+#   trajectories and their waypoints are unchanged.
+# Full license: roboverse_learn/il/policies/act/LICENSE
+
 import numpy as np
 import matplotlib.pyplot as plt
 import quaternion

@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: port of mjlab's `tasks/velocity/mdp/curriculums.py` and `tasks/manipulation/mdp/curriculums.py` to
+#   RoboVerse's `func(env, env_ids, **params)` term convention; the terrain-levels term is a stub pending the
+#   terrain manager.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Curriculum term functions ported from mjlab.
 
 Signature: ``func(env: ManagerBasedRVEnv, env_ids: torch.Tensor, **params) -> dict[str, Tensor] | scalar | None``

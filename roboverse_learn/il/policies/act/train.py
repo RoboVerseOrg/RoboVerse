@@ -1,3 +1,13 @@
+# Copyright (c) 2023 Tony Z. Zhao
+# SPDX-License-Identifier: MIT
+#
+# Adapted from ACT (https://github.com/tonyzhaozh/act), file imitate_episodes.py.
+# Changes: ACT's train_bc loop is refactored into ACTRunner(BaseRunner) and wired to RoboVerse's
+#   IL runner/config plumbing (OmegaConf config, RoboVerse output dirs, zarr data loading); the
+#   policy/optimizer construction, the forward pass, the epoch loop with validation and best-
+#   checkpoint tracking, and plot_history follow upstream.
+# Full license: roboverse_learn/il/policies/act/LICENSE
+
 import torch
 import numpy as np
 import os

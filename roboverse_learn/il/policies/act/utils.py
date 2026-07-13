@@ -1,3 +1,14 @@
+# Copyright (c) 2023 Tony Z. Zhao
+# SPDX-License-Identifier: MIT
+#
+# Adapted from ACT (https://github.com/tonyzhaozh/act), file utils.py.
+# Changes: ZarrEpisodicRoboVerseDataset was added to read RoboVerse demos from a zarr
+#   ReplayBuffer; get_norm_stats was rewritten to compute state/action statistics (and
+#   max_episode_len) from that buffer instead of per-episode HDF5 files, and returns the clamped
+#   episode count; load_data now builds the zarr dataset. ACT's HDF5 EpisodicDataset and the
+#   helpers (compute_dict_mean, detach_dict, set_seed) are kept as upstream.
+# Full license: roboverse_learn/il/policies/act/LICENSE
+
 import sys
 import os
 

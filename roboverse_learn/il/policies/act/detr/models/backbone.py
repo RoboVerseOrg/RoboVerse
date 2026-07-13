@@ -1,3 +1,14 @@
+# Copyright (c) Facebook, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from DETR (https://github.com/facebookresearch/detr), file models/backbone.py, via
+# ACT's fork of DETR (https://github.com/tonyzhaozh/act), which made BackboneBase.forward take a
+# plain image tensor instead of a NestedTensor.
+# Changes: NestedTensor and is_main_process are imported from the absolute package path
+#   `roboverse_learn.il.policies.act.detr.util` instead of `util.misc`; ACT's commented-out
+#   NestedTensor masking block was dropped; whitespace.
+# Full license: roboverse_learn/il/policies/act/detr/LICENSE
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 Backbone modules.

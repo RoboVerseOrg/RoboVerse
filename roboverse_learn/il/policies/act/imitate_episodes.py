@@ -1,3 +1,12 @@
+# Copyright (c) 2023 Tony Z. Zhao
+# SPDX-License-Identifier: MIT
+#
+# Adapted from ACT (https://github.com/tonyzhaozh/act), file imitate_episodes.py.
+# Changes: the real-robot TASK_CONFIGS import is retargeted from `aloha_scripts.constants` to
+#   `roboverse.constants`, and the episode return now filters out None rewards explicitly
+#   (`np.array([r for r in rewards if r is not None])`). Otherwise verbatim.
+# Full license: roboverse_learn/il/policies/act/LICENSE
+
 import torch
 import numpy as np
 import os

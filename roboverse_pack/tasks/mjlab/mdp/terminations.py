@@ -1,3 +1,10 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: termination terms ported from mjlab to RoboVerse's `func(env, env_states, **params) -> BoolTensor`
+#   convention, reading `TensorState` / MuJoCo qpos instead of mjlab's scene entities.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Termination term functions ported from mjlab.
 
 Signature: ``func(env: ManagerBasedRVEnv, env_states: TensorState, **params) -> torch.BoolTensor``

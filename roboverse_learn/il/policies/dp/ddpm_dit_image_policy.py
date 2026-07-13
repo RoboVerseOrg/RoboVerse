@@ -1,3 +1,13 @@
+# Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from diffusion_policy (https://github.com/real-stanford/diffusion_policy).
+# Changes: RoboVerse-authored DiT variant. It subclasses the diffusion_policy-derived
+#   DiffusionDenoisingImagePolicy base class (ddpm_image_policy.py) and swaps the denoising
+#   backbone for RoboVerse's FlowTransformer; the diffusion sampling/training logic is
+#   inherited from that base class rather than reproduced here.
+# Full license: roboverse_learn/il/policies/dp/LICENSE
+
 from __future__ import annotations
 
 from typing import Any, Dict, Mapping, Optional

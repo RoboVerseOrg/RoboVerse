@@ -1,3 +1,11 @@
+# Copyright (c) 2023 Karl Pertsch
+# SPDX-License-Identifier: MIT
+#
+# Adapted from rlds_dataset_builder (https://github.com/kpertsch/rlds_dataset_builder), file
+# test_dataset_transform.py.
+# Changes: the target action spec is 7-dimensional instead of 8. Otherwise verbatim.
+# Full license: roboverse_learn/vla/rlds_utils/LICENSE
+
 import argparse
 import importlib
 import tqdm

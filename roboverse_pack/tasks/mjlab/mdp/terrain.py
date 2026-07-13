@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: reduced port of mjlab's `terrains/`: a single rough-heightfield MJCF generator plus the terrain-level
+#   move-up/move-down heuristic from mjlab's `terrain_levels_vel` curriculum; mjlab's full terrain generator
+#   (heightfield/primitive terrains, sub-terrain grid) is not ported.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Terrain manager — mjlab terrain_levels port (minimal but functional).
 
 Full mjlab terrain (``mjlab/src/mjlab/terrains/``) is ~4000 LOC across

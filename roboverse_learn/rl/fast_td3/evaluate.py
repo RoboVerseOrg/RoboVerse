@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Younggyo Seo
+# SPDX-License-Identifier: MIT
+#
+# Adapted from FastTD3 (https://github.com/younggyoseo/FastTD3).
+# Changes: checkpoint-evaluation script built around the MetaSim task/handler APIs (get_task_class,
+#   handler.get_states, save_traj_file); loads FastTD3 Actor/EmpiricalNormalization weights and adds RoboVerse
+#   trajectory/video export.
+# Full license: roboverse_learn/rl/fast_td3/LICENSE
 from __future__ import annotations
 
 import os

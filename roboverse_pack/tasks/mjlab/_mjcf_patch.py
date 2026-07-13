@@ -1,3 +1,12 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: RoboVerse MJCF patcher that reproduces mjlab's programmatic `<position>` actuator setup and solver
+#   defaults (`implicitfast` integrator, iterations/ls_iterations) via `mujoco.MjSpec`, writing a patched XML for
+#   MetaSim's `SceneCfg`; the per-joint stiffness maps are derived from mjlab's
+#   `asset_zoo/robots/*/go1_constants.py` and `g1_constants.py`. No mjlab source copied.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Runtime MJCF patching to add ``<position>`` actuators (mjlab parity helper).
 
 mjlab adds actuators programmatically via ``mujoco.MjSpec`` so each joint gets

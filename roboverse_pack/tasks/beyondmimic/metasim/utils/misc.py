@@ -1,3 +1,10 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: only get_checkpoint_path() is Isaac Lab code (copied from isaaclab_tasks.utils.parse_cfg); the remaining helpers are RoboVerse code written for the BeyondMimic port.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.isaaclab
+
 from __future__ import annotations
 
 import argparse

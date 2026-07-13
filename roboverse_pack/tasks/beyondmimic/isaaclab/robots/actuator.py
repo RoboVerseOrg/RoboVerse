@@ -1,3 +1,10 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab), via BeyondMimic (https://github.com/HybridRobotics/whole_body_tracking).
+# Changes: DelayedImplicitActuator applies Isaac Lab's DelayedPDActuator delay-buffer logic to ImplicitActuator (the docstring copied from DelayedPDActuator still claims it extends IdealPDActuator); reached RoboVerse via BeyondMimic. RoboVerse changed the default max_delay from 0 to 3 and added method docstrings.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.isaaclab
+
 from __future__ import annotations
 
 from collections.abc import Sequence
