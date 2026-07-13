@@ -168,7 +168,6 @@ if __name__ == "__main__":
             next_obs, reward, terminations, truncations, infos = envs.step(action)
             next_done = torch.logical_or(terminations, truncations)
             rewards[step] = reward.view(-1)
-            dones[step] = next_done
 
             # Update episode tracker
             episode_tracker.update(reward.view(-1), terminations, truncations)
