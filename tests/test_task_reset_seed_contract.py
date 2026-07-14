@@ -1,9 +1,21 @@
-"""Backend-free conformance guardrail: every Tier-1 task ``reset`` accepts ``seed``.
+"""Backend-free conformance guardrail: every Tier-1 task ``reset`` is substitutable for the base.
 
-The gym bridge (``metasim.task.gym_registration``) forwards ``env.reset(seed=)``
-to a task only when the task's ``reset`` signature accepts it — tasks that
-override ``reset`` without a ``seed`` parameter silently drop the seed, so
-rollouts are not reproducible on the simulator side.
+The base contract is ``BaseTaskEnv.reset(states=None, env_ids=None, seed=None)``, and callers rely
+on the *whole* signature, not just one parameter:
+
+* ``states`` — the IL/VLA eval runners replay demo initial states with
+  ``env.reset(states=...)`` (``roboverse_learn/il/runners/default_runner.py``,
+  ``roboverse_learn/vla/{OpenVLA,SmolVLA,pi0}/*_eval.py``). An override that drops ``states``
+  makes those runners die with ``TypeError: reset() got an unexpected keyword argument 'states'``.
+* ``env_ids`` — partial resets.
+* ``seed`` — the gym bridge (``metasim.task.gym_registration``) forwards ``env.reset(seed=)`` to a
+  task only when its signature accepts it, so an override without ``seed`` silently drops it and
+  rollouts are not reproducible on the simulator side.
+
+This guardrail originally checked ``seed`` alone; eight Tier-1 overrides passed it while dropping
+``states`` (six SimplerEnv tasks took ``options`` in its place). It now checks full
+substitutability — accepted parameters, their positional order, and that no override adds a
+*required* parameter of its own — so that class of drift cannot recur.
 
 This test statically (no sim backend, no instantiation) scans every task file
 and asserts the contract on **Tier-1 tasks only**:
@@ -20,15 +32,18 @@ and asserts the contract on **Tier-1 tasks only**:
 
 Assertions (ratchets — each allowlist may only SHRINK, and may not go stale):
 
-* ``reset`` — no *new* Tier-1 override drops ``seed`` (allowlist now empty →
+* ``reset`` — no *new* Tier-1 override breaks substitutability (allowlist now empty →
   zero-tolerance); the unified family base classes honor the contract.
 * ``step`` — no *new* Tier-1 override (action transforms belong in a pre-physics
   action hook / ``pre_physics_step_callback``); current overrides are tracked
   in ``KNOWN_STEP_OVERRIDES`` as P1-cleanup targets.
 * ``close`` — no *new* Tier-1 override (teardown belongs in ``close_callback``).
 
-When you fix a file (accept ``seed`` / drop the ``step``/``close`` override),
+When you fix a file (honor the reset contract / drop the ``step``/``close`` override),
 delete it from the corresponding allowlist below.
+
+A task may still take *extra* parameters (e.g. SimplerEnv's ``options`` episode spec) as long as
+they come after the contract's three and have defaults, so a plain ``reset(states=...)`` call works.
 """
 
 from __future__ import annotations
@@ -45,7 +60,11 @@ _TASKS = pathlib.Path(__file__).resolve().parents[1] / "roboverse_pack" / "tasks
 # roboverse_learn — they are not defined under tasks/, so they anchor the graph.
 _CONTRACT_ROOTS = {"BaseTaskEnv", "RLTaskEnv", "ManagerBasedRVEnv"}
 
-# Family base classes fixed in the reset(seed) unification — must stay conformant.
+# The base signature: BaseTaskEnv.reset(states=None, env_ids=None, seed=None). Order matters —
+# callers may pass these positionally.
+_CONTRACT_PARAMS = ("states", "env_ids", "seed")
+
+# Family base classes / tasks fixed in the reset-contract unification — must stay conformant.
 _FIXED_BASES = {
     "libero/libero_base.py",
     "libero_90/libero_90_base.py",
@@ -55,13 +74,22 @@ _FIXED_BASES = {
     "calvin/base_table.py",
     "pick_place/base.py",
     "humanoid/base/base_legged_robot.py",
+    "beyondmimic/metasim/envs/base_legged_robot.py",
+    # SimplerEnv: took `options` in place of `states`, so VLA eval on SimplerEnv — the canonical
+    # pairing for that benchmark — was a hard TypeError. They keep `options` after the contract's
+    # three parameters.
+    "simpler_env/_metasim/coke_task.py",
+    "simpler_env/_metasim/drawer_task.py",
+    "simpler_env/_metasim/grasp_objects_task.py",
+    "simpler_env/_metasim/place_task.py",
+    "simpler_env/_metasim/put_on_task.py",
 }
 
-# P1 cleanup targets: Tier-1 task files whose ``reset`` override still drops
-# ``seed``. The contract is now COMPLETE — every Tier-1 task accepts ``seed`` —
-# so this is empty and the guardrail is zero-tolerance. It may only ever be
-# extended with a NEW genuine violator pending its fix; prefer fixing instead.
-KNOWN_NO_SEED_RESET = frozenset()
+# P1 cleanup targets: Tier-1 task files whose ``reset`` override is not substitutable for the base
+# signature. The contract is now COMPLETE — every Tier-1 task accepts states/env_ids/seed — so this
+# is empty and the guardrail is zero-tolerance. It may only ever be extended with a NEW genuine
+# violator pending its fix; prefer fixing instead.
+KNOWN_NONCONFORMANT_RESET = frozenset()
 
 # The BaseTaskEnv contract says tasks should NOT override step()/close() — action
 # transforms belong in a pre-physics action hook, teardown in close_callback. These
@@ -144,15 +172,49 @@ def _is_tier3(rel_path: str, class_name: str) -> bool:
     return "/_native/" in p or "_passthrough" in rel_path
 
 
-def _reset_lacks_seed(fn: ast.FunctionDef) -> bool:
+def _reset_violations(fn: ast.FunctionDef) -> list[str]:
+    """Reasons ``fn`` is not substitutable for ``reset(states=None, env_ids=None, seed=None)``.
+
+    Three ways an override breaks a caller of the base signature:
+
+    1. it does not accept a contract parameter at all (``reset(states=...)`` → TypeError);
+    2. it accepts them positionally in a different order (a positional caller silently binds the
+       wrong value — worse than a TypeError, because it corrupts instead of failing);
+    3. it adds a parameter of its own with no default (``reset(states=...)`` → TypeError for the
+       missing argument).
+    """
     a = fn.args
-    names = {p.arg for p in (*a.posonlyargs, *a.args, *a.kwonlyargs)}
-    return "seed" not in names and a.kwarg is None  # no seed= and no **kwargs
+    positional = [p.arg for p in (*a.posonlyargs, *a.args)][1:]  # drop self
+    kwonly = [p.arg for p in a.kwonlyargs]
+    names = [*positional, *kwonly]
+    bad: list[str] = []
+
+    # (1) accepted at all? **kwargs absorbs anything, so it satisfies the contract.
+    if a.kwarg is None:
+        missing = [p for p in _CONTRACT_PARAMS if p not in names]
+        if missing:
+            bad.append(f"does not accept {', '.join(missing)}")
+
+    # (2) contract params that are positional must keep the base's relative order.
+    ordered = [p for p in positional if p in _CONTRACT_PARAMS]
+    if ordered != [p for p in _CONTRACT_PARAMS if p in ordered]:
+        bad.append(f"positional order is {tuple(ordered)}, must follow {_CONTRACT_PARAMS}")
+
+    # (3) any extra parameter must have a default (positional defaults bind to the tail).
+    n_pos_defaults = len(a.defaults)
+    required_positional = positional[: len(positional) - n_pos_defaults]
+    required_kwonly = [p.arg for p, d in zip(a.kwonlyargs, a.kw_defaults) if d is None]
+    extra_required = [p for p in (*required_positional, *required_kwonly) if p not in _CONTRACT_PARAMS]
+    if extra_required:
+        bad.append(f"adds required parameter(s) {', '.join(extra_required)} (give them defaults)")
+
+    return bad
 
 
-def _all_violators() -> set[str]:
+def _all_violators() -> dict[str, list[str]]:
+    """Tier-1 task files whose ``reset`` override is not substitutable → why."""
     graph = _build_class_graph()
-    out: set[str] = set()
+    out: dict[str, list[str]] = {}
     for path in _TASKS.rglob("*.py"):
         rel = path.relative_to(_TASKS).as_posix()
         try:
@@ -163,12 +225,10 @@ def _all_violators() -> set[str]:
             if _is_tier3(rel, cls.name) or not _in_contract(cls.name, graph):
                 continue
             for fn in cls.body:
-                if (
-                    isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef))
-                    and fn.name == "reset"
-                    and _reset_lacks_seed(fn)
-                ):
-                    out.add(rel)
+                if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)) and fn.name == "reset":
+                    bad = _reset_violations(fn)
+                    if bad:
+                        out.setdefault(rel, []).extend(f"{cls.name}.reset {b}" for b in bad)
     return out
 
 
@@ -191,40 +251,65 @@ def _files_overriding(method: str) -> set[str]:
 
 
 @pytest.mark.general
-def test_no_new_reset_without_seed():
-    """No Tier-1 task may add a ``reset`` override that drops ``seed`` (ratchet)."""
-    new = sorted(_all_violators() - KNOWN_NO_SEED_RESET)
+def test_no_new_nonconformant_reset():
+    """No Tier-1 task may add a ``reset`` override that is not substitutable for the base (ratchet).
+
+    Covers all three contract parameters. ``states`` is the one that bit us: the IL and VLA eval
+    runners call ``env.reset(states=...)`` unconditionally, so an override that drops it turns
+    every evaluation on that task into a TypeError.
+    """
+    violators = _all_violators()
+    new = sorted(set(violators) - KNOWN_NONCONFORMANT_RESET)
+    detail = "\n  ".join(f"{rel}: {'; '.join(violators[rel])}" for rel in new)
     assert not new, (
-        "These Tier-1 task files override reset() without a seed parameter, breaking "
-        "the env.reset(seed=) contract. Add seed=None and forward it to super().reset:\n  " + "\n  ".join(new)
+        "These Tier-1 task files override reset() incompatibly with the base contract "
+        "reset(states=None, env_ids=None, seed=None). Accept all three (extra params go last, with "
+        "defaults) and forward them to super().reset:\n  " + detail
     )
 
 
 @pytest.mark.general
-def test_reset_seed_allowlist_has_no_stale_entries():
+def test_reset_allowlist_has_no_stale_entries():
     """Allowlisted files must still be violators — forces the list to shrink."""
-    stale = sorted(KNOWN_NO_SEED_RESET - _all_violators())
+    stale = sorted(KNOWN_NONCONFORMANT_RESET - set(_all_violators()))
     assert not stale, (
-        "These files no longer violate the reset(seed) contract — remove them from "
-        "KNOWN_NO_SEED_RESET:\n  " + "\n  ".join(stale)
+        "These files no longer violate the reset() contract — remove them from "
+        "KNOWN_NONCONFORMANT_RESET:\n  " + "\n  ".join(stale)
     )
 
 
 @pytest.mark.general
-def test_unified_bases_accept_seed():
-    """The fixed family base classes must keep accepting seed (regression guard)."""
+def test_unified_bases_honor_reset_contract():
+    """The fixed family bases/tasks must keep the full reset signature (regression guard)."""
     regressed = []
     for rel in sorted(_FIXED_BASES):
         tree = ast.parse((_TASKS / rel).read_text(encoding="utf-8"))
         for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
             for fn in cls.body:
-                if (
-                    isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef))
-                    and fn.name == "reset"
-                    and _reset_lacks_seed(fn)
-                ):
-                    regressed.append(rel)
-    assert not regressed, f"Base classes regressed to reset() without seed: {sorted(set(regressed))}"
+                if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)) and fn.name == "reset":
+                    regressed += [f"{rel}: {cls.name}.reset {b}" for b in _reset_violations(fn)]
+    assert not regressed, "Base classes regressed off the reset contract:\n  " + "\n  ".join(sorted(regressed))
+
+
+@pytest.mark.general
+@pytest.mark.parametrize(
+    ("sig", "conformant"),
+    [
+        ("def reset(self, states=None, env_ids=None, seed=None): ...", True),
+        # SimplerEnv: extra episode-spec param, after the contract's three, with a default.
+        ("def reset(self, states=None, env_ids=None, seed=0, options=None): ...", True),
+        ("def reset(self, states=None, env_ids=None, **kwargs): ...", True),  # **kwargs absorbs seed
+        ("def reset(self, env_ids=None, seed=None): ...", False),  # legged-robot bases, pre-fix
+        ("def reset(self, env_ids=None, options=None, seed=0): ...", False),  # SimplerEnv, pre-fix
+        ("def reset(self, env_ids=None, states=None, seed=None): ...", False),  # swapped positionals
+        # extra param with no default: reset(states=...) would TypeError on the missing argument
+        ("def reset(self, states=None, env_ids=None, seed=None, *, options): ...", False),
+    ],
+)
+def test_reset_violation_checker(sig, conformant):
+    """The checker itself — it must reject exactly the signatures the seed-only guardrail let pass."""
+    fn = ast.parse(sig).body[0]
+    assert (not _reset_violations(fn)) is conformant
 
 
 @pytest.mark.general

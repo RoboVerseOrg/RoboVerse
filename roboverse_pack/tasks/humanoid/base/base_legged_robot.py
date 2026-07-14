@@ -253,12 +253,22 @@ class LeggedRobotTask(AgentTask):
         effort = torch.clip(effort, -self.torque_limits, self.torque_limits)
         return effort.to(torch.float32)
 
-    def reset(self, env_ids: torch.Tensor | list[int] | None = None, seed: int | None = None):
+    def reset(
+        self,
+        states: TensorState | None = None,
+        env_ids: torch.Tensor | list[int] | None = None,
+        seed: int | None = None,
+    ):
         """Reset selected envs (defaults to all).
 
-        ``seed`` is forwarded to the handler when supported, so the
-        ``env.reset(seed=)`` contract reaches the simulator (this base
-        reimplements ``reset`` and does not call ``super().reset``).
+        Args:
+            states: Optional external states to set for the selected envs, per the
+                ``BaseTaskEnv.reset`` contract. If None, the task's own initial states are
+                used. IL/VLA eval runners replay demos through this argument.
+            env_ids: The environment ids to reset (defaults to all).
+            seed: Optional reproducibility seed, forwarded to the handler when supported so
+                the ``env.reset(seed=)`` contract reaches the simulator (this base
+                reimplements ``reset`` and does not call ``super().reset``).
         """
         if seed is not None:
             set_seed = getattr(self.handler, "set_seed", None)
@@ -276,7 +286,8 @@ class LeggedRobotTask(AgentTask):
         for _reset_fn, _params in self.reset_callback.values():
             _ = _reset_fn(self, env_ids, **_params)
 
-        self.set_states(states=self.setup_initial_env_states, env_ids=env_ids)
+        states_to_set = self.setup_initial_env_states if states is None else states
+        self.set_states(states=states_to_set, env_ids=env_ids)
 
         for history in self.history_buffer.values():
             for item in history:
@@ -302,8 +313,8 @@ class LeggedRobotTask(AgentTask):
                 torch.mean(self.episode_not_terminations[key][env_ids]) / self.max_episode_steps
             )
             self.episode_not_terminations[key][env_ids] = 0.0
-        states = self.handler.get_states(mode="tensor")
-        info = {"privileged_observation": self._privileged_observation(states)}
+        env_states = self.handler.get_states(mode="tensor")
+        info = {"privileged_observation": self._privileged_observation(env_states)}
         return self.obs_buf, info
 
     def step(
