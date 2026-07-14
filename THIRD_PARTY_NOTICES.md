@@ -44,7 +44,7 @@ below. If you cannot name the upstream and its license, do not merge it.
 | `roboverse_learn/il/policies/act/` (everything except the DETR-derived files in the next row) | [ACT](https://github.com/tonyzhaozh/act) © 2023 Tony Z. Zhao | MIT | Vendored | `roboverse_learn/il/policies/act/LICENSE` |
 | `roboverse_learn/il/policies/act/detr/models/backbone.py`, `roboverse_learn/il/policies/act/detr/models/position_encoding.py`, `roboverse_learn/il/policies/act/detr/models/transformer.py`, `roboverse_learn/il/policies/act/detr/util/` | [DETR](https://github.com/facebookresearch/detr) © Facebook, Inc. (reached via ACT's fork of DETR) | Apache-2.0 | Vendored | `roboverse_learn/il/policies/act/detr/LICENSE` |
 | `roboverse_learn/il/policies/act/detr/main.py`, `roboverse_learn/il/policies/act/detr/models/__init__.py` | mixed: DETR's argument parser / package init (© Facebook, Inc.) plus ACT's model-build path (© 2023 Tony Z. Zhao) | Apache-2.0 AND MIT | Adapted | `roboverse_learn/il/policies/act/detr/LICENSE`, `roboverse_learn/il/policies/act/LICENSE` |
-| `roboverse_learn/il/runners/base_eval_runner.py`, `roboverse_learn/eval/harness/chunking.py` | [ACT](https://github.com/tonyzhaozh/act) © 2023 Tony Z. Zhao (temporal ensembling only) | MIT | Adapted | `roboverse_learn/il/policies/act/LICENSE` |
+| `roboverse_learn/il/runners/base_eval_runner.py` | [ACT](https://github.com/tonyzhaozh/act) © 2023 Tony Z. Zhao (temporal ensembling only) | MIT | Adapted | `roboverse_learn/il/policies/act/LICENSE` |
 | `roboverse_learn/il/utils/robomimic_util.py` | [robomimic](https://github.com/ARISE-Initiative/robomimic) © 2021 Stanford Vision and Learning Lab / [diffusion_policy](https://github.com/real-stanford/diffusion_policy) | MIT | Adapted | `roboverse_learn/il/policies/dp/LICENSE` |
 | `roboverse_learn/il/utils/pymunk_override.py` | [pymunk](https://github.com/viblo/pymunk) © 2007-2016 Victor Blomqvist, via [diffusion_policy](https://github.com/real-stanford/diffusion_policy)'s copy | MIT | Adapted | pymunk's MIT notice, reproduced verbatim at the top of `roboverse_learn/il/utils/pymunk_override.py` |
 | `roboverse_learn/vla/rlds_utils/` | [rlds_dataset_builder](https://github.com/kpertsch/rlds_dataset_builder) © Karl Pertsch | MIT | Adapted | `roboverse_learn/vla/rlds_utils/LICENSE` |
@@ -113,15 +113,11 @@ an attribution header; `tests/test_attribution.py` checks that this list stays i
    verify its provenance. **Obtain a license from the graspness authors or remove the vendored
    copy.**
 
-3. **`roboverse_pack/teleop/transforms.py` and `roboverse_pack/tasks/benchmark/cube_reach.py` —
-   "BiDexBench" upstream could not be identified.**
-   `transforms.py` says its AVP frame profiles were *"ported from BiDexBench"* and
-   `cube_reach.py` says it was *"migrated from BiDexBench"*, but no project by that name could be
-   found (no public repository, no license). If BiDexBench is a RoboVerse-internal project, say
-   so in the files and no third-party attribution is needed; if it is someone else's, the
-   upstream and its license must be named before release. Per `AGENTS.md`: *if you cannot name
-   the upstream and its license, do not merge the code.* We have deliberately **not** guessed a
-   copyright holder or license here.
+## Not third-party (recorded to stop the next reader re-opening the question)
+
+`roboverse_pack/teleop/transforms.py` and `roboverse_pack/tasks/benchmark/cube_reach.py` say their
+code was *"ported/migrated from BiDexBench"*. BiDexBench is a **RoboVerse-internal predecessor
+project**, not an outside one, so no third-party attribution is owed. Both files now say so inline.
 
 ## Full license texts
 

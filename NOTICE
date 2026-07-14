@@ -29,10 +29,8 @@ Summary of third-party code included in this distribution:
   Isaac Lab                  (BSD-3-Clause)  - github.com/isaac-sim/IsaacLab
   rsl_rl                     (BSD-3-Clause)  - github.com/leggedrobotics/rsl_rl
 
-Three components have unresolved licensing and are listed under "Unresolved" in
+Two components have unresolved licensing and are listed under "Unresolved" in
 THIRD_PARTY_NOTICES.md. They must be settled before redistribution:
 
   - scripts/advanced/isaacgym_animate.py  (NVIDIA Isaac Gym sample; proprietary)
   - third_party/gsnet/                    (graspness upstream publishes no license)
-  - roboverse_pack/teleop/transforms.py, roboverse_pack/tasks/benchmark/cube_reach.py
-                                          ("BiDexBench" upstream could not be identified)

@@ -30,7 +30,11 @@ OPENARM_BIMANUAL_WUJI_PROFILE = BenchmarkRobotTeleopProfile(
 
 
 def build_cube_reach_spec() -> BenchmarkTaskSpec:
-    """Build the first native benchmark task migrated from BiDexBench."""
+    """Build the first native benchmark task, migrated from BiDexBench.
+
+    BiDexBench is a RoboVerse-internal predecessor project, not a third party — this code
+    carries no upstream attribution obligation.
+    """
     return BenchmarkTaskSpec(
         name="benchmark.cube_reach",
         family="precision",

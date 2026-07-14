@@ -21,7 +21,7 @@ only ever proves that the files someone remembered are fine). It fails when:
 * `THIRD_PARTY_NOTICES.md` and the tree disagree in either direction: a row names a path that
   does not exist, or a headered file is not covered by any row.
 
-Three escape hatches exist, all narrow and all machine-checked here:
+Four escape hatches exist, all narrow and all machine-checked here:
 
 1. **Reimplemented / Integration rows.** A `THIRD_PARTY_NOTICES.md` row whose *Relationship* is
    "Reimplemented" (written from the upstream's ideas, no source copied) or "Integration" (we
@@ -31,7 +31,11 @@ Three escape hatches exist, all narrow and all machine-checked here:
    recorded there instead of being silently headered with a guessed license. Those paths are
    exempt from the header rule; the paths must exist, and the list is the *only* place such code
    may hide.
-3. **`# RoboVerse-original: <reason>`.** A file inside a vendored tree that contains no upstream
+3. **The "Not third-party" section.** A "ported from X" tell where X is a RoboVerse-internal
+   predecessor project, not an outside one. This is an assertion no test can verify, so it is
+   made expensive to grant: the path must be named in that section *and* the file itself must
+   repeat the claim, so a reader who opens only the file is not left guessing.
+4. **`# RoboVerse-original: <reason>`.** A file inside a vendored tree that contains no upstream
    code must say so — silence is indistinguishable from a forgotten header. It is narrowed here:
    the marker needs a written reason, and a file claiming to be RoboVerse-original may not carry
    somebody else's copyright line. It is still an unverified assertion by the author, which is
@@ -149,15 +153,22 @@ def _table_rows() -> list[tuple[list[str], str]]:
     return rows
 
 
-def _unresolved_paths() -> list[str]:
-    """Paths recorded in the 'Unresolved' section — code we could not attribute."""
+def _section_paths(heading: str) -> list[str]:
+    """Repo paths named in a top-level section of THIRD_PARTY_NOTICES.md."""
     text = NOTICES.read_text(encoding="utf-8")
-    section = text.split("## Unresolved", 1)[1].split("\n## ", 1)[0]
+    if heading not in text:
+        return []
+    section = text.split(heading, 1)[1].split("\n## ", 1)[0]
     return sorted({p for p in re.findall(r"`([^`]+)`", section) if _is_repo_path(p)})
 
 
 TABLE_ROWS = _table_rows()
-UNRESOLVED = _unresolved_paths()
+#: Code we could not attribute — must be settled or removed before release.
+UNRESOLVED = _section_paths("## Unresolved")
+#: Code whose "ported from X" tell names a RoboVerse-internal predecessor, not an outside project.
+#: Naming the file here is the *only* way to make that claim: a comment in the file is not enough,
+#: because a comment is exactly what an un-attributed copy would also have.
+INTERNAL = _section_paths("## Not third-party")
 INDEXED_PATHS = [p for paths, _ in TABLE_ROWS for p in paths]
 NO_HEADER_NEEDED = [p for paths, rel in TABLE_ROWS if rel.startswith(("Reimplemented", "Integration")) for p in paths]
 
@@ -216,8 +227,8 @@ def test_copied_code_declares_its_upstream(path: Path) -> None:
 
     if "SPDX-License-Identifier:" in head:
         return  # completeness is checked by test_header_is_complete
-    if _covered_by(rel, UNRESOLVED) or _covered_by(rel, NO_HEADER_NEEDED):
-        return  # recorded in THIRD_PARTY_NOTICES.md as unresolved / reimplemented / integration
+    if _covered_by(rel, UNRESOLVED) or _covered_by(rel, NO_HEADER_NEEDED) or _covered_by(rel, INTERNAL):
+        return  # recorded in THIRD_PARTY_NOTICES.md: unresolved / reimplemented / integration / internal
 
     tell = COPY_TELL.search(text)
     foreign_copyright = [line for line in head.splitlines() if COPYRIGHT.search(line) and "RoboVerse" not in line]
@@ -310,6 +321,26 @@ def test_unresolved_path_exists(unresolved: str) -> None:
     assert (REPO / unresolved).exists(), (
         f"THIRD_PARTY_NOTICES.md lists {unresolved} as unresolved, but it does not exist. "
         f"If it was removed, drop it from the list."
+    )
+
+
+@pytest.mark.parametrize("internal", INTERNAL)
+def test_internal_path_exists_and_says_so(internal: str) -> None:
+    """A file exempted as RoboVerse-internal must exist and repeat the claim where a reader lands.
+
+    The exemption is an assertion we cannot machine-verify — the least we can do is make it
+    impossible to grant silently, and impossible to leave behind once the file is gone.
+    """
+    path = REPO / internal
+    assert path.exists(), (
+        f"THIRD_PARTY_NOTICES.md exempts {internal} as RoboVerse-internal, but it does not exist. "
+        f"If it was removed, drop it from the 'Not third-party' section."
+    )
+    text = path.read_text(encoding="utf-8", errors="replace")
+    assert "internal" in text.lower(), (
+        f"{internal} is exempted as a RoboVerse-internal port in THIRD_PARTY_NOTICES.md, but the "
+        f"file itself does not say so. Someone reading only the file sees an unexplained "
+        f"'ported from ...' and has to re-open the question. State it inline."
     )
 
 
