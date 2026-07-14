@@ -22,6 +22,12 @@ import pytest
 
 _GET_STARTED = Path(__file__).resolve().parents[1] / "get_started"
 
+# The get_started examples are runnable scripts: they import the example-runner deps
+# (rootutils/tyro/rich) at module scope, and example 9 also needs h5py to read the demo.
+# Loading one therefore needs those extras, even though the converter logic under test is pure.
+requires_example_deps = pytest.mark.requires_optional("rootutils", "tyro", "rich", extra="examples")
+requires_h5py = pytest.mark.requires_optional("h5py", extra="learn")
+
 
 def _load_example(filename: str):
     """Import a ``get_started/NN_*.py`` example module by file path.
@@ -50,7 +56,8 @@ def _write_fake_ms_demo(path: Path, ex9, n_frames: int = 4) -> dict:
     The articulation row layout mirrors ManiSkill's
     ``hstack([pose.p(3), pose.q(4), lin_vel(3), ang_vel(3), qpos(9), qvel(9)])``.
     """
-    h5py = pytest.importorskip("h5py")
+    import h5py
+
     n_dof = len(ex9.PANDA_JOINTS)
     width = 13 + 2 * n_dof  # 31 for a 9-DOF panda
     qpos_by_agent = {}
@@ -78,6 +85,8 @@ def _write_fake_ms_demo(path: Path, ex9, n_frames: int = 4) -> dict:
 
 
 @pytest.mark.general
+@requires_example_deps
+@requires_h5py
 def test_convert_demo_to_v2_is_name_keyed_with_shared_objects(tmp_path):
     """convert_demo_to_v2 yields one entry per agent, shared objects, right qpos."""
     ex9 = _load_example("9_maniskill_two_robot_stack_cube.py")
@@ -120,9 +129,12 @@ def test_convert_demo_to_v2_is_name_keyed_with_shared_objects(tmp_path):
 
 
 @pytest.mark.general
+@requires_example_deps
+@requires_h5py
 def test_validate_schema_rejects_narrow_articulation(tmp_path):
     """A too-narrow articulation row must raise, not silently mis-slice qpos."""
-    h5py = pytest.importorskip("h5py")
+    import h5py
+
     ex9 = _load_example("9_maniskill_two_robot_stack_cube.py")
     bad = tmp_path / "bad.h5"
     with h5py.File(bad, "w") as f:
@@ -140,9 +152,12 @@ def test_validate_schema_rejects_narrow_articulation(tmp_path):
 
 
 @pytest.mark.general
+@requires_example_deps
+@requires_h5py
 def test_validate_schema_rejects_missing_agent_key(tmp_path):
     """A missing expected articulation key must raise a clear KeyError."""
-    h5py = pytest.importorskip("h5py")
+    import h5py
+
     ex9 = _load_example("9_maniskill_two_robot_stack_cube.py")
     bad = tmp_path / "bad.h5"
     n_dof = len(ex9.PANDA_JOINTS)
@@ -270,6 +285,7 @@ def test_bridge_to_v2_roundtrip_and_off_by_one(tmp_path):
 
 
 @pytest.mark.general
+@requires_example_deps
 def test_example10_imports_shared_converter():
     """Example 10 must consume the shared converter, not re-define its own."""
     ex10 = _load_example("10_robotwin_aloha_replay.py")

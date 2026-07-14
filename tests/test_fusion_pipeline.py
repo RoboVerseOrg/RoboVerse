@@ -8,6 +8,14 @@ from __future__ import annotations
 
 import pytest
 
+# The orchestrator parses its CLI with tyro at module scope. This has to be an
+# importorskip rather than a `requires_optional` marker: the import below happens at
+# collection time, before any marker would get a chance to skip the test.
+pytest.importorskip(
+    "tyro",
+    reason='optional dependency not installed: tyro — install with: python -m pip install -e ".[examples]"',
+)
+
 from roboverse_learn.fusion.pipeline import Args, build_commands
 
 
