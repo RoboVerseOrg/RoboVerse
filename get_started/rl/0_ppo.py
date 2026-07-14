@@ -61,12 +61,48 @@ class VecEnvWrapper(VecEnv):
         super().__init__(env.num_envs, self.observation_space, self.action_space)
         self.render_mode = None
 
+        # Terminal-observation capture.
+        #
+        # ``RLTaskEnv.step`` auto-resets the done envs *in place* before returning, so the
+        # observation it hands back for a done env is already the first observation of the
+        # *next* episode, not the terminal one. SB3 corrects truncated episodes with
+        # ``reward += gamma * V(terminal_observation)``, so reporting the post-reset
+        # observation silently corrupts the final reward of every timed-out episode. The task
+        # publishes no usable pre-reset observation (``info["observations"]["raw"]["obs"]``
+        # holds the *first* obs of the current episode, not the terminal one), so we snapshot
+        # it here: record every observation the task computes and keep the last one produced
+        # before the auto-reset fires.
+        self._task = env
+        while not isinstance(self._task, RLTaskEnv) and hasattr(self._task, "env"):
+            self._task = self._task.env  # unwrap viz/debug wrappers around the task
+        self._latest_obs: torch.Tensor | None = None
+        self._terminal_obs: torch.Tensor | None = None
+        self._task_observation = self._task._observation
+        self._task_reset = self._task.reset
+        self._task._observation = self._capture_observation
+        self._task.reset = self._capture_reset
+
+    def _capture_observation(self, states):
+        """Record the observation the task just computed (see ``__init__``)."""
+        obs = self._task_observation(states)
+        self._latest_obs = obs
+        return obs
+
+    def _capture_reset(self, *args, **kwargs):
+        """Snapshot the pre-reset observation before a reset overwrites the simulator state."""
+        if self._terminal_obs is None and self._latest_obs is not None:
+            # ``step`` overwrites the obs tensor in place for the done envs right after this
+            # reset returns, so keep a copy rather than a reference.
+            self._terminal_obs = self._latest_obs.clone()
+        return self._task_reset(*args, **kwargs)
+
     ############################################################
     ## Gym-like interface
     ############################################################
     def reset(self):
         """Reset the environment."""
         obs, _ = self.env.reset()
+        self._terminal_obs = None
         return obs.cpu().numpy()
 
     def step_async(self, actions: np.ndarray) -> None:
@@ -76,6 +112,7 @@ class VecEnvWrapper(VecEnv):
 
     def step_wait(self):
         """Wait for the step to complete."""
+        self._terminal_obs = None  # armed for the auto-reset that happens inside this step
         obs, reward, terminated, time_out, info = self.env.step(self.pending_actions)
 
         done = terminated | time_out
@@ -84,11 +121,29 @@ class VecEnvWrapper(VecEnv):
         reward_np = reward.cpu().numpy()
         done_np = done.cpu().numpy()
 
+        terminal_obs_np = None
+        if bool(done.any()):
+            terminal_obs = self._terminal_obs
+            if terminal_obs is None:
+                # Tasks that override ``step`` may compute their observations without going
+                # through ``_observation``; those are expected to publish the pre-reset
+                # observation themselves (e.g. ``LeggedRobotTask``).
+                terminal_obs = info.get("observations", {}).get("raw", {}).get("obs")
+            if terminal_obs is None:
+                raise RuntimeError(
+                    "VecEnvWrapper: an env is done but no pre-reset observation was captured. SB3"
+                    " bootstraps truncated episodes from `terminal_observation`, so handing it the"
+                    " post-reset observation would silently corrupt the last reward of every"
+                    " episode. The task must either compute observations through `_observation()`"
+                    " or publish the pre-reset observation in info['observations']['raw']['obs']."
+                )
+            terminal_obs_np = terminal_obs.cpu().numpy()
+
         # Prepare extra info for SB3
         extra = [{} for _ in range(self.num_envs)]
         for env_id in range(self.num_envs):
             if bool(done[env_id].item()):
-                extra[env_id]["terminal_observation"] = obs_np[env_id]
+                extra[env_id]["terminal_observation"] = terminal_obs_np[env_id]
             extra[env_id]["TimeLimit.truncated"] = bool(time_out[env_id].item() and not terminated[env_id].item())
 
         return obs_np, reward_np, done_np, extra
