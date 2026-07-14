@@ -1,3 +1,10 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: port of mjlab's `tasks/velocity/mdp/velocity_command.py` and `tasks/manipulation/mdp/commands.py` to
+#   standalone torch command managers driven by RoboVerse's `ManagerBasedRVEnv`.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Command managers — mjlab Command* port.
 
 Contents:

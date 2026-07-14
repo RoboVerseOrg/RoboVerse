@@ -1,3 +1,10 @@
+# Copyright (c) The BeyondMimic authors (HybridRobotics/whole_body_tracking)
+# SPDX-License-Identifier: MIT
+#
+# Adapted from BeyondMimic / whole_body_tracking (https://github.com/HybridRobotics/whole_body_tracking).
+# Changes: upstream's ASSET_DIR import replaced by RoboVerse's 'roboverse_data' asset root; explanatory comments added.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.beyondmimic
+
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg

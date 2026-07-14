@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: YAM lift-cube scaffold on RoboVerse's `ManagerBasedRVEnv`; loads mjlab's `i2rt_yam` MJCF and follows
+#   the shape of mjlab's manipulation env cfg, but only the scaffold-level obs/reward/termination terms are ported
+#   (full mjlab manipulation parity is deferred).
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Minimal YAM lift_cube scaffold on ManagerBasedRVEnv (Phase 4 / 12-task).
 
 Mirrors the cartpole / go1 / g1 scaffolds for the i2rt YAM 6-DOF

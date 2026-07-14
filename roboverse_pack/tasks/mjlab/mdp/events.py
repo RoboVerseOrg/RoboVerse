@@ -1,3 +1,10 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: event terms ported from mjlab's `envs/mdp/events` to RoboVerse's reset-event convention (`func(env,
+#   env_ids, **params)`), mutating state through MetaSim's handler instead of mjlab's scene entities.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Event term functions ported from mjlab.
 
 Signature for reset-mode events:

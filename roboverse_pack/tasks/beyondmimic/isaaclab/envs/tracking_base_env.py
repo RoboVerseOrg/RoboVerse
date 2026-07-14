@@ -2,6 +2,10 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: Isaac Lab's ManagerBasedEnv adapted into a standalone TrackingBaseEnv for the BeyondMimic tracking task; logging switched to loguru.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.isaaclab
 
 from __future__ import annotations
 

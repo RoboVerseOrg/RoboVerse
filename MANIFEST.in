@@ -1,0 +1,12 @@
+# Attribution files must travel with every source distribution.
+# Apache-2.0 §4(d) requires the NOTICE; MIT/BSD-3 require the upstream notice to accompany
+# any copy of the covered code, which is why the vendored LICENSE files are included too.
+include LICENSE
+include NOTICE
+include THIRD_PARTY_NOTICES.md
+
+# Upstream license texts that sit next to the vendored code they cover.
+recursive-include roboverse_learn LICENSE*
+recursive-include roboverse_pack LICENSE*
+recursive-include get_started LICENSE*
+recursive-include scripts LICENSE*

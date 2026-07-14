@@ -1,3 +1,11 @@
+# Copyright (c) ManiSkill2-real2sim contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from ManiSkill2-real2sim (https://github.com/simpler-env/ManiSkill2_real2sim).
+# Changes: from `mani_skill2_real2sim/agents/controllers/passive_controller.py`; import paths rewritten for
+#   RoboVerse and line wrapping reflowed by the repo formatter; controller math unchanged (AST-identical to
+#   upstream, kept byte-faithful for bitwise parity).
+# Full license: roboverse_pack/tasks/simpler_env/_native/control/LICENSE
 from dataclasses import dataclass
 from typing import Sequence, Union
 

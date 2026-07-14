@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT
+#
+# RoboVerse-original file. Portions adapted from FastTD3
+# (https://github.com/younggyoseo/FastTD3) — Copyright (c) 2025 Younggyo Seo, MIT.
+# Only the environment-setup preamble derives from FastTD3; the MIT notice is retained for that
+# portion. The rest of this file is RoboVerse's own.
+# Changes: replays saved MetaSim states through handler.set_states; contains none of the FastTD3
+#   algorithm code.
+# Full license: roboverse_learn/rl/fast_td3/LICENSE
 """Replay script for lift states.
 
 Continuously replays saved lift states for visualization.

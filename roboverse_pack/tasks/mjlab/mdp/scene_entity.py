@@ -1,3 +1,10 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: minimal port of mjlab's `SceneEntityCfg`; name-pattern joint/body selection is resolved against MetaSim
+#   handler's sorted joint/body ordering and cached per cfg instance.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """SceneEntityCfg adapter for mjlab → RoboVerse MDP function port.
 
 mjlab's ``SceneEntityCfg`` selects a subset of joints / bodies from a

@@ -1,3 +1,10 @@
+# Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from diffusion_policy (https://github.com/real-stanford/diffusion_policy).
+# Changes: import ordering and formatting only (ruff/isort); no functional changes.
+# Full license: roboverse_learn/il/policies/dp/LICENSE
+
 import os
 import random
 from collections import OrderedDict

@@ -1,3 +1,6 @@
+# RoboVerse-original: asset-path resolver. Contains no mjlab source code, but it resolves
+# mjlab-derived MJCF/mesh assets, which are covered by mjlab's Apache-2.0 license — see
+# THIRD_PARTY_NOTICES.md and roboverse_pack/tasks/mjlab/LICENSE.
 """Resolve mjlab MJCF assets, preferring a local clone but falling back to HF.
 
 mjlab is an external repo we don't vendor. Tasks here reference its MJCF files

@@ -1,3 +1,11 @@
+# Copyright (c) 2019 Antonin Raffin
+# SPDX-License-Identifier: MIT
+#
+# Adapted from stable-baselines3 (https://github.com/DLR-RM/stable-baselines3).
+# Changes: stable_baselines3/common/buffers.py vendored as a self-contained module: the helpers it imported
+#   from other stable-baselines3 modules (get_action_dim, get_obs_shape, get_device, the sample NamedTuples)
+#   are inlined and VecNormalize support is dropped. No RoboVerse APIs are used.
+# Full license: roboverse_learn/rl/clean_rl/LICENSE.stable-baselines3
 # Copyright notice
 #
 # This file contains code adapted from stable-baselines3

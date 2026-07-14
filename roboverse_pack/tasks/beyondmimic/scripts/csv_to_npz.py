@@ -1,3 +1,10 @@
+# Copyright (c) The BeyondMimic authors (HybridRobotics/whole_body_tracking)
+# SPDX-License-Identifier: MIT
+#
+# Adapted from BeyondMimic / whole_body_tracking (https://github.com/HybridRobotics/whole_body_tracking).
+# Changes: import paths rewired to RoboVerse; printing switched to loguru; docstrings added.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.beyondmimic
+
 from __future__ import annotations
 
 """This script replays a motion from a csv file and outputs it to a npz file.

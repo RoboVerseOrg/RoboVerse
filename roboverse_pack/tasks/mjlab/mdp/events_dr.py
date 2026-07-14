@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: domain-randomization terms ported from mjlab's `envs/mdp/dr/` (geom friction, body COM offset, body
+#   mass, velocity push, encoder bias); rewritten to mutate the compiled `MjModel` / handler state directly under
+#   RoboVerse's event-term convention.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Domain-randomization event functions — mjlab parity ports.
 
 These get registered as ``EventTerm(mode="interval"|"startup", func=...)``

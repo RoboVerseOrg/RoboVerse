@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: port of mjlab's `envs/mdp/actions/actions.py` `JointPositionAction` config surface to RoboVerse
+#   dataclasses; the `clip(scale * raw + offset, ranges)` processing semantics follow mjlab, but the action is
+#   applied in each RoboVerse task's `_apply_action` instead of by an mjlab action manager.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Action term cfgs — mjlab JointPositionAction declarative-API port.
 
 Mjlab declares action cfgs inside ``cfg.actions``:

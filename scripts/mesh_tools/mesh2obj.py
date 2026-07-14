@@ -1,3 +1,12 @@
+# Copyright (c) 2023 DeepMind Technologies Limited
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from MuJoCo (https://github.com/google-deepmind/mujoco), file
+# python/mujoco/msh2obj.py.
+# Changes: the texture u and v coordinates are flipped; everything else is upstream's (see the
+#   note and MuJoCo's Apache-2.0 notice below).
+# Full license: scripts/mesh_tools/LICENSE.mujoco
+#
 # Everything remains the same from the original Mujoco repo, besides flipping
 # coordinates of the texture u and v.
 

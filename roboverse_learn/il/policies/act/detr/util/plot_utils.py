@@ -1,3 +1,12 @@
+# Copyright (c) Facebook, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from DETR (https://github.com/facebookresearch/detr), file util/plot_utils.py, via ACT
+# (https://github.com/tonyzhaozh/act). Upstream ships this file without a copyright line; it is
+# covered by DETR's Apache-2.0 license.
+# Changes: none (vendored verbatim).
+# Full license: roboverse_learn/il/policies/act/detr/LICENSE
+
 """
 Plotting utilities to visualize training logs.
 """

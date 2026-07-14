@@ -1,3 +1,4 @@
+# RoboVerse-original: re-export shim only; contains no mjlab code.
 """mjlab task wrappers.
 
 Re-exports task classes so importing `roboverse_pack.tasks.mjlab` triggers

@@ -1,7 +1,13 @@
+# Copyright (c) 2019 CleanRL developers
+# SPDX-License-Identifier: MIT
+#
+# Adapted from CleanRL (https://github.com/vwxyzjn/cleanrl).
+# Changes: ppo_continuous_action.py adapted to RoboVerse: the environment is created with gymnasium make_vec
+#   on a registered RoboVerse/<task> env id, the CleanRL Args dataclass is replaced by CleanRLPPOConfig, and
+#   RoboVerse EpisodeTracker logging is added. The PPO update is otherwise unchanged.
+# Full license: roboverse_learn/rl/clean_rl/LICENSE
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
 #
-# This file is based on CleanRL's PPO implementation and has been adapted for RoboVerse.
-# Original CleanRL code is licensed under MIT License.
 
 import random
 import time

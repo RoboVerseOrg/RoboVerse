@@ -1,3 +1,12 @@
+# Copyright (c) Facebook, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from DETR (https://github.com/facebookresearch/detr), file models/transformer.py, via
+# ACT's fork of DETR (https://github.com/tonyzhaozh/act), which added the additional positional
+# embeddings the CVAE decoder needs.
+# Changes: none (vendored verbatim from ACT).
+# Full license: roboverse_learn/il/policies/act/detr/LICENSE
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 DETR Transformer class.

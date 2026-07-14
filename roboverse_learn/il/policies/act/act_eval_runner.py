@@ -1,3 +1,14 @@
+# Copyright (c) 2023 Tony Z. Zhao
+# SPDX-License-Identifier: MIT
+#
+# Adapted from ACT (https://github.com/tonyzhaozh/act), file imitate_episodes.py (eval_bc).
+# Changes: RoboVerse evaluation harness. The policy-inference path is ACT's: dataset_stats-based
+#   observation/action normalisation (pre_process / post_process), chunked action prediction with
+#   `query_frequency`, and the exponential temporal ensembling over `all_time_actions`. Everything
+#   else — MetaSim env construction and stepping, domain randomisation, success bookkeeping and
+#   video export — is RoboVerse's own.
+# Full license: roboverse_learn/il/policies/act/LICENSE
+
 from __future__ import annotations
 
 import argparse

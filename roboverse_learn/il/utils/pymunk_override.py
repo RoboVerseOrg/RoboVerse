@@ -1,3 +1,16 @@
+# Copyright (c) 2007-2016 Victor Blomqvist
+# Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from pymunk's pygame_util (https://github.com/viblo/pymunk), vendored into RoboVerse
+# via diffusion_policy (https://github.com/real-stanford/diffusion_policy) as
+# diffusion_policy/env/pusht/pymunk_override.py — this file matches diffusion_policy's copy,
+# which keeps pymunk's MIT notice reproduced verbatim below.
+# Changes: formatting only (ruff/isort: import order, whitespace, double quotes); no functional
+#   changes to diffusion_policy's copy.
+# Full license: roboverse_learn/il/utils/pymunk_override.py (pymunk's MIT notice, immediately
+#   below), roboverse_learn/il/policies/dp/LICENSE (diffusion_policy)
+#
 # ----------------------------------------------------------------------------
 # pymunk
 # Copyright (c) 2007-2016 Victor Blomqvist

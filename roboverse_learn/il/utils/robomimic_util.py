@@ -1,3 +1,15 @@
+# Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from diffusion_policy (https://github.com/real-stanford/diffusion_policy),
+# file diffusion_policy/common/robomimic_util.py. RobomimicAbsoluteActionConverter originates
+# in diffusion_policy, not in robomimic itself (robomimic's own copy, in
+# robomimic/scripts/conversion/robosuite_add_absolute_actions.py, credits diffusion_policy).
+# It is built on the robomimic APIs (https://github.com/ARISE-Initiative/robomimic, MIT,
+# (c) 2021 Stanford Vision and Learning Lab), which it imports at run time.
+# Changes: import ordering and formatting only (ruff/isort); no functional changes.
+# Full license: roboverse_learn/il/policies/dp/LICENSE
+
 import copy
 
 import h5py

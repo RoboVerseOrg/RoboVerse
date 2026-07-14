@@ -1,3 +1,10 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: only resolve_matching_names(), find_bodies() and resolve_matching_names_values() are adapted from isaaclab.utils.string; the remaining helpers are RoboVerse code written for the BeyondMimic port.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.isaaclab
+
 from __future__ import annotations
 
 import re
