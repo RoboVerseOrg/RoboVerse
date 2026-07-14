@@ -67,15 +67,19 @@ def _obs_for_policy(obs):
 
 
 def _check_success(env):
+    """Task success from the env's own checker.
+
+    An error (or a missing checker) is **not** a failed episode: swallowing it into
+    ``False`` silently reports a 0% success rate for a policy that may be fine. Fail loudly.
+    """
     for owner in (getattr(env, "env", None), env):
         for attr in ("_check_success", "check_success"):
             fn = getattr(owner, attr, None) if owner is not None else None
             if fn:
-                try:
-                    return bool(fn())
-                except Exception:
-                    return False
-    return False
+                return bool(fn())
+    raise RuntimeError(
+        f"{type(env).__name__} exposes no _check_success()/check_success(); success cannot be evaluated."
+    )
 
 
 def _variants(suite, base):

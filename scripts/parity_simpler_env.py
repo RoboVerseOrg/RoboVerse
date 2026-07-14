@@ -133,7 +133,7 @@ def check_task(task_name: str, *, steps: int, seed: int) -> dict:
     return {"task": task_name, "parity_1to1": False, "error": proc.stderr[-2000:]}
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tasks", nargs="*", default=["google_robot_pick_coke_can"])
     parser.add_argument("--all", action="store_true", help="run every installed SimplerEnv task")
@@ -142,9 +142,12 @@ def main() -> None:
     parser.add_argument("--json", type=str, default=None, help="write results to this JSON path")
     args = parser.parse_args()
 
-    import simpler_env
+    if args.all:
+        import simpler_env
 
-    tasks = list(simpler_env.ENVIRONMENTS) if args.all else args.tasks
+        tasks = list(simpler_env.ENVIRONMENTS)
+    else:
+        tasks = args.tasks
 
     results = []
     for t in tasks:
@@ -171,6 +174,12 @@ def main() -> None:
             )
         print(f"wrote {args.json}")
 
+    # `results` empty -> nothing was checked; that is not a PASS. The exit status must
+    # carry the verdict so a shell/CI caller can tell a failing run from a clean one.
+    ok = bool(results) and n_ok == len(results)
+    print("RESULT: PASS — every task is bitwise 1:1." if ok else "RESULT: FAIL — not every task is bitwise 1:1.")
+    return 0 if ok else 1
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -171,7 +171,7 @@ def check_task(task, *, seed, steps, init_rng):
     }
 
 
-def main():
+def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--tasks", nargs="*", default=["google_robot_pick_coke_can"])
     p.add_argument("--seed", type=int, default=0)
@@ -208,6 +208,11 @@ def main():
             )
         print(f"wrote {args.json}")
 
+    # No tasks checked -> nothing proven -> not a PASS. Exit status carries the verdict.
+    ok = bool(results) and n_ok == len(results)
+    print("RESULT: PASS — closed-loop policy parity is 1:1." if ok else "RESULT: FAIL — policy parity is not 1:1.")
+    return 0 if ok else 1
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

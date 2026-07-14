@@ -14,12 +14,19 @@ import argparse
 import base64
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 import numpy as np
 
-RV = "/home/ghr/projects/RoboVerse/RoboVerse-simpler/roboverse_data"
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Asset root: repo-local by default, overridable for an out-of-tree data checkout.
+RV = os.environ.get("ROBOVERSE_DATA", os.path.join(_REPO_ROOT, "roboverse_data"))
+# Per-run rollout artifacts. Wiped at the start of a full run so a stale .npz from an
+# earlier run can never be compared as if it were fresh.
+ART = os.environ.get("MFP_ARTIFACT_DIR", os.path.join(tempfile.gettempdir(), "metasim_full_parity"))
 RVA = f"{RV}/assets/simpler_env"
 URDF_G = f"{RV}/robots/google_robot/urdf/google_robot_meta_sim_fix_wheel_fix_fingertip.urdf"
 URDF_W = f"{RV}/robots/widowx/widowx_description/wx250s.urdf"
@@ -148,26 +155,37 @@ def run(which, name):
         out = env.step(a)
         rgbs.append(raw())
         succ.append(bool(out[-1]["success"]))
-    np.savez(f"/tmp/mfp_{which}_{name}.npz", rgbs=np.stack(rgbs), succ=np.array(succ))
+    os.makedirs(ART, exist_ok=True)
+    np.savez(os.path.join(ART, f"mfp_{which}_{name}.npz"), rgbs=np.stack(rgbs), succ=np.array(succ))
 
 
-def run_compare():
+def run_compare() -> bool:
+    """Compare the two sides' recorded rollouts. Returns True only if every task matches.
+
+    Rollouts must be the *same length*: truncating to ``min(len(a), len(b))`` would let a
+    side that died after one frame "match" over the frames it did produce. A missing
+    artifact raises (FileNotFoundError) rather than silently shrinking the comparison.
+    """
     res = {}
     for name in ALL:
-        a = np.load(f"/tmp/mfp_native_{name}.npz")
-        b = np.load(f"/tmp/mfp_metasim_{name}.npz")
+        a = np.load(os.path.join(ART, f"mfp_native_{name}.npz"))
+        b = np.load(os.path.join(ART, f"mfp_metasim_{name}.npz"))
         ar, br = a["rgbs"].astype(np.float64), b["rgbs"].astype(np.float64)
-        k = min(len(ar), len(br))
+        same_len = ar.shape == br.shape and len(a["succ"]) == len(b["succ"])
         res[name] = {
-            "rgb": round(float(np.abs(ar[:k] - br[:k]).mean()), 4),
-            "succ": bool(np.array_equal(a["succ"], b["succ"])),
+            "rgb": round(float(np.abs(ar - br).mean()), 4) if same_len else float("inf"),
+            "succ": same_len and bool(np.array_equal(a["succ"], b["succ"])),
+            "same_length": bool(same_len),
         }
     worst = max(r["rgb"] for r in res.values())
-    ok = all(r["rgb"] < 1.0 and r["succ"] for r in res.values())
+    # An empty task list proves nothing: `all([])` is True, which would be a vacuous PASS.
+    ok = bool(res) and all(r["same_length"] and r["rgb"] < 1.0 and r["succ"] for r in res.values())
     out = {"all_ok": ok, "n": len(res), "worst_rgb_mean_abs": worst, "per_task": res}
     print("MFP_B64:" + base64.b64encode(json.dumps(out).encode()).decode())
-    with open("/tmp/metasim_full_parity.json", "w") as f:
+    with open(os.path.join(ART, "metasim_full_parity.json"), "w") as f:
         json.dump(out, f, indent=2)
+    print(f"RESULT: {'PASS' if ok else 'FAIL'} — {len(res)} tasks, worst rgb mean-abs {worst}")
+    return ok
 
 
 def main():
@@ -176,10 +194,14 @@ def main():
     ap.add_argument("--task", default=None)
     a = ap.parse_args()
     if a.mode in ("native", "metasim"):
-        return run(a.mode, a.task)
+        run(a.mode, a.task)
+        sys.exit(0)
     if a.mode == "compare":
-        return run_compare()
-    env = dict(os.environ, JAX_PLATFORMS="cpu", LOGURU_LEVEL="WARNING")
+        sys.exit(0 if run_compare() else 1)
+    # Full run: start from a clean artifact dir so nothing stale can be compared.
+    shutil.rmtree(ART, ignore_errors=True)
+    os.makedirs(ART, exist_ok=True)
+    env = dict(os.environ, JAX_PLATFORMS="cpu", LOGURU_LEVEL="WARNING", MFP_ARTIFACT_DIR=ART)
     for name in ALL:
         for m in ("native", "metasim"):
             if (
@@ -188,7 +210,7 @@ def main():
             ):
                 print(f"FAIL {name} {m}")
                 sys.exit(1)
-    subprocess.run([sys.executable, __file__, "--mode", "compare"], env=env, check=False)
+    sys.exit(subprocess.run([sys.executable, __file__, "--mode", "compare"], env=env, check=False).returncode)
 
 
 if __name__ == "__main__":
