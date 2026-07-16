@@ -34,28 +34,32 @@ class Go1FeetCfg(RobotCfg):
     # ------------------------------------------------------------------
     # Global XML defaults: kp=35, kd=0.5, force= ±23.7
     # Knee class overrides: force= ±35.55
-    _HIP_KP = 35.0
-    _HIP_KD = 0.5
-    _HIP_FMAX = 23.7
-    _KNEE_FMAX = 35.55
+    #
+    # ``BaseActuatorCfg`` exposes the PD gains as ``stiffness`` (position gain, kp) and
+    # ``damping`` (velocity gain, kd), and the torque cap as ``effort_limit_sim`` (the
+    # per-backend force limit). The XML's kp/kd/force values map onto those fields.
+    _HIP_KP = 35.0  # -> stiffness
+    _HIP_KD = 0.5  # -> damping
+    _HIP_FMAX = 23.7  # -> effort_limit_sim
+    _KNEE_FMAX = 35.55  # -> effort_limit_sim (knee override)
 
     actuators: dict[str, BaseActuatorCfg] = {
         # Front-Right (FR)
-        "FR_hip": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "FR_thigh": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "FR_calf": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
+        "FR_hip": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_HIP_FMAX),
+        "FR_thigh": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_HIP_FMAX),
+        "FR_calf": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_KNEE_FMAX),
         # Front-Left (FL)
-        "FL_hip": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "FL_thigh": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "FL_calf": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
+        "FL_hip": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_HIP_FMAX),
+        "FL_thigh": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_HIP_FMAX),
+        "FL_calf": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_KNEE_FMAX),
         # Rear-Right (RR)
-        "RR_hip": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "RR_thigh": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "RR_calf": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
+        "RR_hip": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_HIP_FMAX),
+        "RR_thigh": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_HIP_FMAX),
+        "RR_calf": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_KNEE_FMAX),
         # Rear-Left (RL)
-        "RL_hip": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "RL_thigh": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_HIP_FMAX),
-        "RL_calf": BaseActuatorCfg(kp=_HIP_KP, kd=_HIP_KD, force_limit=_KNEE_FMAX),
+        "RL_hip": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_HIP_FMAX),
+        "RL_thigh": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_HIP_FMAX),
+        "RL_calf": BaseActuatorCfg(stiffness=_HIP_KP, damping=_HIP_KD, effort_limit_sim=_KNEE_FMAX),
     }
 
     # ------------------------------------------------------------------
