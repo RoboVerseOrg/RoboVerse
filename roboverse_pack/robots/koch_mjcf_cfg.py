@@ -45,11 +45,15 @@ class KochCfg(RobotCfg):
 
     ee_body_name: str = "tool0"
 
+    # wrist_pitch default was the Franka-style -2.356194, outside its own limit
+    # (-0.19198, 3.927), so the robot spawned in an illegal pose. The true home
+    # pose is not recoverable from any repo artifact (the koch MJCF is fetched on
+    # demand), so wrist_pitch is set to the neutral 0.0 (inside the limit).
     default_joint_positions: dict[str, float] = {
         "base_rotation": 0.0,
         "pitch": -0.785398,
         "elbow": 0.0,
-        "wrist_pitch": -2.356194,
+        "wrist_pitch": 0.0,
         "wrist_roll": 0.0,
         "gripper": 0,
     }
@@ -63,8 +67,12 @@ class KochCfg(RobotCfg):
         "gripper": "position",
     }
 
-    gripper_open_q = [0.035, 0.035]
-    gripper_close_q = [0.0, 0.0]
+    # A single gripper joint (``gripper``) is actuated, so the gripper qs must be
+    # length 1 -- length 2 gave ``n_dof_ik = len(actuators) - 2 = 6 - 2 = 4`` and
+    # swallowed arm ``wrist_roll`` into the gripper block. Open = 0.035 (limit max),
+    # close = 0.0. Now ``n_dof_ik = 6 - 1 = 5`` (the arm DOF).
+    gripper_open_q = [0.035]
+    gripper_close_q = [0.0]
 
     # curobo_ref_cfg_name: str = "ur5e.yml"
     # curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.0]

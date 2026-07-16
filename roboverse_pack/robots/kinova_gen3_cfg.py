@@ -36,9 +36,18 @@ class KinovaGen3Cfg(RobotCfg):
     }
     ee_body_name: str = "end_effector_link"
 
-    gripper_open_q = [0.04, 0.04]  # TODO
-    gripper_close_q = [0.0, 0.0]  # TODO
-
-    curobo_ref_cfg_name: str = "franka.yml"  # TODO
-    curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.10312]  # TODO
-    curobo_tcp_rel_rot: tuple[float, float, float] = [0.0, 0.0, 0.0]  # TODO
+    # This is the bare 7-DOF Kinova Gen3 arm: no gripper joints are actuated. The
+    # IK wiring here was copied from Franka and was wrong on both counts. The
+    # 2-element ``gripper_open_q`` (Franka finger widths) made
+    # ``n_dof_ik = len(actuators) - len(gripper_open_q) = 7 - 2 = 5``, so IK solved
+    # only 5 of the 7 arm joints and wrote gripper widths onto joint_6/joint_7.
+    # ``franka.yml`` is Franka's kinematics, not this arm. Both are removed so
+    # ``IKSolver`` is not mis-constructed. To run IK, add a real Kinova Gen3
+    # curobo config (the arm+gripper sibling uses ``kinova_gen3.yml``, but that
+    # includes the 2F-85 and may not fit this bare arm) or a ``urdf_path`` for the
+    # pyroki backend; add a gripper cfg if grasping is needed.
+    # gripper_open_q = [...]
+    # gripper_close_q = [...]
+    # curobo_ref_cfg_name = "<kinova_gen3_arm>.yml"
+    # curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.10312]
+    # curobo_tcp_rel_rot: tuple[float, float, float] = [0.0, 0.0, 0.0]

@@ -48,11 +48,17 @@ class ArxL5Cfg(RobotCfg):
 
     ee_body_name: str = "tool0"
 
+    # joint2/joint4 defaults were the Franka home pose (-0.785398 / -2.356194),
+    # which fall outside this arm's narrower limits ((0, 3.14) and (-1.7, 1.7)) and
+    # would spawn the robot in an illegal pose. The true home pose is not
+    # recoverable from any repo artifact (the arx_l5 MJCF is fetched on demand), so
+    # they are set to the neutral zero configuration (0.0 is inside both limits)
+    # rather than an unverified ready pose.
     default_joint_positions: dict[str, float] = {
         "joint1": 0.0,
-        "joint2": -0.785398,
+        "joint2": 0.0,
         "joint3": 0.0,
-        "joint4": -2.356194,
+        "joint4": 0.0,
         "joint5": 0.0,
         "joint6": 1.570796,
         "gripper": 0.044,
@@ -70,8 +76,15 @@ class ArxL5Cfg(RobotCfg):
         "joint8": "position",
     }
 
-    gripper_open_q = [-0.044, 0.044]
-    gripper_close_q = [0.0, 0.0]
+    # Only one gripper joint is actuated (``gripper``; the second finger ``joint8``
+    # is passive and not in ``actuators``), so the gripper qs must be length 1 --
+    # keeping length 2 gave ``n_dof_ik = len(actuators) - 2 = 7 - 2 = 5`` and
+    # swallowed arm ``joint6`` into the gripper block. The old open value -0.044 was
+    # also below ``gripper``'s own limit (0, 0.044) (it belonged to ``joint8``), so
+    # it drove the jaw to an illegal closed pose. Open = 0.044 (limit max),
+    # close = 0.0. Now ``n_dof_ik = 7 - 1 = 6`` (the arm DOF).
+    gripper_open_q = [0.044]
+    gripper_close_q = [0.0]
 
     # curobo_ref_cfg_name: str = "ur5e.yml"
     # curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.0]

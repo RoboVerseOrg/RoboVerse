@@ -46,10 +46,18 @@ class FetchCfg(RobotCfg):
     }
     ee_body_name: str = "gripper_link"
 
-    # TODO: Make it more elegant
+    # 2-finger gripper widths (both fingers, limits (0, 0.05)). These stay: they
+    # are a valid gripper descriptor used by ``process_gripper_command``.
     gripper_open_q = [0.04, 0.04]
     gripper_close_q = [0.0, 0.0]
 
-    curobo_ref_cfg_name: str = "franka.yml"
-    curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.10312]
-    curobo_tcp_rel_rot: tuple[float, float, float] = [0.0, 0.0, 0.0]
+    # ``curobo_ref_cfg_name = "franka.yml"`` was wrong: Fetch is not a Franka, and
+    # there is no Fetch curobo config to point at. Fetch also cannot use the
+    # arm-first ``IKSolver`` as-is -- its actuator order is wheels/torso/head first
+    # and the 7-DOF arm is in the middle, not the leading ``n_dof_ik`` block, so IK
+    # would solve wheels/torso/head instead of the arm. Removed rather than left
+    # mis-pointed; wiring Fetch IK needs a Fetch curobo config plus an arm-only
+    # actuator ordering (maintainer input).
+    # curobo_ref_cfg_name = "<fetch>.yml"
+    # curobo_tcp_rel_pos: tuple[float, float, float] = [0.0, 0.0, 0.10312]
+    # curobo_tcp_rel_rot: tuple[float, float, float] = [0.0, 0.0, 0.0]

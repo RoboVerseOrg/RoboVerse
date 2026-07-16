@@ -92,11 +92,12 @@ _KNOWN_DEFAULT_POS_ORPHAN_GAPS: dict[str, str] = {
 }
 
 _KNOWN_DEFAULT_POS_OUT_OF_RANGE_GAPS: dict[str, str] = {
-    "YamCfg": "joint2/joint4 defaults copy-pasted from Franka home pose; limits are Yam's narrower ranges.",
-    "ArxL5Cfg": "joint2/joint4 defaults copy-pasted from Franka home pose; limits are ArxL5's narrower ranges.",
+    # YamCfg, ArxL5Cfg and KochCfg were fixed in deep-fix/robot-ik-gripper-dof:
+    # their out-of-range Franka-home-pose defaults were clamped to the neutral
+    # zero configuration, so their entries were removed here (the xfail now xpasses
+    # and test_known_gap_dicts_match_actual_failures would flag a stale entry).
     "VegaCfg": "torso_j1 default 0.0 but joint_limits is the single-point [0.2, 0.2] — limit looks like a fixed offset, not a range.",
     "SoArm100Cfg": "Wrist_Pitch default -2.356 (Franka-style) outside [-0.192, 3.927].",
-    "KochCfg": "wrist_pitch default -2.356 (Franka-style) outside [-0.192, 3.927].",
     "Go2Cfg": "RL/RR_thigh_joint default 1.0 outside [-4.54, 0.52] — sign or value error in stand-pose default.",
     "AllegroHandCfg": "thumb_joint_0 default 0.0 below lower limit 0.263; either default→0.263 or limit→0.",
 }
