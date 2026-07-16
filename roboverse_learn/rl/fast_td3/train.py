@@ -8,10 +8,30 @@ from typing import Any
 import yaml
 import argparse
 
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge ``override`` onto ``base``; ``override`` wins on key conflicts."""
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
 def load_config(config_path: str) -> dict[str, Any]:
-    """Load configuration from YAML file."""
+    """Load a FastTD3 YAML config, layered on top of ``configs/base.yaml``.
+
+    Every task config inherits from ``base.yaml`` (task keys override the base defaults), so a
+    per-task file only needs to declare what differs. ``base.yaml`` itself loads unchanged.
+    """
     with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+        config = yaml.safe_load(f) or {}
+
+    base_path = os.path.join(os.path.dirname(os.path.abspath(config_path)), 'base.yaml')
+    if os.path.abspath(config_path) != base_path and os.path.exists(base_path):
+        with open(base_path, 'r') as f:
+            base_config = yaml.safe_load(f) or {}
+        config = _deep_merge(base_config, config)
     return config
 
 def get_config():
