@@ -319,7 +319,12 @@ class DefaultRunner(BaseRunner):
                         ) as tepoch:
                             for batch_idx, batch in enumerate(tepoch):
                                 batch = dataset.postprocess(batch, device)
-                                loss = self.model.compute_loss(batch)
+                                # Validate the model that is actually deployed at eval time
+                                # (``policy`` == ``self.ema_model`` when ``use_ema`` else
+                                # ``self.model``) and in the eval() mode set above, so val_loss
+                                # tracks the deployed policy and is epoch-comparable. Using
+                                # ``self.model`` here would score a train-mode, non-EMA model.
+                                loss = policy.compute_loss(batch)
                                 val_losses.append(loss.item())
                                 if (
                                     cfg.train_config.training_params.max_val_steps
