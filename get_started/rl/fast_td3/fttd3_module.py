@@ -425,7 +425,8 @@ class DistributionalQNetwork(nn.Module):
         next_dist = F.softmax(self.forward(obs, actions), dim=1)
         proj_dist = torch.zeros_like(next_dist)
         offset = (
-            torch.linspace(0, (batch_size - 1) * self.num_atoms, batch_size, device=device)
+            torch
+            .linspace(0, (batch_size - 1) * self.num_atoms, batch_size, device=device)
             .unsqueeze(1)
             .expand(batch_size, self.num_atoms)
             .long()

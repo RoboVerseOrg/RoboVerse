@@ -109,9 +109,8 @@ def undesired_contacts(
     contact_forces: ContactForces = env_states.extras["contact_forces"][env.name]
     is_contact = (
         # TODO check correspondence with `contact_sensor.data.net_forces_w_history`
-        contact_forces.contact_forces_history[
-            :, :, indexes, :
-        ]  # [n_envs, history_length, n_indexes, 3] -> [n_envs, 3, 26, 3]
+        contact_forces
+        .contact_forces_history[:, :, indexes, :]  # [n_envs, history_length, n_indexes, 3] -> [n_envs, 3, 26, 3]
         .norm(dim=-1)
         .max(dim=1)[0]
         > threshold
