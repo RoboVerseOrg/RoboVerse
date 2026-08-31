@@ -84,13 +84,15 @@ paths:
 
    ```python
    ScenarioCfg(
-       robots=[RobotCfg(
-           name="g1",
-           num_joints=29,
-           fix_base_link=False,
-           mjcf_path=mjlab_asset("asset_zoo/robots/unitree_g1/xmls/g1.xml"),
-           enabled_self_collisions=False,
-       )],
+       robots=[
+           RobotCfg(
+               name="g1",
+               num_joints=29,
+               fix_base_link=False,
+               mjcf_path=mjlab_asset("asset_zoo/robots/unitree_g1/xmls/g1.xml"),
+               enabled_self_collisions=False,
+           )
+       ],
        simulator="mujoco",
        add_default_ground=False,  # raw rollout doesn't add a ground either
    )

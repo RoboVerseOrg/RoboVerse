@@ -43,16 +43,8 @@ class RandomizationCfg:
 Without the need for knowing the details of randomized evaluation, you can simply define the level of randomization with numbers 0-3, and use the randomization config inside of a scenario config:
 
 ```python
-randomization = RandomizationCfg(
-    camera=False, light=False, ground=False, reflection=False
-)
-scenario = ScenarioCfg(
-    task=task,
-    robot=robot,
-    cameras=[camera],
-    randomization=randomization,
-    try_add_table=True
-)
+randomization = RandomizationCfg(camera=False, light=False, ground=False, reflection=False)
+scenario = ScenarioCfg(task=task, robot=robot, cameras=[camera], randomization=randomization, try_add_table=True)
 ```
 
 And the instantiated environment will be automatically randomized!
