@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- SuperDex renderer keeps mesh textures: OBJ/MTL, DAE and GLB visuals with UVs and a material image are uploaded to pyrender instead of being flattened to grey (a URDF `<material>` colour no longer overrides a real texture; untextured meshes use their own material colour before the grey fallback); visual meshes load with `process=False` so vertex merging cannot break UVs.
 - `set_states` restores velocities. MuJoCo zeroed every velocity on write (`zero_vel=True` default) and SuperDex ignored root velocities, so no mid-episode state was a usable checkpoint; both now write `vel`/`ang_vel`/`dof_vel` (absent keys still mean rest). New `metasim.utils.replay` (record / `verify_action_replay` / `verify_state_replay`) and `metasim/test/sim/test_replay.py` pin the L0 (action replay) and L1 (state round-trip + one step) contracts on every backend. SuperDex lifts a dynamic body whose collision hull would spawn inside the ground plane (a centred-origin URDF placed at an MJCF bottom-origin height left at ~86 m/s on the first step) and logs the correction.
 - `RLTaskEnv.step` publishes the *terminal* observation in `info["observations"]["raw"]["obs"]` instead of the episode's first one (off-policy truncation bootstraps in clean_rl SAC/TD3 and FastTD3 read it).
 - IsaacGym and PyBullet reported `joint_pos_target` in native DoF order while `joint_pos` is in sorted-name order; both now use `get_joint_names(sort=True)` (completes #12).
