@@ -18,7 +18,8 @@ IDENTITY_ROT: Matrix3 = (
     (0.0, 0.0, 1.0),
 )
 
-# Maintained openarm-teleop AVP frame profiles ported from BiDexBench.
+# Maintained openarm-teleop AVP frame profiles, ported from BiDexBench — a RoboVerse-internal
+# predecessor project, not a third party. No upstream attribution is owed for this code.
 AVP_R_VR_TO_ROBOT: Matrix3 = (
     (0.0, 1.0, 0.0),
     (-1.0, 0.0, 0.0),

@@ -1,5 +1,7 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+# setuptools >= 77 is the first release where [tool.setuptools] license-files is stable under PEP 639;
+# an older builder would silently drop NOTICE and the vendored LICENSE files from the wheel.
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -170,13 +172,21 @@ extend-exclude = [
     "roboverse_pack/tasks/simpler_env/_native/control",
 ]
 
+[tool.setuptools]
+# Apache-2.0 §4(d): the NOTICE must travel with every distribution. THIRD_PARTY_NOTICES.md is
+# the authoritative index of vendored/adapted code and its licenses — ship it too.
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
+
 [tool.setuptools.packages.find]
 include = ["roboverse_pack", "roboverse_pack.*", "roboverse_learn", "roboverse_learn.*"]
 exclude = ["metasim", "metasim.*"]
 namespaces = true
 
 [tool.setuptools.package-data]
+# "**/LICENSE*" keeps the upstream license text next to the vendored code it covers.
+roboverse_learn = ["**/LICENSE*"]
 roboverse_pack = [
+    "**/LICENSE*",
     "**/*.md",
     "**/*.mdl",
     "**/*.urdf",

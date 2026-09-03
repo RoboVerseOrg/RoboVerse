@@ -2,6 +2,10 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: Isaac Lab's ManagerBasedRLEnv adapted into TrackingRLEnv; wired to MetaSim's ScenarioCfg and task registry, and to RSL-RL v2/v3; logging switched to loguru.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.isaaclab
 
 from __future__ import annotations
 

@@ -10,7 +10,24 @@ from metasim.utils.state import TensorState
 
 
 class ManiskillBaseTask(BaseTaskEnv):
-    """Pick up the red cube with a Panda robot and lift it by 0.1 m."""
+    """Base class for the ManiSkill **config ports** (``maniskill.<task>``).
+
+    ManiSkill is integrated on **two tiers** — pick the one that matches your goal:
+
+    * **Config port (this class, e.g. ``maniskill.pick_cube``,
+      ``maniskill.peg_insertion_side_*``)** — a MetaSim ``ScenarioCfg`` +
+      RoboVerse-format ``roboverse_data`` trajectory, runnable across any backend, for
+      cross-simulator training/data. **Not** bit-exact with ManiSkill's SAPIEN physics
+      — do **not** expect 1:1 official-demo replay from these ids.
+    * **Native 1:1 port (``maniskill.<task>_native`` — see ``_native/`` +
+      ``native_tasks.py``)** — SAPIEN3 with ManiSkill's PhysX/controller recipe,
+      replays ManiSkill's *official* ``.h5`` demos and is bitwise pose-parity vs
+      upstream (``tools.maniskill_integration.parity_native --all`` → 15/15). **Use
+      these ids for 1:1 replay / the documented parity videos.**
+
+    See ``release/benchmark/CROSS_BENCHMARK_1TO1.md`` and
+    ``docs/source/dataset_benchmark/integrations/maniskill.md``.
+    """
 
     scenario = None
     max_episode_steps = 250

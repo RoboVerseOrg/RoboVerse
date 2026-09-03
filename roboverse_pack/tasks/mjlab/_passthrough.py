@@ -1,3 +1,4 @@
+# RoboVerse-original: wrapper that imports the real `mjlab` package; contains no mjlab code.
 """MjlabPassthroughEnv — expose ANY mjlab task through MetaSim's gym.make API.
 
 Wraps mjlab.envs.ManagerBasedRlEnv with the gym.Env interface so users can do:

@@ -1,3 +1,10 @@
+# Copyright (c) The BeyondMimic authors (HybridRobotics/whole_body_tracking)
+# SPDX-License-Identifier: MIT
+#
+# Adapted from BeyondMimic / whole_body_tracking (https://github.com/HybridRobotics/whole_body_tracking).
+# Changes: MetaSim query types (e.g. per-body contact forces) written for the port to replace Isaac Lab's sensor/manager access; no single upstream file corresponds to it.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.beyondmimic
+
 from __future__ import annotations
 
 from collections import deque

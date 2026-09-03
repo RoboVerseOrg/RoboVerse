@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: RoboVerse task scaffold that loads mjlab's `i2rt_yam` MJCF through MetaSim's `RobotCfg` and mirrors
+#   mjlab's sim settings (dt / decimation / episode length); mjlab's lift-cube reward/goal shaping is not ported
+#   here.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """mjlab lift-cube task scaffold (YAM arm).
 
 Loads the bare YAM MJCF as a fixed-base robot. The lift-cube goal /

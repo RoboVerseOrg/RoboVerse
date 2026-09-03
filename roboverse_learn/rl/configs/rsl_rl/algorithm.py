@@ -2,6 +2,10 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: rsl_rl algorithm config ported onto MetaSim's @configclass.
+# Full license: THIRD_PARTY_NOTICES.md (BSD-3-Clause, full text included)
 
 from __future__ import annotations
 

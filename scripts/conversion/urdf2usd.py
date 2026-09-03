@@ -1,8 +1,11 @@
-# Everything from IsaacSim
 # Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: adapted to RoboVerse's asset paths and CLI; conversion logic unchanged.
+# Full license: THIRD_PARTY_NOTICES.md (BSD-3-Clause, full text included)
 
 """
 Utility to convert a URDF into USD format.

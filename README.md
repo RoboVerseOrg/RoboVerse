@@ -100,7 +100,33 @@ RoboVerse also integrates data from the following projects:
 - [vMaterials](https://developer.nvidia.com/vmaterials)
 - [HumanoidBench](https://github.com/carlosferrazza/humanoid-bench)
 
-The licenses for the assets used in RoboVerse will be added soon. Please contact us if you have any issues.
+### Third-party code
+
+Beyond the data above, RoboVerse **includes or adapts source code** from the projects below.
+Each is used under its own license; every affected file carries a header naming the upstream,
+its license, and our changes — the only exceptions are the components listed as *Unresolved* in
+`THIRD_PARTY_NOTICES.md`. **[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) is the
+authoritative index** — it maps each path in this repo to its upstream, license, and license
+text. See also [`NOTICE`](NOTICE).
+
+- [FastTD3](https://github.com/younggyoseo/FastTD3) (MIT) — `roboverse_learn/rl/fast_td3/`
+- [CleanRL](https://github.com/vwxyzjn/cleanrl) (MIT) — `roboverse_learn/rl/clean_rl/`
+- [stable-baselines3](https://github.com/DLR-RM/stable-baselines3) (MIT)
+- [diffusion_policy](https://github.com/real-stanford/diffusion_policy) (MIT) — `roboverse_learn/il/policies/dp/`
+- [robomimic](https://github.com/ARISE-Initiative/robomimic) (MIT), [robosuite](https://github.com/ARISE-Initiative/robosuite) (MIT)
+- [ACT](https://github.com/tonyzhaozh/act) (MIT) — `roboverse_learn/il/policies/act/`
+- [minGPT](https://github.com/karpathy/minGPT) (MIT), [DETR](https://github.com/facebookresearch/detr) (Apache-2.0)
+- [BeyondMimic](https://github.com/HybridRobotics/whole_body_tracking) (MIT) — `roboverse_pack/tasks/beyondmimic/`
+- [ManiSkill](https://github.com/haosulab/ManiSkill) & [ManiSkill2-real2sim](https://github.com/simpler-env/ManiSkill2_real2sim) (Apache-2.0)
+- [MuJoCo Playground](https://github.com/google-deepmind/mujoco_playground) (Apache-2.0), [mjlab](https://github.com/mujocolab/mjlab) (Apache-2.0)
+- [Isaac Lab](https://github.com/isaac-sim/IsaacLab) (BSD-3-Clause), [rsl_rl](https://github.com/leggedrobotics/rsl_rl) (BSD-3-Clause)
+
+If you contribute code adapted from another project, follow the attribution rule in
+[`AGENTS.md`](AGENTS.md) — the header is required, not optional.
+
+Asset licenses are documented per integration under `docs/source/dataset_benchmark/`; follow
+the original terms for each. Please contact us if you spot an attribution error or omission —
+we will correct it promptly.
 
 ## Citation
 If you find RoboVerse useful, please consider citing it:

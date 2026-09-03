@@ -1,3 +1,15 @@
+# Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from diffusion_policy (https://github.com/real-stanford/diffusion_policy).
+# Derived from diffusion_policy/policy/diffusion_unet_image_policy.py.
+# Changes: diffusion_policy's DiffusionUnetImagePolicy was refactored into a
+#   backbone-agnostic base class (DiffusionDenoisingImagePolicy) whose denoising network is
+#   supplied by subclasses via build_denoising_model(); conditional sampling, action
+#   prediction and the DDPM training loss follow the upstream implementation. Import paths
+#   retargeted and type annotations added.
+# Full license: roboverse_learn/il/policies/dp/LICENSE
+
 from __future__ import annotations
 
 from collections.abc import Mapping

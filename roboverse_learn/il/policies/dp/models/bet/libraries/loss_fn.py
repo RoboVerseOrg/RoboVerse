@@ -1,3 +1,17 @@
+# Copyright (c) 2020 Adeel Hassan
+# SPDX-License-Identifier: MIT
+#
+# Adapted from pytorch-multi-class-focal-loss
+# (https://github.com/AdeelH/pytorch-multi-class-focal-loss), vendored into RoboVerse via
+# diffusion_policy (https://github.com/real-stanford/diffusion_policy) as
+# diffusion_policy/model/bet/libraries/loss_fn.py. FocalLoss and focal_loss come from the
+# focal-loss upstream; the soft_cross_entropy helper was already present in diffusion_policy's
+# copy and is not part of that upstream.
+# Changes: import ordering and formatting only (ruff/isort); no functional changes.
+# Full license: roboverse_learn/il/policies/dp/models/bet/libraries/LICENSE.focal_loss
+#   upstream notice is at
+#   https://github.com/AdeelH/pytorch-multi-class-focal-loss/blob/master/LICENSE)
+
 from collections.abc import Sequence
 from typing import Optional
 

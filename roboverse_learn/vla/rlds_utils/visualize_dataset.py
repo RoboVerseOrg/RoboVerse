@@ -1,3 +1,13 @@
+# Copyright (c) 2023 Karl Pertsch
+# SPDX-License-Identifier: MIT
+#
+# Adapted from rlds_dataset_builder (https://github.com/kpertsch/rlds_dataset_builder), file
+# visualize_dataset.py.
+# Changes: a W&B entity is set; the episode viewer reads observation/image_0 instead of
+#   observation/image; the statistics plots are computed over the EEF_state and gripper_state
+#   fields instead of a single state field; formatting (double quotes).
+# Full license: roboverse_learn/vla/rlds_utils/LICENSE
+
 import argparse
 import importlib
 import os

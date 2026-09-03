@@ -2,6 +2,10 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: the configclass decorator keeps Isaac Lab's field semantics; MetaSim adds per-instance deep-copy in __post_init__ and the update() helpers.
+# Full license: packages/metasim/LICENSE.isaaclab
 
 """Sub-module that provides a wrapper around the Python 3.7 onwards ``dataclasses`` module."""
 

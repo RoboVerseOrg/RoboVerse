@@ -1,3 +1,9 @@
+# Copyright (c) 2025 Younggyo Seo
+# SPDX-License-Identifier: MIT
+#
+# Adapted from FastTD3 (https://github.com/younggyoseo/FastTD3).
+# Changes: none (vendored verbatim).
+# Full license: roboverse_learn/rl/fast_td3/LICENSE
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -1,3 +1,13 @@
+# Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from diffusion_policy (https://github.com/real-stanford/diffusion_policy).
+# Derived from diffusion_policy/policy/diffusion_unet_image_policy.py.
+# Changes: reworked into a DDIM variant of diffusion_policy's DiffusionUnetImagePolicy
+#   (uses diffusers' DDIMScheduler and an `eta` sampling parameter); import paths retargeted
+#   and a local BaseImagePolicy stub is defined in-file.
+# Full license: roboverse_learn/il/policies/dp/LICENSE
+
 from typing import Dict
 
 import torch

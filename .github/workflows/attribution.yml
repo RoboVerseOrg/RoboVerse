@@ -1,0 +1,38 @@
+name: Third-party attribution guardrail
+
+# Enforces the attribution rule in AGENTS.md: every file vendored or adapted from another
+# project must carry its upstream header (copyright, SPDX license, upstream URL, statement of
+# changes), and every vendored tree must be listed in THIRD_PARTY_NOTICES.md.
+#
+# MIT and BSD-3 require the upstream notice to travel with any copy; Apache-2.0 §4(b) requires
+# a statement of changes. This job makes those obligations mechanical instead of a matter of
+# whoever remembers. Pure file-reads — no simulator, no torch.
+
+on:
+  pull_request:
+    paths:
+      - "roboverse_learn/**"
+      - "roboverse_pack/**"
+      - "get_started/**"
+      - "scripts/**"
+      - "third_party/**"
+      - "metasim/**"
+      - "THIRD_PARTY_NOTICES.md"
+      - "NOTICE"
+      - "tests/test_attribution.py"
+      - ".github/workflows/attribution.yml"
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  attribution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip pytest
+      - name: Check third-party attribution headers
+        run: python -m pytest tests/test_attribution.py -v

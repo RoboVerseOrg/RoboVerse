@@ -1,3 +1,14 @@
+# Copyright (c) 2023 Karl Pertsch
+# SPDX-License-Identifier: MIT
+#
+# Adapted from rlds_dataset_builder (https://github.com/kpertsch/rlds_dataset_builder), file
+# example_dataset/example_dataset_dataset_builder.py.
+# Changes: the example TFDS builder is retargeted at RoboVerse demonstrations stored as
+#   Bridge-V2-style mp4 + metadata (BridgeOrig): the feature spec, the episode generator and the
+#   language-embedding step were rewritten for that layout; GCS lookups are disabled. The overall
+#   GeneratorBasedBuilder structure follows upstream.
+# Full license: roboverse_learn/vla/rlds_utils/LICENSE
+
 import json
 import os
 from collections.abc import Iterator

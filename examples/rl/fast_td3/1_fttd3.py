@@ -1,3 +1,12 @@
+# Copyright (c) 2025 Younggyo Seo
+# SPDX-License-Identifier: MIT
+#
+# Adapted from FastTD3 (https://github.com/younggyoseo/FastTD3).
+# Changes: single-file tutorial version of the FastTD3 training loop: the tyro CLI is replaced by an inline
+#   CONFIG dict, and the environment is created through the MetaSim task registry (get_task_class,
+#   scenario.update) with viser/ObsSaver rendering. The algorithm and its networks (imported from
+#   fttd3_module) are unchanged.
+# Full license: examples/rl/fast_td3/LICENSE
 from __future__ import annotations
 
 import os

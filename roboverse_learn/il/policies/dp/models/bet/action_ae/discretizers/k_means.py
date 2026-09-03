@@ -1,3 +1,13 @@
+# Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from diffusion_policy (https://github.com/real-stanford/diffusion_policy).
+# Per the in-file docstring, the _kmeans routine is itself adapted from
+# Karpathy's minGPT (https://github.com/karpathy/minGPT/blob/master/play_image.ipynb).
+# Changes: import paths retargeted to the roboverse_learn.il package layout; reformatted
+#   (ruff/isort). No functional changes.
+# Full license: roboverse_learn/il/policies/dp/LICENSE
+
 from typing import Optional
 
 import torch

@@ -1,3 +1,13 @@
+# Copyright (c) ManiSkill2-real2sim contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from ManiSkill2-real2sim (https://github.com/simpler-env/ManiSkill2_real2sim), the sim
+# stack behind SimplerEnv (https://github.com/simpler-env/SimplerEnv).
+# Changes: the visual-matching (greenscreen) compositing of
+#   `mani_skill2_real2sim/envs/custom_scenes/base_env.py::get_obs` is reproduced as a standalone
+#   pure-numpy/cv2 function with no dependency on the upstream package; the pixel math is
+#   unchanged (kept bit-for-bit faithful for parity).
+# Full license: roboverse_pack/tasks/simpler_env/_native/control/LICENSE
 """Visual-matching (greenscreen) overlay — vendored from SimplerEnv, pixel-exact.
 
 SimplerEnv's "visual matching" eval composites a real-world inpainted photo behind the

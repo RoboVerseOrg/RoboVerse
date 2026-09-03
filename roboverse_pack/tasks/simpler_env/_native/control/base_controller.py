@@ -1,3 +1,11 @@
+# Copyright (c) ManiSkill2-real2sim contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from ManiSkill2-real2sim (https://github.com/simpler-env/ManiSkill2_real2sim).
+# Changes: from `mani_skill2_real2sim/agents/base_controller.py`; import paths rewritten to the vendored sibling
+#   modules, one `str.format` call modernized to an f-string, and line wrapping reflowed by the repo formatter.
+#   Controller math unchanged (kept byte-faithful for bitwise parity).
+# Full license: roboverse_pack/tasks/simpler_env/_native/control/LICENSE
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Dict, List

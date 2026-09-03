@@ -1,3 +1,4 @@
+# RoboVerse-original: re-export shim only; contains no mjlab code.
 """Mjlab MDP function library ported to RoboVerse.
 
 These functions are the term implementations used by mjlab task configs

@@ -35,6 +35,7 @@ release.
   import name `metasim` unchanged). The pin moves to a MetaSim tag with the next release.
 
 ### Added
+- Third-party attribution: `NOTICE` and `THIRD_PARTY_NOTICES.md` index every vendored or adapted component (FastTD3, CleanRL, stable-baselines3, diffusion_policy, BeT/minGPT, ACT/DETR, Isaac Lab, RSL-RL, BeyondMimic, gsnet/pointnet2, MuJoCo mesh tools, …) with its license text in-tree; adapted files carry a header naming upstream, license, changes and the license path; `tests/test_attribution.py` fails the build when a header or an index row is missing; wheels ship `NOTICE`, the index and the vendored `LICENSE*` files (`setuptools>=77`, PEP 639 `license-files`).
 
 - `--sim superdex` in every MuJoCo-capable `get_started` tutorial and a `roboverse-py[superdex]`
   extra (needs the MetaSim SuperDex backend, Python >= 3.12).

@@ -1,3 +1,12 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: port of mjlab's `sensor/` subsystem (ContactSensor / TerrainHeightSensor / BuiltinSensor) as
+#   stand-alone Python classes; quantities are recomputed from `mjData` contacts and `mujoco.mj_ray` instead of
+#   mjlab's MjSpec sensor injection, keeping mjlab's `data` dataclass surface so the ported reward terms read
+#   unchanged.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Sensor ports — ContactSensor / TerrainHeightSensor / BuiltinSensor.
 
 RoboVerse-side ports of mjlab's sensor subsystem

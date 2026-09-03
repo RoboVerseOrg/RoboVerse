@@ -1,3 +1,10 @@
+# Copyright (c) ManiSkill2-real2sim contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from ManiSkill2-real2sim (https://github.com/simpler-env/ManiSkill2_real2sim).
+# Changes: `mani_skill2_real2sim/agents/utils.py` renamed to `ruckig_utils.py`; unused `Result` import dropped and
+#   line wrapping reflowed by the repo formatter; function bodies unchanged (kept byte-faithful for bitwise parity).
+# Full license: roboverse_pack/tasks/simpler_env/_native/control/LICENSE
 # TODO(jigu): Move to sapien_utils.py
 from collections import OrderedDict
 from typing import Dict, Sequence

@@ -1,3 +1,11 @@
+# Copyright (c) ManiSkill contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from ManiSkill (https://github.com/haosulab/ManiSkill).
+# Changes: reimplemented in numpy (no upstream file copied) so MetaSim's sapien3 handler reproduces the
+#   `pd_joint_delta_pos` action contract of `mani_skill.agents.controllers.pd_joint_pos` — same normalized
+#   `Box(-1, 1)` action space, same float32 clip-and-scale, same arm-delta + absolute mimic-gripper target math.
+# Full license: roboverse_pack/tasks/simpler_env/_native/control/LICENSE
 """Vendored ManiSkill PD joint-position controllers (byte-faithful math).
 
 These mirror ``mani_skill.agents.controllers.pd_joint_pos`` so the shipped MetaSim tasks consume the

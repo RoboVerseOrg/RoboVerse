@@ -1,3 +1,11 @@
+# Copyright (c) 2023 Tony Z. Zhao
+# SPDX-License-Identifier: MIT
+#
+# Adapted from ACT (https://github.com/tonyzhaozh/act), file policy.py.
+# Changes: the model builders are imported from the package-relative `.detr.main` instead of the
+#   top-level `detr.main`. Otherwise verbatim (ACTPolicy, CNNMLPPolicy, kl_divergence).
+# Full license: roboverse_learn/il/policies/act/LICENSE
+
 import IPython
 import torch.nn as nn
 import torchvision.transforms as transforms

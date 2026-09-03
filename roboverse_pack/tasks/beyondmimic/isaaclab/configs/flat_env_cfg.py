@@ -1,3 +1,10 @@
+# Copyright (c) The BeyondMimic authors (HybridRobotics/whole_body_tracking)
+# SPDX-License-Identifier: MIT
+#
+# Adapted from BeyondMimic / whole_body_tracking (https://github.com/HybridRobotics/whole_body_tracking).
+# Changes: import paths rewired to RoboVerse; upstream's G1FlatWoStateEstimationEnvCfg/G1FlatLowFreqEnvCfg replaced by G1FlatEnvCfgDeploy, which uses the delayed-actuator G1 config; docstrings added.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.beyondmimic
+
 from isaaclab.utils import configclass
 
 from roboverse_pack.tasks.beyondmimic.isaaclab.configs.tracking_env_cfg import TrackingEnvCfg

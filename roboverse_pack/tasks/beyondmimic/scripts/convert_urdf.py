@@ -2,6 +2,10 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: print() calls replaced with loguru logging and minor import changes for RoboVerse; the URDF-to-USD conversion logic is unchanged.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.isaaclab
 
 """Utility to convert a URDF into USD format.
 

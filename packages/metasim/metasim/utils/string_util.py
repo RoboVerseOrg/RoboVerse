@@ -2,6 +2,10 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: string/case helpers used unchanged apart from import paths.
+# Full license: packages/metasim/LICENSE.isaaclab
 
 """Sub-module containing utilities for transforming strings and regular expressions."""
 

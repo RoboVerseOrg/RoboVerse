@@ -1,3 +1,16 @@
+# Copyright (c) 2023 Tony Z. Zhao
+# SPDX-License-Identifier: MIT
+#
+# RoboVerse-original file, except for get_temporal_agg_action(): the exponential temporal
+# ensembling of overlapping action chunks (the `all_time_actions` buffer and the
+# exp(-m * k) weighting) is adapted from ACT (https://github.com/tonyzhaozh/act),
+# imitate_episodes.py::eval_bc. The MIT notice is retained for that portion; the rest of this
+# file (observation preprocessing, action postprocessing, IK, the runner protocol) is RoboVerse's
+# own.
+# Changes: the ensembling was vectorised over parallel environments (an extra leading env
+#   dimension) and reads its chunk length / action dimension from the policy config.
+# Full license: roboverse_learn/il/policies/act/LICENSE
+
 from roboverse_learn.il.configs.base_config import BasePolicyCfg
 
 try:

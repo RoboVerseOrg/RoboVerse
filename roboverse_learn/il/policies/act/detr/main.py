@@ -1,3 +1,16 @@
+# Copyright (c) Facebook, Inc. and its affiliates
+# Copyright (c) 2023 Tony Z. Zhao
+# SPDX-License-Identifier: Apache-2.0 AND MIT
+#
+# Adapted from ACT's fork of DETR: the argument parser is DETR's
+# (https://github.com/facebookresearch/detr, main.py, Apache-2.0, Facebook), while
+# build_ACT_model_and_optimizer / build_CNNMLP_model_and_optimizer replace DETR's training loop
+# and are ACT's own (https://github.com/tonyzhaozh/act, MIT, Tony Z. Zhao).
+# Changes: added the --state_dim, --num_episodes, --dataset_dir, --algo and --ckpt_path
+#   arguments; --ckpt_dir, --policy_class, --seed and --num_epochs got defaults instead of being
+#   required; parse_args() became parse_known_args() so RoboVerse's own CLI flags do not error.
+# Full license: roboverse_learn/il/policies/act/detr/LICENSE (Apache-2.0), roboverse_learn/il/policies/act/LICENSE (MIT)
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 import argparse
 

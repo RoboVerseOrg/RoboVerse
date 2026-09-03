@@ -1,3 +1,10 @@
+# Copyright (c) The BeyondMimic authors (HybridRobotics/whole_body_tracking)
+# SPDX-License-Identifier: MIT
+#
+# Adapted from BeyondMimic / whole_body_tracking (https://github.com/HybridRobotics/whole_body_tracking).
+# Changes: upstream's tracking_env_cfg.py/flat_env_cfg.py ported onto MetaSim's @configclass and callback-based MDP terms; domain randomization is not yet fully aligned with upstream (see the TODO comments in-file).
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.beyondmimic
+
 from __future__ import annotations
 
 from collections.abc import Callable

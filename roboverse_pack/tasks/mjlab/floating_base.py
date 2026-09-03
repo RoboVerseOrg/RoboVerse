@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: RoboVerse task scaffolds that load mjlab's `unitree_g1` / `unitree_go1` MJCFs through MetaSim's
+#   `RobotCfg` and mirror mjlab's sim settings (dt / decimation / episode length); no mjlab env or manager code
+#   ported.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """mjlab floating-base locomotion task scaffolds (g1, go1).
 
 These tasks load mjlab's bare unitree_g1 / unitree_go1 MJCFs through

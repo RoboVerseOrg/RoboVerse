@@ -1,3 +1,10 @@
+# Copyright (c) The BeyondMimic authors (HybridRobotics/whole_body_tracking)
+# SPDX-License-Identifier: MIT
+#
+# Adapted from BeyondMimic / whole_body_tracking (https://github.com/HybridRobotics/whole_body_tracking).
+# Changes: upstream's observation terms ported from Isaac Lab manager terms to MetaSim's TensorState-based callbacks; body ordering kept as upstream for checkpoint compatibility.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.beyondmimic
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
