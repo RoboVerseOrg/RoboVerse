@@ -166,3 +166,26 @@ def test_symlinked_local_dir_is_not_traversal(monkeypatch, tmp_path):
         hf_util.check_and_download_single(str(real_dir / "robots" / "g1" / "meshes" / "pelvis.STL"))
     assert "Refusing to fetch" not in str(excinfo.value)
     assert seen["relpath"] == "robots/g1/meshes/pelvis.STL"
+
+
+@pytest.mark.general
+def test_cwd_mismatch_error_names_the_cause(monkeypatch, tmp_path):
+    """A ``roboverse_data/...`` path evaluated from the wrong CWD must explain the CWD /
+    ROBOVERSE_DATA_DIR mismatch (and where the asset already is), not accuse the caller of traversal."""
+    from metasim.utils import hf_util
+
+    data_dir = tmp_path / "shared_data"
+    (data_dir / "robots").mkdir(parents=True)
+    (data_dir / "robots" / "franka.urdf").write_text("<robot/>", encoding="utf-8")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(data_dir))
+    monkeypatch.setattr(hf_util.hf_api, "file_exists", lambda *a, **kw: pytest.fail("HfApi reached"))
+
+    with pytest.raises(ValueError) as excinfo:
+        hf_util.check_and_download_single(os.path.join("roboverse_data", "robots", "franka.urdf"))
+    msg = str(excinfo.value)
+    assert "working directory" in msg and str(elsewhere) in msg
+    assert str(data_dir / "robots" / "franka.urdf") in msg
+    assert "ROBOVERSE_DATA_DIR" in msg and "traversal" not in msg

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 import metasim.utils.hf_util as hf_util
@@ -50,6 +52,9 @@ def test_check_and_download_single_falls_back_to_private_roboverse_data(monkeypa
     def fake_hf_hub_download(repo_id, filename, repo_type, local_dir):
         download_calls.append((repo_id, filename, repo_type, local_dir))
 
+    # LOCAL_DIR is resolved from ROBOVERSE_DATA_DIR at import time; pin it to the CWD-relative
+    # default so the test does not depend on the caller's environment.
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", os.path.abspath("roboverse_data"))
     monkeypatch.setattr(hf_util.os.path, "exists", lambda path: False)
     monkeypatch.setattr(hf_util.hf_api, "file_exists", fake_file_exists)
     monkeypatch.setattr(hf_util, "hf_hub_download", fake_hf_hub_download)

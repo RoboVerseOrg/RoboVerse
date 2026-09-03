@@ -120,6 +120,33 @@ def extract_texture_paths_from_mdl(mdl_file_path: str) -> list[str]:
     return texture_paths
 
 
+_RELATIVE_DATA_PREFIX = "roboverse_data" + os.sep
+
+
+def _outside_local_dir_message(filepath: str, relpath: str) -> str:
+    """Explain why ``filepath`` cannot be fetched into ``LOCAL_DIR``.
+
+    Asset paths in configs are ``roboverse_data/...`` and are opened by the simulator backends
+    relative to the *current working directory*; ``ROBOVERSE_DATA_DIR`` only moves where downloads
+    land. So a relative path that does not resolve under ``LOCAL_DIR`` is almost always a CWD /
+    ``ROBOVERSE_DATA_DIR`` mismatch, not a malicious ``..`` — say so, and point at the asset when it
+    already exists in the configured directory.
+    """
+    if not os.path.isabs(filepath) and filepath.startswith(_RELATIVE_DATA_PREFIX):
+        in_local_dir = os.path.join(LOCAL_DIR, filepath[len(_RELATIVE_DATA_PREFIX) :])
+        found = f" The asset exists at {in_local_dir!r}." if os.path.exists(in_local_dir) else ""
+        return (
+            f"Cannot fetch {filepath!r}: asset paths are relative to the working directory "
+            f"({os.getcwd()!r}), which is not the parent of LOCAL_DIR ({LOCAL_DIR!r}).{found} "
+            f"Run from the repository root, or symlink ./roboverse_data to LOCAL_DIR "
+            f"(ROBOVERSE_DATA_DIR only changes where downloads are stored)."
+        )
+    return (
+        f"Refusing to fetch {filepath!r}: resolves outside LOCAL_DIR ({LOCAL_DIR}) via relative-path "
+        f"traversal ({relpath!r})."
+    )
+
+
 def check_and_download_single(filepath: str):
     """Check if the file exists in the local directory, and download it from the huggingface dataset if it doesn't exist.
 
@@ -145,10 +172,7 @@ def check_and_download_single(filepath: str):
         # outside LOCAL_DIR — refuse it rather than send the escaped path
         # to the HF API. Optional files warn-and-skip; required files raise.
         if relpath.split(os.sep, 1)[0] == "..":
-            msg = (
-                f"Refusing to fetch {filepath!r}: resolves outside LOCAL_DIR "
-                f"({LOCAL_DIR}) via relative-path traversal ({relpath!r})."
-            )
+            msg = _outside_local_dir_message(filepath, relpath)
             if is_optional_file:
                 log.warning(msg + " Skipping optional file.")
                 return
