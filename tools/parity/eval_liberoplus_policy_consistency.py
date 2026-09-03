@@ -30,7 +30,9 @@ from roboverse_pack.tasks.libero_plus import _passthrough as pt
 
 _DEMO_ROOT = os.environ.get(
     "LIBERO_DEMO_ROOT",
-    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "third_party", "libero_datasets"),
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "third_party", "libero_datasets"
+    ),
 )
 
 # (suite, demo-task-stem, perturbation-task-name, label). Perturbations chosen to
