@@ -4,14 +4,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
+from roboverse_learn.il.policies.vita.action_ae import CNNActionEncoder, SimpleActionDecoder
+from roboverse_learn.il.utils.flow.flow_matchers import TorchFlowMatcher
+from roboverse_learn.il.utils.models.flow_net import SimpleFlowNet
 from roboverse_learn.il.utils.normalizer import LinearNormalizer
 from roboverse_learn.il.utils.pytorch_util import dict_apply
-from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
-
-from roboverse_learn.il.utils.models.flow_net import SimpleFlowNet
-from roboverse_learn.il.policies.vita.action_ae import CNNActionEncoder, SimpleActionDecoder
 from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
-from roboverse_learn.il.utils.flow.flow_matchers import TorchFlowMatcher
 
 
 class VITAImagePolicy(BaseImagePolicy):
@@ -59,10 +58,7 @@ class VITAImagePolicy(BaseImagePolicy):
         self.action_ae = action_ae
 
         self.obs_encoder = obs_encoder
-        self.obs_projector = nn.Linear(
-            obs_feature_dim * n_obs_steps,
-            latent_dim
-        )
+        self.obs_projector = nn.Linear(obs_feature_dim * n_obs_steps, latent_dim)
 
         self.flow_net = SimpleFlowNet(
             input_dim=latent_dim,
@@ -70,7 +66,7 @@ class VITAImagePolicy(BaseImagePolicy):
             output_dim=latent_dim,
             num_layers=flow_net.num_layers,
             mlp_ratio=flow_net.mlp_ratio,
-            dropout=flow_net.dropout
+            dropout=flow_net.dropout,
         )
         self.action_encoder = CNNActionEncoder(
             pred_horizon=horizon,
@@ -118,7 +114,7 @@ class VITAImagePolicy(BaseImagePolicy):
             start=obs_latents,  # Use visual latents as the flow source
         )
         loss = flow_loss
-        metrics['flow_loss'] = flow_loss.item()
+        metrics["flow_loss"] = flow_loss.item()
 
         # Encoder contrastive loss
         if self.enc_contrastive_weight > 0:
@@ -126,7 +122,7 @@ class VITAImagePolicy(BaseImagePolicy):
             action_features = action_latents.view(batch_size, -1)
             contrastive_loss = compute_contrastive_loss(image_features, action_features)
             loss += self.enc_contrastive_weight * contrastive_loss
-            metrics['enc_contrastive_loss'] = contrastive_loss.item()
+            metrics["enc_contrastive_loss"] = contrastive_loss.item()
 
         # Flow latent decoding
         if self.decode_flow_latents:
@@ -135,25 +131,25 @@ class VITAImagePolicy(BaseImagePolicy):
                 shape=(batch_size, self.latent_dim),
                 device=obs_latents.device,
                 start=obs_latents,  # Use visual latents as the flow source
-                num_steps=self.num_sampling_steps
+                num_steps=self.num_sampling_steps,
             )
 
             if self.consistency_weight > 0:
                 consistency_loss = F.mse_loss(action_latents_pred, action_latents)
                 loss += self.consistency_weight * consistency_loss
-                metrics['consistency_loss'] = consistency_loss.item()
+                metrics["consistency_loss"] = consistency_loss.item()
 
             if self.flow_contrastive_weight > 0:
                 image_features = obs_latents.view(batch_size, -1)
                 action_features = action_latents_pred.view(batch_size, -1)
                 contrastive_loss = compute_contrastive_loss(image_features, action_features)
                 loss += self.flow_contrastive_weight * contrastive_loss
-                metrics['flow_contrastive_loss'] = contrastive_loss.item()
+                metrics["flow_contrastive_loss"] = contrastive_loss.item()
 
             if self.action_ae["flow_recon_weight"] > 0:
                 actions_recon = self.action_decoder(action_latents_pred)
                 action_recon_loss = F.l1_loss(actions_recon, nactions)
-                metrics['flow_action_recon_loss'] = action_recon_loss.item()
+                metrics["flow_action_recon_loss"] = action_recon_loss.item()
                 loss += self.action_ae["flow_recon_weight"] * action_recon_loss
         else:
             action_latents_pred = action_latents
@@ -162,7 +158,7 @@ class VITAImagePolicy(BaseImagePolicy):
         if self.action_ae["enc_recon_weight"] > 0:
             actions_recon = self.action_decoder(action_latents)
             action_recon_loss = F.l1_loss(actions_recon, nactions)
-            metrics['enc_action_recon_loss'] = action_recon_loss.item()
+            metrics["enc_action_recon_loss"] = action_recon_loss.item()
             loss += self.action_ae["enc_recon_weight"] * action_recon_loss
 
         return loss
@@ -174,7 +170,7 @@ class VITAImagePolicy(BaseImagePolicy):
         B = value.shape[0]
 
         # reshape B, T, ... to B*T
-        this_nobs = dict_apply(nobs, lambda x: x[:, :self.n_obs_steps, ...].reshape(-1, *x.shape[2:]))
+        this_nobs = dict_apply(nobs, lambda x: x[:, : self.n_obs_steps, ...].reshape(-1, *x.shape[2:]))
         nobs_features = self.obs_encoder(this_nobs)
         nobs_features = nobs_features.reshape(B, -1)
         obs_latents = self.obs_projector(nobs_features)
@@ -186,7 +182,7 @@ class VITAImagePolicy(BaseImagePolicy):
             device=obs_latents.device,
             num_steps=self.num_sampling_steps,
             start=obs_latents,  # Use visual latents as the flow source
-            return_traces=False
+            return_traces=False,
         )
 
         with torch.no_grad():

@@ -1,12 +1,12 @@
 from typing import Optional, Tuple
 
+import einops
+import torch
+import torch.nn.functional as F
+
 import roboverse_learn.il.policies.dp.models.bet.latent_generators.latent_generator as latent_generator
 import roboverse_learn.il.policies.dp.models.bet.libraries.mingpt.model as mingpt_model
 import roboverse_learn.il.policies.dp.models.bet.libraries.mingpt.trainer as mingpt_trainer
-import einops
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from roboverse_learn.il.policies.dp.models.bet.libraries.loss_fn import FocalLoss, soft_cross_entropy
 
 
@@ -28,7 +28,7 @@ class MinGPT(latent_generator.AbstractLatentGenerator):
         predict_offsets: bool = False,
         offset_loss_scale: float = 1.0,
         focal_loss_gamma: float = 0.0,
-        **kwargs
+        **kwargs,
     ):
         super().__init__()
         self.input_size = input_dim

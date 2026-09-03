@@ -7,13 +7,13 @@ This script evaluates a fine-tuned SmolVLA model on RoboVerse tasks.
 
 import argparse
 import json
+import multiprocessing
 import os
 import sys
 import time
-import multiprocessing
 from collections import deque
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 import numpy as np
 import torch
@@ -22,23 +22,25 @@ from PIL import Image
 # Add parent directories to path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-import metasim
 import gymnasium as gym
 
+import metasim
+
 metasim.register_gym_envs()
-from metasim.utils import configclass
+from metasim.randomization import DomainRandomizationManager, DRConfig
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
-from metasim.utils.obs_utils import ObsSaver
+from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
+from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_robot
-from metasim.randomization import DomainRandomizationManager, DRConfig
-from roboverse_learn.il.configs.base_config import BasePolicyCfg, ActionCfg, ObsCfg, EndEffectorCfg
+from roboverse_learn.il.configs.base_config import ActionCfg, BasePolicyCfg, EndEffectorCfg, ObsCfg
 
 
 @configclass
 class SmolVLAPolicyCfg(BasePolicyCfg):
     """Configuration for SmolVLA policy."""
+
     name: str = "SmolVLAPolicy"
     action_config: ActionCfg = ActionCfg(
         action_type="ee",
@@ -76,10 +78,10 @@ class SmolVLARunner:
         # Get the base environment for accessing handler
         # GymEnvWrapper has a task_env attribute which contains the handler
         env_unwrapped = env
-        while hasattr(env_unwrapped, 'unwrapped') and env_unwrapped != env_unwrapped.unwrapped:
+        while hasattr(env_unwrapped, "unwrapped") and env_unwrapped != env_unwrapped.unwrapped:
             env_unwrapped = env_unwrapped.unwrapped
         # Access handler through task_env if it exists
-        if hasattr(env_unwrapped, 'task_env'):
+        if hasattr(env_unwrapped, "task_env"):
             self.env_base = env_unwrapped.task_env
         else:
             self.env_base = env_unwrapped
@@ -101,19 +103,25 @@ class SmolVLARunner:
 
         try:
             from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
+
             self.model = SmolVLAPolicy.from_pretrained(checkpoint_path)
             self.model = self.model.to(self.device).eval()
             self.use_lerobot = True
         except Exception as e:
             try:
                 from transformers import AutoModel, AutoProcessor
+
                 self.processor = AutoProcessor.from_pretrained(checkpoint_path, trust_remote_code=True)
-                self.model = AutoModel.from_pretrained(
-                    checkpoint_path,
-                    torch_dtype=torch.bfloat16,
-                    low_cpu_mem_usage=True,
-                    trust_remote_code=True,
-                ).to(self.device).eval()
+                self.model = (
+                    AutoModel.from_pretrained(
+                        checkpoint_path,
+                        torch_dtype=torch.bfloat16,
+                        low_cpu_mem_usage=True,
+                        trust_remote_code=True,
+                    )
+                    .to(self.device)
+                    .eval()
+                )
                 self.use_lerobot = False
             except Exception as e2:
                 raise RuntimeError(f"Failed to load SmolVLA model from {checkpoint_path}: {e2}")
@@ -127,6 +135,7 @@ class SmolVLARunner:
     def _setup_ik(self):
         """Setup IK solver for end-effector control."""
         from metasim.utils.ik_solver import setup_ik_solver
+
         self.robot_cfg = self.scenario.robots[0]
         self.ik_solver = setup_ik_solver(self.robot_cfg, self.solver)
 
@@ -157,15 +166,15 @@ class SmolVLARunner:
         image = Image.fromarray(rgb_data.detach().cpu().numpy())
 
         # Get task description (unwrap to access task_env)
-        task_env = getattr(self.env, 'unwrapped', self.env)
-        if hasattr(task_env, 'task_env'):
+        task_env = getattr(self.env, "unwrapped", self.env)
+        if hasattr(task_env, "task_env"):
             task_env = task_env.task_env
         instruction = getattr(task_env, "task_desc", self.task_name)
 
         if self.use_lerobot:
             # Prepare input batch for LeRobot model
-            from torchvision.transforms import ToTensor
             import torch
+            from torchvision.transforms import ToTensor
 
             # Convert image to tensor and add batch dimension
             image_tensor = ToTensor()(image).unsqueeze(0).to(self.device)
@@ -184,10 +193,7 @@ class SmolVLARunner:
 
             # Tokenize instruction
             tokenized = self.model.model.vlm_with_expert.processor.tokenizer(
-                instruction,
-                return_tensors="pt",
-                padding=True,
-                truncation=True
+                instruction, return_tensors="pt", padding=True, truncation=True
             )
 
             batch = {
@@ -201,10 +207,12 @@ class SmolVLARunner:
         else:
             prompt = f"What action should the robot take to {instruction}?"
             inputs = self.processor(text=prompt, images=image, return_tensors="pt")
-            inputs = {k: v.to(self.device, dtype=torch.bfloat16 if v.dtype == torch.float32 else v.dtype)
-                     for k, v in inputs.items()}
+            inputs = {
+                k: v.to(self.device, dtype=torch.bfloat16 if v.dtype == torch.float32 else v.dtype)
+                for k, v in inputs.items()
+            }
             outputs = self.model(**inputs)
-            action = outputs.action if hasattr(outputs, 'action') else outputs[0]
+            action = outputs.action if hasattr(outputs, "action") else outputs[0]
 
         # Convert to tensor if needed
         if not isinstance(action, torch.Tensor):
@@ -241,8 +249,16 @@ class SmolVLARunner:
         joint_pos_raw = rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)
         curr_robot_q = joint_pos_raw[:, inverse_reorder_idx].to(self.device).float()
 
-        robot_ee_state = (rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state)).to(self.device).float()
-        robot_root_state = (rs.root_state if isinstance(rs.root_state, torch.Tensor) else torch.tensor(rs.root_state)).to(self.device).float()
+        robot_ee_state = (
+            (rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state))
+            .to(self.device)
+            .float()
+        )
+        robot_root_state = (
+            (rs.root_state if isinstance(rs.root_state, torch.Tensor) else torch.tensor(rs.root_state))
+            .to(self.device)
+            .float()
+        )
 
         # Get end-effector pose
         if self.ee_body_idx is None:
@@ -262,9 +278,7 @@ class SmolVLARunner:
         gripper_open = action[:num_envs, 6]
 
         # Convert rotation delta to quaternion
-        ee_quat_delta = transforms.matrix_to_quaternion(
-            transforms.euler_angles_to_matrix(ee_rot_delta, "XYZ")
-        )
+        ee_quat_delta = transforms.matrix_to_quaternion(transforms.euler_angles_to_matrix(ee_rot_delta, "XYZ"))
 
         # Compute target pose
         ee_pos_target = curr_ee_pos_local + ee_pos_delta
@@ -275,6 +289,7 @@ class SmolVLARunner:
 
         # Process gripper command
         from metasim.utils.ik_solver import process_gripper_command
+
         gripper_widths = process_gripper_command(gripper_open, self.robot_cfg, self.device)
 
         # Compose final action
@@ -314,9 +329,9 @@ def evaluate_episode(
 
         # Access task_env through wrapper
         env_unwrapped = env
-        while hasattr(env_unwrapped, 'unwrapped') and env_unwrapped != env_unwrapped.unwrapped:
+        while hasattr(env_unwrapped, "unwrapped") and env_unwrapped != env_unwrapped.unwrapped:
             env_unwrapped = env_unwrapped.unwrapped
-        task_env = env_unwrapped.task_env if hasattr(env_unwrapped, 'task_env') else env_unwrapped
+        task_env = env_unwrapped.task_env if hasattr(env_unwrapped, "task_env") else env_unwrapped
 
         # Reset to specific state
         obs, info = task_env.reset(states=[init_states[demo_idx]], env_ids=[0])
@@ -327,20 +342,15 @@ def evaluate_episode(
         # Update gym wrapper state to avoid "ResetNeeded" error
         wrapper = env
         while wrapper is not env_unwrapped:
-            if hasattr(wrapper, '_has_reset'):
+            if hasattr(wrapper, "_has_reset"):
                 wrapper._has_reset = True
-            if hasattr(wrapper, '_episode_steps'):
+            if hasattr(wrapper, "_episode_steps"):
                 wrapper._episode_steps[0] = 0
-            wrapper = wrapper.unwrapped if hasattr(wrapper, 'unwrapped') else wrapper.env
+            wrapper = wrapper.unwrapped if hasattr(wrapper, "unwrapped") else wrapper.env
     else:
         obs, info = env.reset()
 
-    stats = {
-        "steps": 0,
-        "success": False,
-        "total_reward": 0.0,
-        "start_time": time.time()
-    }
+    stats = {"steps": 0, "success": False, "total_reward": 0.0, "start_time": time.time()}
     runner.reset()
 
     # Initialize video saver
@@ -415,20 +425,20 @@ def main():
         type=int,
         default=0,
         choices=[0, 1, 2, 3],
-        help="Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera"
+        help="Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera",
     )
     parser.add_argument(
         "--scene_mode",
         type=int,
         default=0,
         choices=[0, 1, 2, 3],
-        help="Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD"
+        help="Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD",
     )
     parser.add_argument(
         "--randomization_seed",
         type=int,
         default=None,
-        help="Seed for reproducible randomization. If None, uses random seed"
+        help="Seed for reproducible randomization. If None, uses random seed",
     )
     args = parser.parse_args()
 
@@ -516,9 +526,9 @@ def main():
 
     # Access the actual task environment through wrapper
     env_unwrapped = env
-    while hasattr(env_unwrapped, 'unwrapped') and env_unwrapped != env_unwrapped.unwrapped:
+    while hasattr(env_unwrapped, "unwrapped") and env_unwrapped != env_unwrapped.unwrapped:
         env_unwrapped = env_unwrapped.unwrapped
-    task_env = env_unwrapped.task_env if hasattr(env_unwrapped, 'task_env') else env_unwrapped
+    task_env = env_unwrapped.task_env if hasattr(env_unwrapped, "task_env") else env_unwrapped
 
     # Load trajectories for domain randomization
     traj_filepath = task_env.traj_filepath
@@ -529,6 +539,7 @@ def main():
     randomization_manager = None
     if args.level > 0:
         from dataclasses import dataclass as dc
+
         @dc
         class SimpleRenderCfg:
             mode: str = render_mode
@@ -542,9 +553,11 @@ def main():
             scenario=env.unwrapped.scenario,
             handler=task_env.handler,
             init_states=init_states,
-            render_cfg=SimpleRenderCfg(mode=render_mode)
+            render_cfg=SimpleRenderCfg(mode=render_mode),
         )
-        print(f"Domain Randomization enabled: level={args.level}, scene_mode={args.scene_mode}, seed={args.randomization_seed}")
+        print(
+            f"Domain Randomization enabled: level={args.level}, scene_mode={args.scene_mode}, seed={args.randomization_seed}"
+        )
 
     # Create runner
     runner = SmolVLARunner(
@@ -560,12 +573,7 @@ def main():
 
     # Run evaluation
     start_time = time.time()
-    eval_stats = {
-        "total_episodes": 0,
-        "total_successes": 0,
-        "total_rewards": [],
-        "episode_results": []
-    }
+    eval_stats = {"total_episodes": 0, "total_successes": 0, "total_rewards": [], "episode_results": []}
 
     for ep in range(args.num_episodes):
         print(f"\n{'=' * 50}")
@@ -575,10 +583,14 @@ def main():
         demo_idx = ep % len(init_states) if randomization_manager is not None else 0
 
         ep_res = evaluate_episode(
-            env, runner, args.max_steps, ep + 1, args.output_dir,
+            env,
+            runner,
+            args.max_steps,
+            ep + 1,
+            args.output_dir,
             randomization_manager=randomization_manager,
             demo_idx=demo_idx,
-            init_states=init_states if randomization_manager is not None else None
+            init_states=init_states if randomization_manager is not None else None,
         )
 
         eval_stats["total_episodes"] += 1
@@ -611,12 +623,16 @@ def main():
     ts = time.strftime("%Y%m%d_%H%M%S")
     result_path = os.path.join(args.output_dir, f"smolvla_eval_{args.task}_{ts}.json")
     with open(result_path, "w") as f:
-        json.dump({
-            "config": vars(args),
-            "eval_stats": eval_stats,
-            "timestamp": ts,
-            "dr_config": {"level": args.level, "scene_mode": args.scene_mode, "seed": args.randomization_seed}
-        }, f, indent=2)
+        json.dump(
+            {
+                "config": vars(args),
+                "eval_stats": eval_stats,
+                "timestamp": ts,
+                "dr_config": {"level": args.level, "scene_mode": args.scene_mode, "seed": args.randomization_seed},
+            },
+            f,
+            indent=2,
+        )
     print(f"\nResults saved to: {result_path}")
 
     # Cleanup

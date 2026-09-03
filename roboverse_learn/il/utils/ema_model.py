@@ -1,5 +1,3 @@
-import copy
-
 import torch
 from torch.nn.modules.batchnorm import _BatchNorm
 

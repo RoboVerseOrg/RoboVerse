@@ -1,6 +1,7 @@
 from typing import Dict
 
 import torch
+
 from roboverse_learn.il.utils.module_attr_mixin import ModuleAttrMixin
 from roboverse_learn.il.utils.normalizer import LinearNormalizer
 

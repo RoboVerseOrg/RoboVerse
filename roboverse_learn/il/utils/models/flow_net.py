@@ -12,13 +12,13 @@ class Attention(nn.Module):
         dim,
         num_heads=8,
         qkv_bias=True,
-        attn_drop=0.,
-        proj_drop=0.,
+        attn_drop=0.0,
+        proj_drop=0.0,
         max_seq_len=16,
         qk_norm=True,
     ):
         super().__init__()
-        assert dim % num_heads == 0, 'dim should be divisible by num_heads'
+        assert dim % num_heads == 0, "dim should be divisible by num_heads"
         self.num_heads = num_heads
         self.head_dim = dim // num_heads
         # self.attn_norm = self.head_dim ** -0.5
@@ -51,40 +51,28 @@ class Attention(nn.Module):
 
 
 class AdaLNBlock(nn.Module):
-    """ Adaptive LayerNorm Transformer Block as in DiT (Peebles et al. 2022) """
+    """Adaptive LayerNorm Transformer Block as in DiT (Peebles et al. 2022)"""
 
     def __init__(
         self,
         dim,
         num_heads,
-        mlp_ratio=4.,
-        dropout=0.,
+        mlp_ratio=4.0,
+        dropout=0.0,
     ):
         super().__init__()
         # self.norm1 = RMSNorm(dim)
         self.norm1 = nn.LayerNorm(dim, elementwise_affine=False, eps=1e-6)
-        self.attn = Attention(
-            dim,
-            num_heads=num_heads,
-            attn_drop=dropout,
-            proj_drop=dropout
-        )
+        self.attn = Attention(dim, num_heads=num_heads, attn_drop=dropout, proj_drop=dropout)
 
-        def approx_gelu(): return nn.GELU(approximate="tanh")
+        def approx_gelu():
+            return nn.GELU(approximate="tanh")
 
         # self.norm2 = RMSNorm(dim)
         self.norm2 = nn.LayerNorm(dim, elementwise_affine=False, eps=1e-6)
-        self.mlp = Mlp(
-            in_features=dim,
-            hidden_features=int(dim * mlp_ratio),
-            act_layer=approx_gelu,
-            drop=0
-        )
+        self.mlp = Mlp(in_features=dim, hidden_features=int(dim * mlp_ratio), act_layer=approx_gelu, drop=0)
 
-        self.ada_ln = nn.Sequential(
-            nn.SiLU(),
-            nn.Linear(dim, 6*dim)
-        )
+        self.ada_ln = nn.Sequential(nn.SiLU(), nn.Linear(dim, 6 * dim))
         self.dim = dim
 
         self._init_weights()
@@ -95,7 +83,7 @@ class AdaLNBlock(nn.Module):
 
     def forward(self, x, t, c):
         B = x.shape[0]
-        features = self.ada_ln(nn.SiLU()(t+c)).view(B, 6, 1, self.dim).unbind(1)
+        features = self.ada_ln(nn.SiLU()(t + c)).view(B, 6, 1, self.dim).unbind(1)
         gamma1, gamma2, scale1, scale2, shift1, shift2 = features
 
         x_norm1 = self.norm1(x)
@@ -134,12 +122,8 @@ class FlowTransformer(nn.Module):
         self.cond_embed = nn.Linear(condition_dim, hidden_dim)
 
         self.transformer_blocks = nn.ModuleList([
-            AdaLNBlock(
-                dim=hidden_dim,
-                num_heads=num_heads,
-                mlp_ratio=mlp_ratio,
-                dropout=dropout
-            ) for _ in range(num_layers)
+            AdaLNBlock(dim=hidden_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, dropout=dropout)
+            for _ in range(num_layers)
         ])
 
         self.norm = nn.LayerNorm(hidden_dim)
@@ -154,6 +138,7 @@ class FlowTransformer(nn.Module):
                 torch.nn.init.xavier_uniform_(module.weight)
                 if module.bias is not None:
                     nn.init.constant_(module.bias, 0)
+
         self.apply(_basic_init)
 
         # Initialize timestep embedding MLP
@@ -180,23 +165,17 @@ class FlowTransformer(nn.Module):
 
 
 class FlowNetLayer(nn.Module):
-    def __init__(self, dim, mlp_ratio=4., dropout=0.0):
+    def __init__(self, dim, mlp_ratio=4.0, dropout=0.0):
         super().__init__()
-        def approx_gelu(): return nn.GELU(approximate="tanh")
+
+        def approx_gelu():
+            return nn.GELU(approximate="tanh")
 
         self.norm = nn.LayerNorm(dim, elementwise_affine=False, eps=1e-6)
-        self.mlp = Mlp(
-            in_features=dim,
-            hidden_features=int(dim * mlp_ratio),
-            act_layer=approx_gelu,
-            drop=dropout
-        )
+        self.mlp = Mlp(in_features=dim, hidden_features=int(dim * mlp_ratio), act_layer=approx_gelu, drop=dropout)
 
         # Injects timestep t
-        self.time_modulator = nn.Sequential(
-            nn.SiLU(),
-            nn.Linear(dim, 3*dim)
-        )
+        self.time_modulator = nn.Sequential(nn.SiLU(), nn.Linear(dim, 3 * dim))
         self.dim = dim
 
         self._init_weights()
@@ -218,7 +197,7 @@ class FlowNetLayer(nn.Module):
 
 
 class SimpleFlowNet(nn.Module):
-    """ A simple flow network with only MLP layers for VITA policy (Gao et al. 2025) """
+    """A simple flow network with only MLP layers for VITA policy (Gao et al. 2025)"""
 
     def __init__(
         self,
@@ -242,11 +221,7 @@ class SimpleFlowNet(nn.Module):
         )
 
         self.layers = nn.ModuleList([
-            FlowNetLayer(
-                dim=hidden_dim,
-                mlp_ratio=mlp_ratio,
-                dropout=dropout
-            ) for _ in range(num_layers)
+            FlowNetLayer(dim=hidden_dim, mlp_ratio=mlp_ratio, dropout=dropout) for _ in range(num_layers)
         ])
 
         self.norm = nn.LayerNorm(hidden_dim)
@@ -261,6 +236,7 @@ class SimpleFlowNet(nn.Module):
                 torch.nn.init.xavier_uniform_(module.weight)
                 if module.bias is not None:
                     nn.init.constant_(module.bias, 0)
+
         self.apply(_basic_init)
 
         # Initialize timestep embedding MLP

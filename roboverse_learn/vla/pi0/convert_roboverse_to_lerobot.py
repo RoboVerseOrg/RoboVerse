@@ -37,9 +37,7 @@ import tyro
 try:
     from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
 except ImportError as exc:  # pragma: no cover - optional dependency
-    raise ImportError(
-        "Install `lerobot` before running this script (e.g. `uv pip install lerobot`)."
-    ) from exc
+    raise ImportError("Install `lerobot` before running this script (e.g. `uv pip install lerobot`).") from exc
 
 
 @dataclass
@@ -75,9 +73,7 @@ def _first_frame_shape(video_path: Path) -> tuple[int, int, int]:
     try:
         import imageio.v3 as iio
     except ImportError as exc:  # pragma: no cover - optional dependency
-        raise ImportError(
-            "Install `imageio` and `imageio-ffmpeg` to decode RoboVerse videos."
-        ) from exc
+        raise ImportError("Install `imageio` and `imageio-ffmpeg` to decode RoboVerse videos.") from exc
     frame = iio.imread(video_path, index=0)
     return tuple(frame.shape)
 
@@ -86,9 +82,7 @@ def _frame_iter(video_path: Path):
     try:
         import imageio.v3 as iio
     except ImportError as exc:  # pragma: no cover - optional dependency
-        raise ImportError(
-            "Install `imageio` and `imageio-ffmpeg` to decode RoboVerse videos."
-        ) from exc
+        raise ImportError("Install `imageio` and `imageio-ffmpeg` to decode RoboVerse videos.") from exc
     return iio.imiter(video_path, plugin="FFMPEG")
 
 
@@ -113,9 +107,7 @@ def convert(args: Args) -> None:
         if args.overwrite:
             shutil.rmtree(output_dir)
         else:
-            raise FileExistsError(
-                f"Dataset already exists at {output_dir}. Pass --overwrite to replace it."
-            )
+            raise FileExistsError(f"Dataset already exists at {output_dir}. Pass --overwrite to replace it.")
 
     dataset = LeRobotDataset.create(
         repo_id=args.repo_id,
@@ -160,14 +152,12 @@ def convert(args: Args) -> None:
             if frame_idx >= total:
                 break
             np_frame = np.asarray(frame, dtype=np.uint8)
-            dataset.add_frame(
-                {
-                    "image": np_frame,
-                    "state": states[frame_idx],
-                    "actions": actions[frame_idx],
-                    "task": prompt,
-                }
-            )
+            dataset.add_frame({
+                "image": np_frame,
+                "state": states[frame_idx],
+                "actions": actions[frame_idx],
+                "task": prompt,
+            })
             frame_count += 1
 
         if frame_count == 0:

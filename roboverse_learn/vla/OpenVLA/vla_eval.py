@@ -6,27 +6,29 @@ import sys
 import time
 from collections import deque
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 import numpy as np
 import torch
 from PIL import Image
-from transformers import AutoModelForVision2Seq, AutoProcessor
 from scipy.spatial.transform import Rotation
+from transformers import AutoModelForVision2Seq, AutoProcessor
+
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-import metasim
 from gymnasium import make_vec
 
+import metasim
+
 metasim.register_gym_envs()
-from metasim.utils import configclass
+from metasim.randomization import DomainRandomizationManager, DRConfig
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
-from metasim.utils.obs_utils import ObsSaver
+from metasim.utils import configclass
 from metasim.utils.demo_util import get_traj
+from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_robot
-from metasim.randomization import DomainRandomizationManager, DRConfig
-from roboverse_learn.il.configs.base_config import BasePolicyCfg, ActionCfg, ObsCfg, EndEffectorCfg
+from roboverse_learn.il.configs.base_config import ActionCfg, BasePolicyCfg, EndEffectorCfg, ObsCfg
 
 
 @configclass
@@ -86,13 +88,17 @@ class OpenVLARunner:
         self.DATA_STAT = json.load(open(stats_path)) if os.path.exists(stats_path) else {}
 
         self.processor = AutoProcessor.from_pretrained(self.model_path, trust_remote_code=True)
-        self.model = AutoModelForVision2Seq.from_pretrained(
-            self.model_path,
-            torch_dtype=torch.bfloat16,
-            low_cpu_mem_usage=True,
-            trust_remote_code=True,
-            attn_implementation="flash_attention_2",
-        ).to(self.device).eval()
+        self.model = (
+            AutoModelForVision2Seq.from_pretrained(
+                self.model_path,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+                trust_remote_code=True,
+                attn_implementation="flash_attention_2",
+            )
+            .to(self.device)
+            .eval()
+        )
 
         # Important: give norm stats to the model; unnorm_key used in predict_action
         self.model.norm_stats = self.DATA_STAT
@@ -102,6 +108,7 @@ class OpenVLARunner:
     # ---------------- IK ----------------
     def _setup_ik(self):
         from metasim.utils.ik_solver import setup_ik_solver
+
         self.robot_cfg = self.scenario.robots[0]
         self.ik_solver = setup_ik_solver(self.robot_cfg, self.solver)
 
@@ -129,14 +136,16 @@ class OpenVLARunner:
             instruction = self.env.task_env.task_desc
         else:
             # Generate instruction from task name
-            task_desc = self.task_name.replace('_', ' ')
+            task_desc = self.task_name.replace("_", " ")
             instruction = task_desc[0].upper() + task_desc[1:]
 
         # Process inputs manually for OpenVLAForActionPrediction
         prompt = f"In: What action should the robot take to {instruction}?\nOut:"
         inputs = self.processor(text=prompt, images=image, return_tensors="pt")
-        inputs = {k: v.to(self.device, dtype=torch.bfloat16 if v.dtype == torch.float32 else v.dtype)
-                 for k, v in inputs.items()}
+        inputs = {
+            k: v.to(self.device, dtype=torch.bfloat16 if v.dtype == torch.float32 else v.dtype)
+            for k, v in inputs.items()
+        }
 
         # Use the model's predict_action method with input_ids
         with torch.no_grad():
@@ -144,7 +153,7 @@ class OpenVLARunner:
                 input_ids=inputs["input_ids"],
                 pixel_values=inputs["pixel_values"],
                 unnorm_key="bridge_orig",
-                do_sample=False
+                do_sample=False,
             )
 
         print(f"VLA model output (denormalized): pos={action[:3]}, rot={action[3:6]}, gripper={action[6]}")
@@ -172,8 +181,8 @@ class OpenVLARunner:
     def ee_control_actions(self, obs) -> list[dict]:
         """Δ-pose (local) -> target EE pose -> cuRobo IK -> joint targets."""
         # 1) VLA action
-        with torch.no_grad():                     # only VLA forward is no-grad
-            action = self.predict_action(obs)     # (B,7)
+        with torch.no_grad():  # only VLA forward is no-grad
+            action = self.predict_action(obs)  # (B,7)
         num_envs = action.shape[0]
 
         # 2) Robot state (TensorState -> tensors)
@@ -184,8 +193,16 @@ class OpenVLARunner:
         inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
         joint_pos_raw = rs.joint_pos if isinstance(rs.joint_pos, torch.Tensor) else torch.tensor(rs.joint_pos)
         curr_robot_q = joint_pos_raw[:, inverse_reorder_idx].to(self.device).float()
-        robot_ee_state = (rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state)).to(self.device).float()
-        robot_root_state = (rs.root_state if isinstance(rs.root_state, torch.Tensor) else torch.tensor(rs.root_state)).to(self.device).float()
+        robot_ee_state = (
+            (rs.body_state if isinstance(rs.body_state, torch.Tensor) else torch.tensor(rs.body_state))
+            .to(self.device)
+            .float()
+        )
+        robot_root_state = (
+            (rs.root_state if isinstance(rs.root_state, torch.Tensor) else torch.tensor(rs.root_state))
+            .to(self.device)
+            .float()
+        )
 
         if self.ee_body_idx is None:
             self.ee_body_idx = rs.body_names.index(self.ee_body_name)
@@ -218,7 +235,7 @@ class OpenVLARunner:
 
         # Convert euler angles to quaternion using scipy
         ee_rot_delta_np = ee_rot_delta.cpu().numpy()
-        ee_quat_delta_rot = Rotation.from_euler('XYZ', ee_rot_delta_np)
+        ee_quat_delta_rot = Rotation.from_euler("XYZ", ee_rot_delta_np)
         ee_quat_delta = self.quat_from_scipy(ee_quat_delta_rot.as_quat(), self.device)
 
         gripper_open = action[:num_envs, -1]
@@ -237,10 +254,13 @@ class OpenVLARunner:
 
         # 5) Gripper control
         from metasim.utils.ik_solver import process_gripper_command
+
         gripper_widths = process_gripper_command(gripper_open, self.robot_cfg, self.device)
 
         # Compose robot command
-        actions = self.ik_solver.compose_joint_action(q_solution, gripper_widths, current_q=curr_robot_q, return_dict=True)
+        actions = self.ik_solver.compose_joint_action(
+            q_solution, gripper_widths, current_q=curr_robot_q, return_dict=True
+        )
         return actions
 
     def reset(self):
@@ -269,6 +289,7 @@ def evaluate_episode(
     # Reset environment
     if randomization_manager is not None and init_states is not None:
         from roboverse_learn.il.act.act_eval_runner import ensure_clean_state
+
         # Use task_env.reset() directly to pass states parameter
         obs, info = env.task_env.reset(states=[init_states[demo_idx]])
         ensure_clean_state(env.task_env.handler, expected_state=None)
@@ -316,13 +337,20 @@ def evaluate_episode(
 
 def main():
     parser = argparse.ArgumentParser(description="OpenVLA Evaluation (EE control + IK)")
-    parser.add_argument("--model_path", type=str, default="openvla_runs/openvla-7b+roboverse_dataset+b16+lr-0.0005+lora-r32+dropout-0.0")
+    parser.add_argument(
+        "--model_path", type=str, default="openvla_runs/openvla-7b+roboverse_dataset+b16+lr-0.0005+lora-r32+dropout-0.0"
+    )
     parser.add_argument("--task", type=str, default="pick_butter")
     parser.add_argument("--robot", type=str, default="franka")
-    parser.add_argument("--sim", type=str, default="mujoco",
-                        choices=["isaacgym", "isaacsim", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"])
-    parser.add_argument("--solver", type=str, default="pyroki", choices=["curobo", "pyroki"],
-                        help="IK solver to use: curobo or pyroki")
+    parser.add_argument(
+        "--sim",
+        type=str,
+        default="mujoco",
+        choices=["isaacgym", "isaacsim", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"],
+    )
+    parser.add_argument(
+        "--solver", type=str, default="pyroki", choices=["curobo", "pyroki"], help="IK solver to use: curobo or pyroki"
+    )
     parser.add_argument("--num_envs", type=int, default=1)
     parser.add_argument("--num_episodes", type=int, default=1)
     parser.add_argument("--max_steps", type=int, default=250)
@@ -336,23 +364,22 @@ def main():
         type=int,
         default=0,
         choices=[0, 1, 2, 3],
-        help="Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera"
+        help="Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera",
     )
     parser.add_argument(
         "--scene_mode",
         type=int,
         default=0,
         choices=[0, 1, 2, 3],
-        help="Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD"
+        help="Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD",
     )
     parser.add_argument(
         "--randomization_seed",
         type=int,
         default=None,
-        help="Seed for reproducible randomization. If None, uses random seed"
+        help="Seed for reproducible randomization. If None, uses random seed",
     )
     args = parser.parse_args()
-
 
     if args.device.startswith("cuda") and not torch.cuda.is_available():
         print("CUDA not available, switching to CPU")
@@ -456,6 +483,7 @@ def main():
     randomization_manager = None
     if args.level > 0:
         from dataclasses import dataclass as dc
+
         @dc
         class SimpleRenderCfg:
             mode: str = render_mode
@@ -469,9 +497,11 @@ def main():
             scenario=env.scenario,
             handler=env.task_env.handler,
             init_states=init_states,
-            render_cfg=SimpleRenderCfg(mode=render_mode)
+            render_cfg=SimpleRenderCfg(mode=render_mode),
         )
-        print(f"Domain Randomization enabled: level={args.level}, scene_mode={args.scene_mode}, seed={args.randomization_seed}")
+        print(
+            f"Domain Randomization enabled: level={args.level}, scene_mode={args.scene_mode}, seed={args.randomization_seed}"
+        )
 
     start_time = time.time()
     eval_stats = {"total_episodes": 0, "total_successes": 0, "total_rewards": [], "episode_results": []}
@@ -484,10 +514,14 @@ def main():
         demo_idx = ep % len(init_states) if randomization_manager is not None else 0
 
         ep_res = evaluate_episode(
-            env, runner, args.max_steps, ep + 1, args.output_dir,
+            env,
+            runner,
+            args.max_steps,
+            ep + 1,
+            args.output_dir,
             randomization_manager=randomization_manager,
             demo_idx=demo_idx,
-            init_states=init_states if randomization_manager is not None else None
+            init_states=init_states if randomization_manager is not None else None,
         )
 
         eval_stats["total_episodes"] += 1
@@ -520,12 +554,17 @@ def main():
         ts = time.strftime("%Y%m%d_%H%M%S")
         out_path = os.path.join(args.output_dir, f"openvla_eval_{args.task}_{ts}.json")
         with open(out_path, "w", encoding="utf-8") as f:
-            json.dump({
-                "config": vars(args),
-                "eval_stats": eval_stats,
-                "timestamp": ts,
-                "dr_config": {"level": args.level, "scene_mode": args.scene_mode, "seed": args.randomization_seed}
-            }, f, indent=2, ensure_ascii=False)
+            json.dump(
+                {
+                    "config": vars(args),
+                    "eval_stats": eval_stats,
+                    "timestamp": ts,
+                    "dr_config": {"level": args.level, "scene_mode": args.scene_mode, "seed": args.randomization_seed},
+                },
+                f,
+                indent=2,
+                ensure_ascii=False,
+            )
 
     try:
         env.close()

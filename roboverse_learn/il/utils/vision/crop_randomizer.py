@@ -1,7 +1,8 @@
-import roboverse_learn.il.utils.tensor_util as tu
 import torch
 import torch.nn as nn
 import torchvision.transforms.functional as ttf
+
+import roboverse_learn.il.utils.tensor_util as tu
 
 
 class CropRandomizer(nn.Module):
@@ -128,9 +129,10 @@ class CropRandomizer(nn.Module):
 
     def __repr__(self):
         """Pretty print network."""
-        header = "{}".format(str(self.__class__.__name__))
-        msg = header + "(input_shape={}, crop_size=[{}, {}], num_crops={})".format(
-            self.input_shape, self.crop_height, self.crop_width, self.num_crops
+        header = f"{self.__class__.__name__!s}"
+        msg = (
+            header
+            + f"(input_shape={self.input_shape}, crop_size=[{self.crop_height}, {self.crop_width}], num_crops={self.num_crops})"
         )
         return msg
 

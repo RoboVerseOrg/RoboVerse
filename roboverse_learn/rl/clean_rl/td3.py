@@ -25,14 +25,14 @@ from torch.utils.tensorboard import SummaryWriter
 
 rootutils.setup_root(__file__, pythonpath=True)
 from gymnasium import make_vec
+
 import metasim
 
 metasim.register_gym_envs()
 
 from roboverse_learn.rl.clean_rl.buffer import ReplayBuffer
-from roboverse_learn.rl.episode_tracker import EpisodeTracker
 from roboverse_learn.rl.configs.clean_rl.td3 import CleanRLTD3Config
-
+from roboverse_learn.rl.episode_tracker import EpisodeTracker
 
 
 def make_roboverse_env(args):
@@ -99,7 +99,6 @@ class Actor(nn.Module):
 
 
 if __name__ == "__main__":
-
     args = tyro.cli(CleanRLTD3Config)
     run_name = f"{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
@@ -177,7 +176,7 @@ if __name__ == "__main__":
     while global_step < args.total_timesteps:
         # ALGO LOGIC: put action logic here
         if global_step < args.learning_starts:
-             actions = torch.tensor([envs.single_action_space.sample() for _ in range(envs.num_envs)], device=device)
+            actions = torch.tensor([envs.single_action_space.sample() for _ in range(envs.num_envs)], device=device)
         else:
             with torch.no_grad():
                 actions = actor(torch.Tensor(obs).to(device))
@@ -189,7 +188,14 @@ if __name__ == "__main__":
         # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
         # Compute 'true' next_obs for saving (similar to fast_td3)
         true_next_obs = torch.where(truncations[:, None] > 0, infos["observations"]["raw"]["obs"], next_obs)
-        rb.add(obs.cpu().numpy(), true_next_obs.cpu().numpy(), actions.cpu().numpy(), rewards.cpu().numpy(), terminations.cpu().numpy(), infos)
+        rb.add(
+            obs.cpu().numpy(),
+            true_next_obs.cpu().numpy(),
+            actions.cpu().numpy(),
+            rewards.cpu().numpy(),
+            terminations.cpu().numpy(),
+            infos,
+        )
 
         # Update episode tracker
         episode_tracker.update(rewards, terminations, truncations)
@@ -213,7 +219,9 @@ if __name__ == "__main__":
                 qf1_next_target = qf1_target(data.next_observations, next_state_actions)
                 qf2_next_target = qf2_target(data.next_observations, next_state_actions)
                 min_qf_next_target = torch.min(qf1_next_target, qf2_next_target)
-                next_q_value = data.rewards.flatten() + (1 - data.dones.flatten()) * args.gamma * (min_qf_next_target).view(-1)
+                next_q_value = data.rewards.flatten() + (1 - data.dones.flatten()) * args.gamma * (
+                    min_qf_next_target
+                ).view(-1)
 
             qf1_a_values = qf1(data.observations, data.actions).view(-1)
             qf2_a_values = qf2(data.observations, data.actions).view(-1)
@@ -254,7 +262,9 @@ if __name__ == "__main__":
                 if episode_tracker.get_episode_count() > 0:
                     writer.add_scalar("charts/avg_episodic_return", avg_return, global_step)
                     writer.add_scalar("charts/avg_episodic_length", avg_length, global_step)
-                    print(f"SPS: {int(global_step / (time.time() - start_time))}, avg_return: {avg_return:.2f}, avg_length: {avg_length:.1f}, timesteps: {global_step}")
+                    print(
+                        f"SPS: {int(global_step / (time.time() - start_time))}, avg_return: {avg_return:.2f}, avg_length: {avg_length:.1f}, timesteps: {global_step}"
+                    )
                 else:
                     print(f"SPS: {int(global_step / (time.time() - start_time))}, timesteps: {global_step}")
                 writer.add_scalar(

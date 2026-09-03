@@ -1,6 +1,7 @@
 from typing import Optional
 
 import numpy as np
+
 from roboverse_learn.il.utils.replay_buffer import ReplayBuffer
 
 try:

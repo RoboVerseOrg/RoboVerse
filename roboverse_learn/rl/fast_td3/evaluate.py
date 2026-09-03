@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-import os
-import sys
 import argparse
-from typing import Any
-import yaml
-
 import os
 import sys
 
@@ -27,16 +22,17 @@ try:
 except ImportError:
     pass
 
-import torch
-import numpy as np
-from loguru import logger as log
-from torch.amp import autocast
 from datetime import datetime
 
-from roboverse_learn.rl.fast_td3.fttd3_module import Actor, EmpiricalNormalization
+import numpy as np
+import torch
+from loguru import logger as log
+from torch.amp import autocast
+
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
 from metasim.utils.demo_util import save_traj_file
+from roboverse_learn.rl.fast_td3.fttd3_module import Actor, EmpiricalNormalization
 
 
 def extract_state_dict(env, scenario, env_idx=0):
@@ -53,7 +49,7 @@ def extract_state_dict(env, scenario, env_idx=0):
     state_dict = {}
 
     # Get states from handler (returns TensorState object)
-    if not hasattr(env, 'handler') or env.handler is None:
+    if not hasattr(env, "handler") or env.handler is None:
         log.warning("Handler not available, returning empty state")
         return state_dict
 
@@ -67,7 +63,7 @@ def extract_state_dict(env, scenario, env_idx=0):
     robot_cfg_dict = {robot.name: robot for robot in scenario.robots}
 
     # Extract object states
-    if hasattr(handler_states, 'objects'):
+    if hasattr(handler_states, "objects"):
         for obj_name, obj_state in handler_states.objects.items():
             pos = obj_state.root_state[env_idx, :3].cpu().numpy()  # [x, y, z]
             quat = obj_state.root_state[env_idx, 3:7].cpu().numpy()  # [w, x, y, z]
@@ -89,7 +85,7 @@ def extract_state_dict(env, scenario, env_idx=0):
             state_dict[obj_name] = state_entry
 
     # Extract robot states
-    if hasattr(handler_states, 'robots'):
+    if hasattr(handler_states, "robots"):
         for robot_name, robot_state in handler_states.robots.items():
             pos = robot_state.root_state[env_idx, :3].cpu().numpy()  # [x, y, z]
             quat = robot_state.root_state[env_idx, 3:7].cpu().numpy()  # [w, x, y, z]
@@ -129,7 +125,7 @@ def evaluate(
     obs_normalizer,
     num_episodes: int,
     device: torch.device,
-    scenario = None,
+    scenario=None,
     task_name: str = "eval",
     amp_enabled: bool = False,
     amp_device_type: str = "cpu",
@@ -240,7 +236,7 @@ def evaluate(
         if save_traj:
             # Get states from handler for trajectory recording
             handler_states = None
-            if hasattr(env, 'handler') and env.handler is not None:
+            if hasattr(env, "handler") and env.handler is not None:
                 handler_states = env.handler.get_states(mode="tensor")
 
             for i in range(num_eval_envs):
@@ -250,7 +246,11 @@ def evaluate(
                     robot_name = scenario.robots[0].name
                     joint_names = sorted(scenario.robots[0].actuators.keys())
 
-                    if handler_states is not None and hasattr(handler_states, 'robots') and robot_name in handler_states.robots:
+                    if (
+                        handler_states is not None
+                        and hasattr(handler_states, "robots")
+                        and robot_name in handler_states.robots
+                    ):
                         # Use handler states (preferred)
                         robot_state = handler_states.robots[robot_name]
                         joint_positions = robot_state.joint_pos[i].cpu().numpy()
@@ -309,12 +309,16 @@ def evaluate(
                         # Use env_id and episode number for filename
                         base_dir = os.path.dirname(video_path)
                         base_name = os.path.splitext(os.path.basename(video_path))[0]
-                        ext = os.path.splitext(video_path)[1] or '.mp4'
-                        ep_video_path = os.path.join(base_dir, f"{base_name}_env{i:02d}_ep{episodes_per_env[i].item():02d}{ext}")
+                        ext = os.path.splitext(video_path)[1] or ".mp4"
+                        ep_video_path = os.path.join(
+                            base_dir, f"{base_name}_env{i:02d}_ep{episodes_per_env[i].item():02d}{ext}"
+                        )
 
                         os.makedirs(base_dir, exist_ok=True)
                         iio.mimsave(ep_video_path, episode_frames[i], fps=30)
-                        log.info(f"Env {i} Episode {episodes_per_env[i].item()}: Saved video to {ep_video_path} (return: {current_returns[i].item():.2f})")
+                        log.info(
+                            f"Env {i} Episode {episodes_per_env[i].item()}: Saved video to {ep_video_path} (return: {current_returns[i].item():.2f})"
+                        )
 
                         # Clear frames for this env
                         episode_frames[i] = []
@@ -327,7 +331,9 @@ def evaluate(
                             "states": current_episode_states[i] if save_states else None,
                         }
                         all_episodes[i].append(episode_data)
-                        log.info(f"Env {i} Episode {episodes_per_env[i].item()}: Saved trajectory ({len(current_episode_actions[i])} steps, return: {current_returns[i].item():.2f})")
+                        log.info(
+                            f"Env {i} Episode {episodes_per_env[i].item()}: Saved trajectory ({len(current_episode_actions[i])} steps, return: {current_returns[i].item():.2f})"
+                        )
 
                         # Reset trajectory tracking for this env
                         current_episode_actions[i] = []
@@ -374,6 +380,7 @@ def evaluate(
     # Save single video if rendering all episodes together
     if render and not render_each_episode and frames and video_path:
         import imageio.v2 as iio
+
         os.makedirs(os.path.dirname(video_path), exist_ok=True)
         iio.mimsave(video_path, frames, fps=30)
         log.info(f"Saved evaluation video to {video_path}")
@@ -482,34 +489,49 @@ def _adjust_state_dict_for_model(checkpoint_state: dict, model: torch.nn.Module)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='FastTD3 Evaluation')
-    parser.add_argument('--checkpoint', type=str, default='roboverse_data/models/walk_1400.pt',
-                       help='Path to checkpoint file')
-    parser.add_argument('--num_episodes', type=int, default=1,
-                       help='Number of episodes per environment (default: 1, each env saves one episode)')
+    parser = argparse.ArgumentParser(description="FastTD3 Evaluation")
+    parser.add_argument(
+        "--checkpoint", type=str, default="roboverse_data/models/walk_1400.pt", help="Path to checkpoint file"
+    )
+    parser.add_argument(
+        "--num_episodes",
+        type=int,
+        default=1,
+        help="Number of episodes per environment (default: 1, each env saves one episode)",
+    )
 
     # Rendering arguments
-    parser.add_argument('--render', type=int, default=1,
-                       help='Render mode: 0=no render, 1=render each episode separately (default), 2=single combined video')
-    parser.add_argument('--video_path', type=str, default='output/eval_rollout.mp4',
-                       help='Path to save video (base name for multiple videos)')
+    parser.add_argument(
+        "--render",
+        type=int,
+        default=1,
+        help="Render mode: 0=no render, 1=render each episode separately (default), 2=single combined video",
+    )
+    parser.add_argument(
+        "--video_path",
+        type=str,
+        default="output/eval_rollout.mp4",
+        help="Path to save video (base name for multiple videos)",
+    )
 
-    parser.add_argument('--device_rank', type=int, default=0,
-                       help='GPU device rank')
-    parser.add_argument('--num_envs', type=int, default=None,
-                       help='Number of parallel environments (default: from checkpoint config)')
-    parser.add_argument('--headless', action='store_true',
-                       help='Run in headless mode')
+    parser.add_argument("--device_rank", type=int, default=0, help="GPU device rank")
+    parser.add_argument(
+        "--num_envs", type=int, default=None, help="Number of parallel environments (default: from checkpoint config)"
+    )
+    parser.add_argument("--headless", action="store_true", help="Run in headless mode")
 
     # Trajectory saving arguments (default: enabled)
-    parser.add_argument('--save_traj', type=int, default=1,
-                       help='Save trajectories: 0=no, 1=yes (default)')
-    parser.add_argument('--save_states', type=int, default=1,
-                       help='Save full states: 0=no (actions only), 1=yes (default)')
-    parser.add_argument('--save_every_n_steps', type=int, default=1,
-                       help='Save every N steps (1=save all, 2=save every other step, etc.)')
-    parser.add_argument('--traj_dir', type=str, default='eval_trajs',
-                       help='Directory to save trajectories')
+    parser.add_argument("--save_traj", type=int, default=1, help="Save trajectories: 0=no, 1=yes (default)")
+    parser.add_argument(
+        "--save_states", type=int, default=1, help="Save full states: 0=no (actions only), 1=yes (default)"
+    )
+    parser.add_argument(
+        "--save_every_n_steps",
+        type=int,
+        default=1,
+        help="Save every N steps (1=save all, 2=save every other step, etc.)",
+    )
+    parser.add_argument("--traj_dir", type=str, default="eval_trajs", help="Directory to save trajectories")
 
     args = parser.parse_args()
 
@@ -607,13 +629,7 @@ def main():
 
     # Setup AMP
     amp_enabled = config.get("amp", False) and torch.cuda.is_available()
-    amp_device_type = (
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if torch.backends.mps.is_available()
-        else "cpu"
-    )
+    amp_device_type = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
     amp_dtype = torch.bfloat16 if config.get("amp_dtype") == "bf16" else torch.float16
 
     # Run evaluation

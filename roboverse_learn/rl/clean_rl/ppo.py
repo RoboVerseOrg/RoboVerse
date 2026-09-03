@@ -49,7 +49,10 @@ def make_roboverse_env(args):
     return env
 
 
-def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+_ORTHOGONAL_GAIN = float(np.sqrt(2))
+
+
+def layer_init(layer, std=_ORTHOGONAL_GAIN, bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer

@@ -1,10 +1,11 @@
 import abc
 from typing import Optional, Union
 
-import roboverse_learn.il.policies.dp.models.bet.utils as utils
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+
+import roboverse_learn.il.policies.dp.models.bet.utils as utils
 
 
 class AbstractActionAE(utils.SaveModule, abc.ABC):

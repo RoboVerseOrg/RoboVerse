@@ -1,6 +1,7 @@
-import torch
-import numpy as np
 from collections import deque
+
+import numpy as np
+import torch
 
 
 class EpisodeTracker:

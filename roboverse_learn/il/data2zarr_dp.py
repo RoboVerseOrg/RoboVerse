@@ -100,7 +100,9 @@ def main():
                     continue
 
         demo_indices.sort()
-        print(f"Found {len(demo_indices)} demos in success folder: {demo_indices[:10]}{'...' if len(demo_indices) > 10 else ''}")
+        print(
+            f"Found {len(demo_indices)} demos in success folder: {demo_indices[:10]}{'...' if len(demo_indices) > 10 else ''}"
+        )
 
         # Use actual number of demos if requested number is not enough
         if len(demo_indices) < num:
@@ -151,11 +153,11 @@ def main():
             print(f"Skipping episode {demo_idx} as directory {demo_dir} does not exist.")
             continue
 
-         # Check metadata.json
+        # Check metadata.json
         metadata_path = os.path.join(demo_dir, "metadata.json")
         if not os.path.isfile(metadata_path):
-          print(f"Skipping episode {demo_idx} as metadata.json does not exist.")
-          continue
+            print(f"Skipping episode {demo_idx} as metadata.json does not exist.")
+            continue
         else:
             with open(os.path.join(demo_dir, "metadata.json"), encoding="utf-8") as f:
                 # print("metadata load dir:", demo_dir)

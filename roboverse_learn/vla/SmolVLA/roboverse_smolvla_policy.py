@@ -6,15 +6,15 @@ to SmolVLA's expected format within the LeRobot training pipeline.
 """
 
 import dataclasses
-from typing import Dict, Any
+from typing import Any, Dict
 
 import torch
 import torch.nn as nn
 
 __all__ = [
+    "RoboVerseSmolVLAConfig",
     "RoboVerseSmolVLAInputs",
     "RoboVerseSmolVLAOutputs",
-    "RoboVerseSmolVLAConfig",
     "create_roboverse_transforms",
     "get_roboverse_data_config",
 ]
@@ -68,10 +68,7 @@ class RoboVerseSmolVLAInputs(nn.Module):
             # Resize if needed
             if image.shape[-2:] != self.image_size:
                 image = torch.nn.functional.interpolate(
-                    image,
-                    size=self.image_size,
-                    mode='bilinear',
-                    align_corners=False
+                    image, size=self.image_size, mode="bilinear", align_corners=False
                 )
 
             output["image"] = image
@@ -164,14 +161,9 @@ def create_roboverse_transforms(config: RoboVerseSmolVLAConfig = None):
     if config is None:
         config = RoboVerseSmolVLAConfig()
 
-    input_transform = RoboVerseSmolVLAInputs(
-        image_size=config.image_size,
-        normalize_image=config.normalize_image
-    )
+    input_transform = RoboVerseSmolVLAInputs(image_size=config.image_size, normalize_image=config.normalize_image)
 
-    output_transform = RoboVerseSmolVLAOutputs(
-        use_first_action=config.use_first_action
-    )
+    output_transform = RoboVerseSmolVLAOutputs(use_first_action=config.use_first_action)
 
     return input_transform, output_transform
 
