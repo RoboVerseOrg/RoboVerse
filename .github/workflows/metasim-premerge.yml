@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 720
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - run: aws --version
       ############# Prebuild ############
       - name: pre_build
