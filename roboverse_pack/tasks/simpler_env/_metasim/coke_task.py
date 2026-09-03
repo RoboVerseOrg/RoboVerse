@@ -47,6 +47,7 @@ from .._native.scene import (
     SCENE_POSE_Q,
     SIM_FREQ,
 )
+from .base import apply_external_states
 
 SUBSTEPS = SIM_FREQ // CONTROL_FREQ
 SCENE_TABLE_HEIGHT = 0.87
@@ -180,7 +181,9 @@ class SimplerCokeTask(BaseTaskEnv):
         self.obj_height_after_settle = None
 
     # ---- reset (RNG repro + fall/settle, on the handler objects) -------------
-    def reset(self, env_ids=None, options=None, seed=0):
+    def reset(self, states=None, env_ids=None, seed=0, options=None):
+        """Reset the task. ``states``/``env_ids``/``seed`` are the ``BaseTaskEnv.reset`` contract;
+        ``options`` is the SimplerEnv episode spec (obj/robot init options) from the gym adapter."""
         options = options or {}
         oio = options.get("obj_init_options") or {}
         if oio.get("init_rot_quat") is None:
@@ -217,6 +220,9 @@ class SimplerCokeTask(BaseTaskEnv):
         self.robot.set_root_pose(sapien.Pose([rxy[0], rxy[1], ROBOT_INIT_HEIGHT], [0, 0, 0, 1]))
         self.robot.set_qpos(INIT_QPOS)
         self.robot.set_qvel(np.zeros(self.robot.dof))
+        if apply_external_states(self, states, env_ids):
+            # the success checker keys off the settled height, so re-read it from the applied states
+            self.obj_height_after_settle = float(self.obj.pose.p[2])
         self.controller.reset()
         self.evaluator.reset(self.obj_height_after_settle)
         self._elapsed = 0
