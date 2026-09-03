@@ -2,6 +2,10 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: dictionary helpers used unchanged apart from import paths.
+# Full license: packages/metasim/LICENSE.isaaclab
 
 """Sub-module for utilities for working with dictionaries."""
 

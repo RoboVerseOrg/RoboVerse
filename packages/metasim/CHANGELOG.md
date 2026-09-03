@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- `metasim/utils/{configclass,dict,math,string_util}.py` carry their Isaac Lab (BSD-3-Clause) attribution header with the license text at `packages/metasim/LICENSE.isaaclab`.
 - Extras are PyPI-installable: `newton>=1.5,<2` (PyPI wheel; the 1.5/1.6 shims are in `_newton_compat`) and `sapien2` → `mani-skill2==0.5.3` replace git URLs; `robo-splatter` (git-only) moves to `requirements/robosplatter.txt`; `[tool.uv] conflicts` marks the isaacsim / isaacsim211 / mjx / isaacgym extras mutually exclusive; `requires-python = ">=3.10,<3.13"`.
 - Moved into the RoboVerse monorepo as `packages/metasim`; version aligned to `1.0.0b0` (lockstep with `roboverse-py`). The standalone `RoboVerseOrg/MetaSim` repository becomes a read-only mirror for one release cycle.
 
