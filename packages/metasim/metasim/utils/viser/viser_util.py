@@ -446,7 +446,9 @@ class ViserVisualizer:
                         self._initial_configs[name] = dof_pos.copy()
                     else:
                         # Convert list to dict using joint names
-                        self._initial_configs[name] = {jn: val for jn, val in zip(joint_names, dof_pos_list)}
+                        self._initial_configs[name] = {
+                            jn: val for jn, val in zip(joint_names, dof_pos_list, strict=False)
+                        }
                     logger.info(f"Stored initial config for robot {name}")
 
         # primitive item visualization
@@ -738,7 +740,7 @@ class ViserVisualizer:
         # Note: Preserve demo initial config if it already exists
         if not has_demo_initial_config:
             # Convert list to dict for consistency
-            self._initial_configs[robot_name] = {jn: val for jn, val in zip(joint_names, initial_config)}
+            self._initial_configs[robot_name] = {jn: val for jn, val in zip(joint_names, initial_config, strict=False)}
 
         # Set initial configuration and save current positions
         if urdf_handle:
@@ -780,7 +782,7 @@ class ViserVisualizer:
 
         # Update slider values - initial_config is a dict, need to extract values in order
         if isinstance(initial_config, dict):
-            for slider, joint_name in zip(sliders, joint_names):
+            for slider, joint_name in zip(sliders, joint_names, strict=False):
                 if joint_name in initial_config:
                     slider.value = initial_config[joint_name]
                     logger.debug(f"Reset {joint_name} to {initial_config[joint_name]}")
@@ -788,7 +790,7 @@ class ViserVisualizer:
                     logger.warning(f"Joint {joint_name} not found in initial config")
         else:
             # If it's a list (legacy support)
-            for slider, init_value in zip(sliders, initial_config):
+            for slider, init_value in zip(sliders, initial_config, strict=False):
                 slider.value = init_value
 
         # Clear saved positions so they don't override demo initial config on next setup

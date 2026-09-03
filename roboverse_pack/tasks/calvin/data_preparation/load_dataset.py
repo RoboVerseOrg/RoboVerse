@@ -27,7 +27,7 @@ if __name__ == "__main__":
     indices = list(range(indices[0], indices[1] + 1))
 
     annotations = np.load(f"{args.path}/lang_annotations/auto_lang_ann.npy", allow_pickle=True).item()
-    annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"]))
+    annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"], strict=False))
 
     idx = 0
     ann_idx = -1

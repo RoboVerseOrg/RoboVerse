@@ -10,9 +10,9 @@ gap-analysis section.
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 

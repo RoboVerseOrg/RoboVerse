@@ -124,7 +124,7 @@ def main():
         q[:, -ee_n_dof:] = random_gripper_widths
 
         actions = [
-            {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
+            {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist(), strict=False))}}
             for i_env in range(num_envs)
         ]
         q_min = torch.min(torch.stack([q_min, q[0]], -1), -1)[0]

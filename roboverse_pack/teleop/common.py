@@ -3,8 +3,9 @@ from __future__ import annotations
 """Packet and command validation for canonical teleoperation streams."""
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 KNOWN_TELEOP_COMMANDS = frozenset({
     "capture_zero",

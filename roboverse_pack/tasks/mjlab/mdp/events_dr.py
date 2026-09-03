@@ -47,7 +47,8 @@ Implementation notes:
 from __future__ import annotations
 
 import dataclasses
-from typing import Callable, NoReturn
+from collections.abc import Callable
+from typing import NoReturn
 
 import numpy as np
 import torch

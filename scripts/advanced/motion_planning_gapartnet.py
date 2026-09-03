@@ -129,7 +129,7 @@ def control_to_pose(
     q[:, -ee_n_dof:] = gripper_widths
 
     actions = [
-        {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist()))}}
+        {robot.name: {"dof_pos_target": dict(zip(robot.actuators.keys(), q[i_env].tolist(), strict=False))}}
         for i_env in range(num_envs)
     ]
 

@@ -498,7 +498,7 @@ def main() -> None:
                     if global_step % cfg("policy_frequency") == 0:
                         logs_dict = update_pol(data, logs_dict)
 
-                for param, target_param in zip(qnet.parameters(), qnet_target.parameters()):
+                for param, target_param in zip(qnet.parameters(), qnet_target.parameters(), strict=False):
                     target_param.data.copy_(cfg("tau") * param.data + (1 - cfg("tau")) * target_param.data)
 
             if torch.cuda.is_available():

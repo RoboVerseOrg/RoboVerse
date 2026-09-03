@@ -169,7 +169,7 @@ def run(task_id: str, steps: int, seed: int, amp: float, out_path: Path, shipped
     H = native_frames[0].shape[0]
     pad = np.zeros((H, 6, 3), np.uint8)
     comp, diffs = [], []
-    for nf, mf in zip(native_frames, metasim_frames):
+    for nf, mf in zip(native_frames, metasim_frames, strict=False):
         d = np.abs(nf.astype(np.int16) - mf.astype(np.int16))
         diffs.append(float(d.mean()))
         dvis = np.clip(d * 8, 0, 255).astype(np.uint8)

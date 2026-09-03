@@ -22,11 +22,11 @@ def test_quaternion_multiply_identity():
 
     # Identity * q should equal q
     result1 = quaternion_multiply(identity, q)
-    assert all(abs(a - b) < 1e-4 for a, b in zip(result1, q))
+    assert all(abs(a - b) < 1e-4 for a, b in zip(result1, q, strict=False))
 
     # q * identity should equal q
     result2 = quaternion_multiply(q, identity)
-    assert all(abs(a - b) < 1e-4 for a, b in zip(result2, q))
+    assert all(abs(a - b) < 1e-4 for a, b in zip(result2, q, strict=False))
 
 
 @pytest.mark.general
@@ -72,7 +72,7 @@ def test_quaternion_multiply_commutativity():
     result2 = quaternion_multiply(q2, q1)
 
     # Results should be different (quaternion multiplication is non-commutative)
-    assert not all(abs(a - b) < 1e-4 for a, b in zip(result1, result2))
+    assert not all(abs(a - b) < 1e-4 for a, b in zip(result1, result2, strict=False))
 
 
 @pytest.mark.general
@@ -99,7 +99,7 @@ def test_quaternion_multiply_zero_rotation():
     result = quaternion_multiply(identity, identity)
 
     # Should remain identity
-    assert all(abs(a - b) < 1e-6 for a, b in zip(result, identity))
+    assert all(abs(a - b) < 1e-6 for a, b in zip(result, identity, strict=False))
 
 
 @pytest.mark.general
@@ -115,7 +115,7 @@ def test_quaternion_multiply_180deg():
     identity = [0.0, 0.0, 0.0, 1.0]
     neg_identity = [0.0, 0.0, 0.0, -1.0]
 
-    matches_identity = all(abs(a - b) < 1e-4 for a, b in zip(result, identity))
-    matches_neg_identity = all(abs(a - b) < 1e-4 for a, b in zip(result, neg_identity))
+    matches_identity = all(abs(a - b) < 1e-4 for a, b in zip(result, identity, strict=False))
+    matches_neg_identity = all(abs(a - b) < 1e-4 for a, b in zip(result, neg_identity, strict=False))
 
     assert matches_identity or matches_neg_identity

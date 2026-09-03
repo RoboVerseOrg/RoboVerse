@@ -203,7 +203,7 @@ def _reset_violations(fn: ast.FunctionDef) -> list[str]:
     # (3) any extra parameter must have a default (positional defaults bind to the tail).
     n_pos_defaults = len(a.defaults)
     required_positional = positional[: len(positional) - n_pos_defaults]
-    required_kwonly = [p.arg for p, d in zip(a.kwonlyargs, a.kw_defaults) if d is None]
+    required_kwonly = [p.arg for p, d in zip(a.kwonlyargs, a.kw_defaults, strict=False) if d is None]
     extra_required = [p for p in (*required_positional, *required_kwonly) if p not in _CONTRACT_PARAMS]
     if extra_required:
         bad.append(f"adds required parameter(s) {', '.join(extra_required)} (give them defaults)")

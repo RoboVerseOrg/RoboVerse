@@ -249,11 +249,11 @@ def sorted_joint_info(model, prefix: str):
         panda_joint1 → panda_joint2 → panda_joint_finger1
     """
     names, ids = _names_ids_mjx(model, "joint")
-    matches = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
+    matches = [(n, i) for n, i in zip(names, ids, strict=False) if n.startswith(prefix)]
     if not matches:
         raise ValueError(f"No joints begin with '{prefix}'")
     matches.sort(key=lambda t: t[0])  # alpha order by full name
-    _, j_ids = zip(*matches)
+    _, j_ids = zip(*matches, strict=False)
     qadr = model.jnt_qposadr[list(j_ids)]
     vadr = model.jnt_dofadr[list(j_ids)]
     return jnp.asarray(qadr), jnp.asarray(vadr)
@@ -262,7 +262,7 @@ def sorted_joint_info(model, prefix: str):
 def sorted_actuator_ids(model, prefix: str):
     """Return **sorted** actuator IDs whose name begins with `prefix`."""
     names, ids = _names_ids_mjx(model, "actuator")
-    sel = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix)]
+    sel = [(n, i) for n, i in zip(names, ids, strict=False) if n.startswith(prefix)]
     sel.sort(key=lambda t: t[0])
     return [i for _, i in sel]
 
@@ -284,7 +284,7 @@ def sorted_body_ids(model, prefix: str):
         panda_link0  → panda_link3 → panda_left_finger
     """
     names, ids = _names_ids_mjx(model, "body")
-    filt = [(n, i) for n, i in zip(names, ids) if n.startswith(prefix) and n != prefix]
+    filt = [(n, i) for n, i in zip(names, ids, strict=False) if n.startswith(prefix) and n != prefix]
     filt.sort(key=lambda t: t[0])
     body_ids = [i for _, i in filt]
     local_names = [n.split("/")[-1] for n, _ in filt]

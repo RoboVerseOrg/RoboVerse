@@ -185,7 +185,7 @@ def render_qpos_replay_with_success(
         opt.sitegroup[g] = 0
 
     ref_frames, ms_frames, flags = [], [], []
-    for rq, mq in zip(ref_qpos, ms_qpos):
+    for rq, mq in zip(ref_qpos, ms_qpos, strict=False):
         env.sim.data.qpos[:nq] = rq[:nq]
         env.sim.data.qvel[:] = 0
         env.sim.forward()

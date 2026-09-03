@@ -209,7 +209,7 @@ class SimplerPutOnTask(SimplerMetaSimTask):
             self.sink.set_pose(sapien.Pose([-0.16, 0.13, 0.88], [1, 0, 0, 0]))
             self.sink.lock_motion()
         z = 0.87 + 0.5
-        for o, xy_i, q_i in zip(self.objs, xy, quat):
+        for o, xy_i, q_i in zip(self.objs, xy, quat, strict=False):
             o.set_pose(sapien.Pose(np.hstack([xy_i, z]), q_i))
             o.lock_motion(0, 0, 0, 1, 1, 0)
         self._settle(0.5)

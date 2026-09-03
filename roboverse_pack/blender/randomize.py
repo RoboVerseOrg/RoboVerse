@@ -65,7 +65,7 @@ def sample_pose_box(
 ) -> tuple[tuple[float, float, float], tuple[float, float, float, float]]:
     """Return (pos, quat_wxyz) — rotation is yaw-only about world +Z."""
     rng = rng or random
-    pos = tuple(rng.uniform(lo, hi) for lo, hi in zip(cfg.xyz_min, cfg.xyz_max))
+    pos = tuple(rng.uniform(lo, hi) for lo, hi in zip(cfg.xyz_min, cfg.xyz_max, strict=False))
     yaw = rng.uniform(*cfg.yaw_range)
     half = yaw * 0.5
     quat = (math.cos(half), 0.0, 0.0, math.sin(half))

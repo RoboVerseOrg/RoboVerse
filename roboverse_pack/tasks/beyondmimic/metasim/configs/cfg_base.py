@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import MISSING
-from typing import Callable
 
 from metasim.utils import configclass
 

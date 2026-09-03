@@ -183,7 +183,7 @@ def run(ckpt, suite, base, episodes, max_steps, exec_horizon):
     en = _native_env(suite, tid, 0)
     _, _, tn = _rollout(en, inits[0], policy, p_mean, p_std, max_steps=60, exec_horizon=exec_horizon, record=True)
     en.close()
-    dev = max((float(np.abs(a - b).max()) for a, b in zip(tp, tn)), default=float("nan"))
+    dev = max((float(np.abs(a - b).max()) for a, b in zip(tp, tn, strict=False)), default=float("nan"))
     print(f"\npassthrough == native under the policy: state max|Δ| over {min(len(tp), len(tn))} steps = {dev:.2e}")
     print("(deterministic policy + deterministic env -> bitwise identical eval through the passthrough)")
     return 0

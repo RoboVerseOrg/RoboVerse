@@ -20,8 +20,8 @@ from __future__ import annotations
 import glob
 import os
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import mujoco
 import numpy as np

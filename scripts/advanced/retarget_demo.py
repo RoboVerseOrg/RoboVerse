@@ -253,12 +253,14 @@ def single(src_path, tgt_path, src_robot, tgt_robot):
         demo = {"actions": [], "states": [], "init_state": {}}
         for i_step in range(episode_lengths[i_succ]):
             demo["actions"].append({
-                "dof_pos_target": dict(zip(tgt_robot_joint_names, tgt_robot_qpos[i_succ, i_step].tolist()))
+                "dof_pos_target": dict(
+                    zip(tgt_robot_joint_names, tgt_robot_qpos[i_succ, i_step].tolist(), strict=False)
+                )
             })
         demo["init_state"] = src_demos[i_succ]["init_state"]
         del demo["init_state"][src_robot_cfg.name]
         demo["init_state"][tgt_robot_cfg.name] = {
-            "dof_pos": dict(zip(tgt_robot_joint_names, tgt_robot_qpos[i_succ, 0].tolist())),
+            "dof_pos": dict(zip(tgt_robot_joint_names, tgt_robot_qpos[i_succ, 0].tolist(), strict=False)),
             "pos": robot_pos[i_succ].tolist(),
             "rot": robot_quat[i_succ].tolist(),
         }

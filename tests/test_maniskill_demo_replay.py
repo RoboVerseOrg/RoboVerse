@@ -84,7 +84,7 @@ def test_action_replay_grasp_lift():
 
     delta = np.abs(nat_cube - np.asarray(our_cube)).max()
     assert delta < 1e-3, f"cube replay delta vs native through grasp+lift too large: {delta:.3e}"
-    assert sum(int(a == b) for a, b in zip(nat_grasp, our_grasp)) >= T - 2
+    assert sum(int(a == b) for a, b in zip(nat_grasp, our_grasp, strict=False)) >= T - 2
     assert nat_cube[-1][2] > 0.2 and np.asarray(our_cube)[-1][2] > 0.2  # both actually lifted
 
 

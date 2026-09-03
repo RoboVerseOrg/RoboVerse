@@ -1,0 +1,4 @@
+# Gaussian-splatting background rendering: not on PyPI, so it cannot be an extra of a published
+# wheel. Install after `pip install roboverse-metasim[robosplatter]`:
+#   pip install -r packages/metasim/requirements/robosplatter.txt
+robo-splatter @ git+https://github.com/HorizonRobotics/RoboSplatter.git@v0.1.2

@@ -67,7 +67,7 @@ def save_poses_to_file(obs, scenario, filename="saved_poses.py"):
                     joint_names = sorted(obj_cfg.actuators.keys())
                     joint_positions = obj_state.joint_pos[0].cpu().numpy()
                     f.write('            "dof_pos": {\n')
-                    for name, pos in zip(joint_names, joint_positions):
+                    for name, pos in zip(joint_names, joint_positions, strict=False):
                         f.write(f'                "{name}": {pos:.6f},\n')
                     f.write("            },\n")
 
@@ -91,7 +91,7 @@ def save_poses_to_file(obs, scenario, filename="saved_poses.py"):
                 joint_names = sorted(robot_cfg.actuators.keys())
                 joint_positions = robot_state.joint_pos[0].cpu().numpy()
                 f.write('            "dof_pos": {\n')
-                for name, pos in zip(joint_names, joint_positions):
+                for name, pos in zip(joint_names, joint_positions, strict=False):
                     f.write(f'                "{name}": {pos:.6f},\n')
                 f.write("            },\n")
 
@@ -367,7 +367,9 @@ def obs_to_state_dict(obs, scenario):
             if obj_cfg and hasattr(obj_cfg, "actuators") and obj_cfg.actuators:
                 joint_names = sorted(obj_cfg.actuators.keys())
                 joint_positions = obj_state.joint_pos[0]
-                obj_entry["dof_pos"] = {name: pos.item() for name, pos in zip(joint_names, joint_positions)}
+                obj_entry["dof_pos"] = {
+                    name: pos.item() for name, pos in zip(joint_names, joint_positions, strict=False)
+                }
 
         state_dict["objects"][obj_name] = obj_entry
 
@@ -386,7 +388,7 @@ def obs_to_state_dict(obs, scenario):
         if robot_cfg and robot_cfg.actuators:
             joint_names = sorted(robot_cfg.actuators.keys())
             joint_positions = robot_state.joint_pos[0]
-            robot_entry["dof_pos"] = {name: pos.item() for name, pos in zip(joint_names, joint_positions)}
+            robot_entry["dof_pos"] = {name: pos.item() for name, pos in zip(joint_names, joint_positions, strict=False)}
 
         state_dict["robots"][robot_name] = robot_entry
 
@@ -640,7 +642,9 @@ if __name__ == "__main__":
                 joint_positions = robot_state.joint_pos[0]
 
                 env_action[robot.name] = {
-                    "dof_pos_target": {name: pos.item() for name, pos in zip(joint_names, joint_positions)}
+                    "dof_pos_target": {
+                        name: pos.item() for name, pos in zip(joint_names, joint_positions, strict=False)
+                    }
                 }
             actions.append(env_action)
 

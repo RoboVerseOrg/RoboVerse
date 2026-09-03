@@ -3,8 +3,8 @@ from __future__ import annotations
 import os
 import struct
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import pytest
 

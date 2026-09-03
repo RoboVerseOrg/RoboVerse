@@ -16,7 +16,7 @@ need any simulator or handler.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import pytest
 from loguru import logger as log

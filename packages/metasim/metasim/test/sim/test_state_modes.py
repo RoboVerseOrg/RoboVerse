@@ -263,7 +263,7 @@ def test_set_states_get_states_round_trip(handler):
     # the quaternion or apply small numerical massaging in set_states.
     got_pos = franka_post["pos"]
     pos_list = got_pos.tolist() if hasattr(got_pos, "tolist") else list(got_pos)
-    for i, (a, b) in enumerate(zip(pos_list, target_pos)):
+    for i, (a, b) in enumerate(zip(pos_list, target_pos, strict=False)):
         assert abs(a - b) < 1e-3, (
             f"root pos round-trip failed on {handler.scenario.simulator} component {i}: set={b:.4f}, got={a:.4f}"
         )

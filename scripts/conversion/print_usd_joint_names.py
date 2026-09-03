@@ -32,7 +32,7 @@ joint_limits = obj.root_physx_view.get_dof_limits().squeeze(0).tolist()
 # joint_qpos = obj.root_physx_view.get_dof_positions()
 # print(joint_qpos)
 # print(obj.root_physx_view.get_dof_position_targets())
-for joint_name, joint_limit in zip(obj.joint_names, joint_limits):
+for joint_name, joint_limit in zip(obj.joint_names, joint_limits, strict=False):
     print(f"{joint_name}: ({joint_limit[0]:.4f}, {joint_limit[1]:.4f})")
 
 print("=" * 100)

@@ -59,7 +59,9 @@ class MetaSimGymEnv(gym.Env):
 
         # Convert numpy actions to handler format
         ## TODO: action should support vectorized actions
-        action_dicts = [{"dof_pos_target": dict(zip(self.env.handler.robot.joint_limits.keys(), actions))}]
+        action_dicts = [
+            {"dof_pos_target": dict(zip(self.env.handler.robot.joint_limits.keys(), actions, strict=False))}
+        ]
 
         # Step the simulation
         obs, rewards, success, timeout, _ = self.env.step(action_dicts)

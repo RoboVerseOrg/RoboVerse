@@ -104,7 +104,7 @@ def main(argv=None) -> int:
     colors = ["steelblue", "darkorange", "green", "purple"]
 
     ax = axes[0, 0]
-    for (label, log), c in zip(logs, colors):
+    for (label, log), c in zip(logs, colors, strict=False):
         ax.plot(log["iters"], log["ep_r"], lw=1.5, color=c, label=label)
     ax.axhline(
         args.mjlab_reference, color="red", linestyle="--", lw=1, label=f"mjlab native ({args.mjlab_reference:.2f})"
@@ -117,7 +117,7 @@ def main(argv=None) -> int:
     ax.grid(alpha=0.3)
 
     ax = axes[0, 1]
-    for (label, log), c in zip(logs, colors):
+    for (label, log), c in zip(logs, colors, strict=False):
         # smooth step_r with rolling mean for readability
         x = log["iters"]
         y = log["step_r"]
@@ -132,7 +132,7 @@ def main(argv=None) -> int:
     ax.legend(fontsize=8)
 
     ax = axes[1, 0]
-    for (label, log), c in zip(logs, colors):
+    for (label, log), c in zip(logs, colors, strict=False):
         ax.plot(log["iters"], log["v"], lw=1.0, color=c, label=label)
     ax.set_title("Value loss")
     ax.set_xlabel("iteration")
@@ -142,7 +142,7 @@ def main(argv=None) -> int:
     ax.legend(fontsize=8)
 
     ax = axes[1, 1]
-    for (label, log), c in zip(logs, colors):
+    for (label, log), c in zip(logs, colors, strict=False):
         ax.plot(log["iters"], log["ent"], lw=1.0, color=c, label=label)
     ax.set_title("Entropy (action distribution)")
     ax.set_xlabel("iteration")

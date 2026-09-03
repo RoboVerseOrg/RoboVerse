@@ -128,7 +128,7 @@ class _DPInference:
         if not isinstance(cameras, dict):  # back-compat: a bare head_camera array
             cameras = {"head_camera": cameras}
         step = {}
-        for obs_key, cam_name in zip(self.cam_obs_keys, self.cam_names):
+        for obs_key, cam_name in zip(self.cam_obs_keys, self.cam_names, strict=False):
             rgb = cameras.get(cam_name, cameras.get("head_camera"))
             img = torch.from_numpy(np.ascontiguousarray(rgb)).to(self.device).float() / 255.0
             step[obs_key] = img.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)

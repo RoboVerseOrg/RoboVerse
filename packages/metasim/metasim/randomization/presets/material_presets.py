@@ -8,10 +8,10 @@ https://huggingface.co/datasets/RoboVerseOrg/roboverse_data/tree/main/materials.
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Callable, Iterable, Sequence
 
 try:
     from huggingface_hub import HfApi, hf_hub_download

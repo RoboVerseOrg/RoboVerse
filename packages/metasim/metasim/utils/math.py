@@ -409,7 +409,7 @@ def matrix_from_euler(euler_angles: torch.Tensor, convention: str) -> torch.Tens
     for letter in convention:
         if letter not in ("X", "Y", "Z"):
             raise ValueError(f"Invalid letter {letter} in convention string.")
-    matrices = [_axis_angle_rotation(c, e) for c, e in zip(convention, torch.unbind(euler_angles, -1))]
+    matrices = [_axis_angle_rotation(c, e) for c, e in zip(convention, torch.unbind(euler_angles, -1), strict=False)]
     # return functools.reduce(torch.matmul, matrices)
     return torch.matmul(torch.matmul(matrices[0], matrices[1]), matrices[2])
 

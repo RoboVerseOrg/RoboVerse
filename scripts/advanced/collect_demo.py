@@ -144,7 +144,7 @@ def get_actions(all_actions, env, demo_idxs: list[int], robot: RobotCfg):
     action_idxs = env._episode_steps
 
     actions = []
-    for env_id, (demo_idx, action_idx) in enumerate(zip(demo_idxs, action_idxs)):
+    for env_id, (demo_idx, action_idx) in enumerate(zip(demo_idxs, action_idxs, strict=False)):
         if action_idx < len(all_actions[demo_idx]):
             action = all_actions[demo_idx][action_idx]
         else:
@@ -157,7 +157,9 @@ def get_actions(all_actions, env, demo_idxs: list[int], robot: RobotCfg):
 
 def get_run_out(all_actions, env, demo_idxs: list[int]) -> list[bool]:
     action_idxs = env._episode_steps
-    run_out = [action_idx >= len(all_actions[demo_idx]) for demo_idx, action_idx in zip(demo_idxs, action_idxs)]
+    run_out = [
+        action_idx >= len(all_actions[demo_idx]) for demo_idx, action_idx in zip(demo_idxs, action_idxs, strict=False)
+    ]
     return run_out
 
 

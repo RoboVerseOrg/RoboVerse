@@ -94,7 +94,7 @@ def _carrot_cfg():
 
 def _stack_cfg():
     xy = []
-    for hx, hy in zip([0.05, 0.1], [0.05, 0.1]):
+    for hx, hy in zip([0.05, 0.1], [0.05, 0.1], strict=False):
         xy += _grid([-0.16, 0.0], hx, hy)
     return dict(
         src="baked_green_cube_3cm",
@@ -261,7 +261,7 @@ class NativePutOnEnv:
             self.sink.set_pose(sapien.Pose([-0.16, 0.13, 0.88], [1, 0, 0, 0]))
             self.sink.lock_motion()
         z = SCENE_TABLE_HEIGHT + 0.5
-        for o, xy_i, q_i in zip(self.objs, xy, quat):
+        for o, xy_i, q_i in zip(self.objs, xy, quat, strict=False):
             o.set_pose(sapien.Pose(np.hstack([xy_i, z]), q_i))
             o.lock_motion(0, 0, 0, 1, 1, 0)
         self._settle(0.5)

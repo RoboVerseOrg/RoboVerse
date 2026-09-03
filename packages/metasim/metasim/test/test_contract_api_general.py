@@ -97,7 +97,7 @@ def test_pyproject_builds_metasim_distribution_only():
     assert project["name"] == "roboverse-metasim"  # PyPI name; `metasim` is an unrelated project there
     assert project["description"] == "MetaSim: A unified simulation framework for robotics"
     assert project["license"] == {"file": "LICENSE"}
-    assert project["requires-python"] == ">=3.8"
+    assert project["requires-python"] == ">=3.10,<3.13"
 
     package_find = pyproject["tool"]["setuptools"]["packages"]["find"]
     assert package_find["include"] == ["metasim", "metasim.*"]
