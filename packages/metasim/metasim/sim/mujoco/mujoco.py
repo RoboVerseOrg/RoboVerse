@@ -1041,8 +1041,21 @@ class MujocoHandler(BaseSimHandler):
         extras = self.get_extra()
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
 
+    @staticmethod
+    def _root_qvel(obj_state) -> np.ndarray:
+        """Free-joint ``qvel`` (6,) for a state dict: world linear velocity, then angular velocity
+        rotated into the body frame (MuJoCo stores free-joint angular velocity locally). Missing keys
+        mean *zero* — a partial state is a reset, not "keep whatever velocity the body had"."""
+        lin = np.asarray(obj_state.get("vel", (0.0, 0.0, 0.0)), dtype=np.float64).reshape(3)
+        ang_world = np.asarray(obj_state.get("ang_vel", (0.0, 0.0, 0.0)), dtype=np.float64).reshape(3)
+        quat = np.asarray(obj_state.get("rot", (1.0, 0.0, 0.0, 0.0)), dtype=np.float64).reshape(4)
+        rot = np.zeros(9)
+        mujoco.mju_quat2Mat(rot, quat)
+        ang_local = rot.reshape(3, 3).T @ ang_world
+        return np.concatenate([lin, ang_local])
+
     def _set_root_state(self, obj_name, obj_state, zero_vel=False):
-        """Set root position and rotation."""
+        """Set root pose and, for free-base bodies, the root velocity (``vel`` / ``ang_vel``)."""
         if "pos" not in obj_state and "rot" not in obj_state:
             return
 
@@ -1060,8 +1073,7 @@ class MujocoHandler(BaseSimHandler):
                 root_joint = self.physics.data.joint(robot_name)
                 root_joint.qpos[:3] = obj_state.get("pos", [0, 0, 0])
                 root_joint.qpos[3:7] = obj_state.get("rot", [1, 0, 0, 0])
-                if zero_vel:
-                    root_joint.qvel[:6] = 0
+                root_joint.qvel[:6] = 0 if zero_vel else self._root_qvel(obj_state)
             else:
                 root_body = self.physics.named.model.body_pos[robot_name]
                 root_body_quat = self.physics.named.model.body_quat[robot_name]
@@ -1073,8 +1085,7 @@ class MujocoHandler(BaseSimHandler):
                 obj_joint = self.physics.data.joint(model_name)
                 obj_joint.qpos[:3] = obj_state["pos"]
                 obj_joint.qpos[3:7] = obj_state["rot"]
-                if zero_vel:
-                    obj_joint.qvel[:6] = 0
+                obj_joint.qvel[:6] = 0 if zero_vel else self._root_qvel(obj_state)
             except KeyError:
                 obj_body = self.physics.named.model.body_pos[model_name]
                 obj_body_quat = self.physics.named.model.body_quat[model_name]
@@ -1082,9 +1093,10 @@ class MujocoHandler(BaseSimHandler):
                 obj_body_quat[:] = obj_state["rot"]
 
     def _set_joint_state(self, obj_name, obj_state, zero_vel=False):
-        """Set joint positions."""
+        """Set joint positions and velocities (``dof_vel``; a joint without one is set to rest)."""
         if "dof_pos" not in obj_state:
             return
+        dof_vel = obj_state.get("dof_vel") or {}
 
         # Check if it's a robot
         robot_idx = None
@@ -1102,15 +1114,17 @@ class MujocoHandler(BaseSimHandler):
 
             joint = self.physics.data.joint(full_joint_name)
             joint.qpos = joint_pos
-            if zero_vel:
-                joint.qvel = 0
+            joint.qvel = 0 if zero_vel else float(np.asarray(dof_vel.get(joint_name, 0.0)).reshape(-1)[0])
             try:
                 actuator = self.physics.model.actuator(full_joint_name)
                 self.physics.data.ctrl[actuator.id] = joint_pos
             except KeyError:
                 pass
 
-    def _set_states(self, states, env_ids=None, zero_vel=True):
+    def _set_states(self, states, env_ids=None, zero_vel=False):
+        """Write a full state. Velocities present in the state (``vel``/``ang_vel``/``dof_vel``, always
+        present when the input is a ``TensorState``) are restored so a recorded state round-trips;
+        absent velocities are zeroed. ``zero_vel=True`` forces a rest state regardless."""
         if isinstance(states, TensorState):
             states = state_tensor_to_nested(self, states)
         if len(states) > 1:

@@ -287,6 +287,30 @@ def _body_tensor_to_dict(body_tensor: torch.Tensor, body_names: list[str]) -> di
     }
 
 
+def select_envs(state: TensorState, env_ids: list[int]) -> TensorState:
+    """Rows ``env_ids`` of every per-env tensor in ``state`` (a new ``TensorState``; names are shared)."""
+    import dataclasses
+
+    idx = torch.as_tensor(list(env_ids), dtype=torch.long)
+
+    def take(value):
+        if isinstance(value, torch.Tensor) and value.ndim >= 1 and value.shape[0] > int(idx.max()):
+            return value[idx.to(value.device)]
+        return value
+
+    def sub(obj):
+        if obj is None or not dataclasses.is_dataclass(obj):
+            return obj
+        return dataclasses.replace(obj, **{f.name: take(getattr(obj, f.name)) for f in dataclasses.fields(obj)})
+
+    return TensorState(
+        objects={k: sub(v) for k, v in state.objects.items()},
+        robots={k: sub(v) for k, v in state.robots.items()},
+        cameras={k: sub(v) for k, v in state.cameras.items()},
+        extras={k: take(v) for k, v in (state.extras or {}).items()},
+    )
+
+
 def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -> list[DictEnvState]:
     """Convert a tensor state to a list of env states. All the tensors will be converted to cpu for compatibility."""
     num_envs = next(iter(chain(tensor_state.objects.values(), tensor_state.robots.values()))).root_state.shape[0]
