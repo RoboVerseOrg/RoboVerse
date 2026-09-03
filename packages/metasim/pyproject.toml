@@ -183,3 +183,10 @@ convention = "google"
 
 [tool.pytest.ini_options]
 testpaths = ["metasim/test"]
+
+[tool.coverage.run]
+omit = ["*/test/*", "*/tests/*", "*/__main__.py"]
+
+[tool.coverage.report]
+skip_empty = true
+precision = 1

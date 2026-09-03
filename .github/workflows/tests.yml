@@ -59,11 +59,24 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -e "packages/metasim[dev,examples,mujoco]"
-      - name: Simulator-free test suite
+      - name: Simulator-free test suite (coverage floor ratchets up only)
         working-directory: packages/metasim
         env:
           MUJOCO_GL: disable
-        run: python -m pytest -k general -q -rs
+        # Baseline 2026-09-03: 36% of 27,378 statements. Raise the floor when coverage grows; never lower it.
+        run: python -m pytest -k general -q -rs --cov=metasim --cov-report=xml --cov-report=term --cov-fail-under=35
+      - name: Coverage summary
+        if: always()
+        working-directory: packages/metasim
+        run: |
+          echo "### MetaSim coverage (py${{ matrix.python-version }})" >> "$GITHUB_STEP_SUMMARY"
+          python -m coverage report --format=markdown --skip-covered --sort=cover | head -60 >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-metasim-py${{ matrix.python-version }}
+          path: packages/metasim/coverage.xml
+          retention-days: 14
 
   tests:
     runs-on: ubuntu-latest
@@ -87,7 +100,19 @@ jobs:
           # (eglQueryString on a None library). `disable` skips GL context creation entirely;
           # nothing in tests/ renders on MuJoCo, and the suite is identical locally with this value.
           MUJOCO_GL: disable
-        run: python -m pytest tests/ -rs
+        # Baseline 2026-09-03: 61% of 30,237 statements across roboverse_pack + roboverse_learn.
+        run: python -m pytest tests/ -rs --cov=roboverse_pack --cov=roboverse_learn --cov-report=xml --cov-report=term --cov-fail-under=58
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "### RoboVerse coverage" >> "$GITHUB_STEP_SUMMARY"
+          python -m coverage report --format=markdown --skip-covered --sort=cover | head -60 >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-roboverse
+          path: coverage.xml
+          retention-days: 14
 
   release-dry-run:
     # What release.yml will do on the next tag, run on every PR so a broken build or a git-URL
