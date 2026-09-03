@@ -8,8 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Moved into the RoboVerse monorepo as `packages/metasim`; version aligned to `1.0.0b0` (lockstep with `roboverse-py`). The standalone `RoboVerseOrg/MetaSim` repository becomes a read-only mirror for one release cycle.
 
+- Moved into the RoboVerse monorepo as `packages/metasim`; version aligned to `1.0.0b0` (lockstep with `roboverse-py`). The standalone `RoboVerseOrg/MetaSim` repository becomes a read-only mirror for one release cycle.
+- **Distribution renamed to `roboverse-metasim`** (`metasim` on PyPI is an unrelated project); the
+  import name stays `metasim`. Downstream requirements must say `roboverse-metasim @ git+...`.
+  `metasim.__version__` now reads the installed version from package metadata.
 - **Task registry is lazy.** `get_task_class(name)` resolves the name through a static AST index of
   every `@register_task(...)` literal (`metasim/task/_static_index.py`, per-file cache under
   `$METASIM_CACHE_DIR`, default `<tmp>/metasim_cache`) and imports only the module that registers it;
@@ -17,11 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   imported to learn them). RoboVerse: cold index 1.1 s, warm 0.04 s, a lookup ~0.1 s, versus 7.3 s
   and every import-time side effect before. `METASIM_TASK_DISCOVERY=eager` restores the old behaviour.
 
-### Changed
+### Fixed
 
-- **Distribution renamed to `roboverse-metasim`** (`metasim` on PyPI is an unrelated project); the
-  import name stays `metasim`. Downstream requirements must say `roboverse-metasim @ git+...`.
-  `metasim.__version__` now reads the installed version from package metadata.
+- `set_states` restores velocities. MuJoCo zeroed every velocity on write (`zero_vel=True` default) and SuperDex ignored root velocities, so no mid-episode state was a usable checkpoint; both now write `vel`/`ang_vel`/`dof_vel` (absent keys still mean rest). New `metasim.utils.replay` (record / `verify_action_replay` / `verify_state_replay`) and `metasim/test/sim/test_replay.py` pin the L0 (action replay) and L1 (state round-trip + one step) contracts on every backend. SuperDex lifts a dynamic body whose collision hull would spawn inside the ground plane (a centred-origin URDF placed at an MJCF bottom-origin height left at ~86 m/s on the first step) and logs the correction.
+- `RLTaskEnv.step` publishes the *terminal* observation in `info["observations"]["raw"]["obs"]` instead of the episode's first one (off-policy truncation bootstraps in clean_rl SAC/TD3 and FastTD3 read it).
+- IsaacGym and PyBullet reported `joint_pos_target` in native DoF order while `joint_pos` is in sorted-name order; both now use `get_joint_names(sort=True)` (completes #12).
+- `ParallelSimWrapper`: a worker that died during handler construction or `launch` surfaced as a bare `EOFError`/`ConnectionResetError` from the handshake and left the other workers running; the handshake now raises the worker's own traceback, `close()` tolerates dead workers, and a failed constructor tears the pool down.
+- `hf_util.check_and_download_single`: a `roboverse_data/...` path evaluated from a working directory that is not the parent of `ROBOVERSE_DATA_DIR` was reported as a path-traversal attempt; the error now names the CWD / `ROBOVERSE_DATA_DIR` mismatch and where the asset already is. `test_check_and_download_single_falls_back_to_private_roboverse_data` no longer depends on the caller's `ROBOVERSE_DATA_DIR`.
+- Newton backend works again on the pinned newton (1.5/1.6): `joint_target_pos`/`joint_target_vel` and `num_worlds` are forwarded to their new names, position targets use `joint_target_q_start` (on newton >= 1.5 they follow the `joint_q` layout, so envs after a free-floating object were driven to the wrong joints), the tiled camera uses the 1.4+ `RenderConfig`/`utils`/`update` API with an untextured fallback, and `CameraState.depth` is `(N, H, W)`.
+- MuJoCo: `<size memory="512M">` is reserved by default; humanoid + mesh scenes no longer die with
+  `mj_stackAlloc: out of memory` (get_started/10_mount_camera.py).
+- `hf_util`: a symlinked `roboverse_data` is no longer refused as path traversal; concurrent
+  processes wait for an in-flight download instead of failing after 5 s (`ParallelSimWrapper`
+  workers, get_started/3_parallel_envs.py).
+- Tree is `ruff check` / `ruff format` clean at the pre-commit pin (0.14.5).
 
 ### Added
 
