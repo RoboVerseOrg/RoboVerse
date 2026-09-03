@@ -262,9 +262,9 @@ class G1TrackingCfg(RobotCfg):
         # resolve regex to avoid compatibility issues with RoboVerse APIs
         joint_names = list(self.joint_limits.keys())
         _, name_list, value_list = resolve_matching_names_values(actuators, joint_names)
-        self.actuators = {k: v for k, v in zip(name_list, value_list)}
+        self.actuators = {k: v for k, v in zip(name_list, value_list, strict=False)}
         _, name_list, value_list = resolve_matching_names_values(action_scale, joint_names)
-        self.action_scale = {k: v for k, v in zip(name_list, value_list)}
+        self.action_scale = {k: v for k, v in zip(name_list, value_list, strict=False)}
 
         # Chain to the base __post_init__ so mjx_mjcf_path defaults to mjcf_path
         # (and scale/fix_base_link are normalised). Without this the MJX backend

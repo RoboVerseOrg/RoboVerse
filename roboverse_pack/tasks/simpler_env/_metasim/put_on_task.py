@@ -48,7 +48,7 @@ from .._native.widowx_config import (
     apply_widowx_urdf_materials,
     widowx_deployed_controller_configs,
 )
-from .base import SimplerMetaSimTask
+from .base import SimplerMetaSimTask, apply_external_states
 
 ROBOT_NAME, ARENA_NAME, CAM_NAME = "widowx", "arena", "3rd_view_camera"
 OBJ_FRICTION = 0.5
@@ -187,7 +187,10 @@ class SimplerPutOnTask(SimplerMetaSimTask):
     def _foreground_ids(self):
         return [link.get_id() for link in self.robot.get_links()] + [o.get_id() for o in self.objs]
 
-    def reset(self, env_ids=None, options=None, seed=0):
+    def reset(self, states=None, env_ids=None, seed=0, options=None):
+        """Reset the task. ``states``/``env_ids``/``seed`` are the ``BaseTaskEnv.reset`` contract;
+        ``options`` is the SimplerEnv episode spec (episode id, robot init options) from the gym
+        adapter."""
         cfg = self.cfg
         n = len(cfg["xy"]) * len(cfg["quat"])
         episode_id = (options or {}).get("episode_id")
@@ -206,7 +209,7 @@ class SimplerPutOnTask(SimplerMetaSimTask):
             self.sink.set_pose(sapien.Pose([-0.16, 0.13, 0.88], [1, 0, 0, 0]))
             self.sink.lock_motion()
         z = 0.87 + 0.5
-        for o, xy_i, q_i in zip(self.objs, xy, quat):
+        for o, xy_i, q_i in zip(self.objs, xy, quat, strict=False):
             o.set_pose(sapien.Pose(np.hstack([xy_i, z]), q_i))
             o.lock_motion(0, 0, 0, 1, 1, 0)
         self._settle(0.5)
@@ -232,6 +235,11 @@ class SimplerPutOnTask(SimplerMetaSimTask):
         self.robot.set_root_pose(sapien.Pose([rxy[0], rxy[1], rh], [0, 0, 0, 1]))
         self.robot.set_qpos(self.qpos)
         self.robot.set_qvel(np.zeros(self.robot.dof))
+        if apply_external_states(self, states, env_ids):
+            # success is measured against the post-reset object poses, so re-derive them
+            self.xyz_after_settle = [o.pose.p.copy() for o in self.objs]
+            self.src_bbox_world = quat2mat(self.objs[0].pose.q) @ self.bbox[0]
+            self.tgt_bbox_world = quat2mat(self.objs[1].pose.q) @ self.bbox[1]
         self.controller.reset()
         self.consecutive_grasp = 0
         self._elapsed = 0

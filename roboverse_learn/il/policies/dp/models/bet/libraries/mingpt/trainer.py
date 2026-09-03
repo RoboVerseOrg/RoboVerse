@@ -17,8 +17,6 @@ import math
 
 import numpy as np
 import torch
-import torch.optim as optim
-from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
@@ -76,7 +74,6 @@ class Trainer:
             losses = []
             pbar = tqdm(enumerate(loader), total=len(loader)) if is_train else enumerate(loader)
             for it, (x, y) in pbar:
-
                 # place data on the correct device
                 x = x.to(self.device)
                 y = y.to(self.device)
@@ -88,7 +85,6 @@ class Trainer:
                     losses.append(loss.item())
 
                 if is_train:
-
                     # backprop and update the parameters
                     model.zero_grad()
                     loss.backward()
@@ -115,7 +111,7 @@ class Trainer:
 
                     # report progress
                     pbar.set_description(  # type: ignore
-                        f"epoch {epoch+1} iter {it}: train loss {loss.item():.5f}. lr {lr:e}"
+                        f"epoch {epoch + 1} iter {it}: train loss {loss.item():.5f}. lr {lr:e}"
                     )
 
             if not is_train:

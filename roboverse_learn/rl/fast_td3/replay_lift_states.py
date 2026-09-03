@@ -14,10 +14,10 @@ Continuously replays saved lift states for visualization.
 
 from __future__ import annotations
 
-import os
-import sys
 import argparse
+import os
 import pickle
+import sys
 import time
 
 os.environ["TORCHDYNAMO_INLINE_INBUILT_NN_MODULES"] = "1"
@@ -38,14 +38,13 @@ try:
 except ImportError:
     pass
 
-import torch
-import numpy as np
-from loguru import logger as log
 import imageio.v2 as iio
+import numpy as np
+import torch
+from loguru import logger as log
 
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
-from roboverse_pack.tasks.pick_place.track_banana import convert_state_dict_to_initial_state
 
 
 def load_states_from_pkl(pkl_path: str):
@@ -105,34 +104,27 @@ def convert_state_to_dict_format(state_dict: dict, device: torch.device, robot_n
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Replay Lift States')
-    parser.add_argument('--state_file', type=str,
-                       default='eval_states/pick_place.approach_grasp_simple_franka_lift_states_101states_20251122_180651.pkl',
-                       help='State file path (pkl format)')
-    parser.add_argument('--task', type=str, default='pick_place.track',
-                       help='Task name')
-    parser.add_argument('--sim', type=str, default='isaacsim',
-                       help='Simulator type')
-    parser.add_argument('--num_envs', type=int, default=1,
-                       help='Number of environments')
-    parser.add_argument('--headless', action='store_true',
-                       help='Run in headless mode')
-    parser.add_argument('--render', action='store_true', default=True,
-                       help='Enable rendering')
-    parser.add_argument('--save_video', action='store_true',
-                       help='Save video')
-    parser.add_argument('--video_path', type=str, default='replay_output/replay.mp4',
-                       help='Video output path')
-    parser.add_argument('--loop', action='store_true', default=True,
-                       help='Loop replay')
-    parser.add_argument('--max_loops', type=int, default=None,
-                       help='Max loop count (None for infinite)')
-    parser.add_argument('--fps', type=int, default=30,
-                       help='Video FPS')
-    parser.add_argument('--delay', type=float, default=0.0,
-                       help='Delay between frames (seconds)')
-    parser.add_argument('--disable_dr', action='store_true', default=True,
-                       help='Disable domain randomization (default: True)')
+    parser = argparse.ArgumentParser(description="Replay Lift States")
+    parser.add_argument(
+        "--state_file",
+        type=str,
+        default="eval_states/pick_place.approach_grasp_simple_franka_lift_states_101states_20251122_180651.pkl",
+        help="State file path (pkl format)",
+    )
+    parser.add_argument("--task", type=str, default="pick_place.track", help="Task name")
+    parser.add_argument("--sim", type=str, default="isaacsim", help="Simulator type")
+    parser.add_argument("--num_envs", type=int, default=1, help="Number of environments")
+    parser.add_argument("--headless", action="store_true", help="Run in headless mode")
+    parser.add_argument("--render", action="store_true", default=True, help="Enable rendering")
+    parser.add_argument("--save_video", action="store_true", help="Save video")
+    parser.add_argument("--video_path", type=str, default="replay_output/replay.mp4", help="Video output path")
+    parser.add_argument("--loop", action="store_true", default=True, help="Loop replay")
+    parser.add_argument("--max_loops", type=int, default=None, help="Max loop count (None for infinite)")
+    parser.add_argument("--fps", type=int, default=30, help="Video FPS")
+    parser.add_argument("--delay", type=float, default=0.0, help="Delay between frames (seconds)")
+    parser.add_argument(
+        "--disable_dr", action="store_true", default=True, help="Disable domain randomization (default: True)"
+    )
 
     args = parser.parse_args()
 
@@ -196,9 +188,9 @@ def main():
                 break
 
             loop_count += 1
-            log.info(f"\n{'='*60}")
+            log.info(f"\n{'=' * 60}")
             log.info(f"Loop {loop_count}")
-            log.info(f"{'='*60}")
+            log.info(f"{'=' * 60}")
 
             for state_idx, state_dict in enumerate(states_list):
                 nested_state = convert_state_to_dict_format(state_dict, device, robot_name=robot_name)
@@ -226,14 +218,14 @@ def main():
                         if len(gripper_joint_names) >= 2:
                             gripper_angles = [
                                 joint_positions[joint_names.index(gripper_joint_names[0])],
-                                joint_positions[joint_names.index(gripper_joint_names[1])]
+                                joint_positions[joint_names.index(gripper_joint_names[1])],
                             ]
                         else:
                             gripper_angles = joint_positions[:2].tolist()
 
                         if state_idx == 0 or state_idx % 10 == 0 or state_idx == len(states_list) - 1:
                             log.info(
-                                f"[State {state_idx:3d}/{len(states_list)-1}] "
+                                f"[State {state_idx:3d}/{len(states_list) - 1}] "
                                 f"Distance: {gripper_box_dist:.4f}m | "
                                 f"Gripper: [{gripper_angles[0]:.4f}, {gripper_angles[1]:.4f}]"
                             )

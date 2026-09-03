@@ -1,0 +1,38 @@
+name: changelog
+
+# Every PR that changes the library must add its line under "## [Unreleased]" in CHANGELOG.md,
+# unless it carries the `no-changelog` label (tests-only, refactors with no user-visible change).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a CHANGELOG entry for library changes
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ ",$LABELS," == *",no-changelog,"* ]]; then echo "no-changelog label present"; exit 0; fi
+          changed=$(git diff --name-only "$BASE" "$HEAD")
+          has_entry() { grep -qx "$1" <<<"$changed" && git diff "$BASE" "$HEAD" -- "$1" | grep -q '^+.*- '; }
+          status=0
+          # RoboVerse content / learning / examples -> CHANGELOG.md
+          if grep -qP '^(roboverse_pack|roboverse_learn|scripts|get_started)/' <<<"$changed"; then
+            if has_entry CHANGELOG.md; then echo "RoboVerse CHANGELOG entry found"; else
+              echo "::error::This PR changes roboverse_pack/, roboverse_learn/, scripts/ or get_started/ but adds no line under '## [Unreleased]' in CHANGELOG.md (or add the no-changelog label)."; status=1; fi
+          fi
+          # MetaSim library (not its tests) -> packages/metasim/CHANGELOG.md
+          if grep -qP '^packages/metasim/metasim/(?!test/)' <<<"$changed"; then
+            if has_entry packages/metasim/CHANGELOG.md; then echo "MetaSim CHANGELOG entry found"; else
+              echo "::error::This PR changes packages/metasim/metasim/ but adds no line under '## [Unreleased]' in packages/metasim/CHANGELOG.md (or add the no-changelog label)."; status=1; fi
+          fi
+          exit $status

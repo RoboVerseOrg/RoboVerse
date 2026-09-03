@@ -9,6 +9,6 @@
 # Full license: roboverse_learn/il/policies/act/detr/LICENSE
 
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-from .misc import *
 from .box_ops import *
+from .misc import *
 from .plot_utils import *

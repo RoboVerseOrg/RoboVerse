@@ -1,0 +1,122 @@
+/*
+ * For reference: https://pydata-sphinx-theme.readthedocs.io/en/v0.9.0/user_guide/customizing.html
+ * For colors: https://clrs.cc/
+ */
+
+html {
+    --pst-font-size-h0: 2.5rem;
+    --pst-font-size-h2: 2.2rem;
+    --pst-font-size-h3: 1.7rem;
+    --pst-font-size-h4: 1.3rem;
+    --pst-font-size-h5: 1rem;
+    --pst-font-size-h6: 1rem;
+}
+
+/* New Custom Theme for Documentation */
+
+/* Light Theme */
+html[data-theme="light"] {
+    --pst-color-primary: #3f51b5; /* Indigo for primary actions */
+    --pst-color-secondary: #ff4081; /* Magenta for accents */
+    --pst-color-secondary-highlight: #ff4081;
+    --pst-color-inline-code-links: #3f51b5;
+    --pst-color-info: var(--pst-color-primary);
+    --pst-color-info-highlight: var(--pst-color-primary);
+    --pst-color-info-bg: #e8eaf6; /* Soft indigo background for info sections */
+    --pst-color-attention: #ffa726; /* Warm orange to highlight important elements */
+    --pst-color-text-base: #212121; /* Dark grey for high readability */
+    --pst-color-text-muted: #727272; /* Medium grey for muted text */
+    --pst-color-shadow: #bdbdbd;
+    --pst-color-border: #e0e0e0; /* Light grey border */
+    --pst-color-inline-code: #3f51b5;
+    --pst-color-target: #f50057; /* Bright target mark */
+    --pst-color-background: #fafafa; /* Bright, clean background */
+    --pst-color-on-background: #fafafa;
+    --pst-color-surface: #f5f5f5; /* Surfaces like cards or panels */
+    --pst-color-on-surface: #eeeeee;
+    --pst-color-link: var(--pst-color-primary);
+    --pst-color-link-hover: #303f9f; /* A deeper indigo for hover effects */
+    --pst-color-table-row-hover-bg: #e8eaf6;
+    --pst-color-accent: var(--pst-color-primary);
+}
+
+/* Dark Theme */
+html[data-theme="dark"] {
+    --pst-color-primary: #82aaff; /* Lighter blue for improved visibility */
+    --pst-color-secondary: #ff79c6; /* Lighter magenta for accents */
+    --pst-color-secondary-highlight: #ff79c6;
+    --pst-color-inline-code-links: #82aaff; /* Matching the lighter primary */
+    --pst-color-info: var(--pst-color-primary);
+    --pst-color-info-highlight: var(--pst-color-primary);
+    --pst-color-info-bg: #2e2e2e; /* A lighter dark grey for info sections */
+    --pst-color-attention: #ffb74d; /* Slightly lighter warm orange for emphasis */
+    --pst-color-text-base: #f5f5f5; /* Much lighter text for better contrast */
+    --pst-color-text-muted: #d1d1d1; /* Lighter muted text to maintain hierarchy */
+    --pst-color-shadow: #000000;
+    --pst-color-border: #757575; /* Adjusted border shade for clarity */
+    --pst-color-inline-code: #82aaff;
+    --pst-color-target: #ff6188; /* A variant of the accent color for targets */
+    --pst-color-background: #121212; /* Deep dark background */
+    --pst-color-on-background: #1e1e1e;
+    --pst-color-surface: #212121;
+    --pst-color-on-surface: #373737;
+    --pst-color-link: var(--pst-color-primary);
+    --pst-color-link-hover: #aabfff; /* Lighter hover effect for links */
+    --pst-color-table-row-hover-bg: #2e2e2e;
+    --pst-color-accent: var(--pst-color-primary);
+}
+
+a {
+    text-decoration: none !important;
+}
+
+/* for the announcement link */
+.bd-header-announcement a,
+.bd-header-version-warning a {
+    color: #7FDBFF;
+}
+
+/* for the search box in the navbar */
+.form-control {
+    border-radius: 0 !important;
+    border: none !important;
+    outline: none !important;
+}
+
+/* reduce padding for logo */
+.navbar-brand {
+    padding-top: 0.0rem !important;
+    padding-bottom: 0.0rem !important;
+}
+
+.navbar-icon-links {
+    padding-top: 0.0rem !important;
+    padding-bottom: 0.0rem !important;
+}
+
+.bd-main .bd-content .bd-article-container {
+    /* min-width: 100%; */
+    max-width: 100%;  /* default is 60em */
+}
+/* .bd-page-width {
+    max-width: 90%;
+} */
+
+.bd-sidebar-primary {
+    width: 19em;
+    padding-left: 3rem;
+}
+
+.bd-links__title {
+    /* Hide the original text visually */
+    position: relative;
+    color: transparent;
+}
+
+.bd-links__title::before {
+    content: "Navigation";
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: #000; /* Set your desired color */
+}

@@ -8,7 +8,6 @@
 import os
 import random
 from collections import OrderedDict
-from typing import List, Optional
 
 import einops
 import numpy as np
@@ -49,7 +48,7 @@ class eval_mode:
     def __exit__(self, *args):
         if self.no_grad:
             self.no_grad_context.__exit__(*args)
-        for model, state in zip(self.models, self.prev_states):
+        for model, state in zip(self.models, self.prev_states, strict=False):
             model.train(state)
         return False
 
@@ -102,9 +101,7 @@ class TrainWithLogger:
             log_key, name_key = key.split("/")
             iterator_log_name = f"{log_key[0]}{name_key[0]}".upper()
             iterator_log_component[iterator_log_name] = to_log
-        postfix = ",".join(
-            "{}:{:.2e}".format(key, iterator_log_component[key]) for key in iterator_log_component.keys()
-        )
+        postfix = ",".join(f"{key}:{iterator_log_component[key]:.2e}" for key in iterator_log_component.keys())
         if iterator is not None:
             iterator.set_postfix_str(postfix)
         wandb.log(log_components, step=epoch)

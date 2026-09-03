@@ -12,7 +12,8 @@
 #   upstream notice is at
 #   https://github.com/AdeelH/pytorch-multi-class-focal-loss/blob/master/LICENSE)
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import torch
 from torch import Tensor, nn
@@ -103,7 +104,7 @@ class FocalLoss(nn.Module):
     def __repr__(self):
         arg_keys = ["alpha", "gamma", "ignore_index", "reduction"]
         arg_vals = [self.__dict__[k] for k in arg_keys]
-        arg_strs = [f"{k}={v}" for k, v in zip(arg_keys, arg_vals)]
+        arg_strs = [f"{k}={v}" for k, v in zip(arg_keys, arg_vals, strict=False)]
         arg_str = ", ".join(arg_strs)
         return f"{type(self).__name__}({arg_str})"
 

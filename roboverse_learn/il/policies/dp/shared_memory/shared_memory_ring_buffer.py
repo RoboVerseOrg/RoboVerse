@@ -9,10 +9,10 @@
 import numbers
 import time
 from multiprocessing.managers import SharedMemoryManager
-from queue import Empty
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import numpy as np
+
 from roboverse_learn.il.policies.dp.shared_memory.shared_memory_util import (
     ArraySpec,
     SharedAtomicCounter,
@@ -90,7 +90,7 @@ class SharedMemoryRingBuffer:
     def create_from_examples(
         cls,
         shm_manager: SharedMemoryManager,
-        examples: Dict[str, Union[np.ndarray, numbers.Number]],
+        examples: Dict[str, np.ndarray | numbers.Number],
         get_max_k: int = 32,
         get_time_budget: float = 0.01,
         put_desired_frequency: float = 60,
@@ -124,7 +124,7 @@ class SharedMemoryRingBuffer:
     def clear(self):
         self.counter.store(0)
 
-    def put(self, data: Dict[str, Union[np.ndarray, numbers.Number]], wait: bool = True):
+    def put(self, data: Dict[str, np.ndarray | numbers.Number], wait: bool = True):
         count = self.counter.load()
         next_idx = count % self.buffer_size
         # Make sure the next self.get_max_k elements in the ring buffer have at least
@@ -144,7 +144,7 @@ class SharedMemoryRingBuffer:
                 # throw an error
                 past_iters = self.buffer_size - self.get_max_k
                 hz = past_iters / deltat
-                raise TimeoutError("Put executed too fast {}items/{:.4f}s ~= {}Hz".format(past_iters, deltat, hz))
+                raise TimeoutError(f"Put executed too fast {past_iters}items/{deltat:.4f}s ~= {hz}Hz")
 
         # write to shared memory
         for key, value in data.items():

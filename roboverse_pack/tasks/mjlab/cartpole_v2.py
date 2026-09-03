@@ -44,7 +44,7 @@ from roboverse_learn.managers import (
     RewTerm,
 )
 
-from ._locator import mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset
 from .cartpole import _CARTPOLE_XML
 from .mdp import (
     SceneEntityCfg,
@@ -91,7 +91,12 @@ def reset_cartpole(
     # MuJoCo path (single-env scene-MJCF): write to physics.data.qpos.
     if hasattr(env.handler, "physics"):
         physics = env.handler.physics
-        rng = np.random.default_rng()
+        # Draw from the *global* NumPy RNG. ``reset(seed=N)`` forwards to
+        # ``handler.set_seed``, which seeds ``np.random`` (plus ``random`` and
+        # torch) — a fresh ``np.random.default_rng()`` would ignore that seed, so
+        # the reset-noise here stayed unreproducible and ``reset(seed=N)`` was a
+        # silent no-op for this task despite the plumbing being in place.
+        rng = np.random
         with physics.reset_context():
             physics.data.qpos[0] = 0.0 + rng.uniform(*slider_pos_range)
             physics.data.qpos[1] = hinge_init + rng.uniform(*hinge_pos_range)
@@ -211,7 +216,7 @@ class CartpoleSwingupEnvCfg(CartpoleBalanceEnvCfg):
 class _CartpoleTaskBase(ManagerBasedRVEnv):
     """Common machinery for both balance + swingup variants."""
 
-    scenario = _cartpole_scenario()
+    scenario = lazy_scenario(lambda: _cartpole_scenario())
     _cfg_cls: type[ManagerBasedRVEnvCfg] = CartpoleBalanceEnvCfg
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:

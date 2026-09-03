@@ -6,11 +6,12 @@
 #   (ruff/isort). No functional changes.
 # Full license: roboverse_learn/il/policies/dp/LICENSE
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import torch
+
 from roboverse_learn.il.utils.module_attr_mixin import ModuleAttrMixin
-from torch import nn
 
 
 def get_intersection_slice_mask(shape: tuple, dim_slices: Sequence[slice], device: Optional[torch.device] = None):

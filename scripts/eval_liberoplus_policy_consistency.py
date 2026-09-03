@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import os
 
-import h5py
 import numpy as np
 
 from roboverse_pack.tasks.libero_plus import _passthrough as pt
@@ -54,6 +53,8 @@ CASES = [
 
 def _load_demo(suite: str, stem: str, demo_idx: int = 0):
     path = os.path.join(_DEMO_ROOT, suite, f"{stem}_demo.hdf5")
+    import h5py  # optional dependency: only the demo loader needs it
+
     with h5py.File(path, "r") as h:
         g = h["data"][f"demo_{demo_idx}"]
         return np.asarray(g["actions"]), np.asarray(g["states"])[0]
@@ -65,10 +66,57 @@ def _raw_state(env) -> np.ndarray:
 
 
 def _success(env) -> bool:
-    try:
-        return bool(env.env._check_success())
-    except Exception:
-        return False
+    """Task success straight from the env's own checker.
+
+    Deliberately **not** wrapped in ``try/except``: swallowing the error into ``False``
+    makes two equally-broken sides compare ``False == False`` and score perfect success
+    parity. An error here means we cannot evaluate this side, which is an ERROR, never a
+    match -- see AGENTS.md, "Parity Is Load-Bearing".
+    """
+    check = getattr(env.env, "_check_success", None)
+    if check is None:
+        raise RuntimeError(
+            f"{type(env.env).__name__} has no _check_success(); the harness cannot evaluate task "
+            "success, so it cannot claim success parity."
+        )
+    return bool(check())
+
+
+_IMAGE_HINTS = ("image", "rgb", "depth")
+
+
+def _state_keys(obs: dict) -> set:
+    """The non-image obs keys -- the ones this harness is able to compare bitwise."""
+    return {k for k in obs if not any(h in k.lower() for h in _IMAGE_HINTS)}
+
+
+def _obs_diff(obss_a, obss_b) -> float:
+    """max|Δ| over every non-image obs key, requiring **identical key sets**.
+
+    Diffing over ``set(a) & set(b)`` would let a side that returns ``{}`` (or that
+    silently drops a key) score a perfect obs parity over zero compared keys. A missing
+    key is a failure, not an unexamined key.
+    """
+    if len(obss_a) != len(obss_b):
+        raise RuntimeError(f"rollout length mismatch: {len(obss_a)} vs {len(obss_b)} steps")
+    if not obss_a:
+        raise RuntimeError("empty rollout: no observations were compared")
+    diff = 0.0
+    for i, (pa, pb) in enumerate(zip(obss_a, obss_b, strict=False)):
+        ka, kb = _state_keys(pa), _state_keys(pb)
+        if ka != kb:
+            raise RuntimeError(
+                f"step {i}: observation key sets differ -- passthrough-only={sorted(ka - kb)}, "
+                f"native-only={sorted(kb - ka)}"
+            )
+        if not ka:
+            raise RuntimeError(f"step {i}: no non-image observation keys to compare -- nothing would be verified")
+        for k in sorted(ka):
+            va, vb = pa[k], pb[k]
+            if va.shape != vb.shape:
+                raise RuntimeError(f"step {i}: obs[{k!r}] shape {va.shape} != {vb.shape}")
+            diff = max(diff, float(np.abs(va.astype(np.float64) - vb.astype(np.float64)).max()))
+    return diff
 
 
 def _rollout(env, init_state, actions, max_steps):
@@ -82,6 +130,8 @@ def _rollout(env, init_state, actions, max_steps):
         dones.append(bool(d))
         succ.append(_success(env))
     env.close()
+    if not states:
+        raise RuntimeError("rollout produced zero steps; there is nothing to compare")
     return states, obss, rews, dones, succ
 
 
@@ -106,6 +156,11 @@ def _native_env(suite: str, tid: int, seed: int):
 
 
 def run(max_steps: int = 120) -> int:
+    """Compare passthrough vs native under the demo policy. Errors propagate: a side we
+    cannot evaluate is an ERROR, and must never be able to reach the PASS branch.
+    """
+    if not CASES:
+        raise RuntimeError("no cases to run; an empty run proves nothing and is not a PASS")
     print("# LIBERO-plus policy-eval consistency (deterministic open-loop demo policy)")
     print("# real VLA = sm_120-blocked; this verifies passthrough == native on the EVAL path\n")
     header = f"{'perturbation':18s} {'state|Δ|':>9s} {'obs|Δ|':>9s} {'rew|Δ|':>9s} {'done':>5s} {'success(pt/nv)':>14s}"
@@ -120,15 +175,10 @@ def run(max_steps: int = 120) -> int:
         # passthrough rollout, then an independently-constructed native rollout.
         sp, op, rp, dp, fp = _rollout(pt.make_liberoplus_env(suite, tid, seed=0), init_state, actions, max_steps)
         sn, on, rn, dn, fn = _rollout(_native_env(suite, tid, seed=0), init_state, actions, max_steps)
-        ds = max(float(np.abs(np.asarray(a) - np.asarray(b)).max()) for a, b in zip(sp, sn))
-        do = 0.0
-        for pa, pb in zip(op, on):
-            for k in set(pa) & set(pb):
-                if any(hh in k.lower() for hh in ("image", "rgb", "depth")):
-                    continue
-                do = max(do, float(np.abs(pa[k].astype(np.float64) - pb[k].astype(np.float64)).max()))
-        dr = max(abs(x - y) for x, y in zip(rp, rn))
-        dd = all(x == y for x, y in zip(dp, dn))
+        ds = max(float(np.abs(np.asarray(a) - np.asarray(b)).max()) for a, b in zip(sp, sn, strict=False))
+        do = _obs_diff(op, on)
+        dr = max(abs(x - y) for x, y in zip(rp, rn, strict=False))
+        dd = all(x == y for x, y in zip(dp, dn, strict=False))
         succ_match = fp[-1] == fn[-1]
         worst = max(worst, ds, do, dr)
         ok = ds == 0.0 and do == 0.0 and dr == 0.0 and dd and succ_match

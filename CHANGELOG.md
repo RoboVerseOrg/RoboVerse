@@ -12,9 +12,62 @@ release.
 
 ## [Unreleased]
 
-Nothing yet — open a PR to add entries here.
+### Changed
+- The mjlab v2 tasks (go1 / g1 velocity, yam lift-cube) declare `supported_simulators = ("mujoco", "newton")`; requesting another backend now fails at construction with a clear message instead of inside the backend.
+- Packaging hygiene: `requires-python = ">=3.10,<3.13"` and ruff `target-version = "py310"` in both packages (old-style typing rewritten by ruff where safe); the CHANGELOG release header is `[1.0.0b0]`, matching the `pyproject` version `release.yml` checks; a `release-dry-run` CI job builds both distributions on every PR, runs `twine check --strict`, and fails on direct-URL dependencies (PyPI rejects them) or mismatched package versions.
+- `roboverse_learn` is linted and formatted by ruff like the rest of the tree (it was in `extend-exclude`, so CI never parsed its 26k lines): 97 auto-fixes applied (unused imports, import order, f-strings), `super(__class__, self)` / nested `max` / `stacklevel` / mutable-default findings fixed, an undefined `lighten` removed from `pymunk_override.__all__`; the remaining style families (`FA100`, `UP006`, `UP045`, `E731`, `B006`, `RUF013`, `F811`) are per-file-ignored for that directory as tracked debt.
+- MetaSim now lives in this repository under `packages/metasim` (imported with `git subtree`, history preserved) and is released in lockstep as `roboverse-metasim`; `roboverse-py` depends on `roboverse-metasim>=1.0.0b0,<1.1` instead of a git `@main` URL. Install with `pip install -e "packages/metasim[mujoco]" -e ".[mujoco]"` (MetaSim first). CI runs MetaSim's simulator-free suite on 3.10/3.11 alongside the RoboVerse suite; `changelog.yml` guards one CHANGELOG per package; `release.yml` builds and publishes both from one tag.
 
-## [1.0.0-beta] - 2026-05-31
+### Fixed
+
+- `roboverse_pack.tasks.mjlab` failed to import without the asset checkout (hosted CI, registry discovery): the go1 / yam class-level scenarios parsed an MJCF at import time; they are now built on first access (`lazy_scenario`).
+- `import roboverse_pack.tasks.benchmark` raised a circular-import error when the tasks package was
+  imported first (task discovery); `roboverse_pack.benchmark` now resolves its two helpers lazily.
+- `roboverse_pack.tasks.mjlab` no longer downloads assets from HuggingFace at import time; the
+  handler's `check_assets()` fetches them when a task is used.
+
+### Changed
+
+- MetaSim dependency renamed to `roboverse-metasim @ git+...` (MetaSim's distribution was renamed;
+  import name `metasim` unchanged). The pin moves to a MetaSim tag with the next release.
+
+### Added
+
+- `--sim superdex` in every MuJoCo-capable `get_started` tutorial and a `roboverse-py[superdex]`
+  extra (needs the MetaSim SuperDex backend, Python >= 3.12).
+- `scripts/parity_superdex_tracking.py`: seeded joint-target tracking and rigid-object drop
+  comparisons between two backends (record per backend, compare + plot).
+- CI (`.github/workflows/tests.yml`): ruff lint job + the whole `tests/` suite on CPU for every PR;
+  `tests/conftest.py` markers `requires_optional` / `requires_asset` skip with a reason instead of
+  failing when optional deps or `roboverse_data` assets are absent.
+- `RELEASING.md`: branches, PR gates, SemVer, release checklist, PyPI publishing, branch
+  protection. `pr-title.yml`, `changelog.yml`, `release.yml`, `CODEOWNERS`.
+
+### Fixed
+
+- `g1_feet` robot cfg crashed at import (wrong `BaseActuatorCfg` keywords) and `unitree_dex3_1` had a degenerate thumb joint limit; a config validation test now guards both.
+- Eight Tier-1 task `reset` overrides (humanoid, beyondmimic, six SimplerEnv tasks) dropped `states=`, so `env.reset(states=...)` from the IL/VLA eval runners raised `TypeError`; the contract test now checks full signature substitutability.
+- FastTD3: the nine stub configs that say `# Inherits from base.yaml` now actually inherit (`load_config` deep-merges over `configs/base.yaml`; previously `float(None)` at startup); `mjx_walk.yaml` `headless: flase` typo.
+- IL `DefaultRunner`: validation loss is computed on the deployed policy (EMA model in `eval()` mode) instead of the train-mode raw model.
+- `ManagerBasedRVEnv.reset` returned `None` (Gym wrappers expect `(obs, info)`), had no `num_obs`/`observation_space`, and mjlab cartpole reset noise ignored `set_seed`; all three fixed with a gym-reset regression test.
+- ManiSkill task leaves declared `ScenarioCfg(objects=[...])` with no robot, so 2,648 registered tasks crashed with `IndexError` on reset; the family now defaults to `franka` (leaf-declared robots win) and raises a clear `ValueError` when no robot resolves.
+- CleanRL PPO overwrote `dones[step]` after `envs.step`, shifting the done buffer by one so GAE bootstrapped `V(reset_state)` across episode boundaries; the duplicate write is removed with a numeric GAE regression test.
+- Parity/eval harnesses (`eval_liberoplus_policy_consistency`, `parity_simpler_env`, `eval_*_cross_sim`, `spike_metasim_full_parity`, `verify_native_registration`) swallowed checker exceptions into `False`, compared only shared obs keys, and exited 0 regardless of verdict, so two broken sides printed PASS; they now raise on errors, require equal key sets and non-empty rollouts, and carry the verdict in the exit status.
+- `maniskill.*_native` specs truncated stack_pyramid/pull_cube_tool/peg_insertion_side/plug_charger/draw_triangle at 50 steps instead of ManiSkill'\''s 250/100/100/200/300 horizons; pinned to upstream with an always-on table test plus registry-derived checks when `mani_skill` is installed.
+- mjlab DR events (`geom_friction`, `body_mass`, `body_com_offset`, `push_by_setting_velocity`) silently no-oped on every backend but single-env MuJoCo, so multi-env Go1 training ran with zero domain randomization; they now write the Newton model (verified on a real 2-env Newton Go1) and raise `NotImplementedError` on backends without support (MJX/IsaacSim runs must drop the EventTerms) instead of skipping.
+- Native LIBERO `Open`/`Close`/`TurnOn`/`TurnOff` predicates always evaluated False on
+  mujoco >= 3.x (`numpy.int32 in (mjtJoint...)` membership).
+- `get_started/multiple_cameras.py` passed a removed `ScenarioCfg` kwarg.
+- Stale test expectations (docs build layout, `LiberoBaseTask.reset` stubs after the `seed` change).
+- Red flags: SSH submodule URL, dangling `release/metasim` symlink, silent `except: pass` around
+  passthrough registration, hard-coded personal paths in scripts/tests, untruthful
+  `requires-python >= 3.8` (now 3.10), wheels missing LIBERO json/npz bundles, stale ruff ignores.
+
+### Security
+
+- `hydra-core` pinned to 1.3.4 in the dp / vita / fm IL policy requirements (Dependabot: `hydra.utils.instantiate` code execution with untrusted configs in <=1.3.3).
+
+## [1.0.0b0] - 2026-05-31
 
 The headline of this release is **cross-platform parity is now testable and
 load-bearing**. Every shipped `RobotCfg`, every contracted handler method,
@@ -99,4 +152,4 @@ flagged `default_joint_positions` mismatches before they trip in CI.
 ---
 
 [Unreleased]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0-beta...HEAD
-[1.0.0-beta]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0-alpha...v1.0.0-beta
+[1.0.0b0]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0-alpha...v1.0.0-beta

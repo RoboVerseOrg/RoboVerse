@@ -17,8 +17,8 @@ import json
 import os
 import sys
 import traceback
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from . import inventory as inv
 from .diff import diff_rollouts

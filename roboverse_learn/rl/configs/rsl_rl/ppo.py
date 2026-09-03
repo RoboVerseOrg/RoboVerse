@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
 from datetime import datetime
+from typing import Literal, Optional
 
 from metasim.utils import configclass
-from datetime import datetime
 
 SimBackend = Literal[
     "isaacgym",
@@ -147,9 +146,9 @@ class RslRlPPOConfig(RslRlOnPolicyRunnerCfg):
             "load_run": self.load_run,
             "load_checkpoint": self.load_checkpoint,
             "obs_groups": self.obs_groups,
-            "policy": policy_cfg,       # legacy rsl_rl key
-            "actor": actor_cfg,         # new rsl_rl key
-            "critic": critic_cfg,       # new rsl_rl key
+            "policy": policy_cfg,  # legacy rsl_rl key
+            "actor": actor_cfg,  # new rsl_rl key
+            "critic": critic_cfg,  # new rsl_rl key
             "algorithm": algo_cfg,
         }
 

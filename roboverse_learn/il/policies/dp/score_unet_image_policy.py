@@ -12,18 +12,16 @@
 from typing import Dict
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+from einops import reduce
+
+from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
 from roboverse_learn.il.policies.dp.models.diffusion.conditional_unet1d import ConditionalUnet1D
 from roboverse_learn.il.policies.dp.models.diffusion.mask_generator import LowdimMaskGenerator
-from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
-from einops import rearrange, reduce
-from loguru import logger as log
-
 from roboverse_learn.il.utils.normalizer import LinearNormalizer
 from roboverse_learn.il.utils.pytorch_util import dict_apply
-from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
+from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
 
 
 class ScoreMatchingUnetImagePolicy(BaseImagePolicy):
@@ -113,7 +111,7 @@ class ScoreMatchingUnetImagePolicy(BaseImagePolicy):
         scheduler.set_timesteps(self.num_inference_steps)
 
         for t in scheduler.timesteps:
-           # log.info(f"Using algorithm: Score Matching")
+            # log.info(f"Using algorithm: Score Matching")
 
             trajectory[condition_mask] = condition_data[condition_mask]
 

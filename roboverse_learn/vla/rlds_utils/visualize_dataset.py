@@ -9,16 +9,16 @@
 # Full license: roboverse_learn/vla/rlds_utils/LICENSE
 
 import argparse
-import tqdm
 import importlib
 import os
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # suppress debug warning messages
-import tensorflow_datasets as tfds
-import numpy as np
-import matplotlib.pyplot as plt
-import wandb
+import tqdm
 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # suppress debug warning messages
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow_datasets as tfds
+import wandb
 
 WANDB_ENTITY = "wbjsamuel"
 WANDB_PROJECT = "vis_rlds"

@@ -1,5 +1,4 @@
 import functools
-from typing import Union
 
 import numpy as np
 import pytorch3d.transforms as pt
@@ -58,7 +57,7 @@ class RotationTransformer:
         self.inverse_funcs = inverse_funcs
 
     @staticmethod
-    def _apply_funcs(x: Union[np.ndarray, torch.Tensor], funcs: list) -> Union[np.ndarray, torch.Tensor]:
+    def _apply_funcs(x: np.ndarray | torch.Tensor, funcs: list) -> np.ndarray | torch.Tensor:
         x_ = x
         if isinstance(x, np.ndarray):
             x_ = torch.from_numpy(x)
@@ -70,10 +69,10 @@ class RotationTransformer:
             y = x_.numpy()
         return y
 
-    def forward(self, x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
+    def forward(self, x: np.ndarray | torch.Tensor) -> np.ndarray | torch.Tensor:
         return self._apply_funcs(x, self.forward_funcs)
 
-    def inverse(self, x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
+    def inverse(self, x: np.ndarray | torch.Tensor) -> np.ndarray | torch.Tensor:
         return self._apply_funcs(x, self.inverse_funcs)
 
 

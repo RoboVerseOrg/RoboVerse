@@ -1,8 +1,6 @@
 [build-system]
-# setuptools >= 62.3 is the floor for the `**` recursive glob in [tool.setuptools.package-data]
-# and for [tool.setuptools] license-files; an older builder would silently drop NOTICE and the
-# vendored LICENSE files from the wheel. 77 is the first release where license-files is stable
-# under PEP 639.
+# setuptools >= 77 is the first release where [tool.setuptools] license-files is stable under PEP 639;
+# an older builder would silently drop NOTICE and the vendored LICENSE files from the wheel.
 requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -10,10 +8,11 @@ build-backend = "setuptools.build_meta"
 name = "roboverse-py"
 version = "1.0.0b0"
 description = "RoboVerse content, learning, and examples built on MetaSim"
-requires-python = ">=3.8"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
-    "metasim @ git+https://github.com/RoboVerseOrg/MetaSim.git@main",
+    "roboverse-metasim>=1.0.0b0,<1.1",
     "gymnasium",
     "loguru",
     "numpy",
@@ -27,7 +26,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "ruff",
-    "metasim[dev] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main",
+    "roboverse-metasim[dev]>=1.0.0b0,<1.1",
 ]
 assets = ["huggingface-hub", "rootutils", "tyro"]
 examples = [
@@ -74,23 +73,33 @@ vla = [
     "tensorflow-hub",
     "transformers",
 ]
-genesis = ["metasim[genesis] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-isaacgym = ["metasim[isaacgym] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-isaacsim = ["metasim[isaacsim] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-isaacsim211 = ["metasim[isaacsim211] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-mjx = ["metasim[mjx] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-mujoco = ["metasim[mujoco] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-newton = ["metasim[newton] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-pybullet = ["metasim[pybullet] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-robosplatter = ["metasim[robosplatter] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-sapien2 = ["metasim[sapien2] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-sapien3 = ["metasim[sapien3] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+genesis = ["roboverse-metasim[genesis]>=1.0.0b0,<1.1"]
+isaacgym = ["roboverse-metasim[isaacgym]>=1.0.0b0,<1.1"]
+isaacsim = ["roboverse-metasim[isaacsim]>=1.0.0b0,<1.1"]
+isaacsim211 = ["roboverse-metasim[isaacsim211]>=1.0.0b0,<1.1"]
+mjx = ["roboverse-metasim[mjx]>=1.0.0b0,<1.1"]
+mujoco = ["roboverse-metasim[mujoco]>=1.0.0b0,<1.1"]
+newton = ["roboverse-metasim[newton]>=1.0.0b0,<1.1"]
+superdex = ["roboverse-metasim[superdex]>=1.0.0b0,<1.1"]  # Python 3.12 only
+pybullet = ["roboverse-metasim[pybullet]>=1.0.0b0,<1.1"]
+robosplatter = ["roboverse-metasim[robosplatter]>=1.0.0b0,<1.1"]
+sapien2 = ["roboverse-metasim[sapien2]>=1.0.0b0,<1.1"]
+sapien3 = ["roboverse-metasim[sapien3]>=1.0.0b0,<1.1"]
 
 [project.entry-points."metasim.packages"]
 roboverse_pack = "roboverse_pack"
 
 [tool.uv]
 index-strategy = "unsafe-best-match"
+
+# Monorepo: MetaSim lives in packages/metasim and is developed in lockstep with this package
+# (same version, same tag). Declared as a uv workspace member; install it first from the checkout:
+#   python -m pip install -e "packages/metasim[mujoco]" -e ".[mujoco]"
+[tool.uv.workspace]
+members = ["packages/metasim"]
+
+[tool.uv.sources]
+roboverse-metasim = { workspace = true }
 
 [tool.uv.pip]
 index-url = "https://download.pytorch.org/whl/cu128"
@@ -103,7 +112,7 @@ extra-index-url = [
 line-length = 120
 format.preview = true
 lint.preview = false
-target-version = "py38"
+target-version = "py310"
 lint.select = [
     "B",    # flake8: bugbear
     "E",    # pycodestyle
@@ -146,7 +155,6 @@ lint.ignore = [
     "PLE0604", # allow __all__ to be nested but still all elements are strings
 ]
 extend-exclude = [
-    "roboverse_learn",
     "wandb",
     "third_party",
     "tmp",
@@ -164,25 +172,40 @@ extend-exclude = [
 license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
 
 [tool.setuptools.packages.find]
-include = ["roboverse_pack", "roboverse_pack.*", "roboverse_learn", "roboverse_learn.*", "scripts", "scripts.*"]
+include = ["roboverse_pack", "roboverse_pack.*", "roboverse_learn", "roboverse_learn.*"]
 exclude = ["metasim", "metasim.*"]
 namespaces = true
 
 [tool.setuptools.package-data]
-# "**/LICENSE*" keeps the upstream license text next to the vendored code it covers (MIT and
-# BSD-3 require the notice to travel with the copy).
-roboverse_pack = ["**/*.md", "**/*.mdl", "**/*.urdf", "**/*.usd", "**/*.xml", "**/*.yaml", "**/*.hdr", "**/LICENSE*"]
+# "**/LICENSE*" keeps the upstream license text next to the vendored code it covers.
 roboverse_learn = ["**/LICENSE*"]
-scripts = ["**/LICENSE*"]
+roboverse_pack = [
+    "**/LICENSE*",
+    "**/*.md",
+    "**/*.mdl",
+    "**/*.urdf",
+    "**/*.usd",
+    "**/*.xml",
+    "**/*.yaml",
+    "**/*.hdr",
+    "**/*.json",  # LIBERO native bundles + task metadata
+    "**/*.npz",  # LIBERO native_bundles_plus initial states
+]
 
 [tool.ruff.lint.per-file-ignores]
 ## For normal scripts, allow print statements, allow no docstrings
 "scripts/**.py" = ["T20", "D"]
+# roboverse_learn was excluded from ruff entirely until 2026-09; it now runs with the same F/E/I
+# rules as the rest of the tree. The style families below are tracked debt for this directory
+# (505 findings at inclusion time): remove a code from this list when its findings are fixed.
+"roboverse_learn/**.py" = ["D", "T20", "FA100", "UP006", "UP007", "UP035", "UP045", "E731", "B006", "RUF007", "RUF013", "F811"]
+"roboverse_learn/vla/pi0/train_config_snippet.py" = ["F821"]  # paste-in snippet for an openpi config, not a module
 "tools/**.py" = ["T20", "D"]  # research / diagnostic harnesses
-"roboverse_pack/tasks/open6dor/utils/**.py" = ["T20", "D"]
 "roboverse_pack/tasks/maniskill/utils/**.py" = ["T20", "D"]
 ## For get_started scripts, allow no docstrings
 "get_started/**.py" = ["D"]
+"generation/enums.py" = ["UP035"]
+"roboverse_pack/tasks/humanoid/base/types.py" = ["UP007"]
 ## For special tasks, allow no docstrings
 "roboverse_pack/tasks/maniskill/{pick_single_egad,pick_single_ycb,peg_insertion_side}.py" = ["D"]
 "roboverse_pack/tasks/open6dor/task/**.py" = ["D"]
@@ -194,23 +217,14 @@ scripts = ["**/LICENSE*"]
 ## For tasks, allow no docstrings in public modules
 "roboverse_pack/tasks/**/*.py" = ["D100"]
 ## For roboverse_learn, allow no docstrings, allow print
-"roboverse_learn/**.py" = ["D", "T20"]
 ## Temporary disable linting for quick testing
 "roboverse_pack/robots/**.py" = ["D"]  # FIXME: whoever in charge of the robot add docstring and remove this
 "roboverse_pack/scenes/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"roboverse_pack/tasks/arnold/**.py" = ["D"]  # FIXME: Steven add docstring and remove this
 "roboverse_pack/tasks/calvin/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"roboverse_pack/tasks/debug/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"roboverse_pack/tasks/dmcontrol/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"roboverse_pack/tasks/fetch/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"roboverse_pack/tasks/gapartnet/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"roboverse_pack/tasks/isaacgym_envs/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
 "roboverse_pack/tasks/libero/**.py" = ["D"]  # FIXME: Peihao add docstring and remove this
-"roboverse_pack/tasks/open6dor/**.py" = ["D"]  # FIXME: Haoran and Yufei add docstring and remove this
 "roboverse_pack/tasks/rlbench/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
 "roboverse_pack/tasks/robosuite/**.py" = ["D"]  # FIXME: Jiangran add docstring and remove this
 "roboverse_pack/tasks/simpler_env/**.py" = ["D"]  # FIXME: Boshi add docstring and remove this
-"roboverse_pack/tasks/skillblender/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
 "roboverse_pack/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
 
 [tool.ruff.lint.isort]
@@ -224,4 +238,6 @@ convention = "google"
 testpaths = ["tests"]
 markers = [
     "general: lightweight test that needs no simulator backend",
+    "requires_optional(*modules, extra=None): skip unless the optional dependencies are installed",
+    "requires_asset(*relpaths): skip unless the roboverse_data assets are present",
 ]

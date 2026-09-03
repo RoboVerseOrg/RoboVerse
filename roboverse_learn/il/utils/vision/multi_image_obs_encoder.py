@@ -1,11 +1,12 @@
 import copy
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple
 
 import torch
 import torch.nn as nn
 import torchvision
-from roboverse_learn.il.utils.pytorch_util import dict_apply, replace_submodules
+
 from roboverse_learn.il.utils.module_attr_mixin import ModuleAttrMixin
+from roboverse_learn.il.utils.pytorch_util import replace_submodules
 from roboverse_learn.il.utils.vision.crop_randomizer import CropRandomizer
 
 
@@ -13,9 +14,9 @@ class MultiImageObsEncoder(ModuleAttrMixin):
     def __init__(
         self,
         shape_meta: dict,
-        rgb_model: Union[nn.Module, Dict[str, nn.Module]],
-        resize_shape: Union[Tuple[int, int], Dict[str, tuple], None] = None,
-        crop_shape: Union[Tuple[int, int], Dict[str, tuple], None] = None,
+        rgb_model: nn.Module | Dict[str, nn.Module],
+        resize_shape: Tuple[int, int] | Dict[str, tuple] | None = None,
+        crop_shape: Tuple[int, int] | Dict[str, tuple] | None = None,
         random_crop: bool = True,
         # replace BatchNorm with GroupNorm
         use_group_norm: bool = False,

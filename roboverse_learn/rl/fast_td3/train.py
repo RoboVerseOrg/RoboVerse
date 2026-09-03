@@ -9,36 +9,65 @@
 # Full license: roboverse_learn/rl/fast_td3/LICENSE
 from __future__ import annotations
 
+import argparse
 import os
 import random
 import sys
 import time
 from typing import Any
+
 import yaml
-import argparse
+
+
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge ``override`` onto ``base``; ``override`` wins on key conflicts."""
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
 
 def load_config(config_path: str) -> dict[str, Any]:
-    """Load configuration from YAML file."""
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+    """Load a FastTD3 YAML config, layered on top of ``configs/base.yaml``.
+
+    Every task config inherits from ``base.yaml`` (task keys override the base defaults), so a
+    per-task file only needs to declare what differs. ``base.yaml`` itself loads unchanged.
+    """
+    with open(config_path) as f:
+        config = yaml.safe_load(f) or {}
+
+    base_path = os.path.join(os.path.dirname(os.path.abspath(config_path)), "base.yaml")
+    if os.path.abspath(config_path) != base_path and os.path.exists(base_path):
+        with open(base_path) as f:
+            base_config = yaml.safe_load(f) or {}
+        config = _deep_merge(base_config, config)
     return config
+
 
 def get_config():
     """Get configuration with command line argument support."""
-    parser = argparse.ArgumentParser(description='FastTD3 Training')
-    parser.add_argument('--config', type=str, default='track.yaml',
-                       help='YAML configuration file name (will be loaded from configs/ directory)')
+    parser = argparse.ArgumentParser(description="FastTD3 Training")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="track.yaml",
+        help="YAML configuration file name (will be loaded from configs/ directory)",
+    )
     args = parser.parse_args()
 
     # Get the directory of the current script
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    configs_dir = os.path.join(script_dir, 'configs')
+    configs_dir = os.path.join(script_dir, "configs")
     config_path = os.path.join(configs_dir, args.config)
 
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
     return load_config(config_path)
+
 
 # Load configuration
 CONFIG = get_config()
@@ -68,6 +97,7 @@ import torch
 torch.set_float32_matmul_precision("high")
 
 import inspect
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -77,10 +107,10 @@ from tensordict import TensorDict
 from torch import optim
 from torch.amp import GradScaler, autocast
 
-from roboverse_learn.rl.fast_td3.fttd3_module import Actor, Critic, EmpiricalNormalization, SimpleReplayBuffer
 from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
 from roboverse_learn.rl.episode_tracker import EpisodeTracker
+from roboverse_learn.rl.fast_td3.fttd3_module import Actor, Critic, EmpiricalNormalization, SimpleReplayBuffer
 
 
 def cpu_state(state_dict):
@@ -112,14 +142,10 @@ def save_params(
         "qnet_state_dict": cpu_state(get_ddp_state_dict(qnet)),
         "qnet_target_state_dict": cpu_state(get_ddp_state_dict(qnet_target)),
         "obs_normalizer_state": (
-            cpu_state(obs_normalizer.state_dict())
-            if hasattr(obs_normalizer, "state_dict")
-            else None
+            cpu_state(obs_normalizer.state_dict()) if hasattr(obs_normalizer, "state_dict") else None
         ),
         "critic_obs_normalizer_state": (
-            cpu_state(critic_obs_normalizer.state_dict())
-            if hasattr(critic_obs_normalizer, "state_dict")
-            else None
+            cpu_state(critic_obs_normalizer.state_dict()) if hasattr(critic_obs_normalizer, "state_dict") else None
         ),
         "config": config,  # Save configuration
         "global_step": global_step,
@@ -149,6 +175,7 @@ def main() -> None:
     # Import wandb if enabled
     if cfg("use_wandb"):
         import wandb
+
         if cfg("train_or_eval") == "train":
             wandb.init(
                 project=cfg("wandb_project", "fttd3_training"),
@@ -192,6 +219,7 @@ def main() -> None:
     if not cfg("headless"):
         try:
             from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
+
             envs = TaskViserWrapper(envs)
         except ImportError:
             log.warning("Viser not available, skipping visualization wrapper")
@@ -526,7 +554,7 @@ def main() -> None:
                     if global_step % cfg("policy_frequency") == 0:
                         logs_dict = update_pol(data, logs_dict)
 
-                for param, target_param in zip(qnet.parameters(), qnet_target.parameters()):
+                for param, target_param in zip(qnet.parameters(), qnet_target.parameters(), strict=False):
                     target_param.data.copy_(cfg("tau") * param.data + (1 - cfg("tau")) * target_param.data)
             # Restore training mode so the next rollout's normalize_obs updates stats.
             obs_normalizer.train()

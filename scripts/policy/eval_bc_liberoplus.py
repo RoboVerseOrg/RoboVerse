@@ -67,14 +67,19 @@ def _act(policy, obs, p_mean, p_std):
 
 
 def _check_success(env) -> bool:
+    """Task success from the env's own checker.
+
+    An error (or a missing checker) is **not** a failed episode: swallowing it into
+    ``False`` silently reports a 0% success rate for a policy that may be fine, and --
+    when both sides of a parity check do it -- makes two broken envs agree. Fail loudly.
+    """
     for attr in ("_check_success", "check_success"):
         fn = getattr(env.env, attr, None) or getattr(env, attr, None)
         if fn is not None:
-            try:
-                return bool(fn())
-            except Exception:
-                return False
-    return False
+            return bool(fn())
+    raise RuntimeError(
+        f"{type(env).__name__} exposes no _check_success()/check_success(); success cannot be evaluated."
+    )
 
 
 def _init_obs(env, init_state):
@@ -178,7 +183,7 @@ def run(ckpt, suite, base, episodes, max_steps, exec_horizon):
     en = _native_env(suite, tid, 0)
     _, _, tn = _rollout(en, inits[0], policy, p_mean, p_std, max_steps=60, exec_horizon=exec_horizon, record=True)
     en.close()
-    dev = max((float(np.abs(a - b).max()) for a, b in zip(tp, tn)), default=float("nan"))
+    dev = max((float(np.abs(a - b).max()) for a, b in zip(tp, tn, strict=False)), default=float("nan"))
     print(f"\npassthrough == native under the policy: state max|Δ| over {min(len(tp), len(tn))} steps = {dev:.2e}")
     print("(deterministic policy + deterministic env -> bitwise identical eval through the passthrough)")
     return 0

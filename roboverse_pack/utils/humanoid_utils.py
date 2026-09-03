@@ -4,8 +4,8 @@ import argparse
 import os
 import random
 import re
+from collections.abc import Callable
 from functools import lru_cache
-from typing import Callable
 
 import numpy as np
 import torch

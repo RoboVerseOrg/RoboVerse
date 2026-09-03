@@ -1,5 +1,5 @@
 import torch.nn as nn
-import torch.nn.functional as F
+
 from roboverse_learn.il.utils.models.layers import Mlp
 
 
@@ -42,7 +42,7 @@ class CNNActionEncoder(nn.Module):
 
         self.encoder = nn.Sequential(*layers)
 
-        conv_output_length = pred_horizon // (2 ** num_layers)
+        conv_output_length = pred_horizon // (2**num_layers)
         conv_output_dim = hidden_dim * conv_output_length
 
         self.latent_proj = nn.Linear(conv_output_dim, latent_dim)
@@ -86,7 +86,7 @@ class SimpleActionDecoder(nn.Module):
                     out_features=dec_hidden_dim,
                     norm_layer=None,
                     bias=True,
-                    drop=dropout
+                    drop=dropout,
                 )
             )
 

@@ -154,7 +154,7 @@ def _agent_slice(traj, articulation: str, agent_name: str) -> dict:
             agent_name: {
                 "pos": art[i, :3].tolist(),
                 "rot": art[i, _POSE_QUAT_SLICE].tolist(),  # wxyz
-                "dof_pos": dict(zip(PANDA_JOINTS, qpos.tolist())),
+                "dof_pos": dict(zip(PANDA_JOINTS, qpos.tolist(), strict=False)),
             }
         }
         for name, rows in objs.items():
@@ -164,7 +164,10 @@ def _agent_slice(traj, articulation: str, agent_name: str) -> dict:
     states = [frame_state(i) for i in range(n_frames)]
     # Action target at step t is the next recorded joint pose (state replay's
     # action-space twin); the loader merges these into per-step {robot: action}.
-    actions = [{"dof_pos_target": dict(zip(PANDA_JOINTS, art[i, _QPOS_SLICE].tolist()))} for i in range(1, n_frames)]
+    actions = [
+        {"dof_pos_target": dict(zip(PANDA_JOINTS, art[i, _QPOS_SLICE].tolist(), strict=False))}
+        for i in range(1, n_frames)
+    ]
     return {"init_state": states[0], "actions": actions, "states": states}
 
 

@@ -26,17 +26,16 @@ from rich.logging import RichHandler
 rootutils.setup_root(__file__, pythonpath=True)
 log.configure(handlers=[{"sink": RichHandler(), "format": "{message}"}])
 
-from metasim.utils.kinematics import get_curobo_models
 from metasim.task.registry import get_task_class
 
 # Try to import randomization components
 try:
     from metasim.randomization import DomainRandomizationManager, DRConfig
+
     RANDOMIZATION_AVAILABLE = True
 except ImportError as e:
     log.warning(f"Domain randomization not available: {e}")
     RANDOMIZATION_AVAILABLE = False
-
 
 
 def images_to_video(images, video_path, frame_size=(1920, 1080), fps=30):
@@ -191,20 +190,20 @@ def parse_args():
         type=int,
         default=0,
         choices=[0, 1, 2, 3],
-        help="Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera"
+        help="Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera",
     )
     parser.add_argument(
         "--scene_mode",
         type=int,
         default=0,
         choices=[0, 1, 2, 3],
-        help="Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD"
+        help="Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD",
     )
     parser.add_argument(
         "--randomization_seed",
         type=int,
         default=None,
-        help="Seed for reproducible randomization. If None, uses random seed"
+        help="Seed for reproducible randomization. If None, uses random seed",
     )
 
     args = parser.parse_args()
@@ -255,7 +254,7 @@ def main():
 
     # Lighting setup (same logic as collect_demo.py)
     # Determine intensity based on render mode (if available)
-    render_mode = getattr(args, 'render_mode', 'raytracing')
+    render_mode = getattr(args, "render_mode", "raytracing")
     if render_mode == "pathtracing":
         ceiling_main = 18000.0
         ceiling_corners = 8000.0
@@ -292,7 +291,7 @@ def main():
         num_envs=args.num_envs,
         headless=args.headless,
         lights=lights,
-        cameras=[camera]
+        cameras=[camera],
     )
 
     tic = time.time()
@@ -304,9 +303,7 @@ def main():
 
     ## Data
     tic = time.time()
-    assert os.path.exists(env.traj_filepath), (
-        f"Trajectory file: {env.traj_filepath} does not exist."
-    )
+    assert os.path.exists(env.traj_filepath), f"Trajectory file: {env.traj_filepath} does not exist."
     init_states, all_actions, all_states = get_traj(env.traj_filepath, robot, env.handler)
     toc = time.time()
     log.trace(f"Time to load data: {toc - tic:.2f}s")
@@ -317,10 +314,11 @@ def main():
         raise ImportError("Domain Randomization not available. Please check installation.")
 
     # Determine render mode from args
-    render_mode = getattr(args, 'render_mode', 'raytracing')
+    render_mode = getattr(args, "render_mode", "raytracing")
 
     # Create render config for DR
     from dataclasses import dataclass
+
     @dataclass
     class SimpleRenderCfg:
         mode: str = render_mode
@@ -334,7 +332,7 @@ def main():
         scenario=scenario,
         handler=env.handler,
         init_states=init_states,
-        render_cfg=SimpleRenderCfg(mode=render_mode)
+        render_cfg=SimpleRenderCfg(mode=render_mode),
     )
 
     if args.algo == "act":
@@ -383,9 +381,8 @@ def main():
             stats = pickle.load(f)
 
         def pre_process(s_qpos):
-           # return (s_qpos - stats["qpos_mean"]) / stats["qpos_std"]
+            # return (s_qpos - stats["qpos_mean"]) / stats["qpos_std"]
             return (s_qpos - stats["state_mean"]) / stats["state_std"]
-
 
         def post_process(a):
             return a * stats["action_std"] + stats["action_mean"]
@@ -451,15 +448,15 @@ def main():
                 # log.debug(f"Step {step}")
                 robot_joint_limits = scenario.robots[0].joint_limits
 
-                image_list.append(np.array(obs.cameras['camera'].rgb.cpu())[0])
+                image_list.append(np.array(obs.cameras["camera"].rgb.cpu())[0])
 
-                qpos_numpy = np.array(obs.robots['franka'].joint_pos.cpu())
+                qpos_numpy = np.array(obs.robots["franka"].joint_pos.cpu())
                 # qpos_numpy = np.array(obs["joint_qpos"])
                 qpos = pre_process(qpos_numpy)
                 # qpos = np.concatenate([qpos, np.zeros((qpos.shape[0], 14 - qpos.shape[1]))], axis=1)
                 qpos = torch.from_numpy(qpos).float().cuda()
                 qpos_history[:, step] = qpos
-                curr_image = np.array(obs.cameras['camera'].rgb.cpu()).transpose(0, 3, 1, 2)
+                curr_image = np.array(obs.cameras["camera"].rgb.cpu()).transpose(0, 3, 1, 2)
                 # cur_image = np.stack([curr_image, curr_image], axis=0)
                 curr_image = torch.from_numpy(curr_image / 255.0).float().cuda().unsqueeze(0)
                 # breakpoint()
@@ -489,10 +486,12 @@ def main():
                 reorder_idx = env.handler.get_joint_reindex(args.robot)
                 inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
                 actions = action[inverse_reorder_idx]
-                inner_actions = {"dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), actions))}
+                inner_actions = {
+                    "dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), actions, strict=False))
+                }
                 # Format: actions[env_id][robot_name][action_type]
                 actions = [{"franka": inner_actions}]
-                #log.debug(f"Actions: {actions}")
+                # log.debug(f"Actions: {actions}")
                 # log.debug(f"Action: {actions}")
                 obs, reward, success, time_out, extras = env.step(actions)
                 env.handler.refresh_render()

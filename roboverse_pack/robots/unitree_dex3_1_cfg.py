@@ -26,7 +26,7 @@ class UnitreeDex31LeftCfg(RobotCfg):
     }
 
     joint_limits: dict[str, tuple[float, float]] = {
-        "left_hand_thumb_0_joint": (-1.04, -1.04),
+        "left_hand_thumb_0_joint": (-1.04, 1.04),
         "left_hand_thumb_1_joint": (-0.72, 0.92),
         "left_hand_thumb_2_joint": (0.0, 1.74),
         "left_hand_middle_0_joint": (-1.57, 0.0),

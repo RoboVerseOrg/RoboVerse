@@ -190,8 +190,9 @@ if __name__ == "__main__":
         env = task_cls(scenario=scenario)
         obs0 = env.handler.get_states(mode="dict")
 
-        base_dir = f"/home/dyz/RoboVerse/roboverse_pack/tasks/calvin/data_preparation/{env_files}/"
-        base_dir_o = f"/home/dyz/RoboVerse/roboverse_pack/tasks/calvin/data_preparation/{env_files}_out/"
+        _here = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.join(_here, env_files) + os.sep
+        base_dir_o = os.path.join(_here, f"{env_files}_out") + os.sep
         if not os.path.isdir(base_dir):
             continue
         files = os.listdir(base_dir)
@@ -227,11 +228,8 @@ if __name__ == "__main__":
 
                 env.reset(init_state)
                 reset_state = env.handler.get_states(mode="dict")
-                # import ipdb; ipdb.set_trace()
 
                 init_state = reset_state[0]["objects"]
-
-                # import ipdb; ipdb.set_trace()
 
                 actions_seg = act_all[start : end - 1]
 

@@ -123,7 +123,10 @@ def rollout(
     return mean_ep_r, ep_count.sum().item(), mean_step_r, mean_step_r / step_dt
 
 
-if __name__ == "__main__":
+def main() -> int:
+    """Roll the checkpoint out on each backend. A sim that fails to run is not a result:
+    it makes the cross-sim comparison unevaluable, so the exit status must reflect it.
+    """
     p = argparse.ArgumentParser()
     p.add_argument("--task", default="mjlab.cartpole_balance_v2")
     p.add_argument("--robot", default="mjlab_cartpole")
@@ -132,6 +135,7 @@ if __name__ == "__main__":
     args = p.parse_args()
 
     print(f"=== {args.task} cross-sim eval (ckpt={Path(args.ckpt).name}) ===")
+    failed = []
     for sim, n_envs in [("mujoco", 1), ("newton", 16)]:
         try:
             ep_r, n_eps, step_r, step_r_raw = rollout(
@@ -146,3 +150,12 @@ if __name__ == "__main__":
 
             traceback.print_exc()
             print(f"  {sim:8s}: FAIL {type(e).__name__}: {str(e)[:120]}")
+            failed.append(sim)
+    if failed:
+        print(f"RESULT: ERROR — {', '.join(failed)} did not run; there is no cross-sim comparison.")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

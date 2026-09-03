@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import pickle
 from pathlib import Path
 
@@ -174,7 +175,10 @@ def test_prepare_script_stages_all_assets(tmp_path):
     produces robot MJCF + object MJCFs + the staged traj at the expected
     paths. Uses a synthetic ``--repo-root`` so we don't disturb the
     real ``roboverse_data/`` tree."""
-    bundle = Path("/home/ghr/projects/RoboVerse/box_task_replay_render_bundle_clean")
+    bundle_env = os.environ.get("BOX_TASK_REPLAY_BUNDLE")
+    if not bundle_env:
+        pytest.skip("set $BOX_TASK_REPLAY_BUNDLE to the upstream box_task_replay_render_bundle_clean dir")
+    bundle = Path(bundle_env)
     if not bundle.exists():
         pytest.skip(f"upstream bundle not present at {bundle}")
 

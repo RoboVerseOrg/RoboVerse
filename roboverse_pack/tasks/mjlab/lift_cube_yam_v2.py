@@ -47,7 +47,7 @@ from roboverse_learn.managers import (
     RewTerm,
 )
 
-from ._locator import mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset
 from ._mjcf_patch import YAM_KP, patch_mjcf_add_cube_and_table, patch_mjcf_with_pd_actuators
 from .mdp import (
     SceneEntityCfg,
@@ -324,7 +324,8 @@ class LiftCubeYamEnvCfg(ManagerBasedRVEnvCfg):
 
 
 class _YamTaskBase(ManagerBasedRVEnv):
-    scenario = _yam_scenario()
+    supported_simulators = ("mujoco", "newton")
+    scenario = lazy_scenario(_yam_scenario)
     _env_cfg_cls: type = LiftCubeYamEnvCfg  # subclasses override to swap cfg
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:

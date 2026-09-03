@@ -115,7 +115,7 @@ def test_passthrough_matches_native_bitwise():
     fw = rollout(wrapped, acts)
     wrapped.close()
 
-    for (on, rn, tn, un, sn), (ow, rw, tw, uw, sw) in zip(fn, fw):
+    for (on, rn, tn, un, sn), (ow, rw, tw, uw, sw) in zip(fn, fw, strict=False):
         assert set(on) == set(ow)
         for k in on:
             assert np.array_equal(on[k], ow[k]), f"obs mismatch at {k}"
@@ -232,5 +232,5 @@ def test_closed_loop_policy_parity_native_vs_passthrough():
     fw = rollout(wrapped)
 
     assert len(fn) == len(fw), f"trajectory length differs: {len(fn)} vs {len(fw)}"
-    for i, (a, b) in enumerate(zip(fn, fw)):
+    for i, (a, b) in enumerate(zip(fn, fw, strict=False)):
         assert a == b, f"closed-loop divergence at step {i}: {a} != {b}"

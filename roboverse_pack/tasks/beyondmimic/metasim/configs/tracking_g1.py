@@ -7,8 +7,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import MISSING
-from typing import Callable
 
 from metasim.utils import configclass
 from roboverse_pack.tasks.beyondmimic.metasim.configs.cfg_randomizers import MassRandomizer, MaterialRandomizer

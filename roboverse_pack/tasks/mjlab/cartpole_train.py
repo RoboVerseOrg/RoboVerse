@@ -43,7 +43,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
 
-from ._locator import mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset
 from .cartpole import _CARTPOLE_XML  # path string
 
 # dm_control tolerance defaults: value_at_margin = 0.1
@@ -84,7 +84,7 @@ def _cartpole_scenario() -> ScenarioCfg:
 class _MjlabCartpoleTrainBase(BaseTaskEnv):
     """Shared training scaffold for balance + swingup."""
 
-    scenario = _cartpole_scenario()
+    scenario = lazy_scenario(lambda: _cartpole_scenario())
     # mjlab default: episode_length_s = 50s, control_dt = 0.05s (dt 0.01 * decim 5)
     max_episode_steps = 1000
     _hinge_init: float = 0.0  # 0 for balance, math.pi for swingup

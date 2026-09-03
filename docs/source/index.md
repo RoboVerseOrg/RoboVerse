@@ -17,7 +17,7 @@
 
 **RoboVerse** is the dataset, benchmark, task-pack, asset, and learning layer of the RoboVerse ecosystem.
 It builds the downstream `roboverse-py` package and depends on the standalone
-[MetaSim](https://github.com/RoboVerseOrg/MetaSim) simulator framework.
+[MetaSim](https://github.com/RoboVerseOrg/RoboVerse/tree/main/packages/metasim) simulator framework.
 
 Use the ecosystem landing page at <a href="/roboverse/">/roboverse/</a> for RoboVerse docs and
 <a href="/metasim/">/metasim/</a> for MetaSim docs.

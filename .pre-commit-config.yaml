@@ -7,7 +7,7 @@ repos:
     -   id: end-of-file-fixer
         exclude: '(^third_party|.*\.md|.*\.rst)'
     -   id: check-added-large-files
-        exclude: '^metasim/data/'
+        exclude: '^(docs/source/_static/|packages/metasim/metasim/data/)'  # tutorial videos / MetaSim example assets (tracked debt: move to a CDN)
     -   id: debug-statements  # check for debugger imports or `breakpoint()`
         exclude: '^roboverse_learn/'
     -   id: check-yaml

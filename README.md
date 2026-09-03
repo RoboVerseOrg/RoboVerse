@@ -22,19 +22,21 @@
 
 ## 🚀 Getting Started
 
-RoboVerse now installs as the downstream `roboverse-py` package. The core `metasim` Python package is resolved from the standalone [MetaSim repository](https://github.com/RoboVerseOrg/MetaSim), while this repository provides RoboVerse tasks, robots, scenes, assets, learning code, and examples.
+This repository contains both layers of RoboVerse: the simulation core **MetaSim** (`packages/metasim`, package `roboverse-metasim`, import `metasim`) and the content, learning code and examples (`roboverse-py`, repo root). Both are released together from one tag.
 
 ```bash
 git clone https://github.com/RoboVerseOrg/RoboVerse.git
 cd RoboVerse
-python -m pip install -e ".[mujoco]"
+python -m pip install -e "packages/metasim[mujoco]" -e ".[mujoco]"   # MetaSim first, then RoboVerse
 ```
 
 For development:
 
 ```bash
-python -m pip install -e ".[dev,mujoco]"
+python -m pip install -e "packages/metasim[dev,examples,mujoco]" -e ".[dev,mujoco]"
 ```
+
+Repository layout: `packages/metasim/` — simulator handlers, scenario config, task registry (its own `AGENTS.md`, `CHANGELOG.md`, tests); `roboverse_pack/` — tasks, robots, scenes; `roboverse_learn/` — RL/IL/VLA; `get_started/` — tutorials; `docs/` — the wiki.
 
 Please refer to the [documentation](https://roboverse.wiki/metasim/) for simulator-specific installation details.
 
@@ -52,7 +54,7 @@ You can also upvote the requests you find most relevant or important. We'll prio
 
 The RoboVerse source code is licensed under the Apache License 2.0.
 
-The MetaSim core package is maintained separately in [RoboVerseOrg/MetaSim](https://github.com/RoboVerseOrg/MetaSim).
+The MetaSim core package lives in this repository under [`packages/metasim`](packages/metasim) and is published as `roboverse-metasim`.
 
 RoboVerse makes use of the following simulation frameworks, renderers, and libraries:
 - [Isaac Lab](https://github.com/isaac-sim/IsaacLab), which is built on top of [Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)

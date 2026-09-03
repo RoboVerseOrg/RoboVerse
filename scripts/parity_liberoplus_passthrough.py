@@ -135,14 +135,31 @@ def _compare(traj_a: list[dict], traj_b: list[dict]) -> tuple[float, float, floa
     ``agentview_image`` with *unseeded* upstream RNG (stochastic per run), and
     headless EGL has rare ±1 framebuffer rounding -- neither is a passthrough or
     physics difference.
+
+    The obs key sets must be **equal**. Comparing only their intersection would let a
+    passthrough that returns ``{}`` -- or that silently drops a key -- score a perfect
+    bitwise parity over zero compared keys. A missing key is a failure, not an
+    unexamined key, so any structural mismatch raises rather than scoring Δ=0.
     """
+    if len(traj_a) != len(traj_b):
+        raise RuntimeError(f"rollout length mismatch: {len(traj_a)} vs {len(traj_b)} steps")
+    if not traj_a:
+        raise RuntimeError("empty rollout: nothing was compared, so this is not parity")
     dev_state = dev_img = dev_rew = 0.0
     done_match = True
-    for sa, sb in zip(traj_a, traj_b):
-        for k in sorted(set(sa["obs"]) & set(sb["obs"])):
+    for i, (sa, sb) in enumerate(zip(traj_a, traj_b, strict=False)):
+        ka, kb = set(sa["obs"]), set(sb["obs"])
+        if ka != kb:
+            raise RuntimeError(
+                f"step {i}: observation key sets differ -- passthrough-only={sorted(ka - kb)}, "
+                f"native-only={sorted(kb - ka)}"
+            )
+        if not any(not _is_image_key(k) for k in ka):
+            raise RuntimeError(f"step {i}: no non-image observation keys to compare -- nothing would be verified")
+        for k in sorted(ka):
             va, vb = sa["obs"][k], sb["obs"][k]
             if va.shape != vb.shape:
-                return float("inf"), float("inf"), float("inf"), False
+                raise RuntimeError(f"step {i}: obs[{k!r}] shape {va.shape} != {vb.shape}")
             d = float(np.abs(va.astype(np.float64) - vb.astype(np.float64)).max())
             if _is_image_key(k):
                 dev_img = max(dev_img, d)
@@ -155,6 +172,10 @@ def _compare(traj_a: list[dict], traj_b: list[dict]) -> tuple[float, float, floa
 
 def run(per_dim: int, steps: int, seed: int) -> int:
     samples = _sample_tasks(per_dim)
+    if not samples:
+        raise RuntimeError("no tasks sampled: a run that checks 0 tasks proves nothing and is not a PASS")
+    if steps <= 0:
+        raise RuntimeError("steps must be >= 1: a run that takes 0 steps proves nothing and is not a PASS")
     acts = _action_sequence(steps, seed=seed)
     print(f"# LIBERO-plus passthrough 1:1 parity — {len(samples)} sampled tasks, {steps} steps each")
     print("# state/reward/done must be bitwise (Δ=0); image bucketed (noise=stochastic upstream)\n")

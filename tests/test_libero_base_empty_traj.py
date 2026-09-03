@@ -6,16 +6,20 @@ The previous _get_initial_states unconditionally indexed and divided by
 The reset() ordering was also flipped relative to checker init.
 
 These tests stub out get_traj and BaseTaskEnv to test the
-LiberoBaseTask methods in isolation.
+LiberoBaseTask methods in isolation. Because the BaseTaskEnv.reset stubs
+below must mirror core's real signature, ``test_reset_signature_matches_base_task_env``
+pins it — a stub that drifts out of sync stops checking anything.
 """
 
 from __future__ import annotations
 
+import inspect
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
+from metasim.task.base import BaseTaskEnv
 from roboverse_pack.tasks.libero.libero_base import LiberoBaseTask
 
 
@@ -91,11 +95,27 @@ def test_get_initial_states_truncates_when_more_states_than_envs(monkeypatch):
 
 
 @pytest.mark.general
+def test_reset_signature_matches_base_task_env():
+    """``LiberoBaseTask.reset`` must keep accepting exactly what ``BaseTaskEnv.reset`` does.
+
+    The reset-ordering tests below monkeypatch ``BaseTaskEnv.reset`` with a stub. When core
+    grew a ``seed`` parameter, ``LiberoBaseTask.reset`` was updated to forward it but the
+    stubs were not, so they silently went stale and the ordering guarantee stopped being
+    checked. Pin the signature at the seam so that divergence fails loudly and points here.
+    """
+    base_params = list(inspect.signature(BaseTaskEnv.reset).parameters)
+    assert base_params == ["self", "states", "env_ids", "seed"]
+    assert list(inspect.signature(LiberoBaseTask.reset).parameters) == base_params
+
+
+@pytest.mark.general
 def test_reset_calls_checker_reset_before_super(monkeypatch):
     """checker.reset must run before super().reset so the latter's
-    callbacks see fresh checker state."""
+    callbacks see fresh checker state, and reset() must forward every
+    argument (including ``seed``) on to super()."""
     task = _instance_without_init(num_envs=1)
     order = []
+    forwarded = {}
 
     def _checker_reset(*a, **k):
         order.append("checker")
@@ -103,18 +123,19 @@ def test_reset_calls_checker_reset_before_super(monkeypatch):
     task.checker = MagicMock()
     task.checker.reset = _checker_reset
 
-    # Patch super().reset to record ordering.
-    from metasim.task.base import BaseTaskEnv
-
-    def _super_reset(self, states=None, env_ids=None):
+    # Patch super().reset to record ordering and the arguments it received.
+    def _super_reset(self, states=None, env_ids=None, seed=None):
         order.append("super")
+        forwarded.update(states=states, env_ids=env_ids, seed=seed)
         return "sentinel"
 
     monkeypatch.setattr(BaseTaskEnv, "reset", _super_reset)
 
-    result = task.reset(env_ids=[0])
+    result = task.reset(env_ids=[0], seed=7)
     assert result == "sentinel"
     assert order == ["checker", "super"]
+    # seed must reach BaseTaskEnv.reset, or the env.reset(seed=) contract dies here.
+    assert forwarded == {"states": None, "env_ids": [0], "seed": 7}
 
 
 @pytest.mark.general
@@ -124,8 +145,6 @@ def test_reset_tolerates_missing_checker(monkeypatch):
     task = _instance_without_init(num_envs=1)
     task.checker = None
 
-    from metasim.task.base import BaseTaskEnv
-
-    monkeypatch.setattr(BaseTaskEnv, "reset", lambda self, states=None, env_ids=None: "ok")
+    monkeypatch.setattr(BaseTaskEnv, "reset", lambda self, states=None, env_ids=None, seed=None: "ok")
 
     assert task.reset(env_ids=[0]) == "ok"

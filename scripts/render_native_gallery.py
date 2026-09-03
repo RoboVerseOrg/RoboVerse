@@ -23,7 +23,8 @@ import sys
 
 import numpy as np
 
-RV = "/home/ghr/projects/RoboVerse/RoboVerse-simpler/roboverse_data"
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RV = os.environ.get("ROBOVERSE_DATA_DIR", os.path.join(_REPO_ROOT, "roboverse_data"))
 RVA = f"{RV}/assets/simpler_env"
 URDF_G = f"{RV}/robots/google_robot/urdf/google_robot_meta_sim_fix_wheel_fix_fingertip.urdf"
 URDF_W = f"{RV}/robots/widowx/widowx_description/wx250s.urdf"

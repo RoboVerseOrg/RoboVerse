@@ -1,0 +1,183 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "roboverse-metasim"  # PyPI name; the import name stays `metasim` (`metasim` on PyPI is an unrelated project)
+version = "1.0.0b0"  # lockstep with roboverse-py (one tag releases both packages)
+description = "MetaSim: A unified simulation framework for robotics"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { file = "LICENSE" }
+dependencies = [
+    "defusedxml",
+    "gymnasium",
+    "huggingface-hub",
+    "imageio[ffmpeg]",
+    "loguru",
+    "numpy",
+    "numpy-quaternion",
+    "opencv-python>=4.11,<4.12",
+    "pillow",
+    "portalocker",
+    "pyyaml",
+    "scipy",
+    "tomli; python_version < '3.11'",
+    "torch",
+    "torchvision",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+examples = ["rich", "rootutils", "tyro"]
+teleop = ["pygame"]
+visualization = ["rerun-sdk", "trimesh", "viser", "yourdfpy"]
+# Simulator extras are intended for the per-simulator Python environments documented in
+# docs/source/get_started/installation.rst, not as an arbitrary co-installable matrix.
+isaacsim = [
+    "torch==2.7.0+cu128",
+    "torchvision==0.22.0+cu128",
+    "isaacsim[all,extscache]==5.0.0",
+]
+isaacsim211 = [
+    "torch==2.5.1+cu118",
+    "torchvision==0.20.1+cu118",
+    "isaacsim[all,extscache]==4.5.0",
+]
+isaacgym = [
+    "numpy<2",
+    "fsspec<=2025.3.0",  # fsspec==2025.3.1 has bug with python 3.8
+]
+mujoco = ["mujoco", "dm-control"]
+mjx = ["torch==2.7.0", "mujoco-mjx>=3.2.7", "dm-control", "jax[cuda]==0.6.0"]
+sapien2 = ["mani-skill2==0.5.3"]
+sapien3 = ["sapien>=3.0.0.b1"]
+pybullet = ["numpy<2", "pybullet"]
+genesis = [
+    "genesis-world",
+    "libigl==2.5.1",  # for genesis 0.2.1, see https://github.com/Genesis-Embodied-AI/Genesis/issues/1156#issuecomment-3069006079
+    "open3d",
+
+]
+blender = ["bpy"]
+# SuperDex (Meta Mochi engine) publishes Python >= 3.12 wheels only; on older interpreters this extra
+# installs just the helpers and `metasim.sim.superdex` raises an actionable ImportError.
+superdex = [
+    "superdex-physics; python_version >= '3.12'",
+    "superdex-robotics; python_version >= '3.12'",
+    "trimesh",
+    "pyrender",
+]
+# robo-splatter itself is git-only (PyPI forbids URL dependencies in published metadata):
+#   pip install -r packages/metasim/requirements/robosplatter.txt
+robosplatter = ["setuptools==59.5.0"]
+newton = [
+    "warp-lang>=1.11.0",
+    "mujoco>=3.3.7",
+    "mujoco-warp>=0.0.1",
+    "newton>=1.5,<2",  # 1.5/1.6 API shims live in metasim/sim/newton/_newton_compat.py
+    "imgui-bundle",
+    "pycollada",
+]
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+# Simulator extras pin different torch / CUDA stacks; declare them mutually exclusive so a resolver
+# fails with a clear message instead of picking one silently (see docs: one environment per simulator).
+conflicts = [
+    [{ extra = "isaacsim" }, { extra = "isaacsim211" }],
+    [{ extra = "isaacsim" }, { extra = "mjx" }],
+    [{ extra = "isaacsim211" }, { extra = "mjx" }],
+    [{ extra = "isaacsim211" }, { extra = "isaacgym" }],
+]
+
+[tool.uv.pip]
+index-url = "https://download.pytorch.org/whl/cu128"
+extra-index-url = [
+    "https://pypi.org/simple",
+    "https://pypi.nvidia.com",
+]
+
+[tool.ruff]
+line-length = 120
+format.preview = true
+lint.preview = false
+target-version = "py310"
+lint.select = [
+    "B",    # flake8: bugbear
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "FA",   # flake8: future annotations
+    "I",    # isort
+    "PLC",  # pylint
+    "PLE",  # pylint
+    "PLW",  # pylint
+    "UP",   # pyupgrade
+    "NPY",  # numpy-specific rules
+    "RUF",  # ruff-defined rules
+    "T20",  # flake8: check prints
+    "D",    # pydocstyle
+]
+lint.ignore = [
+    "B007",  # allow used loop control variable without leading underscore
+    "D100",  # allow no docstrings in public module
+    "D105",  # allow magic methods without docstring
+    "D107",  # allow __init__ without docstring
+    "E266",  # allow multiple leading # in comments
+    "E402",  # allow imports not at the top of the file
+    "E501",  # allow long lines
+    "E722",  # allow bare except
+    "F403",  # allow `from module import *`
+    "F841",  # allow unused variable
+    "PLC0206",  # allow directly iterating over a dict
+    "PLC0415",  # allow imports not at the top of the file
+    "PLC1901",  # allow `if some_string == ""`
+    "PLW1514",  # allow open without encoding argument
+    "PLW2901",  # allow for loop variable overwriting
+    "PLW0602", "PLW0603", "PLW0604",  # allow global variables, TODO: add docstring and remove this
+    "UP031",  # allow `%` to be used to format strings
+    "NPY002",  # allow legacy `numpy.random` functions
+    "RUF003",  # allow ambiguous characters in comments
+    "RUF005",  # allow using `+` to concatenate collections
+    "RUF009",  # allow function calls in dataclass default values
+    "RUF012",  # allow mutable class attributes
+    "RUF059",  # allow unused variable
+    "PLE0604", # allow __all__ to be nested but still all elements are strings
+]
+extend-exclude = [
+    "wandb",
+    "third_party",
+    "tmp",
+    "assets",
+    "docker"
+]
+
+[tool.setuptools.packages.find]
+include = ["metasim", "metasim.*"]
+
+[tool.setuptools.package-data]
+metasim = ["data/**/*"]
+
+[tool.ruff.lint.per-file-ignores]
+## For unit test, allow no docstrings
+"metasim/types.py" = ["UP007", "UP035"]  # runtime Union/Tuple aliases, see the comment in the file
+"metasim/utils/gs_util.py" = ["UP035"]
+"metasim/test/**.py" = ["D"]
+## For python files in docs, allow no docstrings
+"docs/**.py" = ["D"]
+"metasim/sim/**.py" = ["D"]
+"metasim/utils/teleop_utils.py" = ["D"]  # FIXME: Chaoyi add docstring and remove this
+
+[tool.ruff.lint.isort]
+known-first-party = ["metasim"]
+known-third-party = ["wandb", "isaacsim"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pytest.ini_options]
+testpaths = ["metasim/test"]

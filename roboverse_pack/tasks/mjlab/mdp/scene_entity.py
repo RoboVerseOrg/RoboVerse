@@ -25,8 +25,8 @@ amortize the name-lookup cost across the training loop.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 import torch
 

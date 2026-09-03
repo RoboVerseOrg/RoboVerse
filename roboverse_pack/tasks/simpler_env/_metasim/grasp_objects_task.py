@@ -27,7 +27,7 @@ from .._native.move_near import MOVE_NEAR_CONFIG, _instruction_obj_name, _xy_con
 from .._native.overlay import load_overlay_image
 from .._native.robot_config import google_robot_deployed_controller_configs
 from .._native.scene import INIT_QPOS, ROBOT_INIT_HEIGHT, SCENE_OFFSET, SCENE_POSE_Q
-from .base import HIDDEN_POS, SimplerMetaSimTask, candidate_mesh_objects, set_actor_collision
+from .base import HIDDEN_POS, SimplerMetaSimTask, apply_external_states, candidate_mesh_objects, set_actor_collision
 from .drawer_task import _google_robot_cfg, _overhead_camera_cfg, _sim_params
 
 ROBOT_NAME, ARENA_NAME, CAM_NAME = "google_robot", "arena", "overhead_camera"
@@ -129,7 +129,9 @@ class SimplerPickObjectTask(_GoogleArenaTask):
     def _foreground_ids(self):
         return [link.get_id() for link in self.robot.get_links()] + [self.obj.get_id()]
 
-    def reset(self, env_ids=None, options=None, seed=0):
+    def reset(self, states=None, env_ids=None, seed=0, options=None):
+        """Reset the task. ``states``/``env_ids``/``seed`` are the ``BaseTaskEnv.reset`` contract;
+        ``options`` is the SimplerEnv episode spec from the gym adapter."""
         orientation = np.random.RandomState(seed).choice(list(_ORIENT.keys()))
         self.model_id = PICK_OBJECT_IDS[np.random.RandomState(seed).randint(len(PICK_OBJECT_IDS))]
         self._park(PICK_OBJECT_IDS)
@@ -155,6 +157,9 @@ class SimplerPickObjectTask(_GoogleArenaTask):
         self.robot.set_root_pose(sapien.Pose([ix, iy, ROBOT_INIT_HEIGHT], [0, 0, 0, 1]))
         self.robot.set_qpos(INIT_QPOS)
         self.robot.set_qvel(np.zeros(self.robot.dof))
+        if apply_external_states(self, states, env_ids):
+            # the success checker keys off the settled height, so re-read it from the applied states
+            self.obj_height_after_settle = float(self.obj.pose.p[2])
         self.controller.reset()
         self.evaluator.reset(self.obj_height_after_settle)
         self._elapsed = 0
@@ -210,7 +215,9 @@ class SimplerMoveNearTask(_GoogleArenaTask):
     def _foreground_ids(self):
         return [link.get_id() for link in self.robot.get_links()] + [o.get_id() for o in self.objs]
 
-    def reset(self, env_ids=None, options=None, seed=0):
+    def reset(self, states=None, env_ids=None, seed=0, options=None):
+        """Reset the task. ``states``/``env_ids``/``seed`` are the ``BaseTaskEnv.reset`` contract;
+        ``options`` is the SimplerEnv episode spec from the gym adapter."""
         n = 5 * len(_SRC_IDS) * 2
         episode_id = np.random.RandomState(seed).randint(n)
         triplet = list(self.cfg["triplets"][episode_id // (len(_SRC_IDS) * 2)])
@@ -232,7 +239,7 @@ class SimplerMoveNearTask(_GoogleArenaTask):
         self.robot.set_qpos(INIT_QPOS)
         self.robot.set_qvel(np.zeros(self.robot.dof))
         z = SCENE_TABLE_HEIGHT + 0.5
-        for o, xy_i, q_i in zip(self.objs, xy, quat):
+        for o, xy_i, q_i in zip(self.objs, xy, quat, strict=False):
             o.set_pose(sapien.Pose(np.hstack([xy_i, z]), q_i))
         self._settle(0.5)
         for o in self.objs:
@@ -252,6 +259,11 @@ class SimplerMoveNearTask(_GoogleArenaTask):
         self.robot.set_root_pose(sapien.Pose([rx, ry, ROBOT_INIT_HEIGHT], [0, 0, 0, 1]))
         self.robot.set_qpos(INIT_QPOS)
         self.robot.set_qvel(np.zeros(self.robot.dof))
+        if apply_external_states(self, states, env_ids):
+            # success is measured against the post-reset object poses, so re-derive them
+            self.xyz_after_settle = [o.pose.p.copy() for o in self.objs]
+            self.src_bbox_world = quat2mat(self.objs[self.src_id].pose.q) @ self.bbox[self.src_id]
+            self.tgt_bbox_world = quat2mat(self.objs[self.tgt_id].pose.q) @ self.bbox[self.tgt_id]
         self.controller.reset()
         self._elapsed = 0
         return self.get_obs(), {"episode_id": int(episode_id), "model_ids": triplet}

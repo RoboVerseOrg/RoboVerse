@@ -33,6 +33,10 @@ Public surface
 
 from __future__ import annotations
 
+from .manager_based_rv_env import (
+    ManagerBasedRVEnv,
+    ManagerBasedRVEnvCfg,
+)
 from .term_cfgs import (
     CfgTerm,
     CurriculumTerm,
@@ -41,18 +45,14 @@ from .term_cfgs import (
     ObsTerm,
     RewTerm,
 )
-from .manager_based_rv_env import (
-    ManagerBasedRVEnv,
-    ManagerBasedRVEnvCfg,
-)
 
 __all__ = [
     "CfgTerm",
-    "ObsTerm",
-    "RewTerm",
-    "DoneTerm",
     "CurriculumTerm",
+    "DoneTerm",
     "EventTerm",
     "ManagerBasedRVEnv",
     "ManagerBasedRVEnvCfg",
+    "ObsTerm",
+    "RewTerm",
 ]

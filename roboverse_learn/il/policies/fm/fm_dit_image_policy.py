@@ -4,12 +4,12 @@ import torch
 import torch.nn.functional as F
 from einops import reduce
 
-from roboverse_learn.il.utils.models.flow_net import FlowTransformer
+from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
 from roboverse_learn.il.policies.dp.models.diffusion.mask_generator import LowdimMaskGenerator
-from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
+from roboverse_learn.il.utils.models.flow_net import FlowTransformer
 from roboverse_learn.il.utils.normalizer import LinearNormalizer
 from roboverse_learn.il.utils.pytorch_util import dict_apply
-from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
+from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
 
 
 class FlowMatchingDiTImagePolicy(BaseImagePolicy):
@@ -102,7 +102,6 @@ class FlowMatchingDiTImagePolicy(BaseImagePolicy):
 
         time_steps = torch.linspace(0, 1.0, self.num_inference_steps + 1)
         for i in range(self.num_inference_steps):
-
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]
 

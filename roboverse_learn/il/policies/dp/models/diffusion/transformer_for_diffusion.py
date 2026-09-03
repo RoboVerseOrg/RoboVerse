@@ -7,12 +7,13 @@
 # Full license: roboverse_learn/il/policies/dp/LICENSE
 
 import logging
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
-from roboverse_learn.il.utils.module_attr_mixin import ModuleAttrMixin
+
 from roboverse_learn.il.policies.dp.models.diffusion.positional_embedding import SinusoidalPosEmb
+from roboverse_learn.il.utils.module_attr_mixin import ModuleAttrMixin
 
 logger = logging.getLogger(__name__)
 
@@ -115,14 +116,14 @@ class TransformerForDiffusion(ModuleAttrMixin):
             # therefore, the upper triangle should be -inf and others (including diag) should be 0.
             sz = T
             mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-            mask = mask.float().masked_fill(mask == 0, float("-inf")).masked_fill(mask == 1, float(0.0))
+            mask = mask.float().masked_fill(mask == 0, float("-inf")).masked_fill(mask == 1, 0.0)
             self.register_buffer("mask", mask)
 
             if time_as_cond and obs_as_cond:
                 S = T_cond
                 t, s = torch.meshgrid(torch.arange(T), torch.arange(S), indexing="ij")
                 mask = t >= (s - 1)  # add one dimension since time is the first token in cond
-                mask = mask.float().masked_fill(mask == 0, float("-inf")).masked_fill(mask == 1, float(0.0))
+                mask = mask.float().masked_fill(mask == 0, float("-inf")).masked_fill(mask == 1, 0.0)
                 self.register_buffer("memory_mask", mask)
             else:
                 self.memory_mask = None
@@ -190,7 +191,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
             # no param
             pass
         else:
-            raise RuntimeError("Unaccounted module {}".format(module))
+            raise RuntimeError(f"Unaccounted module {module}")
 
     def get_optim_groups(self, weight_decay: float = 1e-3):
         """
@@ -233,9 +234,10 @@ class TransformerForDiffusion(ModuleAttrMixin):
         inter_params = decay & no_decay
         union_params = decay | no_decay
         assert len(inter_params) == 0, "parameters %s made it into both decay/no_decay sets!" % (str(inter_params),)
-        assert (
-            len(param_dict.keys() - union_params) == 0
-        ), "parameters %s were not separated into either decay/no_decay set!" % (str(param_dict.keys() - union_params),)
+        assert len(param_dict.keys() - union_params) == 0, (
+            "parameters %s were not separated into either decay/no_decay set!"
+            % (str(param_dict.keys() - union_params),)
+        )
 
         # create the pytorch optimizer object
         optim_groups = [
@@ -263,9 +265,9 @@ class TransformerForDiffusion(ModuleAttrMixin):
     def forward(
         self,
         sample: torch.Tensor,
-        timestep: Union[torch.Tensor, float, int],
+        timestep: torch.Tensor | float | int,
         cond: Optional[torch.Tensor] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         x: (B,T,input_dim)

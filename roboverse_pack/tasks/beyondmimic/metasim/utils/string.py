@@ -168,7 +168,7 @@ def resolve_matching_names(
     if not all(keys_match_found):
         # make this print nicely aligned for debugging
         msg = "\n"
-        for key, value in zip(keys, keys_match_found):
+        for key, value in zip(keys, keys_match_found, strict=False):
             msg += f"\t{key}: {value}\n"
         msg += f"Available strings: {list_of_strings}\n"
         # raise error
@@ -283,7 +283,7 @@ def resolve_matching_names_values(
     if not all(keys_match_found):
         # make this print nicely aligned for debugging
         msg = "\n"
-        for key, value in zip(data.keys(), keys_match_found):
+        for key, value in zip(data.keys(), keys_match_found, strict=False):
             msg += f"\t{key}: {value}\n"
         msg += f"Available strings: {list_of_strings}\n"
         # raise error

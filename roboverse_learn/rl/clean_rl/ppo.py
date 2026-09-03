@@ -31,13 +31,13 @@ from torch.utils.tensorboard import SummaryWriter
 
 rootutils.setup_root(__file__, pythonpath=True)
 from gymnasium import make_vec
+
 import metasim
 
 metasim.register_gym_envs()
 
-from roboverse_learn.rl.episode_tracker import EpisodeTracker
 from roboverse_learn.rl.configs.clean_rl.ppo import CleanRLPPOConfig
-
+from roboverse_learn.rl.episode_tracker import EpisodeTracker
 
 
 def make_roboverse_env(args):
@@ -55,12 +55,13 @@ def make_roboverse_env(args):
     return env
 
 
-def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+_ORTHOGONAL_GAIN = float(np.sqrt(2))
+
+
+def layer_init(layer, std=_ORTHOGONAL_GAIN, bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
-
-
 
 
 class Agent(nn.Module):
@@ -174,7 +175,6 @@ if __name__ == "__main__":
             next_obs, reward, terminations, truncations, infos = envs.step(action)
             next_done = torch.logical_or(terminations, truncations)
             rewards[step] = reward.view(-1)
-            dones[step] = next_done
 
             # Update episode tracker
             episode_tracker.update(reward.view(-1), terminations, truncations)
@@ -276,7 +276,9 @@ if __name__ == "__main__":
         if episode_tracker.get_episode_count() > 0:
             writer.add_scalar("charts/avg_episodic_return", avg_return, global_step)
             writer.add_scalar("charts/avg_episodic_length", avg_length, global_step)
-            print(f"SPS: {int(global_step / (time.time() - start_time))}, avg_return: {avg_return:.2f}, avg_length: {avg_length:.1f}, timesteps: {global_step}")
+            print(
+                f"SPS: {int(global_step / (time.time() - start_time))}, avg_return: {avg_return:.2f}, avg_length: {avg_length:.1f}, timesteps: {global_step}"
+            )
         else:
             print(f"SPS: {int(global_step / (time.time() - start_time))}, timesteps: {global_step}")
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)

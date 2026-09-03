@@ -9,12 +9,13 @@
 #   GeneratorBasedBuilder structure follows upstream.
 # Full license: roboverse_learn/vla/rlds_utils/LICENSE
 
-from typing import Iterator, Tuple, Any
-import os
 import json
+import os
+from collections.abc import Iterator
+from typing import Any, Tuple
+
 import imageio.v2 as iio
 import numpy as np
-import tensorflow as tf
 import tensorflow_datasets as tfds
 import tensorflow_hub as hub
 
@@ -36,50 +37,40 @@ class BridgeOrig(tfds.core.GeneratorBasedBuilder):
     def _info(self) -> tfds.core.DatasetInfo:
         """Dataset metadata (features)."""
         return self.dataset_info_from_configs(
-            features=tfds.features.FeaturesDict(
-                {
-                    "steps": tfds.features.Dataset(
-                        {
-                            "observation": tfds.features.FeaturesDict(
-                                {
-                                    "image_0": tfds.features.Image(
-                                        shape=(256, 256, 3), dtype=np.uint8, doc="RGB image (H,W,3)."
-                                    ),
-                                    "image_1": tfds.features.Image(
-                                        shape=(256, 256, 3), dtype=np.uint8, doc="Secondary RGB image (H,W,3)."
-                                    ),
-                                    "state": tfds.features.Tensor(
-                                        shape=(7,), dtype=np.float32, doc="Full state (6 dims EEF + 1 dim gripper)."
-                                    ),
-                                    "EEF_state": tfds.features.Tensor(
-                                        shape=(6,), dtype=np.float32, doc="End-effector state (6 dims: xyz + rpy)."
-                                    ),
-                                    "gripper_state": tfds.features.Tensor(
-                                        shape=(1,), dtype=np.float32, doc="Gripper state (1 dim)."
-                                    ),
-                                }
-                            ),
-                            "action": tfds.features.Tensor(
-                                shape=(7,), dtype=np.float32, doc="Delta action (next_state - current_state) (7 dims)."
-                            ),
-                            "discount": tfds.features.Scalar(dtype=np.float32),
-                            "reward": tfds.features.Scalar(dtype=np.float32),
-                            "is_first": tfds.features.Scalar(dtype=np.bool_),
-                            "is_last": tfds.features.Scalar(dtype=np.bool_),
-                            "is_terminal": tfds.features.Scalar(dtype=np.bool_),
-                            "language_instruction": tfds.features.Text(),
-                            "language_embedding": tfds.features.Tensor(shape=(512,), dtype=np.float32),
-                        }
+            features=tfds.features.FeaturesDict({
+                "steps": tfds.features.Dataset({
+                    "observation": tfds.features.FeaturesDict({
+                        "image_0": tfds.features.Image(shape=(256, 256, 3), dtype=np.uint8, doc="RGB image (H,W,3)."),
+                        "image_1": tfds.features.Image(
+                            shape=(256, 256, 3), dtype=np.uint8, doc="Secondary RGB image (H,W,3)."
+                        ),
+                        "state": tfds.features.Tensor(
+                            shape=(7,), dtype=np.float32, doc="Full state (6 dims EEF + 1 dim gripper)."
+                        ),
+                        "EEF_state": tfds.features.Tensor(
+                            shape=(6,), dtype=np.float32, doc="End-effector state (6 dims: xyz + rpy)."
+                        ),
+                        "gripper_state": tfds.features.Tensor(
+                            shape=(1,), dtype=np.float32, doc="Gripper state (1 dim)."
+                        ),
+                    }),
+                    "action": tfds.features.Tensor(
+                        shape=(7,), dtype=np.float32, doc="Delta action (next_state - current_state) (7 dims)."
                     ),
-                    "episode_metadata": tfds.features.FeaturesDict(
-                        {
-                            "file_path": tfds.features.Text(),
-                            "depth_min": tfds.features.Tensor(shape=(None,), dtype=np.float32),
-                            "depth_max": tfds.features.Tensor(shape=(None,), dtype=np.float32),
-                        }
-                    ),
-                }
-            )
+                    "discount": tfds.features.Scalar(dtype=np.float32),
+                    "reward": tfds.features.Scalar(dtype=np.float32),
+                    "is_first": tfds.features.Scalar(dtype=np.bool_),
+                    "is_last": tfds.features.Scalar(dtype=np.bool_),
+                    "is_terminal": tfds.features.Scalar(dtype=np.bool_),
+                    "language_instruction": tfds.features.Text(),
+                    "language_embedding": tfds.features.Tensor(shape=(512,), dtype=np.float32),
+                }),
+                "episode_metadata": tfds.features.FeaturesDict({
+                    "file_path": tfds.features.Text(),
+                    "depth_min": tfds.features.Tensor(shape=(None,), dtype=np.float32),
+                    "depth_max": tfds.features.Tensor(shape=(None,), dtype=np.float32),
+                }),
+            })
         )
 
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
@@ -143,7 +134,7 @@ class BridgeOrig(tfds.core.GeneratorBasedBuilder):
             if not os.path.isfile(meta_file):
                 return None
 
-            with open(meta_file, "r") as f:
+            with open(meta_file) as f:
                 meta = json.load(f)
 
             # get keys (support both names)

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import os
 import struct
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-OPENARM_ROOT = REPO_ROOT / "roboverse_data" / "robots" / "openarm_wuji"
-ROBOT_DESCRIPTION_ROOT = REPO_ROOT / "roboverse_data" / "robots"
+# Same resolution as tests/conftest.py::roboverse_data_root (ROBOVERSE_DATA_DIR, legacy ROBOVERSE_DATA, in-repo default).
+_DATA_ENV = os.environ.get("ROBOVERSE_DATA_DIR") or os.environ.get("ROBOVERSE_DATA")
+DATA_ROOT = Path(_DATA_ENV) if _DATA_ENV else REPO_ROOT / "roboverse_data"
+OPENARM_ROOT = DATA_ROOT / "robots" / "openarm_wuji"
+ROBOT_DESCRIPTION_ROOT = DATA_ROOT / "robots"
 MJCF_PATH = OPENARM_ROOT / "openarm_wuji.xml"
 URDF_PATH = OPENARM_ROOT / "openarm_wuji.urdf"
 USD_PATH = OPENARM_ROOT / "openarm_wuji.usd"
@@ -20,6 +24,18 @@ RIGHT_PALM_MESH = ROBOT_DESCRIPTION_ROOT / "wuji_hand_description" / "meshes" / 
 MAX_WRIST_PALM_VISUAL_OVERLAP_M = 0.001
 MAX_WRIST_PALM_VISUAL_GAP_M = 0.001
 WUJI_MOUNT_Z_M = 0.105
+
+# The mesh/MJCF/URDF geometry assertions below read real bytes out of roboverse_data, which a
+# fresh checkout (and CI) does not have. They skip there; the cfg-wiring contract does not
+# need the assets and keeps running everywhere.
+requires_openarm_assets = pytest.mark.requires_asset(
+    "robots/openarm_wuji/openarm_wuji.urdf",
+    "robots/openarm_wuji/openarm_wuji.xml",
+    "robots/openarm_wuji/openarm_wuji.usd",
+    "robots/openarm_description/meshes/arm/v10/visual/link7.stl",
+    "robots/wuji_hand_description/meshes/left/left_palm_link.STL",
+    "robots/wuji_hand_description/meshes/right/right_palm_link.STL",
+)
 
 
 def _binary_stl_bounds(path: Path) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
@@ -82,6 +98,7 @@ def _mesh_paths_from_mjcf(path: Path) -> list[Path]:
     return [(path.parent / mesh.attrib["file"]).resolve() for mesh in root.iter("mesh") if mesh.attrib.get("file")]
 
 
+@requires_openarm_assets
 @pytest.mark.parametrize(
     ("asset_file", "mesh_path_reader"),
     (
@@ -99,7 +116,15 @@ def test_openarm_wuji_mesh_paths_resolve_from_robot_descriptions(
     assert all(ROBOT_DESCRIPTION_ROOT in path.parents for path in mesh_paths)
 
 
+EXPECTED_CFG_PATHS = {
+    "urdf_path": OPENARM_ROOT / "openarm_wuji.urdf",
+    "mjcf_path": OPENARM_ROOT / "openarm_wuji.xml",
+    "usd_path": OPENARM_ROOT / "openarm_wuji.usd",
+}
+
+
 def test_openarm_wuji_cfg_defaults_use_renamed_asset_directory() -> None:
+    """The cfg points at the renamed asset dir. Pure source/config wiring — needs no assets."""
     old_module_path = REPO_ROOT / "roboverse_pack" / "robots" / "openarm_bimanual_wuji_cfg.py"
     new_module_path = REPO_ROOT / "roboverse_pack" / "robots" / "openarm_wuji_cfg.py"
     assert not old_module_path.exists()
@@ -109,17 +134,22 @@ def test_openarm_wuji_cfg_defaults_use_renamed_asset_directory() -> None:
 
     cfg = OpenarmBimanualWujiCfg()
 
-    expected_paths = {
-        "urdf_path": OPENARM_ROOT / "openarm_wuji.urdf",
-        "mjcf_path": OPENARM_ROOT / "openarm_wuji.xml",
-        "usd_path": OPENARM_ROOT / "openarm_wuji.usd",
-    }
-    for attr, expected_path in expected_paths.items():
-        actual_path = (REPO_ROOT / getattr(cfg, attr)).resolve()
-        assert actual_path == expected_path
-        assert actual_path.is_file()
+    for attr, expected_path in EXPECTED_CFG_PATHS.items():
+        assert (REPO_ROOT / getattr(cfg, attr)).resolve() == expected_path.resolve()
 
 
+@requires_openarm_assets
+def test_openarm_wuji_cfg_asset_files_exist_on_disk() -> None:
+    """The paths the cfg points at are real files in a populated roboverse_data checkout."""
+    from roboverse_pack.robots.openarm_wuji_cfg import OpenarmBimanualWujiCfg
+
+    cfg = OpenarmBimanualWujiCfg()
+
+    for attr in EXPECTED_CFG_PATHS:
+        assert EXPECTED_CFG_PATHS[attr].is_file()
+
+
+@requires_openarm_assets
 @pytest.mark.parametrize(
     ("side", "palm_mesh"),
     (
@@ -156,6 +186,7 @@ def test_openarm_wuji_palm_mount_sits_flush_with_wrist_visual(side: str, palm_me
     assert gap <= MAX_WRIST_PALM_VISUAL_GAP_M
 
 
+@requires_openarm_assets
 def test_openarm_wuji_usd_mount_matches_mjcf_and_urdf() -> None:
     Usd = pytest.importorskip("pxr.Usd")
 

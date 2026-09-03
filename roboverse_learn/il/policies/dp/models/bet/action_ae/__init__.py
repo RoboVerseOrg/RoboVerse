@@ -7,12 +7,13 @@
 # Full license: roboverse_learn/il/policies/dp/LICENSE
 
 import abc
-from typing import Optional, Union
+from typing import Optional
 
-import roboverse_learn.il.policies.dp.models.bet.utils as utils
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+
+import roboverse_learn.il.policies.dp.models.bet.utils as utils
 
 
 class AbstractActionAE(utils.SaveModule, abc.ABC):
@@ -63,7 +64,7 @@ class AbstractActionAE(utils.SaveModule, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def num_latents(self) -> Union[int, float]:
+    def num_latents(self) -> int | float:
         """
         Number of possible latents for this generator, useful for state priors that use softmax.
         """

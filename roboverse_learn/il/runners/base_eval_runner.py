@@ -15,15 +15,16 @@ from roboverse_learn.il.configs.base_config import BasePolicyCfg
 
 try:
     from curobo.types.math import Pose
-    from metasim.utils.kinematics import get_curobo_models
     from pytorch3d import transforms
+
+    from metasim.utils.kinematics import get_curobo_models
 except ImportError:
     pass
 
-import sys
 
 import torch
 from loguru import logger as log
+
 from metasim.scenario.scenario import ScenarioCfg
 from roboverse_learn.il.utils.pytorch_util import dict_apply
 
@@ -61,8 +62,7 @@ class BaseEvalRunner:
                 [
                     self.num_envs,
                     self.scenario.episode_length,
-                    self.scenario.episode_length
-                    + self.policy_cfg.action_config.action_chunk_steps,
+                    self.scenario.episode_length + self.policy_cfg.action_config.action_chunk_steps,
                     self.policy_cfg.action_config.action_dim,
                 ],
                 device=self.device,
@@ -93,9 +93,7 @@ class BaseEvalRunner:
             curr_ee_pos_local = transforms.quaternion_apply(
                 transforms.quaternion_invert(robot_quat), curr_ee_pos - robot_pos
             )
-            curr_ee_quat_local = transforms.quaternion_multiply(
-                transforms.quaternion_invert(robot_quat), curr_ee_quat
-            )
+            curr_ee_quat_local = transforms.quaternion_multiply(transforms.quaternion_invert(robot_quat), curr_ee_quat)
 
             if self.policy_cfg.obs_config.ee_cfg.gripper_rep == "q_pos":
                 gripper_state = obs["joint_qpos"][:, -2:]
@@ -110,14 +108,10 @@ class BaseEvalRunner:
                     convention="XYZ",
                 )
 
-            obs_dict["agent_pos"] = torch.cat(
-                [curr_ee_pos_local, curr_ee_rot_local, gripper_state], dim=1
-            )
+            obs_dict["agent_pos"] = torch.cat([curr_ee_pos_local, curr_ee_rot_local, gripper_state], dim=1)
 
         if self.policy_cfg.obs_config.obs_padding > 0:
-            padding_len = (
-                self.policy_cfg.obs_config.obs_padding - obs_dict["agent_pos"].shape[1]
-            )
+            padding_len = self.policy_cfg.obs_config.obs_padding - obs_dict["agent_pos"].shape[1]
             padding = torch.zeros(self.num_envs, padding_len, device=self.device)
             obs_dict["agent_pos"] = torch.cat([obs_dict["agent_pos"], padding], dim=1)
 
@@ -126,11 +120,7 @@ class BaseEvalRunner:
             self.policy_cfg.obs_config.obs_dim,
         )
         # flush unused keys
-        obs_dict = {
-            k: v
-            for k, v in obs_dict.items()
-            if k in self.policy_cfg.obs_config.obs_keys
-        }
+        obs_dict = {k: v for k, v in obs_dict.items() if k in self.policy_cfg.obs_config.obs_keys}
         return obs_dict
 
     def action_to_dict(self, curr_action: torch.Tensor):
@@ -143,9 +133,7 @@ class BaseEvalRunner:
                 self.scenario.robots[0].name: {
                     "dof_pos_target": {
                         joint_name: action_nested_list[i][index]
-                        for index, joint_name in enumerate(
-                            sorted(self.scenario.robots[0].joint_limits.keys())
-                        )
+                        for index, joint_name in enumerate(sorted(self.scenario.robots[0].joint_limits.keys()))
                     }
                 }
             }
@@ -172,9 +160,7 @@ class BaseEvalRunner:
 
         actions_for_curr_step = self.all_time_actions[:, :, self.step]
 
-        actions_populated = torch.all(
-            torch.all(actions_for_curr_step != 0, dim=2), dim=0
-        )
+        actions_populated = torch.all(torch.all(actions_for_curr_step != 0, dim=2), dim=0)
         actions_for_curr_step = actions_for_curr_step[:, actions_populated]
 
         time_indices = torch.arange(
@@ -185,9 +171,7 @@ class BaseEvalRunner:
         exp_weights = torch.exp(self.k * time_indices)
         exp_weights = exp_weights / exp_weights.sum()
 
-        weighted_actions = actions_for_curr_step * exp_weights.unsqueeze(-1).unsqueeze(
-            0
-        )
+        weighted_actions = actions_for_curr_step * exp_weights.unsqueeze(-1).unsqueeze(0)
 
         raw_action = weighted_actions.sum(dim=1)
 
@@ -201,17 +185,13 @@ class BaseEvalRunner:
             curr_action = self.action_cache.pop(0)
         else:
             processed_obs = self.process_obs(obs)
-            action_chunk = self.predict_action(
-                processed_obs
-            )  # shape: (action_chunk_steps, num_envs, action_dim)
+            action_chunk = self.predict_action(processed_obs)  # shape: (action_chunk_steps, num_envs, action_dim)
             if self.policy_cfg.action_config.temporal_agg:
                 curr_action = self.get_temporal_agg_action(action_chunk)
                 curr_action = self.process_action([curr_action], obs)[0]
             else:
                 qpos_action = self.process_action(action_chunk, obs)
-                assert (
-                    len(qpos_action) == self.policy_cfg.action_config.action_chunk_steps
-                ), (
+                assert len(qpos_action) == self.policy_cfg.action_config.action_chunk_steps, (
                     f"Expected {self.policy_cfg.action_config.action_chunk_steps} actions, got {len(qpos_action)}"
                 )
                 self.action_cache = qpos_action
@@ -244,25 +224,17 @@ class BaseEvalRunner:
             quat_norm = torch.norm(ee_quat_action, dim=1, keepdim=True)
             ee_quat_action = ee_quat_action / (quat_norm + 1e-5)
         else:
-            ee_quat_action = transforms.matrix_to_quaternion(
-                transforms.euler_angles_to_matrix(action[:, 3:6], "XYZ")
-            )
+            ee_quat_action = transforms.matrix_to_quaternion(transforms.euler_angles_to_matrix(action[:, 3:6], "XYZ"))
 
         if self.policy_cfg.action_config.delta:
             ee_pos_target = curr_ee_pos_local + action[:, :3]
-            ee_quat_target = transforms.quaternion_multiply(
-                curr_ee_quat_local, ee_quat_action
-            )
+            ee_quat_target = transforms.quaternion_multiply(curr_ee_quat_local, ee_quat_action)
         else:
             ee_pos_target = action[:, :3]
             ee_quat_target = ee_quat_action
 
         # Solve IK
-        seed_config = (
-            curr_robot_q[:, : self.curobo_n_dof]
-            .unsqueeze(1)
-            .tile([1, self.robot_ik._num_seeds, 1])
-        )
+        seed_config = curr_robot_q[:, : self.curobo_n_dof].unsqueeze(1).tile([1, self.robot_ik._num_seeds, 1])
         result = self.robot_ik.solve_batch(
             Pose(ee_pos_target.cuda(0), ee_quat_target.cuda(0)),
             seed_config=seed_config.cuda(0),
@@ -270,18 +242,12 @@ class BaseEvalRunner:
 
         if self.policy_cfg.action_config.ee_cfg.gripper_rep == "strength":
             gripper_pos = 1 - action[:, -1]
-            gripper_widths = torch.zeros(
-                self.num_envs, self.ee_n_dof, device=self.device
-            )
+            gripper_widths = torch.zeros(self.num_envs, self.ee_n_dof, device=self.device)
             for i in range(self.num_envs):
                 if gripper_pos[i] < 0.5:
-                    gripper_widths[i] = torch.tensor(
-                        self.scenario.robots[0].gripper_close_q, device=self.device
-                    )
+                    gripper_widths[i] = torch.tensor(self.scenario.robots[0].gripper_close_q, device=self.device)
                 else:
-                    gripper_widths[i] = torch.tensor(
-                        self.scenario.robots[0].gripper_open_q, device=self.device
-                    )
+                    gripper_widths[i] = torch.tensor(self.scenario.robots[0].gripper_open_q, device=self.device)
         else:
             gripper_widths = action[:, -self.ee_n_dof :]
 
@@ -291,9 +257,7 @@ class BaseEvalRunner:
             log.warning(f"IK failed: {ik_succ}")
             log.info("Trying to POS delta: ", action[:, :3])
 
-        q[ik_succ, : self.curobo_n_dof] = result.solution.to(self.device)[
-            ik_succ, 0
-        ].clone()
+        q[ik_succ, : self.curobo_n_dof] = result.solution.to(self.device)[ik_succ, 0].clone()
         q[:, -self.ee_n_dof :] = gripper_widths
         return q
 
@@ -320,20 +284,14 @@ class BaseEvalRunner:
             curr_ee_pos_local = transforms.quaternion_apply(
                 transforms.quaternion_invert(robot_quat), curr_ee_pos - robot_pos
             )
-            curr_ee_quat_local = transforms.quaternion_multiply(
-                transforms.quaternion_invert(robot_quat), curr_ee_quat
-            )
+            curr_ee_quat_local = transforms.quaternion_multiply(transforms.quaternion_invert(robot_quat), curr_ee_quat)
             curr_robot_q = obs["joint_qpos"].to(self.device)
             for action in action_chunk:
-                target_qpos = self._solve_ik(
-                    action, curr_ee_pos_local, curr_ee_quat_local, curr_robot_q
-                )
+                target_qpos = self._solve_ik(action, curr_ee_pos_local, curr_ee_quat_local, curr_robot_q)
                 qpos_action_chunk.append(target_qpos)
 
         if self.policy_cfg.action_config.interpolate_chunk:
-            return self._interpolate_chunk(
-                obs["joint_qpos"].to(self.device), qpos_action_chunk
-            )
+            return self._interpolate_chunk(obs["joint_qpos"].to(self.device), qpos_action_chunk)
         else:
             return qpos_action_chunk
 
@@ -345,10 +303,7 @@ class BaseEvalRunner:
         )
 
         return [
-            curr_qpos
-            + (last_action - curr_qpos)
-            * (i + 1)
-            / self.policy_cfg.action_config.action_chunk_steps
+            curr_qpos + (last_action - curr_qpos) * (i + 1) / self.policy_cfg.action_config.action_chunk_steps
             for i in range(self.policy_cfg.action_config.action_chunk_steps)
         ]
 

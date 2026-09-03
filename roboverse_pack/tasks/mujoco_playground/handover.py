@@ -176,7 +176,9 @@ class HandOver(RLTaskEnv):
 
         # Calculate potential-based reward
         raw_rewards = self._calculate_raw_rewards(self.env_states)
-        potential = sum(w * r for w, r in zip(self.reward_weights, raw_rewards)) / sum(self.reward_weights)
+        potential = sum(w * r for w, r in zip(self.reward_weights, raw_rewards, strict=False)) / sum(
+            self.reward_weights
+        )
 
         # Reward progress (clip at zero to not penalize exploration)
         progress_reward = torch.maximum(potential - self._prev_potential, torch.zeros_like(potential))

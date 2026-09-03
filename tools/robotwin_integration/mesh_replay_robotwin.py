@@ -360,7 +360,7 @@ def _replay_one(bridge: dict, args) -> dict:
                 jn, cols, jtraj = artic_drive[rv]
                 if cols is not None:
                     q = jtraj[min(t, len(jtraj) - 1)]
-                    st["dof_pos"] = {j: (float(q[c]) if c is not None else 0.0) for j, c in zip(jn, cols)}
+                    st["dof_pos"] = {j: (float(q[c]) if c is not None else 0.0) for j, c in zip(jn, cols, strict=False)}
                 else:
                     st["dof_pos"] = {j: 0.0 for j in jn}
             out[rv] = st

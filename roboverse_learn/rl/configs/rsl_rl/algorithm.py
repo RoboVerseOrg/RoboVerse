@@ -14,7 +14,6 @@ from typing import List, Literal
 
 from metasim.utils import configclass
 
-
 #########################
 # Policy configurations #
 #########################
@@ -212,9 +211,9 @@ class RslRlOnPolicyRunnerCfg(RslRlBaseRunnerCfg):
 
 
 __all__ = [
+    "RslRlBaseRunnerCfg",
+    "RslRlOnPolicyRunnerCfg",
     "RslRlPpoActorCriticCfg",
     "RslRlPpoActorCriticRecurrentCfg",
     "RslRlPpoAlgorithmCfg",
-    "RslRlBaseRunnerCfg",
-    "RslRlOnPolicyRunnerCfg",
 ]

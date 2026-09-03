@@ -8,9 +8,10 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import asdict
-from typing import Any, Sequence
+from typing import Any
 
 import torch
 
@@ -191,12 +192,22 @@ class LeggedRobotTask(RLTaskEnv):
         # NOTE corresponds to action clipping in `RslRlVecEnvWrapper.step()` in Isaac Lab
         return torch.clip(actions, -self.action_clip, self.action_clip) if self.action_clip else actions
 
-    def reset(self, env_ids: Sequence[int] | None = None, seed: int | None = None):
+    def reset(
+        self,
+        states: TensorState | None = None,
+        env_ids: Sequence[int] | None = None,
+        seed: int | None = None,
+    ):
         """Reset the specified environments.
 
-        ``seed`` is forwarded to the handler when supported (this base
-        reimplements ``reset`` and does not call ``super().reset``), honoring
-        the ``env.reset(seed=)`` contract.
+        Args:
+            states: Optional external states to set for the selected envs, per the
+                ``BaseTaskEnv.reset`` contract. If None, the reset events own the initial
+                state. IL/VLA eval runners replay demos through this argument.
+            env_ids: The environment ids to reset (defaults to all).
+            seed: Optional reproducibility seed, forwarded to the handler when supported
+                (this base reimplements ``reset`` and does not call ``super().reset``),
+                honoring the ``env.reset(seed=)`` contract.
         """
         if seed is not None:
             set_seed = getattr(self.handler, "set_seed", None)
@@ -205,8 +216,12 @@ class LeggedRobotTask(RLTaskEnv):
         if env_ids is None:
             env_ids = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
 
-        # reset state of scene
+        # reset state of scene (reset events randomize the initial state)
         self._reset_idx(env_ids)
+
+        # caller-supplied states win over the reset events, so demo replay is exact
+        if states is not None:
+            self.handler.set_states(states=states, env_ids=env_ids)
 
         # update articulation kinematics
         # self.handler.scene.write_data_to_sim()

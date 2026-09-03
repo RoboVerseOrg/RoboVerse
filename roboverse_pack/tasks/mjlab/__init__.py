@@ -15,6 +15,8 @@ and scripts/test_mjlab_v2_backward_compat.py):
 
 from __future__ import annotations
 
+from loguru import logger as log
+
 from ._passthrough import register_mjlab_passthrough_tasks
 from .cartpole import MjlabCartpoleBalance, MjlabCartpoleSwingup
 from .cartpole_train import MjlabCartpoleBalanceTrain, MjlabCartpoleSwingupTrain
@@ -22,8 +24,10 @@ from .cartpole_train import MjlabCartpoleBalanceTrain, MjlabCartpoleSwingupTrain
 # Auto-register all mjlab tasks under MjlabPassthrough/<task_id>
 try:
     register_mjlab_passthrough_tasks()
-except Exception:
-    pass  # mjlab not installed or registry issue
+except ImportError as exc:  # mjlab not installed: expected, keep quiet
+    log.debug(f"[mjlab] passthrough registration skipped: {exc}")
+except Exception as exc:  # a registry bug must not be hidden
+    log.warning(f"[mjlab] passthrough registration failed: {exc!r}")
 # v2 manager-based ports — register ``mjlab.*_v2`` task IDs via @register_task.
 from . import cartpole_v2 as _cartpole_v2  # noqa: F401
 from . import lift_cube_yam_v2 as _lift_cube_yam_v2  # noqa: F401

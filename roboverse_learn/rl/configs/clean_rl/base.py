@@ -2,7 +2,6 @@ from typing import Literal, Optional
 
 from metasim.utils import configclass
 
-
 SimBackend = Literal[
     "isaacgym",
     "isaacsim",

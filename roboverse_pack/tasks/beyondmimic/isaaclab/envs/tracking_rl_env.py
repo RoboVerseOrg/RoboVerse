@@ -431,7 +431,7 @@ class TrackingRLEnv(TrackingBaseEnv, gym.Env):
             else:
                 self.single_observation_space[group_name] = gym.spaces.Dict({
                     term_name: gym.spaces.Box(low=-np.inf, high=np.inf, shape=term_dim)
-                    for term_name, term_dim in zip(group_term_names, group_dim)
+                    for term_name, term_dim in zip(group_term_names, group_dim, strict=False)
                 })
         # action space (unbounded since we don't impose any limits)
         action_dim = sum(self.action_manager.action_term_dim)

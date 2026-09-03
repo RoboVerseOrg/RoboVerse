@@ -8,11 +8,11 @@
 #   (ruff/isort). No functional changes.
 # Full license: roboverse_learn/il/policies/dp/LICENSE
 
-from typing import Optional, Tuple, Union
+from typing import Optional
 
-import numpy as np
 import torch
 import tqdm
+
 from roboverse_learn.il.utils.dict_of_tensor_mixin import DictOfTensorMixin
 
 
@@ -33,9 +33,9 @@ class KMeansDiscretizer(DictOfTensorMixin):
         self.predict_offsets = predict_offsets
 
     def fit_discretizer(self, input_actions: torch.Tensor) -> None:
-        assert (
-            self.action_dim == input_actions.shape[-1]
-        ), f"Input action dimension {self.action_dim} does not match fitted model {input_actions.shape[-1]}"
+        assert self.action_dim == input_actions.shape[-1], (
+            f"Input action dimension {self.action_dim} does not match fitted model {input_actions.shape[-1]}"
+        )
 
         flattened_actions = input_actions.view(-1, self.action_dim)
         cluster_centers = KMeansDiscretizer._kmeans(flattened_actions, ncluster=self.n_bins)
@@ -123,7 +123,7 @@ class KMeansDiscretizer(DictOfTensorMixin):
         reconstructed_action (shape: ... x action_dim): The reconstructed action.
         """
         offsets = None
-        if type(latent_action_batch) == tuple:
+        if isinstance(latent_action_batch, tuple):
             latent_action_batch, offsets = latent_action_batch
         # get the closest cluster center
         closest_cluster_center = self.params_dict["bin_centers"][latent_action_batch]

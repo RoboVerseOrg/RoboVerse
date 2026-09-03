@@ -6,14 +6,14 @@
 #   (ruff/isort). No functional changes.
 # Full license: roboverse_learn/il/policies/dp/LICENSE
 
-from typing import Optional, Tuple
+from typing import Tuple
 
-import roboverse_learn.il.policies.dp.models.bet.latent_generators.latent_generator as latent_generator
 import einops
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from roboverse_learn.il.policies.dp.models.bet.libraries.loss_fn import FocalLoss, soft_cross_entropy
+
+import roboverse_learn.il.policies.dp.models.bet.latent_generators.latent_generator as latent_generator
+from roboverse_learn.il.policies.dp.models.bet.libraries.loss_fn import FocalLoss
 from roboverse_learn.il.policies.dp.models.diffusion.transformer_for_diffusion import (
     TransformerForDiffusion,
 )
@@ -28,7 +28,7 @@ class Transformer(latent_generator.AbstractLatentGenerator):
         horizon: int,
         focal_loss_gamma: float,
         offset_loss_scale: float,
-        **kwargs
+        **kwargs,
     ):
         super().__init__()
         self.model = TransformerForDiffusion(

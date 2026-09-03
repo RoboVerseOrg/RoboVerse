@@ -66,7 +66,7 @@ def cvt_embodiedgen_asset_to_anysim(
     asset_paths = dict()
 
     with asset_converter:
-        for urdf_file, target_dir in zip(urdf_files, target_dirs):
+        for urdf_file, target_dir in zip(urdf_files, target_dirs, strict=False):
             filename = os.path.basename(urdf_file).replace(".urdf", "")
             if target_type == AssetType.MJCF:
                 target_file = f"{target_dir}/{filename}.xml"

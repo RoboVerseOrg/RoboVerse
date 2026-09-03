@@ -17,7 +17,10 @@ except Exception:  # ImportError, or numba's NumPy-version guard
     _HAS_NUMBA = False
     _prange = range
 import torch
+
+from roboverse_learn.il.datasets.base_dataset import BaseImageDataset
 from roboverse_learn.il.utils.normalize_util import get_image_range_normalizer
+from roboverse_learn.il.utils.normalizer import LinearNormalizer
 from roboverse_learn.il.utils.pytorch_util import dict_apply
 from roboverse_learn.il.utils.replay_buffer import ReplayBuffer
 from roboverse_learn.il.utils.sampler import (
@@ -25,8 +28,6 @@ from roboverse_learn.il.utils.sampler import (
     downsample_mask,
     get_val_mask,
 )
-from roboverse_learn.il.datasets.base_dataset import BaseImageDataset
-from roboverse_learn.il.utils.normalizer import LinearNormalizer
 
 
 class RobotImageDataset(BaseImageDataset):

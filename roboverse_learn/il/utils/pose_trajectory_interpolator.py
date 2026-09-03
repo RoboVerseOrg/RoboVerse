@@ -1,5 +1,4 @@
 import numbers
-from typing import Union
 
 import numpy as np
 import scipy.interpolate as si
@@ -88,7 +87,7 @@ class PoseTrajectoryInterpolator:
         pos_min_duration = pos_dist / max_pos_speed
         rot_min_duration = rot_dist / max_rot_speed
         duration = time - curr_time
-        duration = max(duration, max(pos_min_duration, rot_min_duration))
+        duration = max(duration, pos_min_duration, rot_min_duration)
         assert duration >= 0
         last_waypoint_time = curr_time + duration
 
@@ -173,7 +172,7 @@ class PoseTrajectoryInterpolator:
         pos_dist, rot_dist = pose_distance(pose, end_pose)
         pos_min_duration = pos_dist / max_pos_speed
         rot_min_duration = rot_dist / max_rot_speed
-        duration = max(duration, max(pos_min_duration, rot_min_duration))
+        duration = max(duration, pos_min_duration, rot_min_duration)
         assert duration >= 0
         last_waypoint_time = end_time + duration
 
@@ -185,7 +184,7 @@ class PoseTrajectoryInterpolator:
         final_interp = PoseTrajectoryInterpolator(times, poses)
         return final_interp
 
-    def __call__(self, t: Union[numbers.Number, np.ndarray]) -> np.ndarray:
+    def __call__(self, t: numbers.Number | np.ndarray) -> np.ndarray:
         is_single = False
         if isinstance(t, numbers.Number):
             is_single = True

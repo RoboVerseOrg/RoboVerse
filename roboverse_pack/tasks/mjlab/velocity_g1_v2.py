@@ -43,7 +43,7 @@ from roboverse_learn.managers import (
     RewTerm,
 )
 
-from ._locator import mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset
 from ._mjcf_patch import G1_KP, patch_mjcf_with_pd_actuators
 from .mdp import (
     SceneEntityCfg,
@@ -491,7 +491,9 @@ class VelocityFlatG1EnvCfg(ManagerBasedRVEnvCfg):
 class _G1TaskBase(ManagerBasedRVEnv):
     """Shared scaffold for all G1 velocity variants (flat / rough)."""
 
-    scenario = _g1_scenario()
+    supported_simulators = ("mujoco", "newton")
+
+    scenario = lazy_scenario(lambda: _g1_scenario())
     # Subclasses override these: rough adds the height_scan obs + terrain_scan sensor.
     _obs_cfg_cls: type = _G1ObsCfg
     _use_terrain_scan: bool = False
@@ -657,7 +659,7 @@ class VelocityRoughG1Task(_G1TaskBase):
     scan).
     """
 
-    scenario = _g1_scenario(rough=True)
+    scenario = lazy_scenario(lambda: _g1_scenario(rough=True))
     _obs_cfg_cls = _G1RoughObsCfg
     _use_terrain_scan = True
 

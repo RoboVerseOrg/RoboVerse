@@ -29,9 +29,9 @@ from __future__ import annotations
 
 import json
 import shutil
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 import tyro
@@ -39,9 +39,7 @@ import tyro
 try:
     from lerobot.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
 except ImportError as exc:
-    raise ImportError(
-        "Install `lerobot` before running this script (e.g. `pip install lerobot`)."
-    ) from exc
+    raise ImportError("Install `lerobot` before running this script (e.g. `pip install lerobot`).") from exc
 
 
 @dataclass
@@ -80,9 +78,7 @@ def _first_frame_shape(video_path: Path) -> tuple[int, int, int]:
     try:
         import imageio.v3 as iio
     except ImportError as exc:
-        raise ImportError(
-            "Install `imageio` and `imageio-ffmpeg` to decode RoboVerse videos."
-        ) from exc
+        raise ImportError("Install `imageio` and `imageio-ffmpeg` to decode RoboVerse videos.") from exc
     frame = iio.imread(video_path, index=0)
     return tuple(frame.shape)
 
@@ -92,9 +88,7 @@ def _frame_iter(video_path: Path):
     try:
         import imageio.v3 as iio
     except ImportError as exc:
-        raise ImportError(
-            "Install `imageio` and `imageio-ffmpeg` to decode RoboVerse videos."
-        ) from exc
+        raise ImportError("Install `imageio` and `imageio-ffmpeg` to decode RoboVerse videos.") from exc
     return iio.imiter(video_path, plugin="FFMPEG")
 
 
@@ -117,7 +111,7 @@ def convert(args: Args) -> None:
     action_dim = len(first_meta[args.action_key][0])
     frame_shape = _first_frame_shape(episode_dirs[0] / args.video_name)
 
-    print(f"Dataset configuration:")
+    print("Dataset configuration:")
     print(f"  State dimension: {state_dim}")
     print(f"  Action dimension: {action_dim}")
     print(f"  Frame shape: {frame_shape}")
@@ -128,9 +122,7 @@ def convert(args: Args) -> None:
             print(f"Removing existing dataset at {output_dir}")
             shutil.rmtree(output_dir)
         else:
-            raise FileExistsError(
-                f"Dataset already exists at {output_dir}. Pass --overwrite to replace it."
-            )
+            raise FileExistsError(f"Dataset already exists at {output_dir}. Pass --overwrite to replace it.")
 
     dataset = LeRobotDataset.create(
         repo_id=args.repo_id,
@@ -206,13 +198,13 @@ def convert(args: Args) -> None:
         if (episode_idx + 1) % 10 == 0:
             print(f"Progress: {written} episodes written, {skipped} skipped")
 
-    print(f"\n{'='*60}")
-    print(f"Conversion complete!")
+    print(f"\n{'=' * 60}")
+    print("Conversion complete!")
     print(f"  Total episodes processed: {len(episode_dirs)}")
     print(f"  Successfully written: {written}")
     print(f"  Skipped: {skipped}")
     print(f"  Output: {output_dir}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     if written == 0:
         raise RuntimeError("No episodes were converted; check dataset integrity.")

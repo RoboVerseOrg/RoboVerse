@@ -4,15 +4,15 @@ This file defines repository-level development rules for people and AI coding ag
 the **RoboVerse** content repo (`roboverse-py`). It is read automatically by Claude Code, Codex,
 Cursor, and similar agents at the start of a session.
 
-RoboVerse is the **downstream** half of a two-repo system:
+This repository is a monorepo with two layers that ship as separate packages:
 
-- **MetaSim** (`metasim`, sibling repo) owns the core simulator abstractions, scenario config types,
-  task registry, package discovery, and simulator backends. Its rules live in the MetaSim
-  [`AGENTS.md`](../MetaSim/AGENTS.md) — follow that file for anything touching core, backends, or the
-  `metasim/test` suite.
-- **RoboVerse** (this repo) owns tasks, robots, scenes, grounds, assets, learning code
-  (`roboverse_learn`), examples (`get_started`), tooling, and reports. It depends on MetaSim via
-  `metasim @ git+https://github.com/RoboVerseOrg/MetaSim.git`.
+- **MetaSim** (`packages/metasim`, distribution `roboverse-metasim`, import name `metasim`) owns the
+  core simulator abstractions, scenario config types, task registry, package discovery, and
+  simulator backends. Its rules live in [`packages/metasim/AGENTS.md`](packages/metasim/AGENTS.md) —
+  follow that file for anything touching core, backends, or the `metasim/test` suite.
+- **RoboVerse** (repo root, distribution `roboverse-py`) owns tasks, robots, scenes, grounds, assets,
+  learning code (`roboverse_learn`), examples (`get_started`), tooling, and reports. It depends on
+  `roboverse-metasim` at the same version; both are released from one tag.
 
 The goals here are:
 
@@ -26,20 +26,20 @@ For details that this file points to:
 - Contributor setup: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Priorities and version targets: [`ROADMAP.md`](./ROADMAP.md)
 - Tutorials, task migration, API: <https://roboverse.wiki/metasim/>
-- Simulator → environment mapping: MetaSim [`ENVIRONMENTS.md`](../MetaSim/ENVIRONMENTS.md)
+- Simulator → environment mapping: MetaSim [`ENVIRONMENTS.md`](packages/metasim/ENVIRONMENTS.md)
 
 ---
 
-## Multi-Repo Workflow
+## Monorepo Workflow
 
-- The two repos are sibling directories. Install both editable
-  (`python -m pip install -e ".[dev,mujoco]"` in RoboVerse), with `metasim` resolved from the local
-  MetaSim checkout when developing cross-cutting features.
+- Install both packages editable from this checkout, MetaSim first:
+  `python -m pip install -e "packages/metasim[dev,examples,mujoco]" -e ".[dev,mujoco]"`
+  (`uv pip install` works the same way; `packages/metasim` is also declared as a uv workspace member).
 - **Know which repo owns the change before editing.** A simulator-backend bug, a scenario-config
   type, or the task registry is a *MetaSim* change. A new task/robot/scene, a reward, a learning
   script, or an example is a *RoboVerse* change.
-- For a feature that spans both, land (or at least draft) the **MetaSim change first**, then the
-  RoboVerse change that consumes it. Do not work around a missing core capability by duplicating it
+- A feature that spans both lands in **one PR** (core change + the content that consumes it), with a
+  line in each package's CHANGELOG. Do not work around a missing core capability by duplicating it
   downstream.
 - Do not push core logic into MetaSim that is really RoboVerse content, and do not fork core types
   into RoboVerse. Use MetaSim's package-discovery mechanisms (`metasim.toml`, entry points,
@@ -151,7 +151,7 @@ RoboVerse uses **ruff** (lint + format) and **pre-commit**. The authoritative co
 ### Python
 
 - **Double quotes** (ruff default — match this repo even if a sibling repo uses single quotes).
-- **Line length 120**; `target-version = "py38"`, so keep syntax 3.8-compatible.
+- **Line length 120**; `requires-python = ">=3.10"` (CI runs 3.11). Ruff's `target-version` is still `py38` so it does not mass-rewrite annotations; do not use syntax newer than 3.10.
 - **Google-style docstrings** (`pydocstyle convention = "google"`).
 - Use `from __future__ import annotations` (the codebase relies on string annotations and `FA`).
 - **Local / lazy imports are allowed here** (`E402`, `PLC0415` are intentionally ignored) because
@@ -170,8 +170,8 @@ RoboVerse uses **ruff** (lint + format) and **pre-commit**. The authoritative co
 ## Testing
 
 - RoboVerse content/integration tests live in `tests/` (`test_*.py`, functions `test_*`); run with
-  `python -m pytest tests/`. Core simulator tests live in MetaSim's `metasim/test` — run those there,
-  following MetaSim's `AGENTS.md`.
+  `python -m pytest tests/`. Core simulator tests live in `packages/metasim/metasim/test` — run them
+  from `packages/metasim` (`python -m pytest -k general`), following that package's `AGENTS.md`.
 - **Be explicit about simulator scope.** Only run a simulator's tests when the change affects that
   simulator or shared code it uses. Read the sim→environment mapping from MetaSim
   [`ENVIRONMENTS.md`](../MetaSim/ENVIRONMENTS.md); if the mapping is unknown, **ask before running

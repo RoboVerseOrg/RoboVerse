@@ -1,3 +1,4 @@
+import os
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -5,9 +6,16 @@ import cv2
 import numpy as np
 
 if __name__ == "__main__":
-    default_path = "/home/boshi/Documents/Science/calvin/dataset/calvin_debug_dataset/training"
+    # No personal default: point at a CALVIN split via --path or $CALVIN_DATASET_DIR.
+    default_path = os.environ.get("CALVIN_DATASET_DIR")
     parser = ArgumentParser(description="Interactive visualization of CALVIN dataset")
-    parser.add_argument("--path", type=str, default=default_path, help="Path to dir containing scene_info.npy")
+    parser.add_argument(
+        "--path",
+        type=str,
+        default=default_path,
+        required=default_path is None,
+        help="Path to dir containing scene_info.npy",
+    )
     parser.add_argument("-d", "--data", nargs="*", default=["rgb_static", "rgb_gripper"], help="Data to visualize")
     args = parser.parse_args()
 
@@ -19,7 +27,7 @@ if __name__ == "__main__":
     indices = list(range(indices[0], indices[1] + 1))
 
     annotations = np.load(f"{args.path}/lang_annotations/auto_lang_ann.npy", allow_pickle=True).item()
-    annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"]))
+    annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"], strict=False))
 
     idx = 0
     ann_idx = -1

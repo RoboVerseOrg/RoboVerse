@@ -10,18 +10,18 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Dict, Optional
 
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-from roboverse_learn.il.policies.dp.models.diffusion.conditional_unet1d import ConditionalUnet1D
-from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
 import torch
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 from roboverse_learn.il.policies.dp.ddpm_image_policy import DiffusionDenoisingImagePolicy
+from roboverse_learn.il.policies.dp.models.diffusion.conditional_unet1d import ConditionalUnet1D
+from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
 
 
 class DiffusionUnetImagePolicy(DiffusionDenoisingImagePolicy):
-
     def __init__(
         self,
         shape_meta: Mapping[str, Any],

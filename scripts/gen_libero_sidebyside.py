@@ -69,10 +69,10 @@ def run(suite, base, variant, frames, sz, out):
     transforms = {"id": lambda x: x, "v": lambda x: x[::-1], "h": lambda x: x[:, ::-1], "vh": lambda x: x[::-1, ::-1]}
     best = min(transforms, key=lambda k: np.abs(native[0].astype(int) - transforms[k](meta[0]).astype(int)).mean())
     meta = [transforms[best](m) for m in meta]
-    mae = float(np.mean([np.abs(n.astype(int) - m.astype(int)).mean() for n, m in zip(native, meta)]))
+    mae = float(np.mean([np.abs(n.astype(int) - m.astype(int)).mean() for n, m in zip(native, meta, strict=False)]))
     print(f"MetaSim orientation match = '{best}'; per-frame native-vs-MetaSim pixel MAE = {mae:.2f}/255")
 
-    sbs = [np.concatenate([n, m], axis=1) for n, m in zip(native, meta)]
+    sbs = [np.concatenate([n, m], axis=1) for n, m in zip(native, meta, strict=False)]
     os.makedirs(os.path.dirname(out), exist_ok=True)
     import imageio
 

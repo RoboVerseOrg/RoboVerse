@@ -95,6 +95,9 @@ def main():
     print(
         f"=== native registration: registry OK + {ok}/{len(ENVIRONMENTS)} tasks make/reset/step with clone deleted ==="
     )
+    # A task that failed to make/reset/step is a verification failure; say so in the
+    # exit status, or a caller cannot tell this run from a clean one.
+    sys.exit(0 if ENVIRONMENTS and ok == len(ENVIRONMENTS) else 1)
 
 
 if __name__ == "__main__":

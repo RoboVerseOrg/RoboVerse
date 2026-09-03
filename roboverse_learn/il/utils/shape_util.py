@@ -1,4 +1,5 @@
-from typing import Callable, Dict, List, Tuple
+from collections.abc import Callable
+from typing import Tuple
 
 import torch
 import torch.nn as nn

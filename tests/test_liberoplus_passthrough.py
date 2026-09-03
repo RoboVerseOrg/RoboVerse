@@ -155,7 +155,7 @@ def test_passthrough_bitwise_matches_native():
     nat_traj = record(nat)
     nat.close()
 
-    for t, ((po, pr, pd), (no, nr, nd)) in enumerate(zip(pt_traj, nat_traj)):
+    for t, ((po, pr, pd), (no, nr, nd)) in enumerate(zip(pt_traj, nat_traj, strict=False)):
         assert set(po) == set(no), f"step{t}: obs key mismatch"
         for k in po:
             if any(h in k.lower() for h in ("image", "rgb", "depth")):

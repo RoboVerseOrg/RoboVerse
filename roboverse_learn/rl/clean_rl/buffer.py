@@ -45,10 +45,10 @@ except ImportError:
 
 __all__ = [
     "BaseBuffer",
-    "RolloutBuffer",
     "ReplayBuffer",
-    "RolloutBufferSamples",
     "ReplayBufferSamples",
+    "RolloutBuffer",
+    "RolloutBufferSamples",
 ]
 
 
@@ -83,12 +83,12 @@ def get_action_dim(action_space: spaces.Space) -> int:
         return 1
     elif isinstance(action_space, spaces.MultiDiscrete):
         # Number of discrete actions
-        return int(len(action_space.nvec))
+        return len(action_space.nvec)
     elif isinstance(action_space, spaces.MultiBinary):
         # Number of binary actions
-        assert isinstance(
-            action_space.n, int
-        ), f"Multi-dimensional MultiBinary({action_space.n}) action space is not supported. You can flatten it instead."
+        assert isinstance(action_space.n, int), (
+            f"Multi-dimensional MultiBinary({action_space.n}) action space is not supported. You can flatten it instead."
+        )
         return int(action_space.n)
     else:
         raise NotImplementedError(f"{action_space} action space is not supported")
@@ -110,7 +110,7 @@ def get_obs_shape(
         return (1,)
     elif isinstance(observation_space, spaces.MultiDiscrete):
         # Number of discrete features
-        return (int(len(observation_space.nvec)),)
+        return (len(observation_space.nvec),)
     elif isinstance(observation_space, spaces.MultiBinary):
         # Number of binary features
         return observation_space.shape
@@ -213,7 +213,7 @@ class BaseBuffer(ABC):
         Add a new batch of transitions to the buffer
         """
         # Do a for loop along the batch axis
-        for data in zip(*args):
+        for data in zip(*args, strict=False):
             self.add(*data)
 
     def reset(self) -> None:
@@ -314,7 +314,9 @@ class ReplayBuffer(BaseBuffer):
 
         if not optimize_memory_usage:
             # When optimizing memory, `observations` contains also the next observation
-            self.next_observations = np.zeros((self.buffer_size, self.n_envs, *self.obs_shape), dtype=observation_space.dtype)
+            self.next_observations = np.zeros(
+                (self.buffer_size, self.n_envs, *self.obs_shape), dtype=observation_space.dtype
+            )
 
         self.actions = np.zeros(
             (self.buffer_size, self.n_envs, self.action_dim), dtype=self._maybe_cast_dtype(action_space.dtype)
@@ -341,7 +343,8 @@ class ReplayBuffer(BaseBuffer):
                 mem_available /= 1e9
                 warnings.warn(
                     "This system does not have apparently enough memory to store the complete "
-                    f"replay buffer {total_memory_usage:.2f}GB > {mem_available:.2f}GB"
+                    f"replay buffer {total_memory_usage:.2f}GB > {mem_available:.2f}GB",
+                    stacklevel=2,
                 )
 
     def add(

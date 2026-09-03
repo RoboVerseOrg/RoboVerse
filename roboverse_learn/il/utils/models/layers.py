@@ -1,10 +1,8 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
+import collections.abc
 from functools import partial
 from itertools import repeat
-import collections.abc
+
+import torch.nn as nn
 
 
 def _ntuple(n):
@@ -12,6 +10,7 @@ def _ntuple(n):
         if isinstance(x, collections.abc.Iterable) and not isinstance(x, str):
             return tuple(x)
         return tuple(repeat(x, n))
+
     return parse
 
 
@@ -19,18 +18,18 @@ to_2tuple = _ntuple(2)
 
 
 class Mlp(nn.Module):
-    """ MLP as used in Vision Transformer (timm.layers)"""
+    """MLP as used in Vision Transformer (timm.layers)"""
 
     def __init__(
-            self,
-            in_features,
-            hidden_features=None,
-            out_features=None,
-            act_layer=nn.GELU,
-            norm_layer=None,
-            bias=True,
-            drop=0.,
-            use_conv=False,
+        self,
+        in_features,
+        hidden_features=None,
+        out_features=None,
+        act_layer=nn.GELU,
+        norm_layer=None,
+        bias=True,
+        drop=0.0,
+        use_conv=False,
     ):
         super().__init__()
         out_features = out_features or in_features
