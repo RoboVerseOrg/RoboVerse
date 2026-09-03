@@ -834,7 +834,13 @@ class IsaacgymHandler(BaseSimHandler):
         cache = self._actions_cache
         if not cache or isinstance(cache, (torch.Tensor, np.ndarray)):
             return None
-        joint_names = self._joint_info[robot.name]["names"]
+        # Iterate joints in alphabetically-sorted order so the reported
+        # ``joint_pos_target`` aligns with ``joint_pos`` (emitted via
+        # ``_get_joint_ids_reindex``, i.e. sorted-name order). ``_joint_info[...]["names"]``
+        # is native DOF order, so using it produced a target vector misaligned with
+        # ``joint_pos`` whenever the URDF joint order was not already alphabetical.
+        # Values are name-keyed, so only the output ordering changes.
+        joint_names = self._get_joint_names(robot.name, sort=True)
         targets_per_env = []
         for env_idx, env_action in enumerate(cache):
             if env_idx >= self._num_envs:

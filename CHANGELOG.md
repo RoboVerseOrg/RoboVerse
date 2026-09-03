@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `RLTaskEnv.step` publishes the *terminal* observation in `info["observations"]["raw"]["obs"]` instead of the episode's first one (off-policy truncation bootstraps in clean_rl SAC/TD3 and FastTD3 read it).
+- IsaacGym and PyBullet reported `joint_pos_target` in native DoF order while `joint_pos` is in sorted-name order; both now use `get_joint_names(sort=True)` (completes #12).
 - MuJoCo: `<size memory="512M">` is reserved by default; humanoid + mesh scenes no longer die with
   `mj_stackAlloc: out of memory` (get_started/10_mount_camera.py).
 - `hf_util`: a symlinked `roboverse_data` is no longer refused as path traversal; concurrent

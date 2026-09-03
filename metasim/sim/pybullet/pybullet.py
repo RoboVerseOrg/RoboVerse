@@ -449,8 +449,14 @@ class SinglePybulletHandler(BaseSimHandler):
             cached_action = (self._actions_cache or {}).get(robot.name)
             if cached_action is not None and cached_action.get("dof_pos_target") is not None:
                 dof_pos_target = cached_action["dof_pos_target"]
+                # Iterate joints in alphabetically-sorted order so the reported
+                # ``joint_pos_target`` aligns with ``joint_pos``/``joint_vel`` (emitted
+                # via ``joint_reindex``, i.e. sorted-name order). ``object_joint_order``
+                # is native URDF order, so using it produced a target vector misaligned
+                # with ``joint_pos`` whenever that order was not already alphabetical.
+                # Values are name-keyed, so only the output ordering changes.
                 joint_pos_target = torch.tensor(
-                    [dof_pos_target[name] for name in self.object_joint_order[robot.name]],
+                    [dof_pos_target[name] for name in self._get_joint_names(robot.name, sort=True)],
                     dtype=torch.float32,
                 ).unsqueeze(0)
             state = RobotState(
