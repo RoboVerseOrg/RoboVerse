@@ -84,7 +84,12 @@ def reset_cartpole(
     # MuJoCo path (single-env scene-MJCF): write to physics.data.qpos.
     if hasattr(env.handler, "physics"):
         physics = env.handler.physics
-        rng = np.random.default_rng()
+        # Draw from the *global* NumPy RNG. ``reset(seed=N)`` forwards to
+        # ``handler.set_seed``, which seeds ``np.random`` (plus ``random`` and
+        # torch) — a fresh ``np.random.default_rng()`` would ignore that seed, so
+        # the reset-noise here stayed unreproducible and ``reset(seed=N)`` was a
+        # silent no-op for this task despite the plumbing being in place.
+        rng = np.random
         with physics.reset_context():
             physics.data.qpos[0] = 0.0 + rng.uniform(*slider_pos_range)
             physics.data.qpos[1] = hinge_init + rng.uniform(*hinge_pos_range)
