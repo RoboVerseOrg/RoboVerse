@@ -47,7 +47,7 @@ from roboverse_learn.managers import (
     RewTerm,
 )
 
-from ._locator import mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset
 from ._mjcf_patch import GO1_KP, patch_mjcf_with_pd_actuators
 from .mdp import (
     SceneEntityCfg,
@@ -545,7 +545,7 @@ class VelocityFlatGo1EnvCfg(ManagerBasedRVEnvCfg):
 class _Go1TaskBase(ManagerBasedRVEnv):
     """Shared scaffold for all go1 velocity variants (flat / rough)."""
 
-    scenario = _go1_scenario()
+    scenario = lazy_scenario(_go1_scenario)
     # Subclasses override these: rough adds the height_scan obs + terrain_scan sensor.
     _obs_cfg_cls: type = _Go1ObsCfg
     _use_terrain_scan: bool = False
@@ -776,6 +776,6 @@ class VelocityRoughGo1Task(_Go1TaskBase):
     remaining step for full rough 1:1.
     """
 
-    scenario = _go1_scenario(rough=True)
+    scenario = lazy_scenario(lambda: _go1_scenario(rough=True))
     _obs_cfg_cls = _Go1RoughObsCfg
     _use_terrain_scan = True
