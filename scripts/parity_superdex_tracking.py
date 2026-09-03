@@ -12,6 +12,11 @@ its own environment and the two recordings are compared afterwards::
 ``compare`` prints, per backend, the mean / max absolute tracking error |q - q_target| over the run
 and the mean absolute difference between the two backends' joint trajectories. It does not claim
 parity: it measures it (see AGENTS.md, "Parity Is Load-Bearing").
+
+``record --mode drop`` records rigid-object dynamics instead of robot tracking: the cube, sphere and
+bbq-sauce bottle of the ``0_static_scene`` tutorial are released from the same poses and their root
+positions are logged per env step; ``compare`` then reports the per-object position difference
+(settling height, slide/roll distance) between the two backends.
 """
 
 from __future__ import annotations
@@ -42,10 +47,136 @@ def _scenario(sim: str):
     )
 
 
-def record(*, sim: str, out: str, steps: int, seed: int, hold: int) -> None:
+def _drop_scenario(sim: str):
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
+    from metasim.scenario.scenario import ScenarioCfg
+
+    return ScenarioCfg(
+        robots=["franka"],
+        simulator=sim,
+        headless=True,
+        num_envs=1,
+        objects=[
+            PrimitiveCubeCfg(
+                name="cube", size=(0.1, 0.1, 0.1), color=[1.0, 0.0, 0.0], physics=PhysicStateType.RIGIDBODY
+            ),
+            PrimitiveSphereCfg(name="sphere", radius=0.1, color=[0.0, 0.0, 1.0], physics=PhysicStateType.RIGIDBODY),
+            RigidObjCfg(
+                name="bbq_sauce",
+                scale=(2, 2, 2),
+                physics=PhysicStateType.RIGIDBODY,
+                usd_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/usd/bbq_sauce.usd",
+                urdf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/urdf/bbq_sauce.urdf",
+                mjcf_path="roboverse_data/assets/libero/COMMON/stable_hope_objects/bbq_sauce/mjcf/bbq_sauce.xml",
+            ),
+        ],
+    )
+
+
+_DROP_INIT = {
+    "cube": ([0.3, -0.2, 0.30], [0.9239, 0.0, 0.3827, 0.0]),  # tilted 45 deg about y: lands on an edge, tips over
+    "sphere": ([0.4, -0.6, 0.40], [1.0, 0.0, 0.0, 0.0]),
+    "bbq_sauce": ([0.7, -0.3, 0.35], [0.7071, 0.7071, 0.0, 0.0]),  # lying on its side: rolls
+}
+
+
+def record_drop(*, sim: str, out: str, steps: int) -> None:
+    """Release the three tutorial objects from fixed poses and log their root positions per env step."""
+    from metasim.utils.setup_util import get_handler
+
+    scenario = _drop_scenario(sim)
+    handler = get_handler(scenario)
+    robot = scenario.robots[0]
+    init = {
+        "objects": {name: {"pos": torch.tensor(p), "rot": torch.tensor(q)} for name, (p, q) in _DROP_INIT.items()},
+        "robots": {
+            robot.name: {
+                "pos": torch.tensor([0.0, 0.0, 0.0]),
+                "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+                "dof_pos": dict(robot.default_joint_positions),
+            }
+        },
+    }
+    handler.set_states([init])
+    names = list(_DROP_INIT)
+    traj = []
+    for _ in range(steps):
+        handler.simulate()
+        objs = handler.get_states(mode="dict")[0]["objects"]
+        traj.append([np.asarray(objs[n]["pos"], dtype=np.float64) for n in names])
+    handler.close()
+    out = out if out.endswith(".npz") else out + ".npz"
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    np.savez(out, sim=sim, mode="drop", object_names=np.array(names), positions=np.array(traj))
+    final = np.array(traj)[-1]
+    print(
+        f"[{sim}] drop {steps} steps: final z "
+        + ", ".join(f"{n}={final[i][2]:.4f}" for i, n in enumerate(names))
+        + f" -> {out}"
+    )
+
+
+def compare_drop(a, b, *, plot: str | None = None) -> None:
+    names = list(a["object_names"])
+    if names != list(b["object_names"]):
+        raise ValueError(f"object order differs: {names} vs {list(b['object_names'])}")
+    pa, pb = a["positions"], b["positions"]  # (T, n_obj, 3)
+    n = min(len(pa), len(pb))
+    for i, name in enumerate(names):
+        diff = np.linalg.norm(pa[:n, i] - pb[:n, i], axis=1)
+        print(
+            f"  {name:>10}: final pos {a['sim']}={np.round(pa[n - 1, i], 4).tolist()} {b['sim']}={np.round(pb[n - 1, i], 4).tolist()}"
+            f" | mean|Δpos|={diff.mean() * 1000:.1f} mm  max={diff.max() * 1000:.1f} mm  final={diff[-1] * 1000:.1f} mm"
+        )
+    if plot:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        fig, axes = plt.subplots(len(names), 3, figsize=(13, 3 * len(names)), sharex=True, squeeze=False)
+        t = np.arange(n)
+        for i, name in enumerate(names):
+            for k, axis in enumerate("xyz"):
+                ax = axes[i, k]
+                ax.plot(t, pa[:n, i, k], lw=1.4, label=str(a["sim"]))
+                ax.plot(t, pb[:n, i, k], lw=1.4, label=str(b["sim"]))
+                ax.set_title(f"{name} {axis} [m]", fontsize=9)
+                ax.grid(alpha=0.3)
+        axes[0, 0].legend(fontsize=8)
+        fig.suptitle(f"Rigid-object drop dynamics: {a['sim']} vs {b['sim']}")
+        fig.supxlabel("env step")
+        fig.tight_layout()
+        fig.savefig(plot, dpi=110)
+        print(f"plot -> {plot}")
+
+
+def _apply_effort_limit(scenario, effort_limit: float | None) -> None:
+    """Give every arm actuator the same explicit ``effort_limit_sim`` on every backend.
+
+    Without it each backend clamps with whatever its asset file says (the Franka MJCF has
+    ``forcerange="-40 40"``, the URDF ``<limit effort="87">``), which is the dominant source of
+    closed-loop divergence — exactly what the MuJoCo backend warns about at launch.
+    """
+    if effort_limit is None:
+        return
+    from metasim.utils.setup_util import get_robot
+
+    robot = scenario.robots[0]
+    if isinstance(robot, str):
+        robot = get_robot(robot)
+        scenario.robots = [robot]
+    for name, act in robot.actuators.items():
+        if "finger" not in name:
+            act.effort_limit_sim = float(effort_limit)
+
+
+def record(*, sim: str, out: str, steps: int, seed: int, hold: int, effort_limit: float | None = None) -> None:
     from metasim.utils.setup_util import get_handler
 
     scenario = _scenario(sim)
+    _apply_effort_limit(scenario, effort_limit)
     handler = get_handler(scenario)
     robot = scenario.robots[0]
     joint_names = handler.get_joint_names(robot.name, sort=True)
@@ -104,6 +235,11 @@ def _summary(names: list[str], measured: np.ndarray, targets: np.ndarray) -> str
 
 def compare(a_path: str, b_path: str, *, plot: str | None = None) -> None:
     a, b = np.load(a_path), np.load(b_path)
+    if "positions" in a.files:
+        if "positions" not in b.files:
+            raise ValueError("cannot compare a drop recording with a tracking recording")
+        compare_drop(a, b, plot=plot)
+        return
     names = list(a["joint_names"])
     if names != list(b["joint_names"]):
         raise ValueError(f"joint order differs: {names} vs {list(b['joint_names'])}")
@@ -152,13 +288,24 @@ def main() -> None:
     rec.add_argument("--steps", type=int, default=120)
     rec.add_argument("--hold", type=int, default=20, help="env steps per random target")
     rec.add_argument("--seed", type=int, default=0)
+    rec.add_argument("--mode", choices=("tracking", "drop"), default="tracking")
+    rec.add_argument(
+        "--effort-limit",
+        type=float,
+        default=None,
+        help="explicit effort_limit_sim [N m] for every arm actuator on this backend (see _apply_effort_limit)",
+    )
     cmp_ = sub.add_parser("compare")
     cmp_.add_argument("a")
     cmp_.add_argument("b")
     cmp_.add_argument("--plot", default=None)
     args = parser.parse_args()
-    if args.cmd == "record":
-        record(sim=args.sim, out=args.out, steps=args.steps, seed=args.seed, hold=args.hold)
+    if args.cmd == "record" and args.mode == "drop":
+        record_drop(sim=args.sim, out=args.out, steps=args.steps)
+    elif args.cmd == "record":
+        record(
+            sim=args.sim, out=args.out, steps=args.steps, seed=args.seed, hold=args.hold, effort_limit=args.effort_limit
+        )
     else:
         compare(args.a, args.b, plot=args.plot)
 

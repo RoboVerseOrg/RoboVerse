@@ -44,7 +44,9 @@ if __name__ == "__main__":
         robot: str = "franka"
 
         ## Handlers
-        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "superdex"] = "mujoco"
+        sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "superdex"] = (
+            "mujoco"
+        )
         renderer: (
             Literal[
                 "isaacsim",

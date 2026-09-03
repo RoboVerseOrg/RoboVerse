@@ -43,10 +43,10 @@ class Args:
     robot: str = "franka"
 
     ## Handlers
-    sim: Literal["isaaclab", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco"] = "mujoco"
+    sim: Literal["isaacsim", "isaacgym", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "superdex"] = "mujoco"
 
     ## Others
-    num_handlers: int = 1
+    num_envs: int = 1
     headless: bool = False
 
     def __post_init__(self):
@@ -61,7 +61,7 @@ scenario = ScenarioCfg(
     robots=[args.robot],
     simulator=args.sim,
     headless=args.headless,
-    num_handlers=args.num_handlers,
+    num_envs=args.num_envs,
 )
 
 # add cameras
