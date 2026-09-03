@@ -1,6 +1,6 @@
 """Integration tests for parallel simulation with multiple environments.
 
-Based on get_started/3_parallel_envs.py - Tests ParallelSimWrapper functionality.
+Based on examples/3_parallel_envs.py - Tests ParallelSimWrapper functionality.
 """
 
 from __future__ import annotations

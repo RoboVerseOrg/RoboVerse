@@ -9,7 +9,7 @@ RoboTwin task through the same passthrough factory RoboVerse exposes
 dumps the dense dual-arm joint trajectory plus initial object poses to a plain
 pickle.
 
-The companion ``get_started/10_robotwin_aloha_replay.py`` then runs in the
+The companion ``examples/10_robotwin_aloha_replay.py`` then runs in the
 ``roboverse`` env: it converts that pickle into RoboVerse's name-keyed ``*_v2``
 format and replays the ALOHA-AgileX embodiment. Keeping the hand-off a plain
 pickle of numpy arrays is what lets the two incompatible envs cooperate.

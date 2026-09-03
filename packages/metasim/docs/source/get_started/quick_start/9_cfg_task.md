@@ -16,19 +16,19 @@
 ## Running the Tutorial
 
 ```bash
-python get_started/9_cfg_task.py --sim <simulator> --num_envs <num_envs> --task <task_name>
+python examples/9_cfg_task.py --sim <simulator> --num_envs <num_envs> --task <task_name>
 ```
 
 ### Examples
 
 #### IsaacSim
 ```bash
-python get_started/9_cfg_task.py --sim isaacsim --num_envs 4 --task close_box
+python examples/9_cfg_task.py --sim isaacsim --num_envs 4 --task close_box
 ```
 
 #### Isaac Gym
 ```bash
-python get_started/9_cfg_task.py --sim isaacgym --num_envs 4 --task close_box
+python examples/9_cfg_task.py --sim isaacgym --num_envs 4 --task close_box
 ```
 
 ## Code Highlights

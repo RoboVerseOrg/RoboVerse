@@ -5,7 +5,7 @@
 
 ## Available Scripts
 
-All scripts are located in `get_started/rl/`:
+All scripts are located in `examples/rl/`:
 
 ### 1. PPO Training (`0_ppo.py`)
 
@@ -15,18 +15,18 @@ Direct implementation using RLTaskEnv with Stable Baselines3 PPO.
 
 ```bash
 # Basic usage with default settings
-python get_started/rl/0_ppo.py
+python examples/rl/0_ppo.py
 
 # Custom task and robot
-python get_started/rl/0_ppo.py --task reach_origin --robot franka --sim isaacgym
+python examples/rl/0_ppo.py --task reach_origin --robot franka --sim isaacgym
 
 # Adjust environment count and headless mode
-python get_started/rl/0_ppo.py --num-envs 256 --headless
+python examples/rl/0_ppo.py --num-envs 256 --headless
 
 # Different simulators
-python get_started/rl/0_ppo.py --sim mujoco
-python get_started/rl/0_ppo.py --sim genesis
-python get_started/rl/0_ppo.py --sim isaacsim
+python examples/rl/0_ppo.py --sim mujoco
+python examples/rl/0_ppo.py --sim genesis
+python examples/rl/0_ppo.py --sim isaacsim
 ```
 
 **Arguments:**
@@ -39,7 +39,7 @@ python get_started/rl/0_ppo.py --sim isaacsim
 
 **Outputs:**
 
-- Model saved to: `get_started/output/rl/0_ppo_reaching_{sim}`
+- Model saved to: `examples/output/rl/0_ppo_reaching_{sim}`
 
 ### 2. PPO Training with Gym Interface (`0_ppo_gym.py`)
 
@@ -49,13 +49,13 @@ Uses Gymnasium-compatible interface with cleaner integration.
 
 ```bash
 # Basic training
-python get_started/rl/0_ppo_gym.py
+python examples/rl/0_ppo_gym.py
 
 # With different backend
-python get_started/rl/0_ppo_gym.py --sim mjx --device cuda
+python examples/rl/0_ppo_gym.py --sim mjx --device cuda
 
 # Custom configuration
-python get_started/rl/0_ppo_gym.py --task reach_origin --robot franka --num-envs 64
+python examples/rl/0_ppo_gym.py --task reach_origin --robot franka --num-envs 64
 ```
 
 **Arguments:**
@@ -75,7 +75,7 @@ Advanced TD3 implementation with distributional critics and various optimization
 
 ```bash
 # Basic training
-python get_started/rl/1_fttd3.py
+python examples/rl/1_fttd3.py
 
 # The script uses a CONFIG dictionary for configuration
 # Key parameters can be modified in the CONFIG section

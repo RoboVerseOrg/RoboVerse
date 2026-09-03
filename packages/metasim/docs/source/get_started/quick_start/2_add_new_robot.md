@@ -19,7 +19,7 @@ In this tutorial, we'll add a humanoid robot (Unitree H1) to demonstrate the pro
 ## Running the Tutorial
 
 ```bash
-python get_started/2_add_new_robot.py  --sim <simulator>
+python examples/2_add_new_robot.py  --sim <simulator>
 ```
 you can also render in the headless mode by adding `--headless` flag. By using this, there will be no window popping up and the rendering will also be faster.
 
@@ -30,40 +30,40 @@ By running the above command, you will add a new robot to MetaSim and it will au
 
 #### IsaacSim
 ```bash
-python get_started/2_add_new_robot.py  --sim isaacsim
+python examples/2_add_new_robot.py  --sim isaacsim
 ```
 
 #### Isaac Gym
 ```bash
-python get_started/2_add_new_robot.py  --sim isaacgym
+python examples/2_add_new_robot.py  --sim isaacgym
 ```
 
 #### Mujoco
 ```bash
 # For mac users, replace python with mjpython.
-python get_started/2_add_new_robot.py  --sim mujoco --headless
+python examples/2_add_new_robot.py  --sim mujoco --headless
 ```
 Note that we find the `non-headless` mode of Mujoco is not stable. So we recommend using the `headless` mode.
 
 #### Genesis
 ```bash
-python get_started/2_add_new_robot.py  --sim genesis
+python examples/2_add_new_robot.py  --sim genesis
 ```
 Note that we find the `headless` mode of Genesis is not stable. So we recommend using the `non-headless` mode.
 
 #### Sapien
 ```bash
-python get_started/2_add_new_robot.py  --sim sapien3
+python examples/2_add_new_robot.py  --sim sapien3
 ```
 
 #### Pybullet
 ```bash
-python get_started/2_add_new_robot.py  --sim pybullet
+python examples/2_add_new_robot.py  --sim pybullet
 ```
 
 #### Newton
 ```bash
-python get_started/2_add_new_robot.py  --sim newton
+python examples/2_add_new_robot.py  --sim newton
 ```
 
 

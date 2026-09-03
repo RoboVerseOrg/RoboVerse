@@ -110,7 +110,7 @@ def test_bundled_object_usds_are_present():
 @pytest.mark.general
 def test_replay_cli_module_loads_and_helpers_work():
     """The CLI is loadable as a module and its pure helpers behave."""
-    script = REPO_ROOT / "get_started" / "replay_multi_scene_render.py"
+    script = REPO_ROOT / "examples" / "replay_multi_scene_render.py"
     spec = importlib.util.spec_from_file_location("rsmsr", script)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -134,7 +134,7 @@ def test_replay_cli_reads_traj_length():
     if not traj.exists():
         pytest.skip(f"trajectory not present locally: {traj}")
 
-    script = REPO_ROOT / "get_started" / "replay_multi_scene_render.py"
+    script = REPO_ROOT / "examples" / "replay_multi_scene_render.py"
     spec = importlib.util.spec_from_file_location("rsmsr", script)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -159,7 +159,7 @@ def test_task_objects_carry_both_usd_and_mjcf_paths():
 @pytest.mark.general
 def test_replay_cli_advertises_simulator_arg():
     """``--simulator`` must accept isaacsim and mujoco."""
-    script = REPO_ROOT / "get_started" / "replay_multi_scene_render.py"
+    script = REPO_ROOT / "examples" / "replay_multi_scene_render.py"
     spec = importlib.util.spec_from_file_location("rsmsr", script)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

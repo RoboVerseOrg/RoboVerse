@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict
 
 import numpy as np
 import torch
@@ -15,7 +15,7 @@ class LinearNormalizer(DictOfTensorMixin):
     @torch.no_grad()
     def fit(
         self,
-        data: Union[Dict, torch.Tensor, np.ndarray, zarr.Array],
+        data: Dict | torch.Tensor | np.ndarray | zarr.Array,
         last_n_dims=1,
         dtype=torch.float32,
         mode="limits",
@@ -48,7 +48,7 @@ class LinearNormalizer(DictOfTensorMixin):
                 fit_offset=fit_offset,
             )
 
-    def __call__(self, x: Union[Dict, torch.Tensor, np.ndarray]) -> torch.Tensor:
+    def __call__(self, x: Dict | torch.Tensor | np.ndarray) -> torch.Tensor:
         return self.normalize(x)
 
     def __getitem__(self, key: str):
@@ -73,10 +73,10 @@ class LinearNormalizer(DictOfTensorMixin):
             params = self.params_dict["_default"]
             return _normalize(x, params, forward=forward)
 
-    def normalize(self, x: Union[Dict, torch.Tensor, np.ndarray]) -> torch.Tensor:
+    def normalize(self, x: Dict | torch.Tensor | np.ndarray) -> torch.Tensor:
         return self._normalize_impl(x, forward=True)
 
-    def unnormalize(self, x: Union[Dict, torch.Tensor, np.ndarray]) -> torch.Tensor:
+    def unnormalize(self, x: Dict | torch.Tensor | np.ndarray) -> torch.Tensor:
         return self._normalize_impl(x, forward=False)
 
     def get_input_stats(self) -> Dict:
@@ -112,7 +112,7 @@ class SingleFieldLinearNormalizer(DictOfTensorMixin):
     @torch.no_grad()
     def fit(
         self,
-        data: Union[torch.Tensor, np.ndarray, zarr.Array],
+        data: torch.Tensor | np.ndarray | zarr.Array,
         last_n_dims=1,
         dtype=torch.float32,
         mode="limits",
@@ -133,7 +133,7 @@ class SingleFieldLinearNormalizer(DictOfTensorMixin):
         )
 
     @classmethod
-    def create_fit(cls, data: Union[torch.Tensor, np.ndarray, zarr.Array], **kwargs):
+    def create_fit(cls, data: torch.Tensor | np.ndarray | zarr.Array, **kwargs):
         obj = cls()
         obj.fit(data, **kwargs)
         return obj
@@ -141,9 +141,9 @@ class SingleFieldLinearNormalizer(DictOfTensorMixin):
     @classmethod
     def create_manual(
         cls,
-        scale: Union[torch.Tensor, np.ndarray],
-        offset: Union[torch.Tensor, np.ndarray],
-        input_stats_dict: Dict[str, Union[torch.Tensor, np.ndarray]],
+        scale: torch.Tensor | np.ndarray,
+        offset: torch.Tensor | np.ndarray,
+        input_stats_dict: Dict[str, torch.Tensor | np.ndarray],
     ):
         def to_tensor(x):
             if not isinstance(x, torch.Tensor):
@@ -175,10 +175,10 @@ class SingleFieldLinearNormalizer(DictOfTensorMixin):
         }
         return cls.create_manual(scale, offset, input_stats_dict)
 
-    def normalize(self, x: Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
+    def normalize(self, x: torch.Tensor | np.ndarray) -> torch.Tensor:
         return _normalize(x, self.params_dict, forward=True)
 
-    def unnormalize(self, x: Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
+    def unnormalize(self, x: torch.Tensor | np.ndarray) -> torch.Tensor:
         return _normalize(x, self.params_dict, forward=False)
 
     def get_input_stats(self):
@@ -187,12 +187,12 @@ class SingleFieldLinearNormalizer(DictOfTensorMixin):
     def get_output_stats(self):
         return dict_apply(self.params_dict["input_stats"], self.normalize)
 
-    def __call__(self, x: Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
+    def __call__(self, x: torch.Tensor | np.ndarray) -> torch.Tensor:
         return self.normalize(x)
 
 
 def _fit(
-    data: Union[torch.Tensor, np.ndarray, zarr.Array],
+    data: torch.Tensor | np.ndarray | zarr.Array,
     last_n_dims=1,
     dtype=torch.float32,
     mode="limits",

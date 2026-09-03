@@ -8,7 +8,7 @@ First, you need to install [cuRobo](../../advanced_installation/curobo.md) or [p
 We provide example code for 2 solvers(curobo and pyroki), specify them with the following command:
 
 ```bash
-python get_started/motion_planning/0_franka_planning.py --sim <simulator> --solver <solver>
+python examples/motion_planning/0_franka_planning.py --sim <simulator> --solver <solver>
 ```
 
 Here is a visualization of how we plan the motion for the Franka robot:

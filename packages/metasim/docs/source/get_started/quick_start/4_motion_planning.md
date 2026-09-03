@@ -19,7 +19,7 @@
 ## Running the Tutorial
 
 ```bash
-python get_started/4_motion_planning.py  --sim <simulator>
+python examples/4_motion_planning.py  --sim <simulator>
 ```
 you can also render in the headless mode by adding `--headless` flag. By using this, there will be no window popping up and the rendering will also be faster.
 
@@ -28,36 +28,36 @@ By running the above command, you will plan a motion for a robot and it will aut
 
 ### IsaacSim
 ```bash
-python get_started/4_motion_planning.py  --sim isaacsim
+python examples/4_motion_planning.py  --sim isaacsim
 ```
 
 ### Isaac Gym
 ```bash
-python get_started/4_motion_planning.py  --sim isaacgym
+python examples/4_motion_planning.py  --sim isaacgym
 ```
 
 ### Mujoco
 ```bash
 # For mac users, replace python with mjpython.
-python get_started/4_motion_planning.py  --sim mujoco --headless
+python examples/4_motion_planning.py  --sim mujoco --headless
 ```
 Note that we find the `non-headless` mode of Mujoco is not stable. So we recommend using the `headless` mode.
 
 
 ### Genesis
 ```bash
-python get_started/4_motion_planning.py  --sim genesis
+python examples/4_motion_planning.py  --sim genesis
 ```
 Note that we find the `headless` mode of Genesis is not stable. So we recommend using the `non-headless` mode.
 
 ### Sapien
 ```bash
-python get_started/4_motion_planning.py  --sim sapien3
+python examples/4_motion_planning.py  --sim sapien3
 ```
 
 ### Pybullet
 ```bash
-python get_started/4_motion_planning.py  --sim pybullet
+python examples/4_motion_planning.py  --sim pybullet
 ```
 
 You will get the following videos:

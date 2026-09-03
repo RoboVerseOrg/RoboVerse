@@ -1,5 +1,4 @@
 import numbers
-from typing import Union
 
 import numpy as np
 import scipy.interpolate as si
@@ -185,7 +184,7 @@ class PoseTrajectoryInterpolator:
         final_interp = PoseTrajectoryInterpolator(times, poses)
         return final_interp
 
-    def __call__(self, t: Union[numbers.Number, np.ndarray]) -> np.ndarray:
+    def __call__(self, t: numbers.Number | np.ndarray) -> np.ndarray:
         is_single = False
         if isinstance(t, numbers.Number):
             is_single = True

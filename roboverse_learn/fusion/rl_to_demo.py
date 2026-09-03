@@ -22,7 +22,7 @@ that episode's first frame (see :func:`_finalise_episode`).
 from __future__ import annotations
 
 import os
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
 
 from loguru import logger as log
 

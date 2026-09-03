@@ -25,17 +25,17 @@ You can generate any objects or scene assets you need, [reference](https://githu
 
 ## Common Usage
 ```bash
-python get_started/14_real_assets.py  --sim <simulator>
+python examples/14_real_assets.py  --sim <simulator>
 ```
 
 In headless mode:
 ```bash
-python get_started/14_real_assets.py  --sim isaacsim --headless
-python get_started/14_real_assets.py  --sim isaacgym --headless
-MUJOCO_GL=egl python get_started/14_real_assets.py  --sim mujoco --headless
-python get_started/14_real_assets.py  --sim genesis --headless
-python get_started/14_real_assets.py  --sim sapien3 --headless
-python get_started/14_real_assets.py  --sim pybullet --headless
+python examples/14_real_assets.py  --sim isaacsim --headless
+python examples/14_real_assets.py  --sim isaacgym --headless
+MUJOCO_GL=egl python examples/14_real_assets.py  --sim mujoco --headless
+python examples/14_real_assets.py  --sim genesis --headless
+python examples/14_real_assets.py  --sim sapien3 --headless
+python examples/14_real_assets.py  --sim pybullet --headless
 ```
 
 You will get the following image:
@@ -65,7 +65,7 @@ Example in `generation/tests/test_asset_converter.py`.
 
 ```py
 from huggingface_hub import snapshot_download
-from generation.asset_converter import AssetConverterFactory, AssetType
+from tools.embodiedgen_integration.asset_converter import AssetConverterFactory, AssetType
 
 data_dir = "roboverse_data/assets/EmbodiedGenData"
 snapshot_download(

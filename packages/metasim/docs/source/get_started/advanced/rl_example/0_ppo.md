@@ -14,13 +14,13 @@ We provide tutorials for training PPO, inference and saving video. In this examp
 ### Task: Reach Far Away
 
 ```bash
-python get_started/rl/0_ppo.py --sim <simulator> --task debug:reach_far_away --num_envs <num_envs> --headless
+python examples/rl/0_ppo.py --sim <simulator> --task debug:reach_far_away --num_envs <num_envs> --headless
 ```
 
 ### Task: Reach Target
 
 ```bash
-python get_started/rl/0_ppo.py --sim <simulator> --task debug:reach_origin --num_envs <num_envs> --headless
+python examples/rl/0_ppo.py --sim <simulator> --task debug:reach_origin --num_envs <num_envs> --headless
 ```
 
 ## Example Commands and Results
@@ -28,22 +28,22 @@ python get_started/rl/0_ppo.py --sim <simulator> --task debug:reach_origin --num
 ### Task: Reach Far Away
 Isaac Gym:
 ```bash
-python get_started/rl/0_ppo.py --sim isaacgym --task debug:reach_far_away --num_envs 128 --headless
+python examples/rl/0_ppo.py --sim isaacgym --task debug:reach_far_away --num_envs 128 --headless
 ```
 
 Isaac Lab:
 ```bash
-python get_started/rl/0_ppo.py --sim isaaclab --task debug:reach_far_away --num_envs 128 --headless
+python examples/rl/0_ppo.py --sim isaaclab --task debug:reach_far_away --num_envs 128 --headless
 ```
 ### Task: Reach Target
 Isaac Gym:
 ```bash
-python get_started/rl/0_ppo.py --sim isaacgym --task debug:reach_origin --num_envs 128 --headless
+python examples/rl/0_ppo.py --sim isaacgym --task debug:reach_origin --num_envs 128 --headless
 ```
 
 Isaac Lab:
 ```bash
-python get_started/rl/0_ppo.py --sim isaaclab --task debug:reach_origin --num_envs 128 --headless
+python examples/rl/0_ppo.py --sim isaaclab --task debug:reach_origin --num_envs 128 --headless
 ```
 
 ### You can get the video like this:

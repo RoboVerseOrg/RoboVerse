@@ -47,7 +47,7 @@ The easiest way to get started is to replay a pre-recorded task trajectory. This
 
 ```bash
 # Replay the stack_cube task
-python get_started/rerun/replay_task_demo.py --task stack_cube --sim mujoco --output stack_cube.rrd
+python examples/rerun/replay_task_demo.py --task stack_cube --sim mujoco --output stack_cube.rrd
 ```
 
 This will:
@@ -74,7 +74,7 @@ You'll see:
 To see the visualization in real-time while recording:
 
 ```bash
-python get_started/rerun/replay_task_demo.py --task stack_cube --sim mujoco --output stack_cube.rrd --spawn-viewer
+python examples/rerun/replay_task_demo.py --task stack_cube --sim mujoco --output stack_cube.rrd --spawn-viewer
 ```
 
 ## Available Demo Scripts
@@ -85,11 +85,11 @@ Replays pre-recorded task trajectories. **No GPU or IK solver needed!**
 
 ```bash
 # Available tasks: stack_cube, close_box, pick_cube, etc.
-python get_started/rerun/replay_task_demo.py --task stack_cube --sim mujoco --output stack_cube.rrd
+python examples/rerun/replay_task_demo.py --task stack_cube --sim mujoco --output stack_cube.rrd
 
 # Try different tasks
-python get_started/rerun/replay_task_demo.py --task close_box --sim mujoco --output close_box.rrd
-python get_started/rerun/replay_task_demo.py --task pick_cube --sim mujoco --output pick_cube.rrd
+python examples/rerun/replay_task_demo.py --task close_box --sim mujoco --output close_box.rrd
+python examples/rerun/replay_task_demo.py --task pick_cube --sim mujoco --output pick_cube.rrd
 ```
 
 **Command Line Arguments:**
@@ -109,13 +109,13 @@ Generates sinusoidal or random joint motions directly. **Works on Mac without GP
 
 ```bash
 # Sinusoidal motion (smooth, periodic)
-python get_started/rerun/save_trajectory_simple.py --sim mujoco --output trajectory.rrd
+python examples/rerun/save_trajectory_simple.py --sim mujoco --output trajectory.rrd
 
 # Random motion
-python get_started/rerun/save_trajectory_simple.py --sim mujoco --motion-type random --output trajectory.rrd
+python examples/rerun/save_trajectory_simple.py --sim mujoco --motion-type random --output trajectory.rrd
 
 # More simulation steps
-python get_started/rerun/save_trajectory_simple.py --sim mujoco --num-steps 500 --output trajectory.rrd
+python examples/rerun/save_trajectory_simple.py --sim mujoco --num-steps 500 --output trajectory.rrd
 ```
 
 **Command Line Arguments:**
@@ -135,13 +135,13 @@ For users with GPU and IK solver (PyRoKi or cuRobo):
 
 ```bash
 # With PyRoKi IK solver
-python get_started/rerun/rerun_demo.py --sim mujoco --dynamic --solver pyroki
+python examples/rerun/rerun_demo.py --sim mujoco --dynamic --solver pyroki
 
 # With cuRobo IK solver
-python get_started/rerun/rerun_demo.py --sim mujoco --dynamic --solver curobo
+python examples/rerun/rerun_demo.py --sim mujoco --dynamic --solver curobo
 
 # Save recording
-python get_started/rerun/rerun_demo.py --sim mujoco --dynamic --save-recording demo.rrd
+python examples/rerun/rerun_demo.py --sim mujoco --dynamic --save-recording demo.rrd
 ```
 
 ## Step-by-Step Tutorial
@@ -276,14 +276,14 @@ pip install trimesh yourdfpy
 
 Reduce the number of steps or recording frequency:
 ```bash
-python get_started/rerun/replay_task_demo.py --task stack_cube --max-steps 100 --output small.rrd
+python examples/rerun/replay_task_demo.py --task stack_cube --max-steps 100 --output small.rrd
 ```
 
 ### Performance issues on macOS
 
 Use headless mode for the simulator:
 ```bash
-python get_started/rerun/replay_task_demo.py --task stack_cube --sim mujoco --output stack_cube.rrd
+python examples/rerun/replay_task_demo.py --task stack_cube --sim mujoco --output stack_cube.rrd
 # The simulator runs headless, only Rerun viewer shows
 ```
 
@@ -301,9 +301,9 @@ The recording shows:
 
 | File | Description |
 |------|-------------|
-| `get_started/rerun/replay_task_demo.py` | Replay pre-recorded task trajectories |
-| `get_started/rerun/save_trajectory_simple.py` | CPU-only trajectory recording |
-| `get_started/rerun/rerun_demo.py` | Full demo with IK solver |
+| `examples/rerun/replay_task_demo.py` | Replay pre-recorded task trajectories |
+| `examples/rerun/save_trajectory_simple.py` | CPU-only trajectory recording |
+| `examples/rerun/rerun_demo.py` | Full demo with IK solver |
 | `metasim/utils/rerun/rerun_util.py` | Core RerunVisualizer class |
 | `metasim/utils/rerun/rerun_env_wrapper.py` | RL environment wrapper |
 

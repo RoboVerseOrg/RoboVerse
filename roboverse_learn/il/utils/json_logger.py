@@ -2,7 +2,8 @@ import copy
 import json
 import numbers
 import os
-from typing import Any, Callable, Optional, Sequence
+from collections.abc import Callable, Sequence
+from typing import Any, Optional
 
 import pandas as pd
 

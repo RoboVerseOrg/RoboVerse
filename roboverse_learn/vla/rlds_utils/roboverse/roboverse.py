@@ -1,6 +1,7 @@
 import json
 import os
-from typing import Any, Iterator, Tuple
+from collections.abc import Iterator
+from typing import Any, Tuple
 
 import imageio.v2 as iio
 import numpy as np

@@ -28,7 +28,7 @@ jobs:
           # RoboVerse content / learning / examples -> CHANGELOG.md
           if grep -qP '^(roboverse_pack|roboverse_learn|scripts|get_started)/' <<<"$changed"; then
             if has_entry CHANGELOG.md; then echo "RoboVerse CHANGELOG entry found"; else
-              echo "::error::This PR changes roboverse_pack/, roboverse_learn/, scripts/ or get_started/ but adds no line under '## [Unreleased]' in CHANGELOG.md (or add the no-changelog label)."; status=1; fi
+              echo "::error::This PR changes roboverse_pack/, roboverse_learn/, scripts/ or examples/ but adds no line under '## [Unreleased]' in CHANGELOG.md (or add the no-changelog label)."; status=1; fi
           fi
           # MetaSim library (not its tests) -> packages/metasim/CHANGELOG.md
           if grep -qP '^packages/metasim/metasim/(?!test/)' <<<"$changed"; then
