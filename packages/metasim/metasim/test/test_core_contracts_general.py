@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import os
-import sys
 import textwrap
 
 import pytest
@@ -115,4 +114,5 @@ def test_index_cache_defaults_to_user_cache_dir(monkeypatch, tmp_path):
     monkeypatch.delenv("METASIM_CACHE_DIR", raising=False)
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
     assert _static_index.default_cache_path() == os.path.join(str(tmp_path), "metasim", "task_index.json")
-    assert "tmp" not in _static_index.default_cache_path().split(os.sep)[:2] or sys.platform == "win32"
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+    assert _static_index.default_cache_path().startswith(os.path.join(os.path.expanduser("~"), ".cache", "metasim"))
