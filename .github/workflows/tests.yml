@@ -55,5 +55,8 @@ jobs:
           python -m pip install -e ".[dev,mujoco]"
       - name: Run test suite
         env:
-          MUJOCO_GL: egl
+          # Hosted runners have no EGL/GLX; with MUJOCO_GL=egl `import mujoco` itself fails
+          # (eglQueryString on a None library). `disable` skips GL context creation entirely;
+          # nothing in tests/ renders on MuJoCo, and the suite is identical locally with this value.
+          MUJOCO_GL: disable
         run: python -m pytest tests/ -rs
