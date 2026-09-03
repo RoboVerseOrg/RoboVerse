@@ -114,7 +114,7 @@ RoboVerse uses **ruff** (lint + format) and **pre-commit**. The authoritative co
 ### Python
 
 - **Double quotes** (ruff default — match this repo even if a sibling repo uses single quotes).
-- **Line length 120**; `target-version = "py38"`, so keep syntax 3.8-compatible.
+- **Line length 120**; `requires-python = ">=3.10"` (CI runs 3.11). Ruff's `target-version` is still `py38` so it does not mass-rewrite annotations; do not use syntax newer than 3.10.
 - **Google-style docstrings** (`pydocstyle convention = "google"`).
 - Use `from __future__ import annotations` (the codebase relies on string annotations and `FA`).
 - **Local / lazy imports are allowed here** (`E402`, `PLC0415` are intentionally ignored) because

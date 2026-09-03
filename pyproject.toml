@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "roboverse-py"
 version = "1.0.0b0"
 description = "RoboVerse content, learning, and examples built on MetaSim"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
     "metasim @ git+https://github.com/RoboVerseOrg/MetaSim.git@main",
@@ -155,18 +155,27 @@ extend-exclude = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["roboverse_pack", "roboverse_pack.*", "roboverse_learn", "roboverse_learn.*", "scripts", "scripts.*"]
+include = ["roboverse_pack", "roboverse_pack.*", "roboverse_learn", "roboverse_learn.*"]
 exclude = ["metasim", "metasim.*"]
 namespaces = true
 
 [tool.setuptools.package-data]
-roboverse_pack = ["**/*.md", "**/*.mdl", "**/*.urdf", "**/*.usd", "**/*.xml", "**/*.yaml", "**/*.hdr"]
+roboverse_pack = [
+    "**/*.md",
+    "**/*.mdl",
+    "**/*.urdf",
+    "**/*.usd",
+    "**/*.xml",
+    "**/*.yaml",
+    "**/*.hdr",
+    "**/*.json",  # LIBERO native bundles + task metadata
+    "**/*.npz",  # LIBERO native_bundles_plus initial states
+]
 
 [tool.ruff.lint.per-file-ignores]
 ## For normal scripts, allow print statements, allow no docstrings
 "scripts/**.py" = ["T20", "D"]
 "tools/**.py" = ["T20", "D"]  # research / diagnostic harnesses
-"roboverse_pack/tasks/open6dor/utils/**.py" = ["T20", "D"]
 "roboverse_pack/tasks/maniskill/utils/**.py" = ["T20", "D"]
 ## For get_started scripts, allow no docstrings
 "get_started/**.py" = ["D"]
@@ -185,19 +194,11 @@ roboverse_pack = ["**/*.md", "**/*.mdl", "**/*.urdf", "**/*.usd", "**/*.xml", "*
 ## Temporary disable linting for quick testing
 "roboverse_pack/robots/**.py" = ["D"]  # FIXME: whoever in charge of the robot add docstring and remove this
 "roboverse_pack/scenes/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"roboverse_pack/tasks/arnold/**.py" = ["D"]  # FIXME: Steven add docstring and remove this
 "roboverse_pack/tasks/calvin/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"roboverse_pack/tasks/debug/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"roboverse_pack/tasks/dmcontrol/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
-"roboverse_pack/tasks/fetch/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"roboverse_pack/tasks/gapartnet/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
-"roboverse_pack/tasks/isaacgym_envs/**.py" = ["D"]  # FIXME: Charlie add docstring and remove this
 "roboverse_pack/tasks/libero/**.py" = ["D"]  # FIXME: Peihao add docstring and remove this
-"roboverse_pack/tasks/open6dor/**.py" = ["D"]  # FIXME: Haoran and Yufei add docstring and remove this
 "roboverse_pack/tasks/rlbench/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
 "roboverse_pack/tasks/robosuite/**.py" = ["D"]  # FIXME: Jiangran add docstring and remove this
 "roboverse_pack/tasks/simpler_env/**.py" = ["D"]  # FIXME: Boshi add docstring and remove this
-"roboverse_pack/tasks/skillblender/**.py" = ["D"]  # FIXME: Haoran add docstring and remove this
 "roboverse_pack/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
 
 [tool.ruff.lint.isort]

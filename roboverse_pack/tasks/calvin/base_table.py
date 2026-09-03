@@ -206,7 +206,6 @@ class BaseCalvinTableTask(BaseTaskEnv):
         for s in states:
             found_idx = -1
             for i, global_s in enumerate(self.global_init_states):
-                # import ipdb; ipdb.set_trace()
                 if self._is_state_equal(s, global_s):
                     found_idx = i
                     break

@@ -3,7 +3,7 @@
 Resolves the migrated SimplerEnv assets (robot URDFs, scene GLBs, object meshes, model_db JSONs,
 real-world overlay images) that live under ``roboverse_data/assets/simpler_env`` +
 ``roboverse_data/robots``. Resolution order:
-  1. ``$ROBOVERSE_DATA`` env var (a roboverse_data checkout),
+  1. ``$ROBOVERSE_DATA_DIR`` (or legacy ``$ROBOVERSE_DATA``) env var (a roboverse_data checkout),
   2. ``roboverse_data`` next to this repo (default dev layout),
   3. HF-backed download from ``RoboVerseOrg/roboverse_data`` (mirrors the robotwin/mjlab
      ``_locator`` pattern) — a fresh checkout works with no manual asset fetch.
@@ -35,9 +35,7 @@ def _download_from_hf() -> pathlib.Path | None:
     ``*.convex.stl`` collision caches are intentionally absent on HF (repo ``.gitignore``)
     and are not required — tasks build and render from the downloaded assets without them.
     """
-    target = (
-        pathlib.Path(os.environ["ROBOVERSE_DATA"]) if os.environ.get("ROBOVERSE_DATA") else _REPO / "roboverse_data"
-    )
+    target = _env_data_root() or _REPO / "roboverse_data"
     try:
         from huggingface_hub import snapshot_download
     except ImportError:
@@ -51,10 +49,17 @@ def _download_from_hf() -> pathlib.Path | None:
     return target if (target / "assets" / "simpler_env").exists() else None
 
 
+def _env_data_root() -> pathlib.Path | None:
+    """``$ROBOVERSE_DATA_DIR`` (MetaSim's canonical override) or the legacy ``$ROBOVERSE_DATA`` alias."""
+    env = os.environ.get("ROBOVERSE_DATA_DIR") or os.environ.get("ROBOVERSE_DATA")
+    return pathlib.Path(env) if env else None
+
+
 def data_root() -> pathlib.Path:
     cands = []
-    if os.environ.get("ROBOVERSE_DATA"):
-        cands.append(pathlib.Path(os.environ["ROBOVERSE_DATA"]))
+    env_root = _env_data_root()
+    if env_root is not None:
+        cands.append(env_root)
     cands.append(_REPO / "roboverse_data")
     for c in cands:
         if c and (c / "assets" / "simpler_env").exists():
@@ -65,7 +70,7 @@ def data_root() -> pathlib.Path:
         return downloaded
     raise FileNotFoundError(
         "roboverse_data/assets/simpler_env not found locally and the HuggingFace download failed. "
-        "Set $ROBOVERSE_DATA to a roboverse_data checkout with the migrated SimplerEnv assets "
+        "Set $ROBOVERSE_DATA_DIR (or the legacy $ROBOVERSE_DATA) to a roboverse_data checkout with the migrated SimplerEnv assets "
         "(robots/google_robot, robots/widowx, assets/simpler_env), or install `huggingface_hub`."
     )
 
