@@ -62,7 +62,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: dist
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           body_path: release_notes.md
           prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'a') || contains(github.ref_name, 'b') }}
