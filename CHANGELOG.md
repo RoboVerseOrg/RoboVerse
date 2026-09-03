@@ -56,6 +56,9 @@ release.
   passthrough registration, hard-coded personal paths in scripts/tests, untruthful
   `requires-python >= 3.8` (now 3.10), wheels missing LIBERO json/npz bundles, stale ruff ignores.
 
+### Security
+
+- `hydra-core` pinned to 1.3.4 in the dp / vita / fm IL policy requirements (Dependabot: `hydra.utils.instantiate` code execution with untrusted configs in <=1.3.3).
 
 ## [1.0.0-beta] - 2026-05-31
 
