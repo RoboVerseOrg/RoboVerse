@@ -35,7 +35,28 @@ def test_docs_deployment_requirements_avoid_runtime_and_live_preview_packages():
         assert package not in requirements
 
 
-def test_split_site_build_script_assembles_landing_roboverse_and_metasim(tmp_path):
+def test_landing_page_links_into_the_metasim_subsite():
+    """The RoboVerse landing page deep-links into /metasim/, without double-prefixing.
+
+    The landing page is Sphinx-built from ``docs/source/index.md`` (it is no longer a
+    hand-assembled HTML file), so this contract is checked at the source level.
+    """
+    index = (REPO_ROOT / "docs/source/index.md").read_text(encoding="utf-8")
+
+    assert "/metasim/get_started/installation.html" in index
+    assert "/metasim/metasim/" not in index
+    # /roboverse/ is a page *within* the root site, not a separately built subsite.
+    assert (REPO_ROOT / "docs/source/roboverse/index.md").is_file()
+
+
+def test_build_script_puts_roboverse_at_site_root_and_metasim_under_metasim(tmp_path):
+    """Pin the layout ``scripts/docs/build_roboverse_wiki.sh`` actually ships.
+
+    RoboVerse docs are built directly at the site root (so roboverse.wiki/ lands on the
+    Sphinx intro) and MetaSim docs at /metasim/. This replaces an older assertion that the
+    script emitted a hand-written landing page plus a separate /roboverse/ subsite — the
+    script stopped doing that, and the test was never updated, so it had been failing.
+    """
     fake_pythonpath = tmp_path / "pythonpath"
     fake_sphinx = fake_pythonpath / "sphinx"
     fake_sphinx.mkdir(parents=True)
@@ -72,12 +93,14 @@ dst.mkdir(parents=True, exist_ok=True)
         check=True,
     )
 
-    assert (output_dir / "index.html").is_file()
-    landing = (output_dir / "index.html").read_text(encoding="utf-8")
-    assert 'href="/metasim/get_started/installation.html"' in landing
-    assert "/metasim/metasim/" not in landing
-    assert (output_dir / "roboverse/index.html").read_text(encoding="utf-8").endswith("docs/source</html>\n")
-    assert (output_dir / "metasim/index.html").read_text(encoding="utf-8").endswith("MetaSim/docs/source</html>\n")
+    # The fake sphinx above records which source tree it was asked to build, so each built
+    # site can be identified by the source dir it names.
+    root_site = (output_dir / "index.html").read_text(encoding="utf-8")
+    assert root_site.endswith(f"{REPO_ROOT / 'docs/source'}</html>\n")
+
+    metasim_site = (output_dir / "metasim/index.html").read_text(encoding="utf-8")
+    assert metasim_site.endswith("MetaSim/docs/source</html>\n")
+
     assert (output_dir / "metasim/_images/tea.jpg").read_bytes() == b"fake image"
     assert (output_dir / ".nojekyll").is_file()
     assert (output_dir / "CNAME").read_text(encoding="utf-8") == "roboverse.wiki\n"
