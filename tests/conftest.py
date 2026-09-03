@@ -36,13 +36,15 @@ _HF_DATA_REPO = "https://huggingface.co/datasets/RoboVerseOrg/roboverse_data"
 
 
 def roboverse_data_root() -> Path:
-    """Return the ``roboverse_data`` asset root: ``$ROBOVERSE_DATA``, else the in-repo default.
+    """Return the ``roboverse_data`` asset root, else the in-repo default.
 
-    Mirrors how the packs themselves resolve assets (see
-    ``roboverse_pack.tasks.simpler_env._native._assets``) minus the HF download step — a test
-    must never trigger a multi-GB fetch as a side effect of being collected.
+    ``$ROBOVERSE_DATA_DIR`` is the canonical override (it is what MetaSim's
+    ``metasim.utils.hf_util`` honours); ``$ROBOVERSE_DATA`` is accepted as a legacy alias
+    (``roboverse_pack.tasks.simpler_env._native._assets``). This mirrors how the packs
+    resolve assets minus the HF download step — a test must never trigger a multi-GB fetch
+    as a side effect of being collected.
     """
-    env_root = os.environ.get("ROBOVERSE_DATA")
+    env_root = os.environ.get("ROBOVERSE_DATA_DIR") or os.environ.get("ROBOVERSE_DATA")
     return Path(env_root) if env_root else REPO_ROOT / "roboverse_data"
 
 
@@ -65,18 +67,6 @@ def missing_modules(names: tuple[str, ...]) -> list[str]:
     return missing
 
 
-def pytest_configure(config: pytest.Config) -> None:
-    """Register the RoboVerse-specific markers (also listed in ``pyproject.toml``)."""
-    config.addinivalue_line(
-        "markers",
-        "requires_optional(*modules, extra=None): skip unless the optional dependencies are installed",
-    )
-    config.addinivalue_line(
-        "markers",
-        "requires_asset(*relpaths): skip unless the roboverse_data assets are present",
-    )
-
-
 def pytest_runtest_setup(item: pytest.Item) -> None:
     """Skip tests whose optional dependencies or ``roboverse_data`` assets are absent."""
     for marker in item.iter_markers(name="requires_optional"):
@@ -91,6 +81,6 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
         if missing:
             pytest.skip(
                 f"roboverse_data asset(s) not fetched: {', '.join(missing)} — "
-                f"looked under {roboverse_data_root()}; point $ROBOVERSE_DATA at a "
+                f"looked under {roboverse_data_root()}; point $ROBOVERSE_DATA_DIR at a "
                 f"roboverse_data checkout or fetch them from {_HF_DATA_REPO}"
             )

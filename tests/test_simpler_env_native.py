@@ -1,9 +1,9 @@
 """Tests for the MetaSim-native (zero-dependency) SimplerEnv registration.
 
 The registration test must NOT need the cloned ``simpler_env`` / ``mani_skill2_real2sim``
-packages — only ``ruckig``, which the native EE-delta controller imports (it is a genuine
-runtime dependency of the native port, not of the clone; note it is not declared in any
-pyproject extra today). The make/reset/step smoke test additionally needs sapien and the
+packages — only ``sapien`` (``_metasim/coke_task.py`` imports ``sapien.core`` at module scope)
+and ``ruckig``, which the native EE-delta controller imports (a genuine runtime dependency of
+the native port, not of the clone; note it is not declared in any pyproject extra today). The make/reset/step smoke test additionally needs sapien and the
 migrated ``roboverse_data`` assets (they ship via HF / a roboverse_data checkout).
 """
 
@@ -20,6 +20,7 @@ sapien_available = importlib.util.find_spec("sapien") is not None
 
 
 @pytest.mark.general
+@pytest.mark.skipif(not sapien_available, reason="sapien not installed (coke_task imports sapien.core at module scope)")
 @pytest.mark.requires_optional("ruckig")
 def test_metasim_registers_all_25_without_clone():
     """All 25 SimplerEnv ids register via the MetaSim-native registry, no cloned packages needed."""

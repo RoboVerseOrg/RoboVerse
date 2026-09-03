@@ -170,7 +170,9 @@ def _artic_qpos(model, data, region: str):
     base = _region_base(region)
     specific, generic = [], []
     for j in range(model.njnt):
-        if model.jnt_type[j] not in (mujoco.mjtJoint.mjJNT_HINGE, mujoco.mjtJoint.mjJNT_SLIDE):
+        # ``jnt_type`` is a numpy int32; membership against the pybind enum members is False on
+        # mujoco >= 3.x, so compare as plain ints (``==`` still works, ``in`` does not).
+        if int(model.jnt_type[j]) not in (int(mujoco.mjtJoint.mjJNT_HINGE), int(mujoco.mjtJoint.mjJNT_SLIDE)):
             continue
         jn = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, j) or ""
         q = float(data.qpos[model.jnt_qposadr[j]])

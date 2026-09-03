@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import struct
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -8,8 +9,11 @@ from typing import Callable
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-OPENARM_ROOT = REPO_ROOT / "roboverse_data" / "robots" / "openarm_wuji"
-ROBOT_DESCRIPTION_ROOT = REPO_ROOT / "roboverse_data" / "robots"
+# Same resolution as tests/conftest.py::roboverse_data_root (ROBOVERSE_DATA_DIR, legacy ROBOVERSE_DATA, in-repo default).
+_DATA_ENV = os.environ.get("ROBOVERSE_DATA_DIR") or os.environ.get("ROBOVERSE_DATA")
+DATA_ROOT = Path(_DATA_ENV) if _DATA_ENV else REPO_ROOT / "roboverse_data"
+OPENARM_ROOT = DATA_ROOT / "robots" / "openarm_wuji"
+ROBOT_DESCRIPTION_ROOT = DATA_ROOT / "robots"
 MJCF_PATH = OPENARM_ROOT / "openarm_wuji.xml"
 URDF_PATH = OPENARM_ROOT / "openarm_wuji.urdf"
 USD_PATH = OPENARM_ROOT / "openarm_wuji.usd"
@@ -131,7 +135,7 @@ def test_openarm_wuji_cfg_defaults_use_renamed_asset_directory() -> None:
     cfg = OpenarmBimanualWujiCfg()
 
     for attr, expected_path in EXPECTED_CFG_PATHS.items():
-        assert (REPO_ROOT / getattr(cfg, attr)).resolve() == expected_path
+        assert (REPO_ROOT / getattr(cfg, attr)).resolve() == expected_path.resolve()
 
 
 @requires_openarm_assets
@@ -142,7 +146,7 @@ def test_openarm_wuji_cfg_asset_files_exist_on_disk() -> None:
     cfg = OpenarmBimanualWujiCfg()
 
     for attr in EXPECTED_CFG_PATHS:
-        assert (REPO_ROOT / getattr(cfg, attr)).resolve().is_file()
+        assert EXPECTED_CFG_PATHS[attr].is_file()
 
 
 @requires_openarm_assets

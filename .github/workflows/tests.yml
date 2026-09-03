@@ -1,6 +1,6 @@
 name: Tests
 
-# Runs the whole RoboVerse content suite (tests/) on CPU.
+# Runs lint + the whole RoboVerse content suite (tests/) on CPU.
 #
 # Until this existed, CI ran exactly one test file (see task-contract.yml), so regressions in
 # the other ~50 files went unnoticed. metasim is a declared git dependency, so a CPU job can
@@ -14,10 +14,29 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  lint:
+    # Same ruff version as .pre-commit-config.yaml so local pre-commit and CI agree.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install "ruff==0.14.5"
+      - name: ruff check
+        run: python -m ruff check --output-format=github .
+      - name: ruff format --check
+        run: python -m ruff format --check .
+
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -31,6 +50,10 @@ jobs:
       - name: Install RoboVerse (CPU) with test deps
         run: |
           python -m pip install --upgrade pip
+          # CPU torch first: with only --extra-index-url pip may still pick the CUDA wheel from PyPI
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -e ".[dev,mujoco]"
       - name: Run test suite
-        run: python -m pytest tests/
+        env:
+          MUJOCO_GL: egl
+        run: python -m pytest tests/ -rs
