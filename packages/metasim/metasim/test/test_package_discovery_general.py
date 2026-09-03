@@ -127,7 +127,6 @@ def test_package_candidates_merge_sources_in_order(tmp_path, monkeypatch):
     )
 
     assert packages == [
-        "builtin_robot",
         "entry_root.robots",
         "entry_robot",
         "toml_root.robots",
@@ -139,6 +138,7 @@ def test_package_candidates_merge_sources_in_order(tmp_path, monkeypatch):
         "env_root.robots",
         "env_robot",
         "local_robot",
+        "builtin_robot",  # MetaSim's bundled defaults come last: content packs must win
     ]
 
 

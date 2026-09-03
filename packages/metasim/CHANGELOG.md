@@ -55,6 +55,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (Conventional Commit titles), `changelog.yml` (entry required for library changes),
   `release.yml` (tag → build, GitHub Release, PyPI), `CODEOWNERS`.
 
+### Fixed
+
+- Content packs win over MetaSim's bundled example pack: `get_package_candidates` searches `defaults` last (a RoboVerse checkout used to resolve `get_robot("franka")` to the example `FrankaCfg`), and `_lookup_cfg` reports a config name defined in more than one package.
+- `gym.make`-style wrappers no longer mutate the task class's shared `scenario` (they update a copy); `ScenarioCfg.replace(**kw)` returns an updated copy for new code.
+- `get_states(env_ids=...)` returns exactly those envs: the base class slices the full batch when a backend ignores `env_ids` (six did, silently) and raises when a backend returns a batch that is neither the subset nor the full set.
+- The task-index cache defaults to a per-user directory (`$METASIM_CACHE_DIR`, else `$XDG_CACHE_HOME/metasim`, else `~/.cache/metasim`) instead of the shared temp dir.
+- `RLTaskEnv.step` publishes the *terminal* observation in `info["observations"]["raw"]["obs"]` instead of the episode's first one (off-policy truncation bootstraps in clean_rl SAC/TD3 and FastTD3 read it).
+- IsaacGym and PyBullet reported `joint_pos_target` in native DoF order while `joint_pos` is in sorted-name order; both now use `get_joint_names(sort=True)` (completes #12).
+- `ParallelSimWrapper`: a worker that died during handler construction or `launch` surfaced as a bare `EOFError`/`ConnectionResetError` from the handshake and left the other workers running; the handshake now raises the worker's own traceback, `close()` tolerates dead workers, and a failed constructor tears the pool down.
+- `hf_util.check_and_download_single`: a `roboverse_data/...` path evaluated from a working directory that is not the parent of `ROBOVERSE_DATA_DIR` was reported as a path-traversal attempt; the error now names the CWD / `ROBOVERSE_DATA_DIR` mismatch and where the asset already is. `test_check_and_download_single_falls_back_to_private_roboverse_data` no longer depends on the caller's `ROBOVERSE_DATA_DIR`.
+- Newton backend works again on the pinned newton (1.5/1.6): `joint_target_pos`/`joint_target_vel` and `num_worlds` are forwarded to their new names, position targets use `joint_target_q_start` (on newton >= 1.5 they follow the `joint_q` layout, so envs after a free-floating object were driven to the wrong joints), the tiled camera uses the 1.4+ `RenderConfig`/`utils`/`update` API with an untextured fallback, and `CameraState.depth` is `(N, H, W)`.
+- MuJoCo: `<size memory="512M">` is reserved by default; humanoid + mesh scenes no longer die with
+  `mj_stackAlloc: out of memory` (get_started/10_mount_camera.py).
+- `hf_util`: a symlinked `roboverse_data` is no longer refused as path traversal; concurrent
+  processes wait for an in-flight download instead of failing after 5 s (`ParallelSimWrapper`
+  workers, get_started/3_parallel_envs.py).
+- Tree is `ruff check` / `ruff format` clean at the pre-commit pin (0.14.5).
+
+
 ## [0.2.0] - 2026-05-31
 
 This release focuses on **cross-platform infrastructure hardening**: tightening

@@ -157,3 +157,13 @@ class ScenarioCfg:
                 setattr(self, key, value)
         self.__post_init__()
         return self
+
+    def replace(self, **kwargs):
+        """Return a copy with ``kwargs`` applied.
+
+        ``update`` mutates in place and the object is shared by every holder (class-level task
+        defaults included); prefer ``replace`` in new code.
+        """
+        import copy
+
+        return copy.deepcopy(self).update(**kwargs)

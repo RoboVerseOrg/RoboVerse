@@ -58,17 +58,24 @@ def get_package_candidates(
     local_modules: Sequence[str] = (),
     cwd: Path | None = None,
 ) -> list[str]:
-    """Return package candidates for a MetaSim content role without importing them."""
+    """Return package candidates for a MetaSim content role without importing them.
+
+    Order is precedence: installed content packs (entry points), then project-local configuration
+    (``metasim.toml`` / ``pyproject.toml`` walking up from ``cwd``, ``METASIM_CONFIG``,
+    ``METASIM_*_PACKAGES``), then modules in ``cwd``, and only then ``defaults`` — MetaSim's bundled
+    example pack. The defaults used to come first, so ``get_robot("franka")`` in a checkout that ships
+    its own ``FrankaCfg`` silently returned the example one.
+    """
     _validate_role(role)
     base_dir = Path.cwd() if cwd is None else Path(cwd)
     candidates = []
-    candidates.extend(defaults)
     candidates.extend(_entry_point_packages(role))
     candidates.extend(_nearest_config_packages(base_dir, "metasim.toml", role))
     candidates.extend(_nearest_config_packages(base_dir, "pyproject.toml", role))
     candidates.extend(_explicit_config_packages(role))
     candidates.extend(_env_packages(role))
     candidates.extend(local_modules)
+    candidates.extend(defaults)
     return _dedupe(candidates)
 
 
