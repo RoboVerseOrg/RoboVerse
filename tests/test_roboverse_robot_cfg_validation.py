@@ -240,3 +240,98 @@ def test_anymal_default_orientation_is_wxyz_identity():
         f"expected wxyz identity [1,0,0,0], got {cfg.default_orientation} "
         f"(w must be the largest component for an identity quaternion)"
     )
+
+
+@pytest.mark.general
+def test_g1_feet_cfg_imports_and_constructs():
+    """Regression: ``roboverse_pack.robots.g1_feet`` must import and construct.
+
+    Every ``BaseActuatorCfg`` in that file used to pass ``kp=/kd=/force_limit=`` —
+    none of which are fields of ``BaseActuatorCfg`` — so *importing the module*
+    raised ``TypeError`` at class-body evaluation. Because the crash happened at
+    import time, ``roboverse_pack.robots.__init__`` swallowed it and ``Go1FeetCfg``
+    silently never registered as a ``RobotCfg`` subclass. The correct field names
+    are ``stiffness`` (kp), ``damping`` (kd), and ``effort_limit_sim`` (force limit),
+    as consumed by the mujoco/isaacgym/newton/pybullet handlers.
+    """
+    import importlib
+
+    mod = importlib.import_module("roboverse_pack.robots.g1_feet")
+    cfg = mod.Go1FeetCfg()
+    assert cfg.name == "go1_feet"
+    assert len(cfg.actuators) == 12
+    # Gains/limits from the XML must survive under the correct field names.
+    hip = cfg.actuators["FR_hip"]
+    assert (hip.stiffness, hip.damping, hip.effort_limit_sim) == (35.0, 0.5, 23.7)
+    assert cfg.actuators["FR_calf"].effort_limit_sim == 35.55
+
+
+# Joints that are *deliberately* pinned to a single point (lo == hi). These are
+# intentional design choices (locked/unused DoF, or a fixed offset expressed as a
+# degenerate range), not the unintended dropped-sign bug the test below hunts for.
+# Keyed by cfg class name -> set of joint names that are allowed to be degenerate.
+_DELIBERATELY_LOCKED_JOINTS: dict[str, set[str]] = {
+    # VegaCfg locks its wheels, right arm/hand, and unused torso DoF; torso_j1 is a
+    # fixed offset [0.2, 0.2]. All intentional — see vega_cfg.py.
+    "VegaCfg": {
+        "B_wheel_j1",
+        "B_wheel_j2",
+        "R_wheel_j1",
+        "R_wheel_j2",
+        "L_wheel_j1",
+        "L_wheel_j2",
+        "torso_j1",
+        "torso_j3",
+        "R_arm_j1",
+        "R_arm_j2",
+        "R_arm_j3",
+        "R_arm_j4",
+        "R_arm_j5",
+        "R_arm_j6",
+        "R_arm_j7",
+        "R_th_j0",
+        "R_th_j1",
+        "R_th_j2",
+        "R_ff_j1",
+        "R_ff_j2",
+        "R_mf_j1",
+        "R_mf_j2",
+        "R_rf_j1",
+        "R_rf_j2",
+        "R_lf_j1",
+        "R_lf_j2",
+    },
+}
+
+
+@pytest.mark.skipif(not _CFG_PARAMS, reason="roboverse_pack not importable")
+@pytest.mark.parametrize("cls", _CFG_PARAMS)
+def test_robot_cfg_no_unintended_degenerate_joint_limits(cls: type[RobotCfg]):
+    """No joint limit may be degenerate (``lo == hi``) unless deliberately locked.
+
+    A ``lo == hi`` limit pins the joint to a single point, so it cannot move — for a
+    real DoF this is almost always a dropped sign (e.g. dex3's thumb-yaw was
+    ``(-1.04, -1.04)`` instead of ``(-1.04, 1.04)``, leaving the thumb unable to
+    oppose the fingers → no pinch grasp). Intentionally locked joints are listed in
+    ``_DELIBERATELY_LOCKED_JOINTS``.
+    """
+    instance = _try_instantiate(cls)
+    if instance is None:
+        pytest.skip(f"{cls.__name__} abstract template")
+    limits = getattr(instance, "joint_limits", None)
+    if not limits:
+        pytest.skip(f"{cls.__name__} has no joint_limits")
+
+    allowed = _DELIBERATELY_LOCKED_JOINTS.get(cls.__name__, set())
+    degenerate: list[str] = []
+    for jn, bounds in limits.items():
+        if not (isinstance(bounds, (tuple, list)) and len(bounds) == 2):
+            continue
+        lo, hi = bounds
+        if lo == hi and jn not in allowed:
+            degenerate.append(f"{jn}={bounds}")
+    assert not degenerate, (
+        f"{cls.__name__}: degenerate (lo == hi) joint limits pin these joints to a point: "
+        f"{degenerate}. If this is intentional, add the joint to "
+        f"_DELIBERATELY_LOCKED_JOINTS; otherwise a sign was likely dropped."
+    )

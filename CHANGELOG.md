@@ -38,6 +38,7 @@ release.
 
 ### Fixed
 
+- `g1_feet` robot cfg crashed at import (wrong `BaseActuatorCfg` keywords) and `unitree_dex3_1` had a degenerate thumb joint limit; a config validation test now guards both.
 - Native LIBERO `Open`/`Close`/`TurnOn`/`TurnOff` predicates always evaluated False on
   mujoco >= 3.x (`numpy.int32 in (mjtJoint...)` membership).
 - `get_started/multiple_cameras.py` passed a removed `ScenarioCfg` kwarg.
