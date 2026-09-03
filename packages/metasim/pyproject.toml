@@ -18,6 +18,7 @@ dependencies = [
     "numpy",
     "numpy-quaternion",
     "opencv-python>=4.11,<4.12",
+    "packaging>=23",
     "pillow",
     "portalocker",
     "pyyaml",
@@ -164,6 +165,7 @@ metasim = ["data/**/*"]
 
 [tool.ruff.lint.per-file-ignores]
 ## For unit test, allow no docstrings
+"metasim/__main__.py" = ["T20"]  # a CLI prints its report
 "metasim/types.py" = ["UP007", "UP035"]  # runtime Union/Tuple aliases, see the comment in the file
 "metasim/utils/gs_util.py" = ["UP035"]
 "metasim/test/**.py" = ["D"]

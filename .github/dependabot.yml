@@ -1,0 +1,31 @@
+version: 2
+# Simulator backends release often and break APIs between minor versions. Dependabot opens one
+# grouped PR per package root per week; the backend-compat workflow decides whether the new
+# versions actually work before `tested` in metasim/sim/_versions.py is bumped.
+updates:
+  - package-ecosystem: pip
+    directory: /packages/metasim
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      simulators:
+        patterns: ["mujoco*", "newton", "warp-lang", "sapien", "pybullet", "genesis-world", "superdex-*", "jax*", "dm-control"]
+      python-deps:
+        patterns: ["*"]
+        exclude-patterns: ["mujoco*", "newton", "warp-lang", "sapien", "pybullet", "genesis-world", "superdex-*", "jax*", "dm-control"]
+    labels: ["dependencies", "no-changelog"]
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      python-deps:
+        patterns: ["*"]
+    labels: ["dependencies", "no-changelog"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels: ["dependencies", "no-changelog"]

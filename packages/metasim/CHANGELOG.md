@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tree is `ruff check` / `ruff format` clean at the pre-commit pin (0.14.5).
 
 ### Added
+- Backend version policy: `metasim/sim/_versions.py` declares, per backend, the supported version range and the last verified version of every simulator package; `get_sim_handler_class` refuses unsupported releases (`METASIM_SKIP_VERSION_CHECK=1` to override) and warns once on untested ones; `python -m metasim doctor [--json] [--backend X]` reports the table. `packaging` is a runtime dependency.
 - `BaseTaskEnv.supported_simulators`: a task class declares the backends it is known to run on; constructing it with another `scenario.simulator` raises `ValueError` before any handler is built. `None` (the default) keeps today's unchecked behaviour.
 
 - **SuperDex backend** (`metasim/sim/superdex/`, `simulator="superdex"`, extra `metasim[superdex]`,

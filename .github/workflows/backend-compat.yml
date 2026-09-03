@@ -1,0 +1,69 @@
+name: backend-compat
+
+# Weekly: install the NEWEST release of each CPU-installable simulator backend (not the pinned
+# `tested` version) and run that backend's MetaSim suite plus `metasim doctor`. A red lane means
+# the next upgrade will break users; it opens (or updates) an issue with the failing versions so
+# the compat shim / `spec` / `tested` in metasim/sim/_versions.py get updated deliberately.
+# GPU-only backends (Isaac Sim / Isaac Gym / Newton with CUDA / MJX) are covered by the
+# merge-queue workflow on the GPU runner, not here.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"  # Mondays 06:17 UTC, after Dependabot has opened its PRs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: mujoco
+            python: "3.11"
+            install: "mujoco dm-control"
+          - backend: pybullet
+            python: "3.11"
+            install: "pybullet"
+          - backend: superdex
+            python: "3.12"
+            install: "superdex-physics superdex-robotics pyrender trimesh"
+    name: ${{ matrix.backend }} @ latest (py${{ matrix.python }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install MetaSim, then the backend at its newest release
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e "packages/metasim[dev,examples]"
+          python -m pip install --upgrade ${{ matrix.install }}
+      - name: Report versions
+        id: doctor
+        run: |
+          python -m metasim doctor --backend ${{ matrix.backend }} | tee doctor.txt
+          echo "versions<<EOF" >> "$GITHUB_OUTPUT"; cat doctor.txt >> "$GITHUB_OUTPUT"; echo "EOF" >> "$GITHUB_OUTPUT"
+      - name: Backend suite
+        working-directory: packages/metasim
+        env:
+          MUJOCO_GL: disable
+          METASIM_SKIP_VERSION_CHECK: "1"  # the point is to run on versions outside `tested`
+        run: python -m pytest -k "${{ matrix.backend }}" -q -rs -p no:cacheprovider
+      - name: Open or update the tracking issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BACKEND: ${{ matrix.backend }}
+          VERSIONS: ${{ steps.doctor.outputs.versions }}
+        run: |
+          title="backend-compat: ${BACKEND} @ latest fails"
+          body=$(printf 'The weekly compatibility run of the **%s** backend against its newest release failed.\n\nRun: %s/%s/actions/runs/%s\n\n```\n%s\n```\n\nNext: fix or shim in `packages/metasim/metasim/sim/%s/`, then update `spec` / `tested` in `metasim/sim/_versions.py`.' "$BACKEND" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$VERSIONS" "$BACKEND")
+          existing=$(gh issue list --search "\"$title\" in:title" --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then gh issue comment "$existing" --body "$body"; else gh issue create --title "$title" --body "$body" --label backend-compat; fi

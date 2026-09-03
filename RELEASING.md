@@ -109,3 +109,22 @@ nothing outside `packages/metasim` may import a `metasim.sim.*` underscore name,
 The former standalone repository `RoboVerseOrg/MetaSim` is a read-only mirror of `packages/metasim`
 kept for one release cycle so `git+https://github.com/RoboVerseOrg/MetaSim.git` installs keep
 working; new work happens here.
+
+## 8. Simulator backend versions
+
+Simulator packages change their APIs between minor releases. The policy is declarative and checked:
+
+- `packages/metasim/metasim/sim/_versions.py` lists, per backend, the distributions it depends on,
+  the version range its code paths support (`spec`) and the exact version its test suite last
+  passed with (`tested`). `get_sim_handler_class` refuses a version outside `spec` (message names
+  the installed and supported versions; `METASIM_SKIP_VERSION_CHECK=1` downgrades it to a warning)
+  and warns once on an untested version inside it.
+- `python -m metasim doctor` prints the table for every backend (`--json` for scripts; exit 1 when
+  an installed backend is unsupported). Run it first when a simulator misbehaves; paste it in issues.
+- `backend-compat.yml` runs weekly (and on demand): it installs the **newest** release of each
+  CPU-installable backend, runs `metasim doctor` and that backend's suite, and opens/updates a
+  `backend-compat` issue on failure. GPU backends are covered by the merge-queue workflow.
+- Dependabot (`.github/dependabot.yml`) groups simulator bumps into one weekly PR per package root.
+- When a new simulator release passes: bump `tested`; when a range must widen or a shim is needed:
+  change `spec` and the compat module (`metasim/sim/<backend>/_*_compat.py`) in the same PR, with a
+  CHANGELOG line. Never widen `spec` without a passing run.
