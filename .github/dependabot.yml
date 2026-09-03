@@ -8,6 +8,17 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    ignore:
+      # Deliberate pins: numpy<2 is what the Isaac / PyBullet / SuperDex stacks are built against,
+      # setuptools==59.5.0 is the last release with distutils for the robosplatter build, and the
+      # torch/CUDA builds are chosen per simulator. The backend-compat workflow, not Dependabot,
+      # decides when a simulator stack moves (metasim/sim/_versions.py).
+      - dependency-name: "numpy"
+      - dependency-name: "setuptools"
+      - dependency-name: "torch"
+      - dependency-name: "torchvision"
+      - dependency-name: "opencv-python"
+      - dependency-name: "isaacsim"
     groups:
       simulators:
         patterns: ["mujoco*", "newton", "warp-lang", "sapien", "pybullet", "genesis-world", "superdex-*", "jax*", "dm-control"]
