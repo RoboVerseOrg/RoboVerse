@@ -113,7 +113,7 @@ class KMeansDiscretizer(DictOfTensorMixin):
         reconstructed_action (shape: ... x action_dim): The reconstructed action.
         """
         offsets = None
-        if type(latent_action_batch) == tuple:
+        if isinstance(latent_action_batch, tuple):
             latent_action_batch, offsets = latent_action_batch
         # get the closest cluster center
         closest_cluster_center = self.params_dict["bin_centers"][latent_action_batch]

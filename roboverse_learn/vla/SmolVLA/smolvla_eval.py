@@ -124,7 +124,7 @@ class SmolVLARunner:
                 )
                 self.use_lerobot = False
             except Exception as e2:
-                raise RuntimeError(f"Failed to load SmolVLA model from {checkpoint_path}: {e2}")
+                raise RuntimeError(f"Failed to load SmolVLA model from {checkpoint_path}: {e2}") from e2
 
         # Load dataset statistics if available
         stats_path = os.path.join(self.model_path, "dataset_statistics.json")
