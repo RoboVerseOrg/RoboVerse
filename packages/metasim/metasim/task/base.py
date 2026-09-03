@@ -48,6 +48,14 @@ class BaseTaskEnv:
 
     max_episode_steps = 100
     traj_filepath = None
+    supported_simulators: tuple[str, ...] | None = None
+    """Backends this task is known to run on (e.g. ``("mujoco", "newton")``).
+
+    ``None`` means *undeclared* (no check). When declared, constructing the task with a
+    ``scenario.simulator`` outside the tuple raises ``ValueError`` at construction instead of failing
+    later inside a backend — a task whose assets, actuator patching or success checker only exist for
+    some backends must say so here. The registry and the docs task-by-simulator matrix read this field.
+    """
 
     def __init__(
         self,
@@ -68,6 +76,7 @@ class BaseTaskEnv:
                 )
         self.scenario = scenario
         self.num_envs = self.scenario.num_envs
+        self._check_supported_simulator(scenario)
 
         if isinstance(self.scenario, BaseSimHandler):
             self.handler = self.scenario
@@ -80,6 +89,20 @@ class BaseTaskEnv:
         self.device = self.handler.device
         self._prepare_callbacks()
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
+
+    @classmethod
+    def _check_supported_simulator(cls, scenario) -> None:
+        """Raise if ``scenario.simulator`` is outside the task's declared ``supported_simulators``."""
+        if cls.supported_simulators is None or isinstance(scenario, BaseSimHandler):
+            return
+        sim = getattr(scenario, "simulator", None)
+        sim_name = getattr(sim, "value", sim)
+        if sim_name is not None and str(sim_name) not in cls.supported_simulators:
+            raise ValueError(
+                f"{cls.__name__} does not support simulator {sim_name!r}; declared supported_simulators = "
+                f"{cls.supported_simulators}. Pass a scenario with one of those backends, or extend the task "
+                "and add the backend to supported_simulators once it is verified."
+            )
 
     def _get_initial_states(self) -> list[dict]:
         """Return per-env initial states (override in subclasses)."""

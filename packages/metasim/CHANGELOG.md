@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- References to the RoboVerse tutorials follow their move from `get_started/` to `examples/` (docs and test docstrings only; no behaviour change).
 - Extras are PyPI-installable: `newton>=1.5,<2` (PyPI wheel; the 1.5/1.6 shims are in `_newton_compat`) and `sapien2` → `mani-skill2==0.5.3` replace git URLs; `robo-splatter` (git-only) moves to `requirements/robosplatter.txt`; `[tool.uv] conflicts` marks the isaacsim / isaacsim211 / mjx / isaacgym extras mutually exclusive; `requires-python = ">=3.10,<3.13"`.
 - Moved into the RoboVerse monorepo as `packages/metasim`; version aligned to `1.0.0b0` (lockstep with `roboverse-py`). The standalone `RoboVerseOrg/MetaSim` repository becomes a read-only mirror for one release cycle.
 
@@ -38,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tree is `ruff check` / `ruff format` clean at the pre-commit pin (0.14.5).
 
 ### Added
+- `BaseTaskEnv.supported_simulators`: a task class declares the backends it is known to run on; constructing it with another `scenario.simulator` raises `ValueError` before any handler is built. `None` (the default) keeps today's unchecked behaviour.
 
 - **SuperDex backend** (`metasim/sim/superdex/`, `simulator="superdex"`, extra `metasim[superdex]`,
   Python >= 3.12): Meta's Mochi engine behind the `BaseSimHandler` contract. URDF robots/objects
