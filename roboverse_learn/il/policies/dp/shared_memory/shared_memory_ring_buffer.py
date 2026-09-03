@@ -1,7 +1,7 @@
 import numbers
 import time
 from multiprocessing.managers import SharedMemoryManager
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import numpy as np
 
@@ -82,7 +82,7 @@ class SharedMemoryRingBuffer:
     def create_from_examples(
         cls,
         shm_manager: SharedMemoryManager,
-        examples: Dict[str, Union[np.ndarray, numbers.Number]],
+        examples: Dict[str, np.ndarray | numbers.Number],
         get_max_k: int = 32,
         get_time_budget: float = 0.01,
         put_desired_frequency: float = 60,
@@ -116,7 +116,7 @@ class SharedMemoryRingBuffer:
     def clear(self):
         self.counter.store(0)
 
-    def put(self, data: Dict[str, Union[np.ndarray, numbers.Number]], wait: bool = True):
+    def put(self, data: Dict[str, np.ndarray | numbers.Number], wait: bool = True):
         count = self.counter.load()
         next_idx = count % self.buffer_size
         # Make sure the next self.get_max_k elements in the ring buffer have at least

@@ -22,7 +22,7 @@ that episode's first frame (see :func:`_finalise_episode`).
 from __future__ import annotations
 
 import os
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
 
 from loguru import logger as log
 
@@ -78,7 +78,7 @@ def _mlp_from_linear_state_dict(sd, device, activation=None):
     # state_dict keys for the Sequential are 0.weight, 2.weight, ... (ELU has none)
     remap = {}
     seq_linear_pos = [p for p, m in enumerate(layers) if isinstance(m, nn.Linear)]
-    for pos, i in zip(seq_linear_pos, idxs):
+    for pos, i in zip(seq_linear_pos, idxs, strict=False):
         remap[f"{pos}.weight"] = sd[f"mlp.{i}.weight"]
         remap[f"{pos}.bias"] = sd[f"mlp.{i}.bias"]
     mlp.load_state_dict(remap)

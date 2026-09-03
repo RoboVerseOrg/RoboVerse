@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Literal, Optional, Sequence
+from collections.abc import Sequence
+from typing import Literal, Optional
 
 from metasim.utils import configclass
 

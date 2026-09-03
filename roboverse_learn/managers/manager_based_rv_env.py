@@ -31,9 +31,10 @@ Subclass responsibilities
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import fields, is_dataclass
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 import torch
