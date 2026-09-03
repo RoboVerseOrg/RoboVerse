@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Task registry is lazy.** `get_task_class(name)` resolves the name through a static AST index of
+  every `@register_task(...)` literal (`metasim/task/_static_index.py`, per-file cache under
+  `$METASIM_CACHE_DIR`, default `<tmp>/metasim_cache`) and imports only the module that registers it;
+  `list_tasks()` no longer imports every task module (modules that register names in loops are
+  imported to learn them). RoboVerse: cold index 1.1 s, warm 0.04 s, a lookup ~0.1 s, versus 7.3 s
+  and every import-time side effect before. `METASIM_TASK_DISCOVERY=eager` restores the old behaviour.
+
+### Changed
+
 - **Distribution renamed to `roboverse-metasim`** (`metasim` on PyPI is an unrelated project); the
   import name stays `metasim`. Downstream requirements must say `roboverse-metasim @ git+...`.
   `metasim.__version__` now reads the installed version from package metadata.
