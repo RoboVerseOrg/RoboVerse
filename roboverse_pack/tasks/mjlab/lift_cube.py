@@ -19,7 +19,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
 
-from ._locator import mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset
 
 _YAM_XML = "asset_zoo/robots/i2rt_yam/xmls/yam.xml"
 
@@ -49,7 +49,7 @@ def _yam_scenario() -> ScenarioCfg:
 class MjlabLiftCubeYam(BaseTaskEnv):
     """YAM arm scaffold (7 DoF, no actuators in the bare MJCF)."""
 
-    scenario = _yam_scenario()
+    scenario = lazy_scenario(lambda: _yam_scenario())
     max_episode_steps = 2500  # mjlab episode_length_s = 5s / dt 0.002
 
 
@@ -57,7 +57,7 @@ class MjlabLiftCubeYam(BaseTaskEnv):
 class MjlabLiftCubeYamRgb(BaseTaskEnv):
     """RGB-observation variant; physics is identical to the parent task."""
 
-    scenario = _yam_scenario()
+    scenario = lazy_scenario(lambda: _yam_scenario())
     max_episode_steps = 2500
 
 
@@ -65,7 +65,7 @@ class MjlabLiftCubeYamRgb(BaseTaskEnv):
 class MjlabLiftCubeYamDepth(BaseTaskEnv):
     """Depth-observation variant; physics is identical to the parent task."""
 
-    scenario = _yam_scenario()
+    scenario = lazy_scenario(lambda: _yam_scenario())
     max_episode_steps = 2500
 
 
@@ -73,5 +73,5 @@ class MjlabLiftCubeYamDepth(BaseTaskEnv):
 class MjlabMultiCubeSegYam(BaseTaskEnv):
     """Multi-cube segmentation variant; physics is identical to the parent task."""
 
-    scenario = _yam_scenario()
+    scenario = lazy_scenario(lambda: _yam_scenario())
     max_episode_steps = 2500
