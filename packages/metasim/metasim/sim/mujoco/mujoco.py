@@ -8,6 +8,8 @@ import torch
 from dm_control import mjcf
 from loguru import logger as log
 
+from metasim.utils.log import warn_once
+
 try:
     # Patch mujoco.renderer.Renderer.__del__ to avoid noisy TypeError if glfw.free is None
     if hasattr(mujoco, "renderer") and hasattr(mujoco.renderer, "Renderer"):
@@ -330,18 +332,16 @@ class MujocoHandler(BaseSimHandler):
                     # inherit different limits — the user almost always wants
                     # to know.
                     fr = self.physics.model.actuator_forcerange[actuator_id]
-                    cache_key = (robot.name, joint_name)
-                    if cache_key not in getattr(self, "_actuator_force_limit_warned", set()):
-                        log.warning(
-                            f"MuJoCo actuator '{robot.name}:{joint_name}': cfg overrides "
-                            f"stiffness/damping but leaves effort_limit_sim unset — the "
-                            f"MJCF-authored forcerange {list(fr)} stays active and may "
-                            f"clamp the new PD output. Cross-backend behaviour will "
-                            f"diverge unless effort_limit_sim is specified."
-                        )
-                        if not hasattr(self, "_actuator_force_limit_warned"):
-                            self._actuator_force_limit_warned = set()
-                        self._actuator_force_limit_warned.add(cache_key)
+                    # Once per (robot, joint) per *process*: with 128 envs this used to print
+                    # 128 copies of the same line.
+                    warn_once(
+                        ("mujoco.forcerange", robot.name, joint_name),
+                        f"MuJoCo actuator '{robot.name}:{joint_name}': cfg overrides "
+                        f"stiffness/damping but leaves effort_limit_sim unset — the "
+                        f"MJCF-authored forcerange {list(fr)} stays active and may "
+                        f"clamp the new PD output. Cross-backend behaviour will "
+                        f"diverge unless effort_limit_sim is specified.",
+                    )
 
     def _apply_scale_to_mjcf(self, mjcf_model, scale):
         """Apply scale to all geoms, bodies, and sites in the MJCF model."""
