@@ -61,6 +61,9 @@ class ContactForces(BaseQueryType):
             sorted_body_names = self.handler.get_body_names(self.robots[0].name, True)
             self.body_ids_reindex = list(range(len(sorted_body_names)))
             self._build_newton_reindex()
+        elif self.simulator == "superdex":
+            # handler.get_contact_forces() already returns bodies in get_body_names(sort=True) order
+            self.body_ids_reindex = list(range(len(self.handler.get_body_names(self.robots[0].name, True))))
         else:
             raise NotImplementedError
 
@@ -78,8 +81,8 @@ class ContactForces(BaseQueryType):
                 self._current_contact_force = self.handler.contact_sensor.data.net_forces_w
             elif self.simulator == "mujoco":
                 self._current_contact_force = self._get_contact_forces_mujoco()
-            elif self.simulator == "newton":
-                self._current_contact_force = self._get_contact_forces_newton()
+            elif self.simulator in ("newton", "superdex"):
+                self._current_contact_force = self.handler.get_contact_forces()
             else:
                 raise NotImplementedError
             if self.simulator == "newton":
@@ -128,8 +131,8 @@ class ContactForces(BaseQueryType):
             self._current_contact_force = self.handler.contact_sensor.data.net_forces_w
         elif self.simulator == "mujoco":
             self._current_contact_force = self._get_contact_forces_mujoco()
-        elif self.simulator == "newton":
-            self._current_contact_force = self._get_contact_forces_newton()
+        elif self.simulator in ("newton", "superdex"):
+            self._current_contact_force = self.handler.get_contact_forces()
         else:
             raise NotImplementedError
         if self.simulator == "newton":

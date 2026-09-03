@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import os
 import sys
+from dataclasses import dataclass
 
 from loguru import logger as log
 
@@ -48,6 +49,67 @@ def get_handler(scenario, optional_queries=None):
     return handler
 
 
+@dataclass(frozen=True)
+class BackendSpec:
+    """How one ``SimType`` is resolved to a handler class.
+
+    ``module``/``cls`` are imported lazily so an uninstalled backend costs nothing until used.
+    ``parallel`` wraps single-environment handlers in :class:`~metasim.sim.parallel.ParallelSimWrapper`
+    so ``num_envs > 1`` is served by worker processes. ``install_hint`` is logged when the lazy
+    import fails.
+    """
+
+    module: str
+    cls: str
+    parallel: bool = False
+    install_hint: str = ""
+
+
+SIM_BACKENDS: dict[SimType, BackendSpec] = {
+    SimType.ISAACGYM: BackendSpec(
+        "metasim.sim.isaacgym", "IsaacgymHandler", False, "IsaacGym is not installed, please install it first"
+    ),
+    SimType.ISAACSIM: BackendSpec(
+        "metasim.sim.isaacsim", "IsaacsimHandler", False, "IsaacSim is not installed, please install it first"
+    ),
+    SimType.GENESIS: BackendSpec(
+        "metasim.sim.genesis", "GenesisHandler", False, "Genesis is not installed, please install it first"
+    ),
+    SimType.PYREP: BackendSpec(
+        "metasim.sim.pyrep", "PyrepHandler", False, "PyRep is not installed, please install it first"
+    ),
+    SimType.PYBULLET: BackendSpec(
+        "metasim.sim.pybullet", "PybulletHandler", True, "PyBullet is not installed, please install it first"
+    ),
+    SimType.SAPIEN2: BackendSpec(
+        "metasim.sim.sapien.sapien2", "Sapien2Handler", True, "Sapien is not installed, please install it first"
+    ),
+    SimType.SAPIEN3: BackendSpec(
+        "metasim.sim.sapien.sapien3", "Sapien3Handler", True, "Sapien is not installed, please install it first"
+    ),
+    SimType.MUJOCO: BackendSpec(
+        "metasim.sim.mujoco", "MujocoHandler", True, "Mujoco is not installed, please install it first"
+    ),
+    SimType.BLENDER: BackendSpec(
+        "metasim.sim.blender", "BlenderHandler", False, "Blender is not installed, please install it first"
+    ),
+    SimType.MJX: BackendSpec("metasim.sim.mjx", "MJXHandler", False, "MJX is not installed, please install it first"),
+    SimType.NEWTON: BackendSpec(
+        "metasim.sim.newton",
+        "NewtonHandler",
+        False,
+        "Newton is not installed. Activate newton conda environment: conda activate newton",
+    ),
+    SimType.SUPERDEX: BackendSpec(
+        "metasim.sim.superdex",
+        "SuperdexHandler",
+        True,
+        "SuperDex is not installed (Python >= 3.12 wheels): python -m pip install superdex-physics superdex-robotics pyrender",
+    ),
+}
+"""Single source of truth for backend dispatch. Adding a simulator = one ``SimType`` value + one entry here."""
+
+
 def get_sim_handler_class(sim: SimType):
     """Get the simulator handler class from the simulator type.
 
@@ -70,96 +132,15 @@ def get_sim_handler_class(sim: SimType):
             stacklevel=2,
         )
         sim = SimType.ISAACSIM
-    if sim == SimType.ISAACGYM:
-        try:
-            from metasim.sim.isaacgym import IsaacgymHandler
-
-            return IsaacgymHandler
-        except ImportError as e:
-            log.error("IsaacGym is not installed, please install it first")
-            raise e
-    elif sim == SimType.ISAACSIM:
-        try:
-            from metasim.sim.isaacsim import IsaacsimHandler
-
-            return IsaacsimHandler
-        except ImportError as e:
-            log.error("IsaacSim is not installed, please install it first")
-            raise e
-    elif sim == SimType.GENESIS:
-        try:
-            from metasim.sim.genesis import GenesisHandler
-
-            return GenesisHandler
-        except ImportError as e:
-            log.error("Genesis is not installed, please install it first")
-            raise e
-    elif sim == SimType.PYREP:
-        try:
-            from metasim.sim.pyrep import PyrepHandler
-
-            return PyrepHandler
-        except ImportError as e:
-            log.error("PyRep is not installed, please install it first")
-            raise e
-    elif sim == SimType.PYBULLET:
-        try:
-            from metasim.sim.pybullet import PybulletHandler
-
-            return ParallelSimWrapper(PybulletHandler)
-        except ImportError as e:
-            log.error("PyBullet is not installed, please install it first")
-            raise e
-    elif sim == SimType.SAPIEN2:
-        try:
-            from metasim.sim.sapien.sapien2 import Sapien2Handler
-
-            return ParallelSimWrapper(Sapien2Handler)
-        except ImportError as e:
-            log.error("Sapien is not installed, please install it first")
-            raise e
-    elif sim == SimType.SAPIEN3:
-        try:
-            from metasim.sim.sapien.sapien3 import Sapien3Handler
-
-            return ParallelSimWrapper(Sapien3Handler)
-        except ImportError as e:
-            log.error("Sapien is not installed, please install it first")
-            raise e
-    elif sim == SimType.MUJOCO:
-        try:
-            from metasim.sim.mujoco import MujocoHandler
-
-            return ParallelSimWrapper(MujocoHandler)
-        except ImportError as e:
-            log.error("Mujoco is not installed, please install it first")
-            raise e
-    elif sim == SimType.BLENDER:
-        try:
-            from metasim.sim.blender import BlenderHandler
-
-            return BlenderHandler
-        except ImportError as e:
-            log.error("Blender is not installed, please install it first")
-            raise e
-    elif sim == SimType.MJX:
-        try:
-            from metasim.sim.mjx import MJXHandler
-
-            return MJXHandler
-        except ImportError as e:
-            log.error("MJX is not installed, please install it first")
-            raise e
-    elif sim == SimType.NEWTON:
-        try:
-            from metasim.sim.newton import NewtonHandler
-
-            return NewtonHandler
-        except ImportError as e:
-            log.error("Newton is not installed. Activate newton conda environment: conda activate newton")
-            raise e
-    else:
+    spec = SIM_BACKENDS.get(sim)
+    if spec is None:
         raise ValueError(f"Invalid simulator type: {sim}")
+    try:
+        handler_cls = getattr(importlib.import_module(spec.module), spec.cls)
+    except ImportError as e:
+        log.error(spec.install_hint)
+        raise e
+    return ParallelSimWrapper(handler_cls) if spec.parallel else handler_cls
 
 
 def _local_python_modules(cwd: str) -> list[str]:

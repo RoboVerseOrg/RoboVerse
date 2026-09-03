@@ -12,7 +12,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 from metasim.test.test_utils import assert_close
 
 
-@pytest.mark.sapien3
+@pytest.mark.sim("sapien3", "superdex")
 def test_init_pose(handler):
     """Test that initial poses are correctly applied."""
     handler.set_dof_targets(

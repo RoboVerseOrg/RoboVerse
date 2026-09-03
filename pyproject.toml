@@ -63,6 +63,14 @@ genesis = [
 
 ]
 blender = ["bpy"]
+# SuperDex (Meta Mochi engine) publishes Python >= 3.12 wheels only; on older interpreters this extra
+# installs just the helpers and `metasim.sim.superdex` raises an actionable ImportError.
+superdex = [
+    "superdex-physics; python_version >= '3.12'",
+    "superdex-robotics; python_version >= '3.12'",
+    "trimesh",
+    "pyrender",
+]
 robosplatter = [
    "robo-splatter @ git+https://github.com/HorizonRobotics/RoboSplatter.git@v0.1.2",
    "setuptools==59.5.0"

@@ -28,6 +28,7 @@ class SimType(enum.Enum):
     BLENDER = "blender"
     MJX = "mjx"
     NEWTON = "newton"
+    SUPERDEX = "superdex"
     # Deprecated alias. The standalone IsaacLab handler was removed; the
     # IsaacSim handler now uses the ``isaaclab`` Python package directly.
     # Existing call sites that still reference ``SimType.ISAACLAB``

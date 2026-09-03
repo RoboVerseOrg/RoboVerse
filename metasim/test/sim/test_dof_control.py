@@ -42,7 +42,7 @@ def reset_robot_to_default(handler, request):
         handler.simulate()
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "superdex")
 def test_set_dof_targets_basic(handler):
     """Test basic set_dof_targets functionality.
 
@@ -88,7 +88,7 @@ def test_set_dof_targets_basic(handler):
     log.info(f"Set dof targets basic test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "superdex")
 def test_set_dof_targets_sequential_changes(handler):
     """Test applying sequential dof targets.
 
@@ -144,7 +144,7 @@ def test_set_dof_targets_sequential_changes(handler):
     log.info(f"Set dof targets sequential changes test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "superdex")
 def test_set_dof_targets_per_env(handler):
     """Test setting different dof targets for each environment.
 
@@ -192,7 +192,7 @@ def test_set_dof_targets_per_env(handler):
     log.info(f"Set dof targets per env test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "superdex")
 def test_dof_targets_gripper_control(handler):
     """Test gripper control via finger joints."""
     # Open gripper
@@ -235,7 +235,7 @@ def test_dof_targets_gripper_control(handler):
     log.info(f"Dof targets gripper control test passed for {handler.scenario.simulator}")
 
 
-@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton")
+@pytest.mark.sim("mujoco", "isaacsim", "isaacgym", "newton", "superdex")
 def test_dof_convergence_to_target(handler):
     """Test that DOF positions converge to targets over time."""
     target_positions = {

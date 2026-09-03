@@ -43,6 +43,7 @@ def _import_all_backend_handlers() -> list[type[BaseSimHandler]]:
         "metasim.sim.isaacgym.isaacgym",
         "metasim.sim.isaacsim.isaacsim",
         "metasim.sim.pyrep.pyrep",
+        "metasim.sim.superdex.superdex",
         "metasim.sim.parallel",
         "metasim.sim.hybrid",
     ]

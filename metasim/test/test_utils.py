@@ -32,6 +32,7 @@ def get_test_parameters():
     mjx_params = [("mjx", 1)]
     sapien3_params = [("sapien3", 1)]
     sapien2_params = [("sapien2", 1)]
+    superdex_params = [("superdex", 1)]
     return (
         mujoco_params
         + mjx_params
@@ -41,6 +42,7 @@ def get_test_parameters():
         + genesis_params
         + sapien3_params
         + sapien2_params
+        + superdex_params
     )
 
 

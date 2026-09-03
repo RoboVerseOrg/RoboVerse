@@ -52,6 +52,7 @@ class ScenarioCfg:
             "mjx",
             "mujoco",
             "newton",
+            "superdex",
             "pybullet",
             "pyrep",
             "sapien2",

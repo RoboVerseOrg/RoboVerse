@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet — open a PR to add entries here.
+### Added
+
+- **SuperDex backend** (`metasim/sim/superdex/`, `simulator="superdex"`, extra `metasim[superdex]`,
+  Python >= 3.12): Meta's Mochi engine behind the `BaseSimHandler` contract. URDF robots/objects
+  (collision geometry baked to watertight hulls in a content-addressed cache), primitives and mesh
+  objects, link-mounted and world cameras (RGB + depth via pyrender/EGL), `ContactForces` through
+  the objects a robot touches, `SimParamCfg.superdex_control_mode` (`pd` honours effort clamps,
+  `implicit` uses the native controller). Mass/inertia, joint damping and effort clamps fall back to
+  the sibling MJCF so dynamics match the MuJoCo backend; `scripts/parity_superdex_tracking.py`
+  (RoboVerse) measures the remaining gap.
+- `metasim.utils.setup_util.SIM_BACKENDS`: backend dispatch is a table; adding a simulator is one
+  `SimType` value plus one entry.
+- `metasim/test/sim/test_superdex_floating_base.py`, `metasim/test/test_superdex_assets_general.py`,
+  `metasim/test/sim/test_mujoco_arena_memory.py`.
+
+### Fixed
+
+- MuJoCo: `<size memory="512M">` is reserved by default; humanoid + mesh scenes no longer die with
+  `mj_stackAlloc: out of memory` (get_started/10_mount_camera.py).
+- `hf_util`: a symlinked `roboverse_data` is no longer refused as path traversal; concurrent
+  processes wait for an in-flight download instead of failing after 5 s (`ParallelSimWrapper`
+  workers, get_started/3_parallel_envs.py).
+- Tree is `ruff check` / `ruff format` clean at the pre-commit pin (0.14.5).
 
 ## [0.2.0] - 2026-05-31
 

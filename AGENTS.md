@@ -75,6 +75,7 @@ Use the existing marker model described in the autotest guide and `metasim/test/
 - `@pytest.mark.isaacsim`
 - `@pytest.mark.newton`
 - `@pytest.mark.sapien3`
+- `@pytest.mark.superdex`
 - `@pytest.mark.blender`
 - `@pytest.mark.sim(...)`
 - `@pytest.mark.general`

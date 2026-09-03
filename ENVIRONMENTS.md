@@ -11,6 +11,7 @@ Update it when the actual conda env names on the machine differ from the default
 - `newton` -> conda env `newton`
 - `isaacsim` -> conda env `isaacsim`
 - `blender` -> conda env `isaacsim`
+- `superdex` -> a Python 3.12 venv with `.[dev,superdex]` (the superdex wheels are 3.12-only)
 
 ## Notes
 

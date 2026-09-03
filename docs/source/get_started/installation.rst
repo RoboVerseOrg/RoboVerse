@@ -56,6 +56,10 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
      - ``uv pip install -e ".[newton]"``
      - 3.10-3.12
      - 3.10
+   * - SuperDex
+     - ``uv pip install -e ".[superdex]"``
+     - 3.12
+     - 3.12
    * - IsaacSim v4.5.0
      - See below
      - 3.10
@@ -159,6 +163,52 @@ Then:
 
    where ``$CONDA_HOME`` is the path to your conda installation. It is typically ``~/anaconda3``, ``~/miniconda3`` or ``~/miniforge3``.
    You can also add it to your ``~/.bashrc`` to make it permanent.
+
+Install SuperDex (Meta Mochi engine)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`SuperDex <https://github.com/facebookresearch/project_superdex>`__ is Meta's contact-first, fully
+implicit rigid/articulated/soft-body engine. Its ``superdex-physics`` / ``superdex-robotics`` wheels
+are published for **Python >= 3.12** (cp312 at the time of writing), so use a dedicated 3.12 environment:
+
+.. code-block:: bash
+
+    uv venv --python 3.12 .venv-superdex && source .venv-superdex/bin/activate
+    uv pip install -e ".[dev,superdex]"
+
+Then select it like any other backend (``ScenarioCfg(simulator="superdex")`` or ``--sim superdex``).
+What to expect from the backend (see ``metasim/sim/superdex/superdex.py`` for the full list):
+
+- **Assets**: robots and articulated objects load from ``urdf_path``; primitives and mesh objects are
+  supported. Collision geometry that is not watertight is replaced by its convex hull in a cache
+  directory (``$METASIM_SUPERDEX_CACHE``, default ``<tmp>/metasim_superdex_cache``) because SuperDex
+  bakes SDF colliders and ignores URDF primitives; a warning names the affected links, since contact
+  geometry then differs from backends that use the original meshes. MJCF/USD are not read, but when a
+  URDF ships no ``<inertial>`` data and the cfg also has an ``mjcf_path``, the explicit MJCF inertials
+  are used so the mass distribution matches the MuJoCo backend.
+- **Physics alignment**: Coulomb friction defaults to 1.0 (MuJoCo's geom default; ``static_friction``
+  overrides it), URDF joint ranges are enforced with stiff limit penalties, and
+  ``enabled_gravity=False`` compensates gravity on every link as the MuJoCo backend does.
+- **Control**: ``RobotCfg.actuators`` stiffness/damping drive SuperDex's implicit pose controller.
+  ``SimParamCfg.superdex_control_mode`` selects how the effort clamp is honoured: ``"pd"`` (default)
+  bounds the target excursion every substep so the spring force never exceeds the limit, which gives
+  the torque-limited slew the MuJoCo backend shows; ``"implicit"`` hands the limit to the native
+  controller's ``saturation`` (in practice not an N m clamp: targets are reached within a few ms).
+  The clamp is ``effort_limit_sim`` if set, else the MJCF actuator ``forcerange`` when the cfg also
+  ships an MJCF (what the MuJoCo backend clamps with), else the URDF ``<limit effort>``. Joint
+  viscous damping / Coulomb friction follow the same URDF-then-MJCF rule (SuperDex's own URDF
+  default of 10 N m s/rad is not used); ``enabled_self_collisions=False`` disables all same-robot
+  contacts, as on MuJoCo. Velocity targets are best effort; effort targets are external DoF forces.
+- **Free bases**: ``fix_base_link=False`` articulations need ``<inertial>`` mass on every link
+  (launch fails fast otherwise); ``root_state`` reports the world pose of the root link.
+- **Contact forces** (``metasim.queries.ContactForces``): SuperDex 1.0 only exposes contact queries
+  on mesh rigid actors, so robot link forces are assembled from the dynamic objects the robot touches;
+  ground-plane, static-object and self contacts are not observable (a warning says so).
+- **Cameras**: RGB + depth are rendered offscreen with ``pyrender`` (EGL) from the physics link
+  transforms; world-fixed and link-mounted cameras are supported. Instance segmentation is not
+  implemented (launch fails loudly).
+- **Parallelism**: one scene per handler on the CPU; ``num_envs > 1`` uses worker processes, as for
+  MuJoCo/PyBullet. There is no GUI viewer; ``headless=False`` only logs a warning.
 
 Install Multiple Simulators
 ---------------------------

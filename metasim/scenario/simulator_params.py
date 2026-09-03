@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from metasim.utils import configclass
 
 
@@ -83,6 +85,13 @@ class SimParamCfg:
     # When set (e.g. "force"), robot joint drives are created with this drive mode and the actuator's
     # effort_limit_sim as the force limit. None keeps the legacy set_drive_property(stiffness, damping).
     sapien_drive_force_mode: str | None = None
+
+    ## SuperDex-specific parameters
+    # "pd": every substep applies tau = clip(kp*(q_target - q) - kd*(qd - qd_target), +-effort_limit) as an
+    # external DoF force -- the same control law and clamp the MuJoCo backend's actuators implement, so
+    # closed-loop behaviour matches it. "implicit": SuperDex's native constraint-based pose controller
+    # (stiffer, ignores effort limits, converges in a few ms).
+    superdex_control_mode: Literal["pd", "implicit"] = "pd"
 
     ## MJX, Newton specific parameters
     nconmax: int | None = 512
