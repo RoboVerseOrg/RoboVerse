@@ -10,6 +10,10 @@ try:
 except PackageNotFoundError:  # running from a checkout that was never installed
     __version__ = "0.0.0+unknown"
 
+from metasim.utils.log import configure_logging as _configure_logging
+
+_configure_logging()  # no-op unless METASIM_LOG_LEVEL is set
+
 
 def register_gym_envs() -> None:
     """Discover task modules and register ``RoboVerse/<task>`` with Gymnasium.

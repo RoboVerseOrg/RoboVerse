@@ -135,6 +135,11 @@ def get_sim_handler_class(sim: SimType):
     spec = SIM_BACKENDS.get(sim)
     if spec is None:
         raise ValueError(f"Invalid simulator type: {sim}")
+    # Version gate before the import: an unsupported simulator release fails here with the
+    # installed/supported versions in the message, not with an AttributeError inside the handler.
+    from metasim.sim._versions import enforce_backend_versions
+
+    enforce_backend_versions(sim)
     try:
         handler_cls = getattr(importlib.import_module(spec.module), spec.cls)
     except ImportError as e:

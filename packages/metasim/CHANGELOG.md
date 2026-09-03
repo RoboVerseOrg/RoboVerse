@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Logging: `metasim.utils.log.warn_once` deduplicates a warning per process (the MuJoCo / Newton "forcerange stays active" warnings printed once per env per actuator — 1,018 copies in a 128-env run); `hf_util`'s "found in local directory" moves to DEBUG (it was 70% of a typical log); `METASIM_LOG_LEVEL` (opt-in, applied at import) sets loguru's level for the library without touching an application's own sinks.
 - `metasim/utils/{configclass,dict,math,string_util}.py` carry their Isaac Lab (BSD-3-Clause) attribution header with the license text at `packages/metasim/LICENSE.isaaclab`.
 - References to the RoboVerse tutorials follow their move from `get_started/` to `examples/` (docs and test docstrings only; no behaviour change).
 - Extras are PyPI-installable: `newton>=1.5,<2` (PyPI wheel; the 1.5/1.6 shims are in `_newton_compat`) and `sapien2` → `mani-skill2==0.5.3` replace git URLs; `robo-splatter` (git-only) moves to `requirements/robosplatter.txt`; `[tool.uv] conflicts` marks the isaacsim / isaacsim211 / mjx / isaacgym extras mutually exclusive; `requires-python = ">=3.10,<3.13"`.
@@ -40,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tree is `ruff check` / `ruff format` clean at the pre-commit pin (0.14.5).
 
 ### Added
+- Backend version policy: `metasim/sim/_versions.py` declares, per backend, the supported version range and the last verified version of every simulator package; `get_sim_handler_class` refuses unsupported releases (`METASIM_SKIP_VERSION_CHECK=1` to override) and warns once on untested ones; `python -m metasim doctor [--json] [--backend X]` reports the table. `packaging` is a runtime dependency.
 - `BaseTaskEnv.supported_simulators`: a task class declares the backends it is known to run on; constructing it with another `scenario.simulator` raises `ValueError` before any handler is built. `None` (the default) keeps today's unchecked behaviour.
 
 - **SuperDex backend** (`metasim/sim/superdex/`, `simulator="superdex"`, extra `metasim[superdex]`,

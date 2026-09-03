@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'packages/metasim/docs/**'
       - 'scripts/docs/**'
       - 'roboverse_pack/tasks/**'
       - '.github/workflows/deploy-docs.yml'

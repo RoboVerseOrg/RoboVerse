@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import torch
 from loguru import logger as log
 
+from metasim.utils.log import warn_once
 from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 
 if TYPE_CHECKING:
@@ -1127,18 +1128,14 @@ class NewtonHandler(BaseSimHandler):
                         except Exception:
                             existing_limit = float("inf")
                         if existing_limit > 0 and existing_limit < 1e30:
-                            cache_key = (robot.name, joint_name)
-                            warned = getattr(self, "_actuator_force_limit_warned", set())
-                            if cache_key not in warned:
-                                log.warning(
-                                    f"Newton actuator '{robot.name}:{joint_name}': cfg overrides "
-                                    f"stiffness/damping but leaves effort_limit_sim unset — the "
-                                    f"asset-authored joint_effort_limit ({existing_limit}) stays "
-                                    f"active and may clamp the new PD output. Cross-backend behaviour "
-                                    f"will diverge unless effort_limit_sim is specified."
-                                )
-                                warned.add(cache_key)
-                                self._actuator_force_limit_warned = warned
+                            warn_once(
+                                ("newton.effort_limit", robot.name, joint_name),
+                                f"Newton actuator '{robot.name}:{joint_name}': cfg overrides "
+                                f"stiffness/damping but leaves effort_limit_sim unset — the "
+                                f"asset-authored joint_effort_limit ({existing_limit}) stays "
+                                f"active and may clamp the new PD output. Cross-backend behaviour "
+                                f"will diverge unless effort_limit_sim is specified.",
+                            )
 
                     vel_limit = (
                         actuator.velocity_limit_sim

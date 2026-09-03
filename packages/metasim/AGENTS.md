@@ -46,6 +46,10 @@ For testing infrastructure details, also refer to:
 - For unsupported backends or unsupported code paths, prefer an explicit error over silent success.
 - Do not turn an explicit unsupported-operation failure into a silent no-op unless there is a strong reason.
 
+## Backend Versions
+
+- Every simulator dependency is declared in `metasim/sim/_versions.py` (supported range + last verified version). Touching a backend for a new simulator release means updating that table in the same PR; `python -m metasim doctor` shows the installed state. See `RELEASING.md` §8.
+
 ## Testing Rules For `metasim/test`
 
 ### Source Of Truth
