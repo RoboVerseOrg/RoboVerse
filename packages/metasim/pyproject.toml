@@ -51,7 +51,7 @@ isaacsim211 = [
 ]
 isaacgym = [
     "numpy<2",
-    "fsspec<=2025.3.0",  # fsspec==2025.3.1 has bug with python 3.8
+    "fsspec<=2026.7.0",  # fsspec==2025.3.1 has bug with python 3.8
 ]
 mujoco = ["mujoco", "dm-control"]
 mjx = ["torch==2.7.0", "mujoco-mjx>=3.2.7", "dm-control", "jax[cuda]==0.6.2"]
@@ -60,7 +60,7 @@ sapien3 = ["sapien>=3.0.0.b1"]
 pybullet = ["numpy<2", "pybullet"]
 genesis = [
     "genesis-world",
-    "libigl==2.5.1",  # for genesis 0.2.1, see https://github.com/Genesis-Embodied-AI/Genesis/issues/1156#issuecomment-3069006079
+    "libigl==2.6.2",  # for genesis 0.2.1, see https://github.com/Genesis-Embodied-AI/Genesis/issues/1156#issuecomment-3069006079
     "open3d",
 
 ]
