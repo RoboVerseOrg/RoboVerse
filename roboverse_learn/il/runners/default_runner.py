@@ -4,8 +4,6 @@ import os
 import pathlib
 import random
 import time
-from omegaconf import OmegaConf
-from torch.utils.data import DataLoader
 
 import hydra
 import imageio.v2 as iio
@@ -14,14 +12,16 @@ import torch
 import tqdm
 import wandb
 from loguru import logger as log
+from omegaconf import OmegaConf
+from torch.utils.data import DataLoader
 
+from metasim.randomization import DomainRandomizationManager, DRConfig
 from metasim.scenario.cameras import PinholeCameraCfg
+from metasim.task.registry import get_task_class
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot
-from metasim.task.registry import get_task_class
-from metasim.randomization import DomainRandomizationManager, DRConfig
-from roboverse_learn.il.utils.ema_model import EMAModel
 from roboverse_learn.il.runners.base_runner import BaseRunner
+from roboverse_learn.il.utils.ema_model import EMAModel
 from roboverse_learn.il.utils.json_logger import JsonLogger
 from roboverse_learn.il.utils.lr_scheduler import get_scheduler
 from roboverse_learn.il.utils.pytorch_util import optimizer_to
@@ -133,9 +133,7 @@ class DefaultRunner(BaseRunner):
             self.ema_model = copy.deepcopy(self.model)
 
         # configure training state
-        self.optimizer = hydra.utils.instantiate(
-            cfg.train_config.optimizer, params=self.model.parameters()
-        )
+        self.optimizer = hydra.utils.instantiate(cfg.train_config.optimizer, params=self.model.parameters())
 
         # configure training state
         self.global_step = 0
@@ -160,9 +158,7 @@ class DefaultRunner(BaseRunner):
 
         # configure validation dataset
         val_dataset = dataset.get_validation_dataset()
-        val_dataloader = create_dataloader(
-            val_dataset, **cfg.train_config.val_dataloader
-        )
+        val_dataloader = create_dataloader(val_dataset, **cfg.train_config.val_dataloader)
 
         self.model.set_normalizer(normalizer)
         if cfg.train_config.training_params.use_ema:
@@ -173,9 +169,7 @@ class DefaultRunner(BaseRunner):
             cfg.train_config.training_params.lr_scheduler,
             optimizer=self.optimizer,
             num_warmup_steps=cfg.train_config.training_params.lr_warmup_steps,
-            num_training_steps=(
-                len(train_dataloader) * cfg.train_config.training_params.num_epochs
-            )
+            num_training_steps=(len(train_dataloader) * cfg.train_config.training_params.num_epochs)
             // cfg.train_config.training_params.gradient_accumulate_every,
             # pytorch assumes stepping LRScheduler every epoch
             # however huggingface diffusers steps it every batch
@@ -196,11 +190,9 @@ class DefaultRunner(BaseRunner):
                 config=OmegaConf.to_container(cfg, resolve=True),
                 **cfg.logging,
             )
-            wandb.config.update(
-                {
-                    "output_dir": self.output_dir,
-                }
-            )
+            wandb.config.update({
+                "output_dir": self.output_dir,
+            })
 
         # device transfer
         device = torch.device(cfg.train_config.training_params.device)
@@ -244,18 +236,11 @@ class DefaultRunner(BaseRunner):
                             train_sampling_batch = batch
 
                         raw_loss = self.model.compute_loss(batch)
-                        loss = (
-                            raw_loss
-                            / cfg.train_config.training_params.gradient_accumulate_every
-                        )
+                        loss = raw_loss / cfg.train_config.training_params.gradient_accumulate_every
                         loss.backward()
 
                         # step optimizer
-                        if (
-                            self.global_step
-                            % cfg.train_config.training_params.gradient_accumulate_every
-                            == 0
-                        ):
+                        if self.global_step % cfg.train_config.training_params.gradient_accumulate_every == 0:
                             self.optimizer.step()
                             self.optimizer.zero_grad()
                             lr_scheduler.step()
@@ -283,9 +268,7 @@ class DefaultRunner(BaseRunner):
                             json_logger.log(step_log)
                             self.global_step += 1
 
-                        if (
-                            cfg.train_config.training_params.max_train_steps is not None
-                        ) and batch_idx >= (
+                        if (cfg.train_config.training_params.max_train_steps is not None) and batch_idx >= (
                             cfg.train_config.training_params.max_train_steps - 1
                         ):
                             break
@@ -319,12 +302,14 @@ class DefaultRunner(BaseRunner):
                         ) as tepoch:
                             for batch_idx, batch in enumerate(tepoch):
                                 batch = dataset.postprocess(batch, device)
-                                loss = self.model.compute_loss(batch)
+                                # Validate the model that is actually deployed at eval time
+                                # (``policy`` == ``self.ema_model`` when ``use_ema`` else
+                                # ``self.model``) and in the eval() mode set above, so val_loss
+                                # tracks the deployed policy and is epoch-comparable. Using
+                                # ``self.model`` here would score a train-mode, non-EMA model.
+                                loss = policy.compute_loss(batch)
                                 val_losses.append(loss.item())
-                                if (
-                                    cfg.train_config.training_params.max_val_steps
-                                    is not None
-                                ) and batch_idx >= (
+                                if (cfg.train_config.training_params.max_val_steps is not None) and batch_idx >= (
                                     cfg.train_config.training_params.max_val_steps - 1
                                 ):
                                     break
@@ -361,10 +346,7 @@ class DefaultRunner(BaseRunner):
                 ) == 0 or self.epoch + 1 >= cfg.train_config.training_params.num_epochs:
                     # checkpointing
                     save_name = pathlib.Path(self.cfg.dataset_config.zarr_path).stem
-                    self.save_checkpoint(
-                        cfg.checkpoint.save_root_dir
-                        + f"/checkpoints/{self.epoch + 1}.ckpt"
-                    )  # TODO
+                    self.save_checkpoint(cfg.checkpoint.save_root_dir + f"/checkpoints/{self.epoch + 1}.ckpt")  # TODO
 
                 # ========= eval end for this epoch ==========
                 policy.train()
@@ -409,7 +391,7 @@ class DefaultRunner(BaseRunner):
         )
 
         # Lighting setup
-        render_mode = getattr(args, 'render_mode', 'raytracing')
+        render_mode = getattr(args, "render_mode", "raytracing")
         if render_mode == "pathtracing":
             ceiling_main = 18000.0
             ceiling_corners = 8000.0
@@ -418,6 +400,7 @@ class DefaultRunner(BaseRunner):
             ceiling_corners = 5000.0
 
         from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
+
         lights = [
             DiskLightCfg(
                 name="ceiling_main",
@@ -447,7 +430,7 @@ class DefaultRunner(BaseRunner):
             num_envs=args.num_envs,
             headless=args.headless,
             lights=lights,
-            cameras=[camera]
+            cameras=[camera],
         )
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tic = time.time()
@@ -455,9 +438,9 @@ class DefaultRunner(BaseRunner):
         robot = get_robot(args.robot)
 
         # Domain Randomization configuration
-        dr_level = getattr(args, 'level', 0)
-        dr_scene_mode = getattr(args, 'scene_mode', 0)
-        dr_seed = getattr(args, 'randomization_seed', None)
+        dr_level = getattr(args, "level", 0)
+        dr_scene_mode = getattr(args, "scene_mode", 0)
+        dr_seed = getattr(args, "randomization_seed", None)
 
         if not RANDOMIZATION_AVAILABLE:
             if dr_level > 0:
@@ -479,7 +462,7 @@ class DefaultRunner(BaseRunner):
                 scenario=scenario,
                 handler=env.handler,
                 init_states=None,
-                render_cfg=SimpleRenderCfg(mode=render_mode)
+                render_cfg=SimpleRenderCfg(mode=render_mode),
             )
             if dr_level > 0:
                 log.info(f"Domain Randomization enabled: level={dr_level}, scene_mode={dr_scene_mode}, seed={dr_seed}")
@@ -493,9 +476,7 @@ class DefaultRunner(BaseRunner):
         checkpoint = self.get_checkpoint_path()
         checkpoint = ckpt_path if ckpt_path is not None else checkpoint
         if checkpoint is None:
-            raise ValueError(
-                "No checkpoint found, please provide a valid checkpoint path."
-            )
+            raise ValueError("No checkpoint found, please provide a valid checkpoint path.")
         args.checkpoint_path = pathlib.Path(checkpoint)
         ckpt_name = args.checkpoint_path.name + "_" + time_str
         ckpt_name = f"{args.task}/{self.policy_name}/{args.robot}/{ckpt_name}"
@@ -512,14 +493,10 @@ class DefaultRunner(BaseRunner):
             subset=args.subset,
         )
 
-        action_set_steps = (
-            2 if policyRunner.policy_cfg.action_config.action_type == "ee" else 1
-        )
+        action_set_steps = 2 if policyRunner.policy_cfg.action_config.action_type == "ee" else 1
         # Data
         tic = time.time()
-        assert os.path.exists(env.traj_filepath), (
-            f"Trajectory file: {env.traj_filepath} does not exist."
-        )
+        assert os.path.exists(env.traj_filepath), f"Trajectory file: {env.traj_filepath} does not exist."
         init_states, all_actions, all_states = get_traj(env.traj_filepath, robot, env.handler)
         num_demos = len(init_states)
         toc = time.time()
@@ -557,9 +534,7 @@ class DefaultRunner(BaseRunner):
             max_demos = args.max_demo
         max_demos = min(max_demos, num_demos)
 
-        for demo_start_idx in range(
-            args.task_id_range_low, args.task_id_range_low + max_demos, num_envs
-        ):
+        for demo_start_idx in range(args.task_id_range_low, args.task_id_range_low + max_demos, num_envs):
             demo_end_idx = min(demo_start_idx + num_envs, num_demos)
             current_demo_idxs = list(range(demo_start_idx, demo_end_idx))
 
@@ -568,7 +543,8 @@ class DefaultRunner(BaseRunner):
                 for env_id, demo_idx in enumerate(current_demo_idxs):
                     log.info(f"[DP Eval] Episode {demo_idx}: Applying DR")
                     randomization_manager.apply_randomization(
-                        demo_idx=demo_idx, is_initial=(demo_start_idx == args.task_id_range_low))
+                        demo_idx=demo_idx, is_initial=(demo_start_idx == args.task_id_range_low)
+                    )
                     randomization_manager.update_positions_to_table(demo_idx=demo_idx, env_id=env_id)
                     randomization_manager.update_camera_look_at(env_id=env_id)
                     randomization_manager.apply_camera_randomization()
@@ -637,9 +613,7 @@ class DefaultRunner(BaseRunner):
                     f.write(f"Domain Randomization Level: {dr_level}\n")
                     f.write(f"Domain Randomization Scene Mode: {dr_scene_mode}\n")
                     f.write(f"Domain Randomization Seed: {dr_seed}\n")
-                    f.write(
-                        f"Cumulative Average Success Rate: {total_success / total_completed:.4f}\n"
-                    )
+                    f.write(f"Cumulative Average Success Rate: {total_success / total_completed:.4f}\n")
             log.info("Demo Indices: ", range(demo_start_idx, demo_end_idx))
             log.info("Num Envs: ", num_envs)
             log.info(f"SuccessOnce: {SuccessOnce}")
@@ -714,9 +688,7 @@ def create_dataloader(
     seed: int = 0,
 ):
     # print("create_dataloader_batch_size", batch_size)
-    batch_sampler = BatchSampler(
-        len(dataset), batch_size, shuffle=shuffle, seed=seed, drop_last=True
-    )
+    batch_sampler = BatchSampler(len(dataset), batch_size, shuffle=shuffle, seed=seed, drop_last=True)
 
     def collate(x):
         assert len(x) == 1
