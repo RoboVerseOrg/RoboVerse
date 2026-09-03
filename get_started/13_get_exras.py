@@ -49,6 +49,7 @@ class Args:
         "sapien2",
         "sapien3",
         "mujoco",
+        "superdex",
         "mjx",
     ] = "mujoco"
 

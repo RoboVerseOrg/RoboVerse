@@ -42,7 +42,7 @@ def _scenario(sim: str):
     )
 
 
-def record(sim: str, out: str, steps: int, seed: int, hold: int) -> None:
+def record(*, sim: str, out: str, steps: int, seed: int, hold: int) -> None:
     from metasim.utils.setup_util import get_handler
 
     scenario = _scenario(sim)
@@ -79,31 +79,54 @@ def record(sim: str, out: str, steps: int, seed: int, hold: int) -> None:
         measured.append([float(state[jn]) for jn in joint_names])
     handler.close()
 
+    out = out if out.endswith(".npz") else out + ".npz"  # np.savez appends the suffix itself
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     np.savez(out, sim=sim, joint_names=np.array(joint_names), targets=np.array(targets), measured=np.array(measured))
-    err = np.abs(np.array(measured) - np.array(targets))
-    print(f"[{sim}] {steps} steps, hold={hold}: mean|err|={err.mean():.4f} rad, max|err|={err.max():.4f} rad -> {out}")
+    print(
+        f"[{sim}] {steps} steps, hold={hold}: {_summary(joint_names, np.array(measured), np.array(targets))} -> {out}"
+    )
 
 
-def compare(a_path: str, b_path: str, plot: str | None) -> None:
+def _summary(names: list[str], measured: np.ndarray, targets: np.ndarray) -> str:
+    """Per-unit tracking error summary: revolute/arm joints (rad) and prismatic/finger joints (m) never mixed."""
+    err = np.abs(measured - targets)
+    arm = [j for j, n in enumerate(names) if "finger" not in n]
+    fingers = [j for j, n in enumerate(names) if "finger" in n]
+    parts = []
+    if arm:
+        parts.append(f"arm mean|err|={err[:, arm].mean():.4f} rad, max={err[:, arm].max():.4f} rad")
+    if fingers:
+        parts.append(
+            f"finger mean|err|={err[:, fingers].mean() * 1000:.2f} mm, max={err[:, fingers].max() * 1000:.2f} mm"
+        )
+    return "; ".join(parts)
+
+
+def compare(a_path: str, b_path: str, *, plot: str | None = None) -> None:
     a, b = np.load(a_path), np.load(b_path)
-    assert list(a["joint_names"]) == list(b["joint_names"]), "joint order differs"
-    assert np.allclose(a["targets"], b["targets"]), "target sequences differ (different seed/hold?)"
     names = list(a["joint_names"])
+    if names != list(b["joint_names"]):
+        raise ValueError(f"joint order differs: {names} vs {list(b['joint_names'])}")
+    if a["targets"].shape != b["targets"].shape or not np.allclose(a["targets"], b["targets"]):
+        raise ValueError("target sequences differ: record both backends with the same --seed/--hold/--steps")
     for rec in (a, b):
-        err = np.abs(rec["measured"] - rec["targets"])
-        print(f"[{rec['sim']}] mean|q - q_target| = {err.mean():.4f} rad, max = {err.max():.4f} rad")
+        print(f"[{rec['sim']}] {_summary(names, rec['measured'], rec['targets'])}")
     diff = np.abs(a["measured"] - b["measured"])
-    print(f"[{a['sim']} vs {b['sim']}] mean|Δq| = {diff.mean():.4f} rad, max = {diff.max():.4f} rad")
+    print(f"[{a['sim']} vs {b['sim']}] {_summary(names, a['measured'], b['measured']).replace('err', 'Δq')}")
     for j, jn in enumerate(names):
-        print(f"  {jn:>20}: mean|Δq| = {diff[:, j].mean():.4f}  max = {diff[:, j].max():.4f}")
+        unit = "m" if "finger" in jn else "rad"
+        print(f"  {jn:>20}: mean|Δq| = {diff[:, j].mean():.4f} {unit}  max = {diff[:, j].max():.4f} {unit}")
     if plot:
         import matplotlib
 
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
-        fig, axes = plt.subplots(3, 3, figsize=(13, 9), sharex=True)
+        cols = 3
+        rows = -(-len(names) // cols)
+        fig, axes = plt.subplots(rows, cols, figsize=(13, 3 * rows), sharex=True, squeeze=False)
+        for ax in axes.ravel()[len(names) :]:
+            ax.set_visible(False)
         t = np.arange(len(a["targets"]))
         for j, (ax, jn) in enumerate(zip(axes.ravel(), names)):
             ax.plot(t, a["targets"][:, j], "k--", lw=1, label="target")
@@ -135,9 +158,9 @@ def main() -> None:
     cmp_.add_argument("--plot", default=None)
     args = parser.parse_args()
     if args.cmd == "record":
-        record(args.sim, args.out, args.steps, args.seed, args.hold)
+        record(sim=args.sim, out=args.out, steps=args.steps, seed=args.seed, hold=args.hold)
     else:
-        compare(args.a, args.b, args.plot)
+        compare(args.a, args.b, plot=args.plot)
 
 
 if __name__ == "__main__":
