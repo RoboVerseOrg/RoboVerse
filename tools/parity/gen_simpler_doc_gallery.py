@@ -12,7 +12,7 @@ doc ``_static`` tree, and rewrites two parts of
 
 Idempotent: the rewritten span is delimited by HTML-comment markers.
 
-Run:  python scripts/gen_simpler_doc_gallery.py
+Run:  python tools/parity/gen_simpler_doc_gallery.py
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import json
 import pathlib
 import shutil
 
-REPO = pathlib.Path(__file__).resolve().parents[1]
+REPO = pathlib.Path(__file__).resolve().parents[2]  # tools/parity/<this>.py -> repo root
 DOC = REPO / "docs/source/dataset_benchmark/integrations/simpler_env.md"
 STATIC = REPO / "docs/source/_static/integrations/simpler_env"
 GALLERY = pathlib.Path("/tmp/policy_gallery")
@@ -143,8 +143,8 @@ def main():
         "earlier native-vs-reference parity — it catches station / overlay / asset-recolor "
         "deviations that an internal self-comparison cannot. Regenerate side-by-side "
         "`[ MetaSim-native | reference | abs-diff x30 ]` clips with "
-        "`scripts/render_metasim_1to1_gallery.py`; the per-task obs-vs-upstream check is in "
-        "`scripts/render_policy_gallery.py`.\n"
+        "`tools/parity/render_metasim_1to1_gallery.py`; the per-task obs-vs-upstream check is in "
+        "`tools/parity/render_policy_gallery.py`.\n"
     )
     blocks.append(END)
     new_gallery = "\n".join(blocks)
@@ -163,11 +163,11 @@ def main():
     # ---- status table: add/refresh a policy-success row ----
     row = (
         f"| Real-policy success (RT-1/Octo) | **{n_ok}/25** solved on MetaSim-native envs "
-        f"(RT-1 {g_ok}/21 · Octo {w_ok}/4) | `scripts/render_policy_gallery.py` |"
+        f"(RT-1 {g_ok}/21 · Octo {w_ok}/4) | `tools/parity/render_policy_gallery.py` |"
     )
     fidelity_row = (
         "| Obs matches upstream | initial render vs `simpler_env` **mean-abs ≤ ~2/255** all 6 families "
-        "(coke/pick/move-near bitwise; drawer 0.01, place 1.94, widowx 0.0) | `scripts/render_policy_gallery.py` |"
+        "(coke/pick/move-near bitwise; drawer 0.01, place 1.94, widowx 0.0) | `tools/parity/render_policy_gallery.py` |"
     )
     lines = txt.splitlines()
     lines = [ln for ln in lines if not ln.startswith(("| Real-policy success", "| Obs matches upstream"))]

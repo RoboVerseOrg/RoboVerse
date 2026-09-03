@@ -28,7 +28,7 @@ SAPIEN keeps process-global renderer state, so run ONE task per process invocati
 Usage::
 
     JAX_PLATFORMS=cpu VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json \
-        python scripts/policy_rollout_simpler_env.py \
+        python tools/parity/policy_rollout_simpler_env.py \
         --task google_robot_pick_coke_can --out /tmp/octo_videos/google_robot_pick_coke_can.mp4
 """
 

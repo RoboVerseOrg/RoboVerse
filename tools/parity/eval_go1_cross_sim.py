@@ -4,7 +4,7 @@ Reports ep_r mean, fell_over count, upright_cos. Useful to verify dual-path
 behavior consistency and quantify zero-shot transfer gap across sims.
 
 Usage:
-  python scripts/eval_go1_cross_sim.py --ckpt path/to/model_999.pt [--steps 1000]
+  python tools/parity/eval_go1_cross_sim.py --ckpt path/to/model_999.pt [--steps 1000]
 """
 
 from __future__ import annotations

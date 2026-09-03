@@ -20,8 +20,8 @@ the native env is fully rolled out and closed before the wrapped env is created.
 
 Usage::
 
-    python scripts/parity_simpler_env.py --tasks google_robot_pick_coke_can --steps 8
-    python scripts/parity_simpler_env.py --all --steps 8 --json /tmp/simpler_parity.json
+    python tools/parity/parity_simpler_env.py --tasks google_robot_pick_coke_can --steps 8
+    python tools/parity/parity_simpler_env.py --all --steps 8 --json /tmp/simpler_parity.json
 """
 
 from __future__ import annotations

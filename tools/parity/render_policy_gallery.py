@@ -12,7 +12,7 @@ Policy per embodiment (matches what SimplerEnv evaluates):
 Each task runs in its own subprocess (SAPIEN keeps a process-global renderer).
 
 Run:  JAX_PLATFORMS=cpu VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json \
-      python scripts/render_policy_gallery.py
+      python tools/parity/render_policy_gallery.py
 """
 
 from __future__ import annotations

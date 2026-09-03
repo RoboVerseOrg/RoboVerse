@@ -12,7 +12,7 @@ visual proof of 1:1 (left = native SimplerEnv, right = RoboVerse passthrough).
 
 Usage::
 
-    python scripts/render_simpler_env.py --tasks google_robot_pick_coke_can \
+    python tools/parity/render_simpler_env.py --tasks google_robot_pick_coke_can \
         widowx_put_eggplant_in_basket --steps 60 --out /tmp/simpler_videos
 
 Requires the dedicated ``simpler`` conda env (SimplerEnv + SAPIEN + a GPU/Vulkan).

@@ -24,10 +24,10 @@ import os
 import numpy as np
 import pytest
 
-import scripts.eval_liberoplus_policy_consistency as evalc
-import scripts.parity_liberoplus_passthrough as parity_pt
-import scripts.parity_simpler_env as parity_se
-import scripts.spike_metasim_full_parity as spike
+import tools.parity.eval_liberoplus_policy_consistency as evalc
+import tools.parity.parity_liberoplus_passthrough as parity_pt
+import tools.parity.parity_simpler_env as parity_se
+import tools.parity.spike_metasim_full_parity as spike
 
 
 class _Boom(RuntimeError):

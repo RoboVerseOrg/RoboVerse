@@ -5,7 +5,7 @@ For every task name: build the MetaSim-API task (via the registry) and the stand
 and compare the RAW overhead render (mean-abs over [0,255]) + the per-step success trajectory.
 This is the definitive "is every task aligned" check.
 
-Run:  JAX_PLATFORMS=cpu python scripts/spike_metasim_full_parity.py
+Run:  JAX_PLATFORMS=cpu python tools/parity/spike_metasim_full_parity.py
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import tempfile
 
 import numpy as np
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tools/parity/ -> root
 RV = os.environ.get("ROBOVERSE_DATA_DIR", os.path.join(_REPO_ROOT, "roboverse_data"))
 # Per-run rollout artifacts. Wiped at the start of a full run so a stale .npz from an
 # earlier run can never be compared as if it were fresh.
