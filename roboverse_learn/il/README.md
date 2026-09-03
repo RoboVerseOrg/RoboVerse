@@ -7,9 +7,7 @@ Pick a policy folder and follow its README for setup and usage.
 Example:
 
 ```bash
-# From the repo root
-cd roboverse_learn/il/policies/dp   # or fm/, vita/ depending on the policy
-pip install -r requirements.txt
+python -m pip install -e ".[learn]"   # from the repository root
 cd ../../../..
 
 # Run policy training and evaluation
