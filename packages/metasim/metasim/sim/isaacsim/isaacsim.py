@@ -130,6 +130,7 @@ class IsaacsimHandler(BaseSimHandler):
             # Default: dt * decimation = 0.015
             self.physics_dt = 0.015 / self.scenario.decimation
         self._physics_step_counter = 0
+        self._render_current = False  # set by refresh_render, cleared by _simulate
         self._is_closed = False
         self.render_interval = self.scenario.decimation  # TODO: fix hardcode
         self._manual_pd_on = []
@@ -450,9 +451,22 @@ class IsaacsimHandler(BaseSimHandler):
 
                     sys.stdout.flush()
                     sys.stderr.flush()
-                    # Non-zero exit so CI/pipelines can distinguish watchdog-forced
-                    # exit from clean success.
-                    os._exit(1)
+                    # The simulation itself finished; only Kit's shutdown hung (it does on
+                    # every Isaac Sim 5.0 run here). Exit 0 so scripts and test matrices
+                    # report the run's real outcome; METASIM_ISAACSIM_HANG_EXIT_CODE
+                    # restores a distinguishable status for pipelines that want one. A
+                    # close() that runs while an exception is propagating (a failed
+                    # launch, a context manager unwinding an error) must still fail.
+                    raw = os.environ.get("METASIM_ISAACSIM_HANG_EXIT_CODE", "0")
+                    try:
+                        exit_code = int(raw)
+                    except ValueError:
+                        log.error(f"METASIM_ISAACSIM_HANG_EXIT_CODE={raw!r} is not an integer; exiting 1")
+                        exit_code = 1
+                    if sys.exc_info()[0] is not None:
+                        log.error(f"exiting 1: {sys.exc_info()[0].__name__} was propagating when close() hung")
+                        exit_code = 1
+                    os._exit(exit_code)
                 if "error" in close_error:
                     raise close_error["error"]
             elif simulation_app is not None and owns_simulation_app:
@@ -736,8 +750,9 @@ class IsaacsimHandler(BaseSimHandler):
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
-        # Special handling for the first frame to ensure camera is properly positioned
-        if self._physics_step_counter == 0:
+        # Special handling for the first frame to ensure camera is properly positioned; skipped when
+        # refresh_render already rendered this state (the hybrid handler renders every synced step)
+        if self._physics_step_counter == 0 and not self._render_current:
             self._update_camera_pose()
             # Force render and sensor update for first frame
             if self.sim.has_gui() or self.sim.has_rtx_sensors():
@@ -963,6 +978,7 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.write_data_to_sim()
 
         # Decimation: run physics multiple times per control step for better stability
+        self._render_current = False
         for _ in range(self.decimation):
             self._physics_step_counter += 1
             self.sim.step(render=False)
@@ -1106,7 +1122,7 @@ class IsaacsimHandler(BaseSimHandler):
                         size=obj.size,
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
                         visual_material=sim_utils.PreviewSurfaceCfg(
-                            diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
+                            diffuse_color=tuple(float(c) for c in obj.color[:3])
                         ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
@@ -1126,7 +1142,7 @@ class IsaacsimHandler(BaseSimHandler):
                         radius=obj.radius,
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
                         visual_material=sim_utils.PreviewSurfaceCfg(
-                            diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
+                            diffuse_color=tuple(float(c) for c in obj.color[:3])
                         ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
@@ -1147,7 +1163,7 @@ class IsaacsimHandler(BaseSimHandler):
                         height=obj.height,
                         mass_props=sim_utils.MassPropertiesCfg(mass=obj.mass),
                         visual_material=sim_utils.PreviewSurfaceCfg(
-                            diffuse_color=(obj.color[0], obj.color[1], obj.color[2])
+                            diffuse_color=tuple(float(c) for c in obj.color[:3])
                         ),
                         rigid_props=rigid_props,
                         collision_props=collision_props,
@@ -1937,38 +1953,37 @@ class IsaacsimHandler(BaseSimHandler):
         self.scene.sensors[camera.name] = camera_inst
         log.debug(f"Added camera {camera.name} to scene with prim_path: {prim_path}")
 
-    def refresh_render(self) -> None:
+    def refresh_render(self, passes: int = 2) -> None:
+        """Render the current state: ``passes`` x (scene update, ``sim.render()``, sensor update).
+
+        Two passes are the safe default after teleporting prims (the first pass propagates the
+        transforms, the second sees them). A caller that already flushed the writes and renders
+        every step (``HybridSimHandler``) uses one. Skipped while ``_defer_all_visual_flushes``
+        is set, so a batch of writes renders once at the end instead of once per write.
+        """
+        if getattr(self, "_defer_all_visual_flushes", False):
+            return
         physics_dt = float(getattr(self, "physics_dt", 0.0))
         if self.scene is not None:
             try:
                 self.scene.update(dt=0.0)
             except Exception as err:
                 log.debug(f"Scene update failed during visual refresh: {err}")
-        if self.sim is not None:
-            try:
-                self.sim.render()
-            except Exception as err:
-                log.debug(f"SimulationContext render failed during visual refresh: {err}")
         sensors = getattr(self.scene, "sensors", {}) if self.scene is not None else {}
-        for sensor in sensors.values():
-            update = getattr(sensor, "update", None)
-            if callable(update):
+        for i in range(max(1, int(passes))):
+            if self.sim is not None:
                 try:
-                    update(dt=physics_dt)
+                    self.sim.render()
                 except Exception as err:
-                    log.debug(f"Sensor update failed during visual refresh: {err}")
-        if self.sim is not None:
-            try:
-                self.sim.render()
-            except Exception as err:
-                log.debug(f"SimulationContext render failed during visual refresh second pass: {err}")
-        for sensor in sensors.values():
-            update = getattr(sensor, "update", None)
-            if callable(update):
-                try:
-                    update(dt=physics_dt)
-                except Exception as err:
-                    log.debug(f"Sensor update failed during visual refresh second pass: {err}")
+                    log.debug(f"SimulationContext render failed during visual refresh pass {i + 1}: {err}")
+            for sensor in sensors.values():
+                update = getattr(sensor, "update", None)
+                if callable(update):
+                    try:
+                        update(dt=physics_dt)
+                    except Exception as err:
+                        log.debug(f"Sensor update failed during visual refresh pass {i + 1}: {err}")
+        self._render_current = True
 
     def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
         """Drive SimulationApp/scene/sensors for a few frames to settle visual state.

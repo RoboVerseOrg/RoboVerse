@@ -311,6 +311,33 @@ def select_envs(state: TensorState, env_ids: list[int]) -> TensorState:
     )
 
 
+def state_to_device(state: TensorState, device) -> TensorState:
+    """Copy of ``state`` with every tensor on ``device`` (names and non-tensor fields shared).
+
+    Used when one backend's state feeds another (``HybridSimHandler``: CPU MuJoCo physics into a
+    CUDA renderer); a mixed-device ``TensorState`` fails inside the receiving backend with an
+    unhelpful "expected all tensors on the same device".
+    """
+    import dataclasses
+
+    device = torch.device(device)
+
+    def move(value):
+        return value.to(device) if isinstance(value, torch.Tensor) and value.device != device else value
+
+    def sub(obj):
+        if obj is None or not dataclasses.is_dataclass(obj):
+            return obj
+        return dataclasses.replace(obj, **{f.name: move(getattr(obj, f.name)) for f in dataclasses.fields(obj)})
+
+    return TensorState(
+        objects={k: sub(v) for k, v in state.objects.items()},
+        robots={k: sub(v) for k, v in state.robots.items()},
+        cameras={k: sub(v) for k, v in state.cameras.items()},
+        extras={k: move(v) for k, v in (state.extras or {}).items()},
+    )
+
+
 def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -> list[DictEnvState]:
     """Convert a tensor state to a list of env states. All the tensors will be converted to cpu for compatibility."""
     num_envs = next(iter(chain(tensor_state.objects.values(), tensor_state.robots.values()))).root_state.shape[0]

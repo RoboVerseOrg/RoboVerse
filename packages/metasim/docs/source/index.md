@@ -132,6 +132,7 @@ concept/randomization
 features/support_matrix
 features/cross_embodiment
 features/cross_sim
+features/hybrid_rendering
 features/teleoperate
 ```
 

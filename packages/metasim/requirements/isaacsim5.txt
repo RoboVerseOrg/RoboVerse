@@ -1,0 +1,15 @@
+# Isaac Sim 5.0 backend (Python 3.11). Scripted in tools/install/isaacsim5.sh; the steps, because
+# Isaac Lab is not on PyPI:
+#
+#   python -m pip install -e "packages/metasim[isaacsim]"          # isaacsim[all,extscache]==5.0.0 + CUDA torch
+#   git clone --depth 1 --branch v2.2.1 https://github.com/isaac-sim/IsaacLab.git
+#   python -m pip install "setuptools<70" wheel && python -m pip install --no-build-isolation flatdict
+#   python -m pip install -e IsaacLab/source/isaaclab -e IsaacLab/source/isaaclab_assets -e IsaacLab/source/isaaclab_tasks "numpy<2" h5py
+#   # LAST, because the steps above silently replace torch with the default PyPI build (cu126, no
+#   # Blackwell sm_120 kernels -> "no kernel image is available" at launch on RTX 50xx / B200):
+#   python -m pip install --index-url https://download.pytorch.org/whl/cu128 "torch==2.7.0" "torchvision==0.22.0"
+#
+# First launch needs the EULA variables: ACCEPT_EULA=Y OMNI_KIT_ACCEPT_EULA=YES PRIVACY_CONSENT=Y
+# Verify with: python -m metasim doctor --backend isaacsim
+isaacsim[all,extscache]==5.0.0
+numpy<2

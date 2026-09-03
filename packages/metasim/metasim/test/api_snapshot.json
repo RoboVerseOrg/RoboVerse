@@ -5757,9 +5757,14 @@
        "default": false,
        "kind": "POSITIONAL_OR_KEYWORD",
        "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "render_launch_kwargs"
       }
      ],
-     "signature": "(self) -> 'None'"
+     "signature": "(self, **render_launch_kwargs) -> 'None'"
     },
     "render": {
      "params": [
@@ -6860,6 +6865,22 @@
     }
    ],
    "signature": "(handler: 'BaseSimHandler', tensor_state: 'TensorState') -> 'list[DictEnvState]'"
+  },
+  "state_to_device": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "state"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "device"
+    }
+   ],
+   "signature": "(state: 'TensorState', device) -> 'TensorState'"
   }
  }
 }
