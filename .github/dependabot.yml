@@ -19,6 +19,8 @@ updates:
       - dependency-name: "torchvision"
       - dependency-name: "opencv-python"
       - dependency-name: "isaacsim"
+      # libigl==2.5.1 is the version genesis 0.2.1 was validated against (see the pin's comment).
+      - dependency-name: "libigl"
     groups:
       simulators:
         patterns: ["mujoco*", "newton", "warp-lang", "sapien", "pybullet", "genesis-world", "superdex-*", "jax*", "dm-control"]
@@ -31,6 +33,10 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    ignore:
+      # `[build-system] requires` is a floor, not a pin: build isolation always fetches the latest
+      # setuptools anyway, so bumping the floor every release is pure noise.
+      - dependency-name: "setuptools"
     groups:
       python-deps:
         patterns: ["*"]
