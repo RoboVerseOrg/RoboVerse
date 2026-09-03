@@ -20,7 +20,7 @@ def test_hsv_to_rgb_matches_colorsys(h, s, v):
     got = hsv_to_rgb(h, s, v)
     assert got is not None, f"hsv_to_rgb returned None for h={h}"
     expected = colorsys.hsv_to_rgb(h / 360.0, s, v)
-    assert max(abs(a - b) for a, b in zip(got, expected)) < 1e-6
+    assert max(abs(a - b) for a, b in zip(got, expected, strict=False)) < 1e-6
 
 
 @pytest.mark.general

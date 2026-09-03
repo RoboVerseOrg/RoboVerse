@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import inspect
 import warnings
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import gymnasium as gym
 import numpy as np

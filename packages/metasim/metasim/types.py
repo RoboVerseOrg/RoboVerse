@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Literal, Tuple, TypedDict, Union
+from typing import Any, Literal, Tuple, TypedDict, Union
 
 try:
     from typing import Annotated
 except ImportError:
-    from typing_extensions import Annotated
+    from typing import Annotated
 
 import numpy as np
 import torch
@@ -16,14 +16,14 @@ import torch
 from metasim.utils.math import convert_camera_frame_orientation_convention
 
 ## Basic types
-Dof = Dict[str, float]
+Dof = dict[str, float]
 
 
 @dataclass(frozen=True)
 class ShapeSpec:
     """Machine-readable shape metadata for tensor annotations."""
 
-    dims: Tuple[Union[str, int], ...]  # noqa: UP006, UP007 — kept typing-style to match the runtime Union aliases below
+    dims: Tuple[Union[str, int], ...]  # noqa: UP006 — kept typing-style to match the runtime Union aliases below
 
 
 RootStateTensor = Annotated[torch.Tensor, ShapeSpec(("num_envs", 13))]
@@ -46,8 +46,8 @@ class RobotAction(TypedDict, total=False):
     dof_effort_target: Dof | None
 
 
-Action = Dict[str, RobotAction]
-ActionBatch = List[Action]
+Action = dict[str, RobotAction]
+ActionBatch = list[Action]
 ActionInput = Union[ActionBatch, torch.Tensor]
 CompatActionInput = Union[ActionInput, np.ndarray]
 
@@ -83,7 +83,7 @@ class DictEnvState(TypedDict):
     extras: dict[str, Any]  # States of Extra information
 
 
-DictStateBatch = List[DictEnvState]
+DictStateBatch = list[DictEnvState]
 StateMode = Literal["tensor", "dict"]
 
 
@@ -418,9 +418,9 @@ InfoValue = Union[
     Obs,
     np.ndarray,
     InfoScalar,
-    List["InfoValue"],
-    Tuple["InfoValue", ...],
-    Dict[str, "InfoValue"],
+    list["InfoValue"],
+    tuple["InfoValue", ...],
+    dict[str, "InfoValue"],
 ]
-Info = Dict[str, InfoValue]
+Info = dict[str, InfoValue]
 Termination = torch.BoolTensor

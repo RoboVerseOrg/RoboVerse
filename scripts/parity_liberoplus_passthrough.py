@@ -147,7 +147,7 @@ def _compare(traj_a: list[dict], traj_b: list[dict]) -> tuple[float, float, floa
         raise RuntimeError("empty rollout: nothing was compared, so this is not parity")
     dev_state = dev_img = dev_rew = 0.0
     done_match = True
-    for i, (sa, sb) in enumerate(zip(traj_a, traj_b)):
+    for i, (sa, sb) in enumerate(zip(traj_a, traj_b, strict=False)):
         ka, kb = set(sa["obs"]), set(sb["obs"])
         if ka != kb:
             raise RuntimeError(

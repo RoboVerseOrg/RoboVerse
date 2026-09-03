@@ -68,7 +68,7 @@ def plot_run(run_dir: Path, task_name: str, out_png: Path, scalars: dict) -> dic
     def _plot(ax, candidates, title, ylabel, scale_y=False):
         for cand in candidates:
             if cand in scalars:
-                xs, ys = zip(*scalars[cand])
+                xs, ys = zip(*scalars[cand], strict=False)
                 ax.plot(xs, ys, lw=1.5, label=cand.split("/")[-1])
                 break
         ax.set_title(title, fontsize=11)
@@ -98,7 +98,7 @@ def plot_run(run_dir: Path, task_name: str, out_png: Path, scalars: dict) -> dic
     summary = {"task": task_name, "run_dir": str(run_dir)}
     for r in ("Train/mean_reward", "rollout/ep_rew_mean", "Train/Mean Reward"):
         if scalars.get(r):
-            xs, ys = zip(*scalars[r])
+            xs, ys = zip(*scalars[r], strict=False)
             summary["iter_final"] = int(xs[-1])
             summary["reward_final"] = float(ys[-1])
             summary["reward_max"] = float(np.max(ys))

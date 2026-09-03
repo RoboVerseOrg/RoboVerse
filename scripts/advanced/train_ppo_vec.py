@@ -69,7 +69,11 @@ class StableBaseline3VecEnv(VecEnv):
 
     def step_async(self, actions: np.ndarray) -> None:
         self.action_dicts = [
-            {args.robot: {"dof_pos_target": dict(zip(self.env.scenario.robots[0].joint_limits.keys(), action))}}
+            {
+                args.robot: {
+                    "dof_pos_target": dict(zip(self.env.scenario.robots[0].joint_limits.keys(), action, strict=False))
+                }
+            }
             for action in actions
         ]
 

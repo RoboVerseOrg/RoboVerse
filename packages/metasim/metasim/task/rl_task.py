@@ -245,7 +245,7 @@ class RLTaskEnv(BaseTaskEnv):
         total_reward = None
         if len(self.reward_functions) == 0:
             return torch.zeros(self.num_envs, dtype=torch.float32, device=self.device)
-        for reward_func, weight in zip(self.reward_functions, self.reward_weights):
+        for reward_func, weight in zip(self.reward_functions, self.reward_weights, strict=False):
             val = reward_func(env_states)
             if total_reward is None:
                 total_reward = torch.zeros_like(val)

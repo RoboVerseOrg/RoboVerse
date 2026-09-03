@@ -13,6 +13,7 @@ release.
 ## [Unreleased]
 
 ### Changed
+- Packaging hygiene: `requires-python = ">=3.10,<3.13"` and ruff `target-version = "py310"` in both packages (old-style typing rewritten by ruff where safe); the CHANGELOG release header is `[1.0.0b0]`, matching the `pyproject` version `release.yml` checks; a `release-dry-run` CI job builds both distributions on every PR, runs `twine check --strict`, and fails on direct-URL dependencies (PyPI rejects them) or mismatched package versions.
 - MetaSim now lives in this repository under `packages/metasim` (imported with `git subtree`, history preserved) and is released in lockstep as `roboverse-metasim`; `roboverse-py` depends on `roboverse-metasim>=1.0.0b0,<1.1` instead of a git `@main` URL. Install with `pip install -e "packages/metasim[mujoco]" -e ".[mujoco]"` (MetaSim first). CI runs MetaSim's simulator-free suite on 3.10/3.11 alongside the RoboVerse suite; `changelog.yml` guards one CHANGELOG per package; `release.yml` builds and publishes both from one tag.
 
 ### Fixed
@@ -64,7 +65,7 @@ release.
 
 - `hydra-core` pinned to 1.3.4 in the dp / vita / fm IL policy requirements (Dependabot: `hydra.utils.instantiate` code execution with untrusted configs in <=1.3.3).
 
-## [1.0.0-beta] - 2026-05-31
+## [1.0.0b0] - 2026-05-31
 
 The headline of this release is **cross-platform parity is now testable and
 load-bearing**. Every shipped `RobotCfg`, every contracted handler method,
@@ -149,4 +150,4 @@ flagged `default_joint_positions` mismatches before they trip in CI.
 ---
 
 [Unreleased]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0-beta...HEAD
-[1.0.0-beta]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0-alpha...v1.0.0-beta
+[1.0.0b0]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0-alpha...v1.0.0-beta

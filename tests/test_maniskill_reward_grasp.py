@@ -223,6 +223,6 @@ def test_is_grasped_matches_native():
         ours.append(is_grasped(task.handler, "cube"))
     task.close()
 
-    agreement = sum(int(a == b) for a, b in zip(native, ours))
+    agreement = sum(int(a == b) for a, b in zip(native, ours, strict=False))
     assert agreement >= T - 1, f"is_grasped agreement {agreement}/{T} too low (native={native}, ours={ours})"
     assert any(ours), "expected the controlled grasp to register as grasped"

@@ -131,7 +131,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             self.error_queue = ctx.Queue()
 
             # Initialize workers
-            self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(self.num_envs)])
+            self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(self.num_envs)], strict=False)
             self.processes = []
             for rank in range(self.num_envs):
                 work_remote = self.work_remotes[rank]

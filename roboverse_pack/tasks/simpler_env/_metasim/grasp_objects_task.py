@@ -239,7 +239,7 @@ class SimplerMoveNearTask(_GoogleArenaTask):
         self.robot.set_qpos(INIT_QPOS)
         self.robot.set_qvel(np.zeros(self.robot.dof))
         z = SCENE_TABLE_HEIGHT + 0.5
-        for o, xy_i, q_i in zip(self.objs, xy, quat):
+        for o, xy_i, q_i in zip(self.objs, xy, quat, strict=False):
             o.set_pose(sapien.Pose(np.hstack([xy_i, z]), q_i))
         self._settle(0.5)
         for o in self.objs:

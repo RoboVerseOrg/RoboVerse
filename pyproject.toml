@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "roboverse-py"
 version = "1.0.0b0"
 description = "RoboVerse content, learning, and examples built on MetaSim"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
     "roboverse-metasim>=1.0.0b0,<1.1",
@@ -109,7 +109,7 @@ extra-index-url = [
 line-length = 120
 format.preview = true
 lint.preview = false
-target-version = "py38"
+target-version = "py310"
 lint.select = [
     "B",    # flake8: bugbear
     "E",    # pycodestyle
@@ -189,6 +189,8 @@ roboverse_pack = [
 "roboverse_pack/tasks/maniskill/utils/**.py" = ["T20", "D"]
 ## For get_started scripts, allow no docstrings
 "get_started/**.py" = ["D"]
+"generation/enums.py" = ["UP035"]
+"roboverse_pack/tasks/humanoid/base/types.py" = ["UP007"]
 ## For special tasks, allow no docstrings
 "roboverse_pack/tasks/maniskill/{pick_single_egad,pick_single_ycb,peg_insertion_side}.py" = ["D"]
 "roboverse_pack/tasks/open6dor/task/**.py" = ["D"]

@@ -102,7 +102,7 @@ def _obs_diff(obss_a, obss_b) -> float:
     if not obss_a:
         raise RuntimeError("empty rollout: no observations were compared")
     diff = 0.0
-    for i, (pa, pb) in enumerate(zip(obss_a, obss_b)):
+    for i, (pa, pb) in enumerate(zip(obss_a, obss_b, strict=False)):
         ka, kb = _state_keys(pa), _state_keys(pb)
         if ka != kb:
             raise RuntimeError(
@@ -175,10 +175,10 @@ def run(max_steps: int = 120) -> int:
         # passthrough rollout, then an independently-constructed native rollout.
         sp, op, rp, dp, fp = _rollout(pt.make_liberoplus_env(suite, tid, seed=0), init_state, actions, max_steps)
         sn, on, rn, dn, fn = _rollout(_native_env(suite, tid, seed=0), init_state, actions, max_steps)
-        ds = max(float(np.abs(np.asarray(a) - np.asarray(b)).max()) for a, b in zip(sp, sn))
+        ds = max(float(np.abs(np.asarray(a) - np.asarray(b)).max()) for a, b in zip(sp, sn, strict=False))
         do = _obs_diff(op, on)
-        dr = max(abs(x - y) for x, y in zip(rp, rn))
-        dd = all(x == y for x, y in zip(dp, dn))
+        dr = max(abs(x - y) for x, y in zip(rp, rn, strict=False))
+        dd = all(x == y for x, y in zip(dp, dn, strict=False))
         succ_match = fp[-1] == fn[-1]
         worst = max(worst, ds, do, dr)
         ok = ds == 0.0 and do == 0.0 and dr == 0.0 and dd and succ_match

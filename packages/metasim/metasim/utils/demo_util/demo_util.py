@@ -98,12 +98,12 @@ def _get_traj_multiagent(
 
     log.info(f"Reading multi-agent trajectory for {len(robots)} agents: {names}")
     per_agent = [get_traj(traj_filepath, robot, handler=handler, v2_as_v3=True) for robot in robots]
-    init_list, action_list, state_list = zip(*per_agent)
+    init_list, action_list, state_list = zip(*per_agent, strict=False)
 
     demo_counts = [len(init) for init in init_list]
     if len(set(demo_counts)) > 1:
         log.warning(
-            f"Multi-agent agents have differing demo counts {dict(zip(names, demo_counts))}; "
+            f"Multi-agent agents have differing demo counts {dict(zip(names, demo_counts, strict=False))}; "
             f"merging the {min(demo_counts)} demo(s) common to all agents."
         )
     return (

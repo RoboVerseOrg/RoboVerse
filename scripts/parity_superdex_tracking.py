@@ -264,7 +264,7 @@ def compare(a_path: str, b_path: str, *, plot: str | None = None) -> None:
         for ax in axes.ravel()[len(names) :]:
             ax.set_visible(False)
         t = np.arange(len(a["targets"]))
-        for j, (ax, jn) in enumerate(zip(axes.ravel(), names)):
+        for j, (ax, jn) in enumerate(zip(axes.ravel(), names, strict=False)):
             ax.plot(t, a["targets"][:, j], "k--", lw=1, label="target")
             ax.plot(t, a["measured"][:, j], lw=1.4, label=str(a["sim"]))
             ax.plot(t, b["measured"][:, j], lw=1.4, label=str(b["sim"]))

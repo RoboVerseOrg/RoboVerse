@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import math
 import os
+from collections.abc import Sequence
 from dataclasses import MISSING
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch

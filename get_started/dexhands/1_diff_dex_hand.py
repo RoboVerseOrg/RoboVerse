@@ -147,7 +147,7 @@ def main():
         actions = []
         for i_env in range(num_envs):
             # Start with actuated joints
-            dof_targets = dict(zip(j_names_actuated, q_actuated[i_env].tolist()))
+            dof_targets = dict(zip(j_names_actuated, q_actuated[i_env].tolist(), strict=False))
 
             # Calculate passive joint targets based on mimic relationships
             # This is needed for ALL simulators to ensure consistency
@@ -173,7 +173,7 @@ def main():
 
         # Log joint positions (only actuated joints)
         log.info("Target joint positions (actuated only):")
-        for i, (name, value) in enumerate(zip(j_names_actuated[:3], q_actuated[0][:3].tolist())):
+        for i, (name, value) in enumerate(zip(j_names_actuated[:3], q_actuated[0][:3].tolist(), strict=False)):
             log.info(f"  {name}: {value:.3f}")
         log.info("  ... (showing first 3 actuated joints)")
 

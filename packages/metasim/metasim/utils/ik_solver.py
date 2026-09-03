@@ -122,7 +122,7 @@ class IKSolver:
             return [
                 {
                     self.robot_cfg.name: {
-                        "dof_pos_target": dict(zip(joint_names_dict_order, q_full_dict_order[i].tolist()))
+                        "dof_pos_target": dict(zip(joint_names_dict_order, q_full_dict_order[i].tolist(), strict=False))
                     }
                 }
                 for i in range(q_full_dict_order.shape[0])

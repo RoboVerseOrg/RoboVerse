@@ -108,7 +108,7 @@ def _robot_map(task, g):
     shipped_names = list(getattr(task, "robot_names", None) or [getattr(task, "robot_name", "panda")])
     if len(demo_keys) != len(shipped_names):
         raise RuntimeError(f"robot count mismatch: demo {demo_keys} vs shipped {shipped_names}")
-    return list(zip(demo_keys, shipped_names))
+    return list(zip(demo_keys, shipped_names, strict=False))
 
 
 def _shipped_rollout(task, g, goal_actor, scene_objs, record_state: bool, actor_remap=None, track: str | None = None):
@@ -376,7 +376,7 @@ def run(
     H = native_frames[0].shape[0]
     pad = np.zeros((H, 6, 3), np.uint8)
     comp, diffs = [], []
-    for nf, mf in zip(native_frames, shipped_frames):
+    for nf, mf in zip(native_frames, shipped_frames, strict=False):
         d = np.abs(nf.astype(np.int16) - mf.astype(np.int16))
         diffs.append(float(d.mean()))
         dvis = np.clip(d * 8, 0, 255).astype(np.uint8)

@@ -88,3 +88,39 @@ jobs:
           # nothing in tests/ renders on MuJoCo, and the suite is identical locally with this value.
           MUJOCO_GL: disable
         run: python -m pytest tests/ -rs
+
+  release-dry-run:
+    # What release.yml will do on the next tag, run on every PR so a broken build or a git-URL
+    # dependency (which PyPI rejects) is caught before the tag exists.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip build twine tomli
+      - name: No git-URL dependencies in either [project] table
+        run: |
+          python - <<'PY'
+          import tomli, sys
+          bad = []
+          for path in ("pyproject.toml", "packages/metasim/pyproject.toml"):
+              proj = tomli.load(open(path, "rb"))["project"]
+              deps = list(proj.get("dependencies", [])) + [d for ds in proj.get("optional-dependencies", {}).values() for d in ds]
+              bad += [f"{path}: {d}" for d in deps if "@ git+" in d or "://" in d]
+          if bad:
+              print("::error::PyPI rejects direct URL dependencies:\n" + "\n".join(bad)); sys.exit(1)
+          print("no direct-URL dependencies")
+          PY
+      - name: Versions agree
+        run: |
+          python - <<'PY'
+          import tomli, sys
+          a = tomli.load(open("pyproject.toml", "rb"))["project"]["version"]
+          b = tomli.load(open("packages/metasim/pyproject.toml", "rb"))["project"]["version"]
+          print("roboverse-py", a, "roboverse-metasim", b)
+          sys.exit(0 if a == b else 1)
+          PY
+      - run: python -m build --outdir dist packages/metasim && python -m build --outdir dist .
+      - run: python -m twine check --strict dist/*

@@ -137,7 +137,7 @@ def _diff_frames(nat, wrp):
     fn, fw = nat["frames"], wrp["frames"]
     if len(fn) != len(fw):
         diffs.append(f"length {len(fn)} vs {len(fw)}")
-    for i, (a, b) in enumerate(zip(fn, fw)):
+    for i, (a, b) in enumerate(zip(fn, fw, strict=False)):
         for k in ("obs", "rew", "term", "trunc", "success", "instr"):
             if a[k] != b[k]:
                 diffs.append(f"step{i}.{k}: {a[k]} != {b[k]}")

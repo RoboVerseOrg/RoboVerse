@@ -166,7 +166,8 @@ def run(suite: str, n_frames: int, engine_steps: int) -> int:
             meta_frames = list(kinematic_rollout(handler, cam, states, image_size=SZ))
             mae = float(
                 np.mean([
-                    np.abs(a.astype(np.float32) - b.astype(np.float32)).mean() for a, b in zip(ref_frames, meta_frames)
+                    np.abs(a.astype(np.float32) - b.astype(np.float32)).mean()
+                    for a, b in zip(ref_frames, meta_frames, strict=False)
                 ])
             )
 

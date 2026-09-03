@@ -985,7 +985,7 @@ class RerunVisualizer:
         elif visual_type == "box":
             size = visual_info.get("size", [1, 1, 1])
             # Apply global scale to box size
-            scaled_size = [s * gs for s, gs in zip(size, global_scale)]
+            scaled_size = [s * gs for s, gs in zip(size, global_scale, strict=False)]
 
             # Use Mesh3D for solid rendering
             if TRIMESH_AVAILABLE:

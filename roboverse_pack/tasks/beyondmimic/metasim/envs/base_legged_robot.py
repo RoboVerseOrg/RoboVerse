@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import asdict
-from typing import Any, Sequence
+from typing import Any
 
 import torch
 
