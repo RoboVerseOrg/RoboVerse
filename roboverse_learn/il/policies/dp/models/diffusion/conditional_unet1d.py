@@ -1,5 +1,4 @@
 import logging
-from typing import Union
 
 import einops
 import torch
@@ -214,7 +213,7 @@ class ConditionalUnet1D(nn.Module):
     def forward(
         self,
         sample: torch.Tensor,
-        timestep: Union[torch.Tensor, float, int],
+        timestep: torch.Tensor | float | int,
         local_cond=None,
         global_cond=None,
         **kwargs,

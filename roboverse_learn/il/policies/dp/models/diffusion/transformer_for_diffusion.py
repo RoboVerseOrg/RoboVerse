@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -257,7 +257,7 @@ class TransformerForDiffusion(ModuleAttrMixin):
     def forward(
         self,
         sample: torch.Tensor,
-        timestep: Union[torch.Tensor, float, int],
+        timestep: torch.Tensor | float | int,
         cond: Optional[torch.Tensor] = None,
         **kwargs,
     ):
