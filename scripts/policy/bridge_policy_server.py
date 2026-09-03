@@ -15,7 +15,7 @@ module here because it pulls in `libero`, which lives only in the sim env), usin
 its own libero-free utilities so inference matches the official eval exactly.
 
 Run:
-    cd /home/ghr/projects/robotwin/policy/openvla-oft
+    cd <path-to-openvla-oft checkout>
     python /path/to/bridge_policy_server.py --ckpt <ckpt_dir> --port 5555
 """
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+# Interpreters: set OPENVLA_PYTHON (env with openvla-oft) and LIBEROPLUS_PYTHON (env with RoboVerse + LIBERO+);
+# both default to `python` on PATH.
 # Guarded launcher: wait for the (shared) GPU to have enough free memory, then
 # run the official LIBERO-plus openVLA-OFT checkpoint closed-loop through the
 # sim<->policy bridge in bf16 (no quantization), and save the eval results.
@@ -35,7 +37,7 @@ fi
 echo "[launcher] launching bf16 policy server ..."
 cd "$OVREPO"
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True CUDA_VISIBLE_DEVICES=0 \
-  /home/ghr/miniconda3/envs/openvla/bin/python "$RVLIB/scripts/policy/bridge_policy_server.py" \
+  "${OPENVLA_PYTHON:-python}" "$RVLIB/scripts/policy/bridge_policy_server.py" \
   --ckpt "$CKPT" --port "$PORT" --quant none > "$SRV_LOG" 2>&1 < /dev/null &
 SRV=$!
 
@@ -52,7 +54,7 @@ done
 echo "[launcher] running sim client eval (suite=$SUITE base=$BASE episodes=$EPISODES) ..."
 cd "$RVLIB"
 LIBERO_CONFIG_PATH=$HOME/.libero_plus MUJOCO_GL=egl \
-  /home/ghr/miniconda3/envs/liberoplus/bin/python -m scripts.policy.bridge_sim_client \
+  "${LIBEROPLUS_PYTHON:-python}" -m scripts.policy.bridge_sim_client \
   --suite "$SUITE" --base "$BASE" --episodes "$EPISODES" --port "$PORT" 2>&1 | tee "$RES_LOG"
 
 echo "[launcher] eval done; shutting down server"
