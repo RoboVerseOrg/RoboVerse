@@ -424,6 +424,11 @@ def _stack_pyramid_success(task):
 
 # name -> spec. ``objects``: list of (name, kind, geom, mass, color, pos, kinematic).
 #   box geom = full size [x,y,z]; sphere geom = radius.
+# ``max_steps`` is the episode truncation limit and must equal the ManiSkill env's registered
+#   ``max_episode_steps`` (it is *not* a free knob: the native tier only stays comparable to
+#   ManiSkill's published numbers if the horizon matches). Pinned by
+#   ``tests/test_maniskill_native_specs.py``, which derives the expected values from the installed
+#   ``mani_skill`` registry.
 TASK_SPECS: dict[str, dict] = {
     "pick_cube": {
         "gym_id": "PickCube-v1",
@@ -516,7 +521,7 @@ TASK_SPECS: dict[str, dict] = {
     "stack_pyramid": {
         "gym_id": "StackPyramid-v1",
         "base": _BASE,
-        "max_steps": 50,
+        "max_steps": 250,
         "objects": [
             ("cubeA", "box", _CUBE, 0.064, _RED, (-0.0007, 0.1073, 0.02), False),
             ("cubeB", "box", _CUBE, 0.064, _GREEN, (-0.0823, -0.1472, 0.02), False),
@@ -530,7 +535,7 @@ TASK_SPECS: dict[str, dict] = {
     "pull_cube_tool": {
         "gym_id": "PullCubeTool-v1",
         "base": _BASE,
-        "max_steps": 50,
+        "max_steps": 100,
         "objects": [
             ("cube", "box", _CUBE, 0.064, _MSBLUE, (0.0677, -0.2104, 0.025), False),
             (
@@ -554,7 +559,7 @@ TASK_SPECS: dict[str, dict] = {
     "peg_insertion_side": {
         "gym_id": "PegInsertionSide-v1",
         "base": _BASE,
-        "max_steps": 50,
+        "max_steps": 100,
         "objects": [
             (
                 "peg_0",
@@ -588,7 +593,7 @@ TASK_SPECS: dict[str, dict] = {
     "plug_charger": {
         "gym_id": "PlugCharger-v1",
         "base": _BASE,
-        "max_steps": 50,
+        "max_steps": 200,
         "objects": [
             (
                 "charger",
@@ -662,7 +667,7 @@ TASK_SPECS: dict[str, dict] = {
     "draw_triangle": {
         "gym_id": "DrawTriangle-v1",
         "base": _BASE,
-        "max_steps": 50,
+        "max_steps": 300,
         "robot": "panda_stick",
         "controller": _STICK_CONTROLLER,
         "rest_qpos": {

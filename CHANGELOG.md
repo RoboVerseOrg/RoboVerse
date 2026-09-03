@@ -46,6 +46,7 @@ release.
 - ManiSkill task leaves declared `ScenarioCfg(objects=[...])` with no robot, so 2,648 registered tasks crashed with `IndexError` on reset; the family now defaults to `franka` (leaf-declared robots win) and raises a clear `ValueError` when no robot resolves.
 - CleanRL PPO overwrote `dones[step]` after `envs.step`, shifting the done buffer by one so GAE bootstrapped `V(reset_state)` across episode boundaries; the duplicate write is removed with a numeric GAE regression test.
 - Parity/eval harnesses (`eval_liberoplus_policy_consistency`, `parity_simpler_env`, `eval_*_cross_sim`, `spike_metasim_full_parity`, `verify_native_registration`) swallowed checker exceptions into `False`, compared only shared obs keys, and exited 0 regardless of verdict, so two broken sides printed PASS; they now raise on errors, require equal key sets and non-empty rollouts, and carry the verdict in the exit status.
+- `maniskill.*_native` specs truncated stack_pyramid/pull_cube_tool/peg_insertion_side/plug_charger/draw_triangle at 50 steps instead of ManiSkill'\''s 250/100/100/200/300 horizons; pinned to upstream with an always-on table test plus registry-derived checks when `mani_skill` is installed.
 - Native LIBERO `Open`/`Close`/`TurnOn`/`TurnOff` predicates always evaluated False on
   mujoco >= 3.x (`numpy.int32 in (mjtJoint...)` membership).
 - `get_started/multiple_cameras.py` passed a removed `ScenarioCfg` kwarg.
