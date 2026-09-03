@@ -100,6 +100,12 @@ class _FakeProcess:
     def is_alive(self) -> bool:
         return self._alive
 
+    def join(self, timeout: float | None = None) -> None:
+        pass
+
+    def terminate(self) -> None:
+        self._alive = False
+
 
 def _make_parallel_stub_handler(remotes, processes, error_queue=None) -> Any:
     """Build a ``ParallelHandler`` instance that bypasses ``__init__`` so
@@ -217,3 +223,53 @@ def test_set_seed_forwards_to_every_worker():
         cmd, payload = remote.sent[-1]
         assert cmd == "set_seed", f"worker {i} got {cmd!r}, expected 'set_seed'"
         assert payload == (123,), f"worker {i} got payload {payload!r}, expected (123,)"
+
+
+@pytest.mark.general
+def test_launch_surfaces_worker_error_instead_of_eof():
+    """A worker that dies inside ``launch`` used to surface as a bare ``EOFError`` from the
+    handshake ``recv``; the real traceback in ``error_queue`` must be what the caller sees."""
+    err_queue = _SyncQueue()
+    err_queue.put(("FileNotFoundError", "missing.usd", ["worker traceback\n"]))
+    handler = _make_parallel_stub_handler(
+        remotes=[_FakeRemote(recv_raises=EOFError)],
+        processes=[_FakeProcess(alive=False, exitcode=1)],
+        error_queue=err_queue,
+    )
+    with pytest.raises(RuntimeError, match=r"Parallel worker error \(FileNotFoundError\): missing\.usd"):
+        handler.launch()
+
+
+@pytest.mark.general
+def test_close_tolerates_dead_worker():
+    """``close`` must not raise ``BrokenPipeError`` on a worker that already died."""
+
+    class _DeadRemote(_FakeRemote):
+        def send(self, msg):
+            raise BrokenPipeError
+
+    handler = _make_parallel_stub_handler(
+        remotes=[_DeadRemote()],
+        processes=[_FakeProcess(alive=False, exitcode=1)],
+    )
+    handler.close()
+    assert handler.closed
+
+
+class _BoomHandler(_StubBaseHandler):
+    """Handler whose construction fails, as an asset-loading error inside a worker would."""
+
+    def __init__(self, *_a, **_k):
+        raise RuntimeError("asset missing: boom.urdf")
+
+
+@pytest.mark.general
+def test_constructor_reports_worker_construction_error():
+    """End-to-end with real worker processes: a handler that raises in ``__init__`` used to
+    surface as ``EOFError`` from the constructor handshake, with the traceback lost."""
+    from metasim.scenario.scenario import ScenarioCfg
+
+    scenario = ScenarioCfg(num_envs=2)
+    with pytest.raises(RuntimeError, match=r"asset missing: boom\.urdf") as excinfo:
+        ParallelSimWrapper(_BoomHandler)(scenario)
+    assert "EOFError" not in str(excinfo.value)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import multiprocessing as mp
 import platform
 import sys
+import time
 import traceback
 from copy import deepcopy
 from functools import partial
@@ -151,11 +152,15 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
                 self.processes.append(process)
                 work_remote.close()
 
-            # To make sure environments are initialized in all workers
-            for remote in self.remotes:
-                remote.send(("handshake", (None,)))
-            for remote in self.remotes:
-                remote.recv()
+            # Every worker must reach its command loop before the wrapper is usable. A worker whose
+            # handler construction raised has already exited, so the handshake reads through
+            # ``_recv_or_surface`` and raises its real traceback (from ``error_queue``) instead of
+            # a bare ``EOFError``; the surviving workers are torn down so nothing is left behind.
+            try:
+                self._handshake()
+            except BaseException:
+                self._terminate_workers()
+                raise
 
         def _check_error(self):
             """Drain the error queue and detect dead workers.
@@ -195,6 +200,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
                 return self.remotes[remote_idx].recv()
             except (EOFError, ConnectionResetError, BrokenPipeError) as err:
                 # Worker died — _check_error will raise with the real message.
+                self._wait_for_error_report()
                 self._check_error()
                 raise RuntimeError(
                     f"Parallel worker {remote_idx} closed its pipe without reporting an error. "
@@ -203,23 +209,58 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
 
         def launch(self):
             for remote in self.remotes:
-                remote.send(("launch", (None,)))
+                self._send(remote, ("launch", (None,)))
             self.waiting = False
-            # ``launch`` sends no reply; handshake round-trips so every
-            # worker has finished launching before the wrapper returns.
-            for remote in self.remotes:
-                remote.send(("handshake", (None,)))
-            for remote in self.remotes:
-                remote.recv()
-            self._check_error()
+            # ``launch`` sends no reply; the handshake round-trips so every worker has finished
+            # launching before the wrapper returns, and surfaces a worker that died in ``launch``.
+            self._handshake()
 
         def close(self):
             if self.closed:
                 return
             for remote in self.remotes:
-                remote.send(("close", (None,)))
+                self._send(remote, ("close", (None,)))
+            self._terminate_workers()
+
+        @staticmethod
+        def _send(remote: Connection, msg) -> None:
+            """``send`` that tolerates a dead worker: the following ``recv`` / ``_check_error``
+            reports the worker's real error, which a ``BrokenPipeError`` here would only hide."""
+            try:
+                remote.send(msg)
+            except (BrokenPipeError, ConnectionResetError, EOFError, OSError):
+                pass
+
+        def _handshake(self) -> None:
+            """Round-trip every worker; raises the worker's own error if one has died."""
+            for remote in self.remotes:
+                self._send(remote, ("handshake", (None,)))
+            for idx in range(len(self.remotes)):
+                self._recv_or_surface(idx)
+            self._check_error()
+
+        def _wait_for_error_report(self, timeout: float = 2.0) -> None:
+            """Give a dying worker's queue feeder thread time to deliver its traceback.
+
+            ``mp.Queue.put`` hands the item to a background thread; the pipe end can close before
+            the report is readable on this side, which would turn a real traceback into
+            "died without reporting an error".
+            """
+            deadline = time.monotonic() + timeout
+            while self.error_queue.empty() and time.monotonic() < deadline:
+                if any(p.is_alive() for p in self.processes):
+                    time.sleep(0.01)
+                else:
+                    break
+
+        def _terminate_workers(self, join_timeout: float = 10.0) -> None:
+            """Join every worker, force-terminating any that does not exit in time."""
             for process in self.processes:
-                process.join()
+                process.join(timeout=join_timeout)
+            for process in self.processes:
+                if process.is_alive():
+                    process.terminate()
+                    process.join(timeout=join_timeout)
             self.closed = True
 
         def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
