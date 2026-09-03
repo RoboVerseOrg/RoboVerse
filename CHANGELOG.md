@@ -12,6 +12,11 @@ release.
 
 ## [Unreleased]
 
+### Changed
+
+- MetaSim dependency renamed to `roboverse-metasim @ git+...` (MetaSim's distribution was renamed;
+  import name `metasim` unchanged). The pin moves to a MetaSim tag with the next release.
+
 ### Added
 
 - `--sim superdex` in every MuJoCo-capable `get_started` tutorial and a `roboverse-py[superdex]`
@@ -21,6 +26,8 @@ release.
 - CI (`.github/workflows/tests.yml`): ruff lint job + the whole `tests/` suite on CPU for every PR;
   `tests/conftest.py` markers `requires_optional` / `requires_asset` skip with a reason instead of
   failing when optional deps or `roboverse_data` assets are absent.
+- `RELEASING.md`: branches, PR gates, SemVer, release checklist, PyPI publishing, branch
+  protection. `pr-title.yml`, `changelog.yml`, `release.yml`, `CODEOWNERS`.
 
 ### Fixed
 
@@ -31,6 +38,7 @@ release.
 - Red flags: SSH submodule URL, dangling `release/metasim` symlink, silent `except: pass` around
   passthrough registration, hard-coded personal paths in scripts/tests, untruthful
   `requires-python >= 3.8` (now 3.10), wheels missing LIBERO json/npz bundles, stale ruff ignores.
+
 
 ## [1.0.0-beta] - 2026-05-31
 
