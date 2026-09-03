@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Content packs win over MetaSim's bundled example pack: `get_package_candidates` searches `defaults` last (a RoboVerse checkout used to resolve `get_robot("franka")` to the example `FrankaCfg`), and `_lookup_cfg` reports a config name defined in more than one package.
+- `gym.make`-style wrappers no longer mutate the task class's shared `scenario` (they update a copy); `ScenarioCfg.replace(**kw)` returns an updated copy for new code.
+- `get_states(env_ids=...)` returns exactly those envs: the base class slices the full batch when a backend ignores `env_ids` (six did, silently) and raises when a backend returns a batch that is neither the subset nor the full set.
+- The task-index cache defaults to a per-user directory (`$METASIM_CACHE_DIR`, else `$XDG_CACHE_HOME/metasim`, else `~/.cache/metasim`) instead of the shared temp dir.
 - `RLTaskEnv.step` publishes the *terminal* observation in `info["observations"]["raw"]["obs"]` instead of the episode's first one (off-policy truncation bootstraps in clean_rl SAC/TD3 and FastTD3 read it).
 - IsaacGym and PyBullet reported `joint_pos_target` in native DoF order while `joint_pos` is in sorted-name order; both now use `get_joint_names(sort=True)` (completes #12).
 - `ParallelSimWrapper`: a worker that died during handler construction or `launch` surfaced as a bare `EOFError`/`ConnectionResetError` from the handshake and left the other workers running; the handshake now raises the worker's own traceback, `close()` tolerates dead workers, and a failed constructor tears the pool down.

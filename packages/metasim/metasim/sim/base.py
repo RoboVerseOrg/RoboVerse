@@ -13,7 +13,7 @@ from loguru import logger as log
 from metasim.queries.base import BaseQueryType
 from metasim.types import CompatActionInput, DictStateBatch, StateMode, StateOutput, TensorState
 from metasim.utils.gs_util import quaternion_multiply
-from metasim.utils.state import list_state_to_tensor, state_tensor_to_nested
+from metasim.utils.state import list_state_to_tensor, select_envs, state_tensor_to_nested
 
 try:
     from robo_splatter.models.basic import GSInstance, RenderConfig
@@ -23,6 +23,20 @@ try:
     ROBO_SPLATTER_AVAILABLE = True
 except ImportError:
     ROBO_SPLATTER_AVAILABLE = False
+
+
+def _state_env_count(result) -> int | None:
+    """Env rows in a ``get_states`` result, or None when it carries no per-env tensor to tell from."""
+    if isinstance(result, TensorState):
+        for group in (result.robots, result.objects):
+            for st in group.values():
+                rs = getattr(st, "root_state", None)
+                if isinstance(rs, torch.Tensor) and rs.ndim == 2:
+                    return int(rs.shape[0])
+        return None
+    if isinstance(result, list):
+        return len(result)
+    return None
 
 
 class BaseSimHandler(ABC):
@@ -306,6 +320,27 @@ class BaseSimHandler(ABC):
         finally:
             self._invalidate_state_caches()
 
+    def _enforce_env_subset(self, result, env_ids: list[int]):
+        """Make ``get_states(env_ids=...)`` return exactly those envs.
+
+        Six backends accept ``env_ids`` and ignore it, returning the full batch; callers that index
+        the result as a subset then read the wrong rows. Slice here (a subset of the full state is
+        the same data) and say so once, instead of trusting every backend's signature.
+        """
+        n_env = _state_env_count(result)
+        if n_env is None or n_env == len(env_ids):
+            return result
+        if n_env != self.num_envs:
+            raise RuntimeError(
+                f"{type(self).__name__}._get_states(env_ids={env_ids}) returned {n_env} envs (handler has {self.num_envs})"
+            )
+        if not getattr(self, "_env_ids_ignored_warned", False):
+            self._env_ids_ignored_warned = True
+            log.warning(f"{type(self).__name__} ignores env_ids in _get_states; the base class slices the full batch.")
+        if isinstance(result, TensorState):
+            return select_envs(result, env_ids)
+        return [result[i] for i in env_ids]
+
     def _normalise_set_states_input(self, states):
         """Coerce ``states`` to the shape declared by ``_set_states_input_type``."""
         wanted = type(self)._set_states_input_type
@@ -470,6 +505,7 @@ class BaseSimHandler(ABC):
             result = self._get_states(env_ids=env_ids)
             if result is None:
                 return None
+            result = self._enforce_env_subset(result, list(env_ids))
             if mode == "tensor":
                 return result if isinstance(result, TensorState) else list_state_to_tensor(self, result)
             return state_tensor_to_nested(self, result) if isinstance(result, TensorState) else result
