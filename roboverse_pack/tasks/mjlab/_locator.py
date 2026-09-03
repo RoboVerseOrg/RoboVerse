@@ -67,12 +67,8 @@ def mjlab_asset(relpath: str) -> str:
     except FileNotFoundError:
         pass
 
-    # 2. HuggingFace fallback — download XML + meshes into roboverse_data/.
-    local = hf_mjlab_path(relpath)
-    if not os.path.exists(local):
-        # Lazy import: hf_util pulls in heavy deps and we only need it on a
-        # cold (clone-less) machine.
-        from metasim.utils.hf_util import check_and_download_recursive
-
-        check_and_download_recursive([local])
-    return local
+    # 2. roboverse_data path. Not downloaded here: ``mjlab_asset`` is evaluated at import time (cfg
+    # defaults), and a network fetch inside ``import roboverse_pack.tasks.mjlab`` is a side effect that
+    # slowed task discovery and broke offline imports. ``ScenarioCfg.check_assets()`` (run by every
+    # handler at construction) fetches the MJCF and its referenced meshes when the task is used.
+    return hf_mjlab_path(relpath)

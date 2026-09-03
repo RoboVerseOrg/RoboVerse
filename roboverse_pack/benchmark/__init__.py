@@ -9,7 +9,6 @@ from roboverse_pack.benchmark.spec import (
     BenchmarkSceneSpec,
     BenchmarkTaskSpec,
 )
-from roboverse_pack.tasks.benchmark import get_benchmark_task_spec, list_benchmark_task_specs
 
 __all__ = [
     "BenchmarkCameraPreset",
@@ -20,3 +19,14 @@ __all__ = [
     "get_benchmark_task_spec",
     "list_benchmark_task_specs",
 ]
+
+
+def __getattr__(name: str):
+    # ``roboverse_pack.tasks.benchmark`` imports ``roboverse_pack.benchmark.spec`` at module scope;
+    # importing it eagerly here made ``import roboverse_pack.tasks.benchmark`` (e.g. during task
+    # discovery) a circular import. Resolve the two helpers on first access instead.
+    if name in ("get_benchmark_task_spec", "list_benchmark_task_specs"):
+        from roboverse_pack.tasks import benchmark as _tasks_benchmark
+
+        return getattr(_tasks_benchmark, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
