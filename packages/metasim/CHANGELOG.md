@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Moved into the RoboVerse monorepo as `packages/metasim`; version aligned to `1.0.0b0` (lockstep with `roboverse-py`). The standalone `RoboVerseOrg/MetaSim` repository becomes a read-only mirror for one release cycle.
 
+### Fixed
+- `set_states` restores velocities. MuJoCo zeroed every velocity on write (`zero_vel=True` default) and SuperDex ignored root velocities, so no mid-episode state was a usable checkpoint; both now write `vel`/`ang_vel`/`dof_vel` (absent keys still mean rest). New `metasim.utils.replay` (record / `verify_action_replay` / `verify_state_replay`) and `metasim/test/sim/test_replay.py` pin the L0 (action replay) and L1 (state round-trip + one step) contracts on every backend. SuperDex lifts a dynamic body whose collision hull would spawn inside the ground plane (a centred-origin URDF placed at an MJCF bottom-origin height left at ~86 m/s on the first step) and logs the correction.
+
 - **Task registry is lazy.** `get_task_class(name)` resolves the name through a static AST index of
   every `@register_task(...)` literal (`metasim/task/_static_index.py`, per-file cache under
   `$METASIM_CACHE_DIR`, default `<tmp>/metasim_cache`) and imports only the module that registers it;
