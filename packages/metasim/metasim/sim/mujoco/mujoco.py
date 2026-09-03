@@ -1,0 +1,1392 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import mujoco
+import numpy as np
+import torch
+from dm_control import mjcf
+from loguru import logger as log
+
+try:
+    # Patch mujoco.renderer.Renderer.__del__ to avoid noisy TypeError if glfw.free is None
+    if hasattr(mujoco, "renderer") and hasattr(mujoco.renderer, "Renderer"):
+        _orig_renderer_del = getattr(mujoco.renderer.Renderer, "__del__", None)
+
+        def _safe_renderer_del(self):
+            try:
+                if _orig_renderer_del is not None:
+                    _orig_renderer_del(self)
+            except Exception:
+                # Swallow exceptions during interpreter shutdown
+                return
+
+        mujoco.renderer.Renderer.__del__ = _safe_renderer_del
+
+    # Patch mujoco.glfw.GLContext.__del__ similarly if present
+    if hasattr(mujoco, "glfw") and hasattr(mujoco.glfw, "GLContext"):
+        _orig_glctx_del = getattr(mujoco.glfw.GLContext, "__del__", None)
+
+        def _safe_glctx_del(self):
+            try:
+                if _orig_glctx_del is not None:
+                    _orig_glctx_del(self)
+            except Exception:
+                return
+
+        mujoco.glfw.GLContext.__del__ = _safe_glctx_del
+except Exception:
+    pass
+
+from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.scenario.robot import RobotCfg
+
+if TYPE_CHECKING:
+    from metasim.scenario.scenario import ScenarioCfg
+
+import glob
+import os
+import sys
+import tempfile
+import threading
+
+from metasim.queries.base import BaseQueryType
+from metasim.sim import BaseSimHandler
+from metasim.types import CompatActionInput
+from metasim.utils.state import (
+    CameraState,
+    ObjectState,
+    RobotState,
+    TensorState,
+    action_input_to_dict_batch,
+    state_tensor_to_nested,
+)
+from metasim.utils.terrain_utils import TerrainGenerator
+
+try:
+    import mujoco.viewer
+except (ImportError, AttributeError):
+    log.warning("Mujoco Viewer not available. Please check your OPENGL environment.")
+    pass
+
+from metasim.utils.gs_util import alpha_blend_rgba
+
+# Optional: RoboSplatter imports for GS background rendering
+try:
+    from robo_splatter.models.camera import Camera as SplatCamera
+    from robo_splatter.render.scenes import SceneRenderType
+
+    ROBO_SPLATTER_AVAILABLE = True
+except ImportError:
+    ROBO_SPLATTER_AVAILABLE = False
+    log.warning("RoboSplatter not available. GS background rendering will be disabled.")
+
+
+_DM_CONTROL_STRUCT_PATCHED = False
+
+
+def _filter_supported_array_sizes(struct, array_sizes: dict[str, tuple[str, ...]]) -> dict[str, tuple[str, ...]]:
+    return {field_name: size_names for field_name, size_names in array_sizes.items() if hasattr(struct, field_name)}
+
+
+def apply_dm_control_struct_compat_patch() -> None:
+    global _DM_CONTROL_STRUCT_PATCHED
+    if _DM_CONTROL_STRUCT_PATCHED:
+        return
+
+    from dm_control.mujoco import wrapper
+    from dm_control.mujoco.wrapper.mjbindings import sizes
+
+    model = wrapper.MjModel.from_xml_string("<mujoco/>")
+    data = wrapper.MjData(model)
+    sizes.array_sizes["mjmodel"] = _filter_supported_array_sizes(model, sizes.array_sizes["mjmodel"])
+    sizes.array_sizes["mjdata"] = _filter_supported_array_sizes(data, sizes.array_sizes["mjdata"])
+    _DM_CONTROL_STRUCT_PATCHED = True
+
+
+MUJOCO_ARENA_MEMORY = "512M"
+"""Default `<size memory>` for models built by this handler (override via the scene MJCF)."""
+
+
+class MujocoHandler(BaseSimHandler):
+    def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
+        super().__init__(scenario, optional_queries)
+        self._actions_cache: CompatActionInput = []
+
+        if scenario.num_envs > 1:
+            raise ValueError("MujocoHandler only supports single envs, please run with --num_envs 1.")
+
+        self._mujoco_robot_names = []
+        self._robot_num_dofs = []
+        self._robot_paths = []
+        self._gravity_compensations = []
+
+        # Support multiple robots
+        for robot in self.robots:
+            self._robot_paths.append(robot.mjcf_path)
+            self._gravity_compensations.append(not robot.enabled_gravity)
+
+        self.viewer = None
+        self.cameras = []
+        for camera in scenario.cameras:
+            self.cameras.append(camera)
+        self._episode_length_buf = 0
+
+        self._current_action = None
+        self._current_vel_target = None  # Track velocity targets
+
+        # === Added: GL/physics serialization + native renderer state ===
+        self._mj_lock = threading.RLock()
+        self._mj_model = None  # native mujoco.MjModel for offscreen rendering
+        self._mj_data = None  # native mujoco.MjData  for offscreen rendering
+        self.renderer = None  # mujoco.Renderer (offscreen)
+        self._split_render_physics_only = bool(self.headless) and len(self.cameras) == 0
+
+    def _get_camera_params(self, camera_id: str, camera):
+        """Get camera intrinsics and extrinsics from MuJoCo camera configuration.
+
+        Returns:
+            Ks: (3, 3) intrinsic matrix
+            c2w: (4, 4) camera-to-world transformation matrix
+        """
+        mj_camera = self.physics.model.camera(camera_id)
+
+        # Extrinsics: build from camera configuration
+        cam_pos = self.physics.data.cam_xpos[mj_camera.id]
+
+        # Compute camera orientation from pos and look_at
+        forward = np.array(camera.look_at) - np.array(camera.pos)
+        forward = forward / np.linalg.norm(forward)
+
+        world_up = np.array([0, 0, 1])
+        right = np.cross(forward, world_up)
+        right = right / np.linalg.norm(right)
+        up = np.cross(right, forward)
+
+        # Build c2w matrix (OpenGL convention: camera looks along -Z)
+        c2w = np.eye(4)
+        c2w[:3, 0] = right
+        c2w[:3, 1] = up
+        c2w[:3, 2] = -forward  # Z axis points backward
+        c2w[:3, 3] = cam_pos
+
+        # Intrinsics: compute from vertical FOV
+        fovy_rad = np.deg2rad(camera.vertical_fov)
+        fy = camera.height / (2 * np.tan(fovy_rad / 2))
+        fx = fy  # assume square pixels
+        cx = camera.width / 2.0
+        cy = camera.height / 2.0
+        Ks = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+
+        return Ks, c2w
+
+    def launch(self) -> None:
+        # dm_control's static ``sizes.array_sizes`` tables list MjModel/MjData
+        # fields (e.g. ``flex_bandwidth``) that newer MuJoCo builds renamed or
+        # removed. Without reconciling them, ``mjcf.Physics.from_mjcf_model``
+        # below dies with ``AttributeError: 'MjModel' object has no attribute
+        # 'flex_bandwidth'`` — i.e. every MuJoCo launch fails. The patch is a
+        # version-agnostic no-op when the fields already match (it only drops
+        # names the live struct lacks) and is idempotent, so call it here, at
+        # the single choke point before any dm_control physics is built.
+        apply_dm_control_struct_compat_patch()
+
+        model = self._init_mujoco()
+        self.physics = mjcf.Physics.from_mjcf_model(model)
+        self.data = self.physics.data
+
+        # === Export MJCF + assets to a temp dir. Handle filename variability (dm_control 1.0.34). ===
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Write assets + XML to disk (this version returns None and writes files)
+            try:
+                # model_name is not guaranteed to be respected by all versions, so we’ll glob later.
+                mjcf.export_with_assets(model, out_dir=tmpdir)
+            except TypeError:
+                # Some older signatures don’t accept keywords; try positional.
+                mjcf.export_with_assets(model, tmpdir)
+
+            # Find the XML the exporter actually wrote (e.g., 'model.xml' or 'unnamed_model.xml')
+            xml_candidates = sorted(glob.glob(os.path.join(tmpdir, "*.xml")))
+            if not xml_candidates:
+                # Fallback: write the raw XML (note: this may reference hashed asset names already).
+                xml_fallback = os.path.join(tmpdir, "model.xml")
+                with open(xml_fallback, "w") as f:
+                    f.write(model.to_xml_string())
+                xml_candidates = [xml_fallback]
+
+            xml_path = xml_candidates[0]
+
+            # Load the model from the XML *in the same directory as the exported assets*
+            # so hashed filenames resolve correctly.
+            self._mj_model = mujoco.MjModel.from_xml_path(xml_path)
+            self._mj_data = mujoco.MjData(self._mj_model)
+
+        # load the ground
+        if hasattr(self, "_height_mat"):
+            if self._height_mat is not None:
+                # normalize height field to [0, 1] range for mujoco hfield
+                height_mat = self._height_mat
+                z_min = float(height_mat.min())
+                z_max = float(height_mat.max())
+                z_span = max(z_max - z_min, 1e-6)
+                normalized_height_mat = (height_mat - z_min) / z_span
+                self.physics.model.hfield_data[:] = normalized_height_mat.flatten(order="C")
+
+        # Create a default-sized renderer unless this handler is acting as a
+        # physics-only backend for split-render mode.
+        if not self._split_render_physics_only:
+            self.renderer = mujoco.Renderer(self._mj_model, width=640, height=480)
+
+        self.body_names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
+        self.robot_body_names = []
+        for robot_name in self._mujoco_robot_names:
+            robot_body_names = [body_name for body_name in self.body_names if body_name.startswith(robot_name)]
+            self.robot_body_names.extend(robot_body_names)
+
+        self._init_torque_control()
+        self._apply_default_joint_positions()
+
+        if not self.headless:
+            self.viewer = mujoco.viewer.launch_passive(self.physics.model.ptr, self.physics.data.ptr)
+            self.viewer.sync()
+
+        if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+            self._build_gs_background()
+
+        return super().launch()
+
+    def _init_torque_control(self):
+        """Initialize position actuators from config first, asset second."""
+        for robot_idx, robot in enumerate(self.robots):
+            joint_names = self._get_joint_names(robot.name, sort=True)
+            self._robot_num_dofs.append(len(joint_names))
+            for joint_name in joint_names:
+                actuator_cfg = robot.actuators.get(joint_name) if robot.actuators else None
+                full_name = f"{self._mujoco_robot_names[robot_idx]}{joint_name}"
+
+                # Armature (reflected motor inertia) and dry frictionloss are
+                # joint-DOF dynamics properties, independent of control mode.
+                # Apply them from the cfg whenever provided so MuJoCo matches the
+                # Newton handler (``joint_armature`` / ``joint_friction``)
+                # instead of silently keeping the MJCF-authored value — otherwise
+                # the same RobotCfg yields different joint dynamics on the two
+                # backends. Controlled joints are single-DOF (hinge/slide), so
+                # the first DOF address of the joint is the one to set.
+                if actuator_cfg is not None and (
+                    actuator_cfg.armature is not None or actuator_cfg.frictionloss is not None
+                ):
+                    joint_dof_adr = self.physics.model.jnt_dofadr[self.physics.model.joint(full_name).id]
+                    if actuator_cfg.armature is not None:
+                        self.physics.model.dof_armature[joint_dof_adr] = float(actuator_cfg.armature)
+                    if actuator_cfg.frictionloss is not None:
+                        self.physics.model.dof_frictionloss[joint_dof_adr] = float(actuator_cfg.frictionloss)
+
+                # Resolve control mode from this robot's config
+                i_control_mode = robot.control_type.get(joint_name, "position") if robot.control_type else "position"
+                if i_control_mode != "position":
+                    continue
+
+                if actuator_cfg is None:
+                    continue
+
+                actuator = self.physics.model.actuator(full_name)
+                actuator_id = actuator.id
+
+                # MuJoCo actuators loaded from the MJCF asset already encode a
+                # servo law. Override those runtime parameters from the MetaSim
+                # config when explicit values are provided, and otherwise keep
+                # the asset-authored values.
+                stiffness_overridden = actuator_cfg.stiffness is not None or actuator_cfg.damping is not None
+                if stiffness_overridden:
+                    stiffness = (
+                        float(actuator_cfg.stiffness)
+                        if actuator_cfg.stiffness is not None
+                        else float(self.physics.model.actuator_gainprm[actuator_id, 0])
+                    )
+                    damping = (
+                        float(actuator_cfg.damping)
+                        if actuator_cfg.damping is not None
+                        else max(0.0, -float(self.physics.model.actuator_biasprm[actuator_id, 2]))
+                    )
+                    self.physics.model.actuator_gaintype[actuator_id] = mujoco.mjtGain.mjGAIN_FIXED
+                    self.physics.model.actuator_biastype[actuator_id] = mujoco.mjtBias.mjBIAS_AFFINE
+                    self.physics.model.actuator_gainprm[actuator_id, :] = 0.0
+                    self.physics.model.actuator_biasprm[actuator_id, :] = 0.0
+                    self.physics.model.actuator_gainprm[actuator_id, 0] = stiffness
+                    self.physics.model.actuator_biasprm[actuator_id, 1] = -stiffness
+                    self.physics.model.actuator_biasprm[actuator_id, 2] = -damping
+
+                if actuator_cfg.effort_limit_sim is not None:
+                    force_limit = float(actuator_cfg.effort_limit_sim)
+                    self.physics.model.actuator_forcelimited[actuator.id] = 1
+                    self.physics.model.actuator_forcerange[actuator.id] = [-force_limit, force_limit]
+                elif stiffness_overridden and bool(self.physics.model.actuator_forcelimited[actuator_id]):
+                    # The user overrode stiffness/damping but did not specify
+                    # ``effort_limit_sim``. The MJCF-authored ``forcerange``
+                    # remains active and can silently dominate the new PD gain
+                    # (e.g. Franka MJCF clamps to ±40 N·m, hiding an effective
+                    # K=1e5). Warn once per (robot, joint) so the asymmetry is
+                    # visible. Backends that read URDF instead of MJCF would
+                    # inherit different limits — the user almost always wants
+                    # to know.
+                    fr = self.physics.model.actuator_forcerange[actuator_id]
+                    cache_key = (robot.name, joint_name)
+                    if cache_key not in getattr(self, "_actuator_force_limit_warned", set()):
+                        log.warning(
+                            f"MuJoCo actuator '{robot.name}:{joint_name}': cfg overrides "
+                            f"stiffness/damping but leaves effort_limit_sim unset — the "
+                            f"MJCF-authored forcerange {list(fr)} stays active and may "
+                            f"clamp the new PD output. Cross-backend behaviour will "
+                            f"diverge unless effort_limit_sim is specified."
+                        )
+                        if not hasattr(self, "_actuator_force_limit_warned"):
+                            self._actuator_force_limit_warned = set()
+                        self._actuator_force_limit_warned.add(cache_key)
+
+    def _apply_scale_to_mjcf(self, mjcf_model, scale):
+        """Apply scale to all geoms, bodies, and sites in the MJCF model."""
+        scale_x, scale_y, scale_z = scale
+
+        for geom in mjcf_model.find_all("geom"):
+            if hasattr(geom, "size") and geom.size is not None:
+                size = list(geom.size)
+                if geom.type in ["box", None]:
+                    if len(size) >= 3:
+                        geom.size = [size[0] * scale_x, size[1] * scale_y, size[2] * scale_z]
+                elif geom.type == "sphere":
+                    if len(size) >= 1:
+                        geom.size = [size[0] * max(scale_x, scale_y, scale_z)]
+                elif geom.type == "cylinder":
+                    if len(size) >= 2:
+                        radius_scale = max(scale_x, scale_y)
+                        geom.size = [size[0] * radius_scale, size[1] * scale_z]
+                elif geom.type == "capsule":
+                    if len(size) >= 2:
+                        radius_scale = max(scale_x, scale_y)
+                        geom.size = [size[0] * radius_scale, size[1] * scale_z]
+                elif geom.type == "ellipsoid":
+                    if len(size) >= 3:
+                        geom.size = [size[0] * scale_x, size[1] * scale_y, size[2] * scale_z]
+
+            if hasattr(geom, "pos") and geom.pos is not None:
+                pos = list(geom.pos)
+                if len(pos) >= 3:
+                    geom.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
+
+        for body in mjcf_model.find_all("body"):
+            if hasattr(body, "pos") and body.pos is not None:
+                pos = list(body.pos)
+                if len(pos) >= 3:
+                    body.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
+
+        for site in mjcf_model.find_all("site"):
+            if hasattr(site, "pos") and site.pos is not None:
+                pos = list(site.pos)
+                if len(pos) >= 3:
+                    site.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
+
+            if hasattr(site, "size") and site.size is not None:
+                size = list(site.size)
+                if len(size) >= 1:
+                    site.size = [size[0] * max(scale_x, scale_y, scale_z)]
+
+        for joint in mjcf_model.find_all("joint"):
+            if hasattr(joint, "pos") and joint.pos is not None:
+                pos = list(joint.pos)
+                if len(pos) >= 3:
+                    joint.pos = [pos[0] * scale_x, pos[1] * scale_y, pos[2] * scale_z]
+
+        # Apply scale to mesh elements (for visual meshes)
+        for mesh in mjcf_model.find_all("mesh"):
+            if hasattr(mesh, "scale") and mesh.scale is not None:
+                mesh_scale = list(mesh.scale)
+                if len(mesh_scale) >= 3:
+                    mesh.scale = [
+                        mesh_scale[0] * scale_x,
+                        mesh_scale[1] * scale_y,
+                        mesh_scale[2] * scale_z,
+                    ]
+                elif len(mesh_scale) == 1:
+                    # Uniform scale
+                    uniform_scale = max(scale_x, scale_y, scale_z)
+                    mesh.scale = [mesh_scale[0] * uniform_scale]
+
+    def _set_framebuffer_size(self, mjcf_model, width, height):
+        visual_elem = mjcf_model.visual
+        global_elem = None
+        for child in visual_elem._children:
+            if child.tag == "global":
+                global_elem = child
+                break
+        if global_elem is None:
+            global_elem = visual_elem.add("global")
+        global_elem.offwidth = width
+        global_elem.offheight = height
+
+    def _create_primitive_xml(self, obj):
+        if isinstance(obj, PrimitiveCubeCfg):
+            size_str = f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}"
+            type_str = "box"
+        elif isinstance(obj, PrimitiveCylinderCfg):
+            size_str = f"{obj.radius} {obj.height}"
+            type_str = "cylinder"
+        elif isinstance(obj, PrimitiveSphereCfg):
+            size_str = f"{obj.radius}"
+            type_str = "sphere"
+        else:
+            raise ValueError("Unknown primitive type")
+
+        rgba_str = f"{obj.color[0]} {obj.color[1]} {obj.color[2]} 1"
+        xml = f"""
+        <mujoco model="{obj.name}_model">
+        <worldbody>
+            <body name="{type_str}_body" pos="{0} {0} {0}">
+            <geom name="{type_str}_geom" type="{type_str}" size="{size_str}" rgba="{rgba_str}"/>
+            </body>
+        </worldbody>
+        </mujoco>
+        """
+        return xml.strip()
+
+    def _init_mujoco(self) -> mjcf.RootElement:
+        """Initialize MuJoCo model with optional scene support."""
+
+        mjcf_model = self._init_scene()
+        self._configure_self_collision_policy(mjcf_model)
+        # MuJoCo >= 3.x sizes its arena from `<size memory>` (the legacy njmax/nconmax hints no longer
+        # grow it). The compiler default is far too small for humanoids + mesh objects: e.g. the H1 scene
+        # in get_started/10_mount_camera.py dies with "mj_stackAlloc: out of memory ... ncon = 286".
+        # Reserve a generous arena unless the scene MJCF already sets one.
+        if getattr(mjcf_model.size, "memory", None) is None:
+            mjcf_model.size.memory = MUJOCO_ARENA_MEMORY
+
+        if self.scenario.sim_params.dt is not None:
+            mjcf_model.option.timestep = self.scenario.sim_params.dt
+        else:
+            mjcf_model.option.timestep = 0.001
+        self._add_ground(mjcf_model)
+        self._add_objects_to_model(mjcf_model)
+        self._add_robots_to_model(mjcf_model)
+        self._add_cameras_to_model(mjcf_model)
+
+        if self.scenario.sim_params.dt is not None:
+            mjcf_model.option.timestep = self.scenario.sim_params.dt
+        return mjcf_model
+
+    def _init_scene(self) -> mjcf.RootElement:
+        """Initialize scene elements."""
+        if self.scenario.scene is not None:
+            mjcf_model = mjcf.from_path(self.scenario.scene.mjcf_path)
+            log.info(f"Loaded scene from: {self.scenario.scene.mjcf_path}")
+        else:
+            mjcf_model = mjcf.RootElement()
+        return mjcf_model
+
+    def _configure_self_collision_policy(self, mjcf_model: mjcf.RootElement) -> None:
+        """Configure MuJoCo's self-collision behaviour from each robot's flag.
+
+        Three policies are supported on `RobotCfg.enabled_self_collisions`:
+
+        - ``True`` — all-self-collision: set ``filterparent="disable"`` so
+          parent-child geom pairs *also* collide. No body-pair excludes added.
+        - ``False`` — no-self-collision: leave ``filterparent`` at MuJoCo's
+          default (enabled) and add an exclude for every body pair inside the
+          robot via ``_exclude_robot_self_collisions``.
+        - ``"mujoco_default"`` — MuJoCo's stock semantics: leave both knobs
+          alone. Parent-child pairs are filtered (MuJoCo default), all other
+          intra-robot pairs collide naturally. Use this when matching a raw
+          ``mujoco.MjModel.from_xml_path`` rollout — neither of the other two
+          options does, because both bias the geom-pair set in opposite
+          directions.
+
+        Only the ``True`` branch needs a global mjcf-level edit; the other
+        two are entirely per-robot and handled in ``_add_robots_to_model``.
+        """
+        if any(getattr(robot, "enabled_self_collisions", False) is True for robot in self.robots):
+            mjcf_model.option.flag.filterparent = "disable"
+
+    def _add_ground(self, mjcf_model: mjcf.RootElement) -> None:
+        if self.scenario.ground is not None:
+            self._add_custom_ground(mjcf_model)
+        elif getattr(self.scenario, "add_default_ground", True):
+            self._add_default_ground(mjcf_model)
+
+    def _apply_default_joint_positions(self) -> None:
+        """Set initial joint positions from robot/object configs if provided."""
+
+        # Robots
+        for robot_idx, robot in enumerate(self.robots):
+            if not getattr(robot, "default_joint_positions", None):
+                continue
+            prefix = self._mujoco_robot_names[robot_idx]
+            for joint_name, joint_pos in robot.default_joint_positions.items():
+                joint = self.physics.data.joint(f"{prefix}{joint_name}")
+                joint.qpos = joint_pos
+                joint.qvel = 0
+
+        self.physics.forward()
+
+    def _add_default_ground(self, mjcf_model: mjcf.RootElement) -> None:
+        """Add default ground plane."""
+        mjcf_model.asset.add(
+            "texture",
+            name="texplane",
+            type="2d",
+            builtin="checker",
+            width=512,
+            height=512,
+            rgb1=[0.72, 0.74, 0.78],
+            rgb2=[0.92, 0.94, 0.97],
+            mark="edge",
+            markrgb=[0.98, 0.78, 0.50],
+        )
+        mjcf_model.asset.add(
+            "material",
+            name="matplane",
+            texture="texplane",
+            texrepeat=[2, 2],
+            texuniform=True,
+            reflectance="0",
+            specular="0.2",
+            shininess="0.4",
+            emission="0.05",
+        )
+        ground = mjcf_model.worldbody.add(
+            "geom",
+            type="plane",
+            pos="0 0 0",
+            size="100 100 0.001",
+            quat="1 0 0 0",
+            condim="3",
+            conaffinity="15",
+            material="matplane",
+        )
+
+        # Expose a simple quad mesh centered at origin, similar to IsaacGym handler.
+        step = float(self.scenario.env_spacing)
+        num_per_row = 1  # MujocoHandler supports single env
+        num_rows = 1
+        width = max(1, num_per_row) * step
+        height = max(1, num_rows) * step
+        border_offset = 20.0
+        hw, hh = width * 0.5 + border_offset, height * 0.5 + border_offset
+
+        self._ground_mesh_vertices = np.array(
+            [
+                [-hw, -hh, 0.0],
+                [hw, -hh, 0.0],
+                [-hw, hh, 0.0],
+                [hw, hh, 0.0],
+            ],
+            dtype=np.float32,
+        )
+        self._ground_mesh_triangles = np.array(
+            [
+                [0, 2, 1],
+                [1, 2, 3],
+            ],
+            dtype=np.int32,
+        )
+
+    def _add_cameras_to_model(self, mjcf_model: mjcf.RootElement) -> None:
+        """Add cameras to the model. If mount_to is set, attach camera under that body so it follows motion."""
+        camera_max_width = 640
+        camera_max_height = 480
+
+        for camera in self.cameras:
+            camera_name = f"{camera.name}_custom"
+            camera_max_width = max(camera_max_width, camera.width)
+            camera_max_height = max(camera_max_height, camera.height)
+
+            mount_to = camera.mount_to
+            if mount_to is not None:
+                mount_link = camera.mount_link.split("/")[-1]  # mujoco requires the leaf prim
+
+                model_prefix = self.mj_objects[mount_to].model
+                full_body_name = f"{model_prefix}/{mount_link}"
+
+                body_elem = mjcf_model.find("body", full_body_name)
+
+                # local mount pos/quat
+                mpos = camera.mount_pos
+                mquat = camera.mount_quat
+
+                body_elem.add(
+                    "camera",
+                    name=camera_name,
+                    mode="fixed",
+                    pos=f"{mpos[0]} {mpos[1]} {mpos[2]}",
+                    quat=f"{mquat[0]} {mquat[1]} {mquat[2]} {mquat[3]}",
+                    fovy=camera.vertical_fov,
+                )
+                continue
+
+            # attach camera to world
+            direction = np.array([
+                camera.look_at[0] - camera.pos[0],
+                camera.look_at[1] - camera.pos[1],
+                camera.look_at[2] - camera.pos[2],
+            ])
+            direction = direction / np.linalg.norm(direction)
+            up = np.array([0, 0, 1])
+            right = np.cross(direction, up)
+            right = right / np.linalg.norm(right)
+            up = np.cross(right, direction)
+
+            camera_params = {
+                "pos": f"{camera.pos[0]} {camera.pos[1]} {camera.pos[2]}",
+                "mode": "fixed",
+                "fovy": camera.vertical_fov,
+                "xyaxes": f"{right[0]} {right[1]} {right[2]} {up[0]} {up[1]} {up[2]}",
+            }
+            mjcf_model.worldbody.add("camera", name=camera_name, **camera_params)
+
+        if camera_max_width > 640 or camera_max_height > 480:
+            self._set_framebuffer_size(mjcf_model, camera_max_width, camera_max_height)
+
+    def _add_objects_to_model(self, mjcf_model: mjcf.RootElement) -> None:
+        """Add individual objects to the model."""
+        self.object_body_names = []
+        self.mj_objects = {}
+
+        for obj in self.objects:
+            if isinstance(obj, (PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg)):
+                xml_str = self._create_primitive_xml(obj)
+                obj_mjcf = mjcf.from_xml_string(xml_str)
+            else:
+                obj_mjcf = mjcf.from_path(obj.mjcf_path)
+                # Remove free joint since dm_control has limit support for it.
+                for joint in obj_mjcf.find_all("joint"):
+                    if joint.tag == "joint" and joint.type == "free":
+                        joint.remove()
+
+            if hasattr(obj, "scale") and obj.scale != (1.0, 1.0, 1.0):
+                self._apply_scale_to_mjcf(obj_mjcf, obj.scale)
+
+            obj_attached = mjcf_model.attach(obj_mjcf)
+
+            # Apply default position and orientation to the object's root body,
+            # matching the behavior of other backends (IsaacGym/IsaacSim/PyBullet).
+            if hasattr(obj, "default_position") and obj.default_position is not None:
+                obj_attached.pos = list(obj.default_position)
+            if hasattr(obj, "default_orientation") and obj.default_orientation is not None:
+                # MuJoCo expects quaternions in (w, x, y, z) order, which matches BaseObjCfg.
+                qw, qx, qy, qz = obj.default_orientation
+                obj_attached.quat = [qw, qx, qy, qz]
+
+            if not obj.fix_base_link:
+                obj_attached.add("freejoint")
+            self.object_body_names.append(obj_attached.full_identifier)
+            self.mj_objects[obj.name] = obj_mjcf
+
+    def _add_robots_to_model(self, mjcf_model: mjcf.RootElement) -> None:
+        """Add robots to the model."""
+        for robot in self.robots:
+            robot_xml = mjcf.from_path(robot.mjcf_path)
+
+            if hasattr(robot, "scale") and robot.scale != (1.0, 1.0, 1.0):
+                self._apply_scale_to_mjcf(robot_xml, robot.scale)
+
+            # Promote any author-declared freejoint to the attachment wrapper
+            # *before* attaching, so MuJoCo still sees one (and only one) free
+            # joint and it's anchored on a top-level body. mjlab's unitree_go1
+            # and unitree_g1 ship `<freejoint name="floating_base_joint"/>`
+            # inside their root body — once wrapped, that body stops being
+            # top-level and MuJoCo errors out. Removing the inner freejoint
+            # and re-adding it to `robot_attached` preserves the floating-base
+            # contract without losing user-set range/damping (freejoints don't
+            # take those attributes in MJCF).
+            inner_freejoint_found = False
+            for body in robot_xml.find_all("body"):
+                for child in list(body.all_children()):
+                    if child.tag in ("freejoint",) or (child.tag == "joint" and getattr(child, "type", None) == "free"):
+                        child.remove()
+                        inner_freejoint_found = True
+
+            robot_attached = mjcf_model.attach(robot_xml)
+            if not robot.fix_base_link or inner_freejoint_found:
+                robot_attached.add("freejoint")
+            # Track any pose the MJCF author baked into the robot's root body so
+            # we can compose it with a user-supplied default_position below. The
+            # re-rooting branch hoists the root body's pos onto the attachment
+            # wrapper, so without composition the user's default_position would
+            # silently overwrite the MJCF-intended world placement (e.g. cartpole
+            # has its cart body at z=1 — losing that drops the cart into the
+            # ground plane and breaks physics).
+            mjcf_root_offset = np.zeros(3, dtype=float)
+            if not hasattr(robot_attached, "inertial") or robot_attached.inertial is None:
+                child_bodies = robot_attached.find_all("body")
+                if child_bodies:
+                    child_body = child_bodies[0]
+                    # Some MJCFs rely on MuJoCo to compute inertia from geoms and
+                    # therefore omit an explicit <inertial> tag; fall back to the
+                    # body origin so the dummy inertial we add below still has a
+                    # sane location.
+                    child_inertial = getattr(child_body, "inertial", None)
+                    pos = child_inertial.pos if child_inertial is not None else (0.0, 0.0, 0.0)
+                    child_root_pos = child_body.pos
+                    if child_root_pos is not None:
+                        mjcf_root_offset = np.asarray(child_root_pos, dtype=float)
+                    robot_attached.pos = child_body.pos
+                    child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
+                    robot_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
+                    robot_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
+            if hasattr(robot, "default_position") and robot.default_position is not None:
+                # Compose with the MJCF root offset preserved above so authored
+                # body frames survive when the user keeps the field's (0, 0, 0)
+                # default. When the MJCF root body was at origin (the common
+                # URDF case), mjcf_root_offset is zero and behavior is unchanged.
+                user_pos = np.asarray(robot.default_position, dtype=float)
+                robot_attached.pos = list(user_pos + mjcf_root_offset)
+            if hasattr(robot, "default_orientation") and robot.default_orientation is not None:
+                robot_attached.quat = robot.default_orientation
+            # Only the explicit `False` branch installs all-pair excludes.
+            # `True` already disabled filterparent globally; the
+            # `"mujoco_default"` sentinel intentionally leaves both knobs
+            # at MuJoCo's stock semantics so parity sweeps can match raw
+            # `mujoco.MjModel.from_xml_path` rollouts.
+            if robot.enabled_self_collisions is False:
+                self._exclude_robot_self_collisions(mjcf_model, robot_attached)
+            self.mj_objects[robot.name] = robot_xml
+            self._mujoco_robot_names.append(robot_xml.full_identifier)
+
+    def _exclude_robot_self_collisions(self, mjcf_model: mjcf.RootElement, robot_attached) -> None:
+        """Disable all same-robot contacts for robots that opt out of self-collision."""
+        robot_bodies = [body for body in robot_attached.find_all("body") if body.name]
+        for i, body1 in enumerate(robot_bodies):
+            for body2 in robot_bodies[i + 1 :]:
+                mjcf_model.contact.add("exclude", body1=body1.full_identifier, body2=body2.full_identifier)
+
+    def _get_actuator_states(self, obj_name):
+        """Get actuator states (targets and forces)."""
+        actuator_states = {
+            "dof_pos_target": {},
+            "dof_vel_target": {},
+            "dof_torque": {},
+        }
+
+        # Find the robot index
+        robot_idx = None
+        for i, robot in enumerate(self.robots):
+            if robot.name == obj_name:
+                robot_idx = i
+                break
+
+        if robot_idx is None:
+            return actuator_states
+
+        robot_name = self._mujoco_robot_names[robot_idx]
+
+        for actuator_id in range(self.physics.model.nu):
+            actuator = self.physics.model.actuator(actuator_id)
+            if actuator.name.startswith(robot_name):
+                clean_name = actuator.name[len(robot_name) :]
+
+                actuator_states["dof_pos_target"][clean_name] = float(
+                    self.physics.data.ctrl[actuator_id].item()
+                )  # Hardcoded to position control
+                actuator_states["dof_vel_target"][clean_name] = None
+                actuator_states["dof_torque"][clean_name] = float(self.physics.data.actuator_force[actuator_id].item())
+
+        return actuator_states
+
+    def _pack_state(self, body_ids: list[int]):
+        """
+        Pack pos(3), quat(4), lin_vel_world(3), ang_vel(3) for one-env MuJoCo.
+
+        Args:
+            body_ids: list of body IDs, e.g. [root_id] or [root_id] + body_ids_reindex
+
+        Returns:
+            root_np: numpy (13,)      — the first body
+            body_np: numpy (n_body,13)     — n_body bodies
+        """
+        data = self.physics.data
+        pos = data.xpos[body_ids]
+        quat = data.xquat[body_ids]
+
+        # angular ω (world) & v @ subtree_com
+        w = data.cvel[body_ids, 0:3]
+        v = data.cvel[body_ids, 3:6]
+
+        # compute world‐frame linear velocity at body origin
+        offset = data.xpos[body_ids] - data.subtree_com[body_ids]
+        lin_world = v + np.cross(w, offset)
+
+        full = np.concatenate([pos, quat, lin_world, w], axis=1)
+        root_np = full[0]
+        return root_np, full[1:]  # root, bodies
+
+    def _mirror_state_to_native(self):
+        self._mj_data = self.physics._data._data
+
+    def _read_joint_qpos(self, full_name: str, qpos_snapshot: np.ndarray) -> float:
+        """Read a single-dof joint's qpos from a frozen qpos snapshot.
+
+        We deliberately avoid ``self.physics.data.joint(name).qpos.item()``
+        — that NamedIndexer path has produced alternating-arm corruption
+        under tight ``set_states → simulate → get_states`` loops
+        (271/300 rollouts in downstream BC training showed ~150° spikes
+        on otherwise-smooth trajectories — see
+        ``bug_get_states_arm_qpos_alternating_corruption.md``).
+        Using ``model.joint(name).qposadr`` indexed into a freshly
+        copied buffer removes that aliasing surface.
+        """
+        adr = int(self.physics.model.joint(full_name).qposadr[0])
+        return float(qpos_snapshot[adr])
+
+    def _read_joint_qvel(self, full_name: str, qvel_snapshot: np.ndarray) -> float:
+        """Read a single-dof joint's qvel via stable ``dofadr``; see ``_read_joint_qpos``."""
+        adr = int(self.physics.model.joint(full_name).dofadr[0])
+        return float(qvel_snapshot[adr])
+
+    def _get_states(self, env_ids: list[int] | None = None) -> TensorState:
+        """Get states of all objects and robots.
+
+        Buffers (``qpos`` / ``qvel`` / ``ctrl`` / ``actuator_force``) are
+        snapshotted up-front so every joint/body read in this call sees
+        the same internally-consistent state — regardless of any
+        NamedIndexer or view-aliasing oddity in dm_control.
+        """
+        data = self.physics.data
+        qpos_snapshot = np.array(data.qpos, copy=True)
+        qvel_snapshot = np.array(data.qvel, copy=True)
+        ctrl_snapshot = np.array(data.ctrl, copy=True)
+        actuator_force_snapshot = np.array(data.actuator_force, copy=True)
+
+        object_states = {}
+        for obj in self.objects:
+            model_name = self.mj_objects[obj.name].model
+
+            obj_body_id = self.physics.model.body(f"{model_name}/").id
+            if isinstance(obj, ArticulationObjCfg):
+                joint_names = self._get_joint_names(obj.name, sort=True)
+                body_ids_reindex = self._get_body_ids_reindex(obj.name)
+
+                root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
+                state = ObjectState(
+                    root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
+                    body_names=self._get_body_names(obj.name),
+                    body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
+                    joint_pos=torch.tensor([
+                        self._read_joint_qpos(f"{model_name}/{jn}", qpos_snapshot) for jn in joint_names
+                    ]).unsqueeze(0),
+                    joint_vel=torch.tensor([
+                        self._read_joint_qvel(f"{model_name}/{jn}", qvel_snapshot) for jn in joint_names
+                    ]).unsqueeze(0),
+                )
+            else:
+                root_np, _ = self._pack_state([obj_body_id])
+
+                state = ObjectState(
+                    root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
+                )
+            object_states[obj.name] = state
+
+        robot_states = {}
+        for robot in self.robots:
+            model_name = self.mj_objects[robot.name].model
+            obj_body_id = self.physics.model.body(f"{model_name}/").id
+            joint_names = self._get_joint_names(robot.name, sort=True)
+            actuator_reindex = self._get_actuator_reindex(robot.name)
+            body_ids_reindex = self._get_body_ids_reindex(robot.name)
+            root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
+
+            state = RobotState(
+                body_names=self._get_body_names(robot.name),
+                root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
+                body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
+                joint_pos=torch.tensor([
+                    self._read_joint_qpos(f"{model_name}/{jn}", qpos_snapshot) for jn in joint_names
+                ]).unsqueeze(0),
+                joint_vel=torch.tensor([
+                    self._read_joint_qvel(f"{model_name}/{jn}", qvel_snapshot) for jn in joint_names
+                ]).unsqueeze(0),
+                joint_pos_target=torch.from_numpy(ctrl_snapshot[actuator_reindex]).unsqueeze(0),
+                joint_vel_target=torch.from_numpy(self._current_vel_target).unsqueeze(0)
+                if self._current_vel_target is not None
+                else None,
+                joint_effort_target=torch.from_numpy(actuator_force_snapshot[actuator_reindex]).unsqueeze(0),
+            )
+            robot_states[robot.name] = state
+
+        camera_states = {}
+        for camera in self.cameras:
+            if camera.mount_to is not None:
+                camera_id = f"{self.mj_objects[camera.mount_to].model}/{camera.name}_custom"
+            else:
+                camera_id = f"{camera.name}_custom"
+
+            rgb = None
+            depth = None
+            if "rgb" in camera.data_types:
+                if sys.platform == "darwin":
+                    with self._mj_lock:  # optional but safer
+                        # match renderer size to camera if needed
+                        if self.renderer is None or (self.renderer.width, self.renderer.height) != (
+                            camera.width,
+                            camera.height,
+                        ):
+                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
+                        # mirror state and render
+                        self._mirror_state_to_native()
+                        self.renderer.update_scene(self._mj_data, camera=camera_id)
+                        rgb_np = self.renderer.render()
+                    rgb = torch.from_numpy(rgb_np.copy()).unsqueeze(0)
+                elif sys.platform == "win32":
+                    rgb_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=False
+                    )
+                    # Ensure numpy array -> torch tensor with shape (1, H, W, C)
+                    rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
+                else:
+                    rgb_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=False
+                    )
+                    rgb = torch.from_numpy(np.ascontiguousarray(rgb_np)).unsqueeze(0)
+
+            if "depth" in camera.data_types:
+                if sys.platform == "darwin":
+                    with self._mj_lock:
+                        # Ensure renderer matches the camera size
+                        if self.renderer is None or (self.renderer.width, self.renderer.height) != (
+                            camera.width,
+                            camera.height,
+                        ):
+                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
+
+                        # Keep native model/data in sync with dm_control physics
+                        self._mirror_state_to_native()
+                        self.renderer.update_scene(self._mj_data, camera=camera_id)
+
+                        # --- Cross-version depth rendering for mujoco.Renderer ---
+                        if hasattr(self.renderer, "enable_depth_rendering"):
+                            # Newer MuJoCo (>= 3.2/3.3): enable depth mode, render(), then disable.
+                            self.renderer.enable_depth_rendering()
+                            depth_np = self.renderer.render()
+                            self.renderer.disable_depth_rendering()
+                        elif hasattr(mujoco, "RenderMode"):
+                            # Some 3.x builds expose RenderMode enum on mujoco
+                            depth_np = self.renderer.render(render_mode=mujoco.RenderMode.DEPTH)
+                        else:
+                            # Very old fallback: some builds returned (rgb, depth) as a tuple.
+                            # If this still fails in your env, we’ll need a dedicated mjr_readPixels path.
+                            maybe = self.renderer.render()
+                            if isinstance(maybe, tuple) and len(maybe) == 2:
+                                _, depth_np = maybe
+                            else:
+                                raise RuntimeError("Depth rendering not supported by this mujoco.Renderer build.")
+                    depth = torch.from_numpy(depth_np.copy()).unsqueeze(0)
+                elif sys.platform == "win32":
+                    depth_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=True
+                    )
+                    depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
+                else:
+                    depth_np = self.physics.render(
+                        width=camera.width, height=camera.height, camera_id=camera_id, depth=True
+                    )
+                    depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
+
+            # Additional GS background rendering and blending (if enabled)
+            if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
+                assert ROBO_SPLATTER_AVAILABLE, (
+                    "RoboSplatter is not available. GS background rendering will be disabled."
+                )
+
+                # Extract camera parameters
+                Ks, c2w = self._get_camera_params(camera_id, camera)
+
+                # Render GS background
+                gs_cam = SplatCamera.init_from_pose_list(
+                    pose_list=c2w,
+                    camera_intrinsic=Ks,
+                    image_height=camera.height,
+                    image_width=camera.width,
+                    device="cuda" if torch.cuda.is_available() else "cpu",
+                )
+                gs_result = self.gs_background.render(gs_cam, render_type=SceneRenderType.FOREGROUND)
+                gs_result.to_numpy()
+
+                # Get semantic segmentation (geom IDs and object IDs)
+                sim_seg = self.physics.render(
+                    width=camera.width, height=camera.height, camera_id=camera_id, depth=False, segmentation=True
+                )
+                geom_ids = sim_seg[..., 0] if sim_seg.ndim == 3 else sim_seg
+                # Create foreground mask: exclude background (-1) and ground plane (0)
+                foreground_mask = geom_ids >= 1
+                seg_mask = np.where(foreground_mask, 255, 0).astype(np.uint8)
+
+                if "rgb" in camera.data_types:
+                    # Blend RGB: foreground objects over GS background
+                    sim_color = (rgb_np * 255).astype(np.uint8) if rgb_np.max() <= 1.0 else rgb_np.astype(np.uint8)
+                    foreground = np.concatenate([sim_color, seg_mask[..., None]], axis=-1)
+                    background = gs_result.rgb.squeeze(0)
+                    blended_rgb = alpha_blend_rgba(foreground, background)
+                    rgb = torch.from_numpy(np.ascontiguousarray(blended_rgb.copy())).unsqueeze(0)
+
+                if "depth" in camera.data_types:
+                    # Compose depth: use simulation depth for foreground, GS depth for background
+                    bg_depth = gs_result.depth.squeeze(0)
+                    if bg_depth.ndim == 3 and bg_depth.shape[-1] == 1:
+                        bg_depth = bg_depth[..., 0]
+                    depth_comp = np.where(foreground_mask, depth_np, bg_depth)
+                    if sys.platform == "darwin":
+                        depth = torch.from_numpy(depth_comp.copy()).unsqueeze(0)
+                    else:
+                        depth = torch.from_numpy(np.ascontiguousarray(depth_comp.copy())).unsqueeze(0)
+
+            state = CameraState(rgb=locals().get("rgb", None), depth=locals().get("depth", None))
+            camera_states[camera.name] = state
+        extras = self.get_extra()
+        return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
+
+    def _set_root_state(self, obj_name, obj_state, zero_vel=False):
+        """Set root position and rotation."""
+        if "pos" not in obj_state and "rot" not in obj_state:
+            return
+
+        # Check if it's a robot
+        robot_idx = None
+        for i, robot in enumerate(self.robots):
+            if robot.name == obj_name:
+                robot_idx = i
+                break
+
+        if robot_idx is not None:
+            robot = self.robots[robot_idx]
+            robot_name = self._mujoco_robot_names[robot_idx]
+            if not robot.fix_base_link:
+                root_joint = self.physics.data.joint(robot_name)
+                root_joint.qpos[:3] = obj_state.get("pos", [0, 0, 0])
+                root_joint.qpos[3:7] = obj_state.get("rot", [1, 0, 0, 0])
+                if zero_vel:
+                    root_joint.qvel[:6] = 0
+            else:
+                root_body = self.physics.named.model.body_pos[robot_name]
+                root_body_quat = self.physics.named.model.body_quat[robot_name]
+                root_body[:] = obj_state.get("pos", [0, 0, 0])
+                root_body_quat[:] = obj_state.get("rot", [1, 0, 0, 0])
+        else:
+            model_name = self.mj_objects[obj_name].model + "/"
+            try:
+                obj_joint = self.physics.data.joint(model_name)
+                obj_joint.qpos[:3] = obj_state["pos"]
+                obj_joint.qpos[3:7] = obj_state["rot"]
+                if zero_vel:
+                    obj_joint.qvel[:6] = 0
+            except KeyError:
+                obj_body = self.physics.named.model.body_pos[model_name]
+                obj_body_quat = self.physics.named.model.body_quat[model_name]
+                obj_body[:] = obj_state["pos"]
+                obj_body_quat[:] = obj_state["rot"]
+
+    def _set_joint_state(self, obj_name, obj_state, zero_vel=False):
+        """Set joint positions."""
+        if "dof_pos" not in obj_state:
+            return
+
+        # Check if it's a robot
+        robot_idx = None
+        for i, robot in enumerate(self.robots):
+            if robot.name == obj_name:
+                robot_idx = i
+                break
+
+        for joint_name, joint_pos in obj_state["dof_pos"].items():
+            if robot_idx is not None:
+                robot_name = self._mujoco_robot_names[robot_idx]
+                full_joint_name = f"{robot_name}{joint_name}"
+            else:
+                full_joint_name = f"{obj_name}/{joint_name}"
+
+            joint = self.physics.data.joint(full_joint_name)
+            joint.qpos = joint_pos
+            if zero_vel:
+                joint.qvel = 0
+            try:
+                actuator = self.physics.model.actuator(full_joint_name)
+                self.physics.data.ctrl[actuator.id] = joint_pos
+            except KeyError:
+                pass
+
+    def _set_states(self, states, env_ids=None, zero_vel=True):
+        if isinstance(states, TensorState):
+            states = state_tensor_to_nested(self, states)
+        if len(states) > 1:
+            raise ValueError("MujocoHandler only supports single env state setting")
+
+        states_flat = [{**state["objects"], **state["robots"]} for state in states]
+
+        for obj_name, obj_state in states_flat[0].items():
+            if obj_name in self.mj_objects:
+                self._set_root_state(obj_name, obj_state, zero_vel)
+                self._set_joint_state(obj_name, obj_state, zero_vel)
+        self.physics.forward()
+
+    def _disable_robotgravity(self):
+        gravity_vec = np.array(self.scenario.gravity)
+
+        self.physics.data.xfrc_applied[:] = 0
+        for body_name in self.robot_body_names:
+            body_id = self.physics.model.body(body_name).id
+            force_vec = -gravity_vec * self.physics.model.body(body_name).mass
+            self.physics.data.xfrc_applied[body_id, 0:3] = force_vec
+            self.physics.data.xfrc_applied[body_id, 3:6] = 0
+
+    def _set_dof_targets(self, actions: CompatActionInput) -> None:
+        """Unified: Tensor/ndarray -> write ctrl (or cache for PD); dict-list -> name-based."""
+        self._actions_cache = actions
+        action_batch = action_input_to_dict_batch(self, actions)
+        if not action_batch:
+            return
+        actions = action_batch[0]
+        for robot_idx, robot in enumerate(self.robots):
+            payload = actions[robot.name]
+
+            # Optional velocity targets
+            vel_targets = payload.get("dof_vel_target")
+            if vel_targets:
+                jnames = self._get_joint_names(robot.name, sort=True)
+                self._current_vel_target = np.zeros(self._robot_num_dofs[robot_idx], dtype=np.float32)
+                for i, jn in enumerate(jnames):
+                    if jn in vel_targets:
+                        self._current_vel_target[i] = vel_targets[jn]
+            else:
+                self._current_vel_target = None
+
+            # Position targets
+            joint_targets = payload.get("dof_pos_target") or {}
+            jnames = self._get_joint_names(robot.name, sort=True)
+            self._current_action = np.zeros(self._robot_num_dofs[robot_idx], dtype=np.float32)
+            for i, jn in enumerate(jnames):
+                if jn in joint_targets:
+                    self._current_action[i] = joint_targets[jn]
+            for i in range(self._robot_num_dofs[robot_idx]):
+                jn = jnames[i]
+                if jn in joint_targets:
+                    self.physics.data.actuator(f"{self._mujoco_robot_names[robot_idx]}{jn}").ctrl = joint_targets[jn]
+
+    def refresh_render(self) -> None:
+        self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.
+        if self.viewer is not None:
+            self.viewer.sync()
+
+    def _simulate(self):
+        # Apply gravity compensation for all robots
+        for robot_idx, robot in enumerate(self.robots):
+            if self._gravity_compensations[robot_idx]:
+                self._disable_robotgravity()
+
+        # Apply torque control if manual PD is enabled
+        self.physics.step(self.decimation)
+
+        if not self.headless:
+            self.viewer.sync()
+
+    def close(self):
+        # Idempotent close: nullify each handle after closing so that a
+        # second ``close()`` (e.g. context-manager exit + explicit close)
+        # is a no-op instead of re-closing a torn-down resource.
+        if self.viewer is not None:
+            try:
+                self.viewer.close()
+            except Exception:
+                pass
+            self.viewer = None
+        if self.renderer is not None:
+            try:
+                self.renderer.close()
+            except Exception:
+                pass
+            self.renderer = None
+
+    ############################################################
+    ## Utils
+    ############################################################
+    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg) or isinstance(
+            self.object_dict[obj_name], RobotCfg
+        ):
+            # Find the robot index
+            robot_idx = None
+            for i, robot in enumerate(self.robots):
+                if robot.name == obj_name:
+                    robot_idx = i
+                    break
+
+            if robot_idx is not None:
+                prefix = self._mujoco_robot_names[robot_idx]
+            else:
+                prefix = obj_name + "/"
+
+            joint_names = [
+                self.physics.model.joint(joint_id).name
+                for joint_id in range(self.physics.model.njnt)
+                if self.physics.model.joint(joint_id).name.startswith(prefix)
+            ]
+
+            if robot_idx is not None:
+                joint_names = [name[len(prefix) :] for name in joint_names]
+            else:
+                joint_names = [name.split("/")[-1] for name in joint_names]
+
+            joint_names = [name for name in joint_names if name != ""]
+            if sort:
+                joint_names.sort()
+            return joint_names
+        else:
+            return []
+
+    def _get_actuator_names(self, robot_name: str) -> list[str]:
+        assert isinstance(self.object_dict[robot_name], RobotCfg)
+        actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
+
+        # Find the robot index
+        robot_idx = None
+        for i, robot in enumerate(self.robots):
+            if robot.name == robot_name:
+                robot_idx = i
+                break
+
+        if robot_idx is None:
+            return []
+
+        robot_actuator_names = []
+        for name in actuator_names:
+            if name.startswith(self._mujoco_robot_names[robot_idx]):
+                joint_name = name[len(self._mujoco_robot_names[robot_idx]) :]
+                if joint_name:
+                    robot_actuator_names.append(joint_name)
+
+        joint_names = self._get_joint_names(robot_name)
+        assert set(robot_actuator_names) == set(joint_names), (
+            f"Actuator names {robot_actuator_names} do not match joint names {joint_names}"
+        )
+        return robot_actuator_names
+
+    def _get_actuator_reindex(self, robot_name: str) -> list[int]:
+        assert isinstance(self.object_dict[robot_name], RobotCfg)
+        origin_actuator_names = self._get_actuator_names(robot_name)
+        sorted_actuator_names = sorted(origin_actuator_names)
+        return [origin_actuator_names.index(name) for name in sorted_actuator_names]
+
+    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            model_name = self.mj_objects[obj_name].model
+            names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
+            names = [name.split("/")[-1] for name in names if name.split("/")[0] == model_name]
+            names = [name for name in names if name != ""]
+
+            if sort:
+                names.sort()
+            return names
+        else:
+            return []
+
+    def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
+        """
+        Charlie: needs to be taken down
+        Get the reindexed body ids for a given object. Reindex means the body reordered by the returned ids will be sorted by their names alphabetically.
+
+        Args:
+            obj_name (str): The name of the object.
+
+        Returns:
+            list[int]: body ids in the order that making body names sorted alphabetically, length is number of bodies.
+
+        Example:
+            Suppose `obj_name = "h1"`, and the model has bodies:
+
+            id 0: `"h1/"`
+            id 1: `"h1/torso"`
+            id 2: `"h1/left_leg"`
+            id 3: `"h1/right_leg"`
+            id 4: `"cube1/"`
+            id 5: `"cube2/"`
+
+            This function will return: `[2, 3, 1]`
+        """
+        assert isinstance(self.object_dict[obj_name], ArticulationObjCfg)
+        if not hasattr(self, "_body_ids_reindex_cache"):
+            self._body_ids_reindex_cache = {}
+        if obj_name not in self._body_ids_reindex_cache:
+            model_name = self.mj_objects[obj_name].model
+            body_ids_origin = []
+            for bi in range(self.physics.model.nbody):
+                body_name = self.physics.model.body(bi).name
+                if body_name.split("/")[0] == model_name and body_name != f"{model_name}/":
+                    body_ids_origin.append(bi)
+
+            body_ids_reindex = [body_ids_origin[i] for i in self.get_body_reindex(obj_name)]
+            self._body_ids_reindex_cache[obj_name] = body_ids_reindex
+
+        return self._body_ids_reindex_cache[obj_name]
+
+    def _add_custom_ground(self, mjcf_model):
+        tg = TerrainGenerator(self.scenario.ground)
+        static_friction = getattr(self.scenario.ground, "static_friction", 1.0)
+        dynamic_friction = getattr(self.scenario.ground, "dynamic_friction", 1.0)
+        restitution = getattr(self.scenario.ground, "restitution", 0.0)
+
+        vertices, triangles, height_mat = tg.generate_terrain(self.scenario.ground, type="both")
+        # Also create a triangular mesh representation for queries (e.g., LiDAR warp raycasts),
+        # consistent with IsaacGym handler's ground mesh exposure.
+        # Store mesh for external consumers (e.g., LidarPointCloud)
+        self._ground_mesh_vertices = vertices
+        self._ground_mesh_triangles = triangles.astype(np.int32)
+        z_min = float(height_mat.min())
+        z_max = float(height_mat.max())
+        z_span = max(z_max - z_min, 1e-6)
+        hfield_name = "terrain"
+
+        self._terrain_hfield_name = hfield_name
+
+        ## Position hfield centered at origin
+        half_width = (vertices[:, 0].max() - vertices[:, 0].min()) / 2.0
+        half_height = (vertices[:, 1].max() - vertices[:, 1].min()) / 2.0
+        mjcf_model.asset.add(
+            "hfield",
+            name=hfield_name,
+            nrow=height_mat.shape[0],
+            ncol=height_mat.shape[1],
+            size=[
+                half_height,
+                half_width,
+                z_span,
+                0.001,
+            ],
+        )
+        mjcf_model.worldbody.add(
+            "geom",
+            name="terrain_geom",
+            type="hfield",
+            hfield=hfield_name,
+            pos=[0.0, 0.0, z_min],
+            rgba="0.8 0.8 0.8 1",
+            friction=[static_friction, dynamic_friction, 0.001],
+            solimp=[0.9, 0.95, 0.001, 0.5, 2.0],
+            contype="1",
+            conaffinity="15",
+        )
+        self._height_mat = height_mat
+
+    ############################################################
+    ## Misc
+    ############################################################
+    @property
+    def num_envs(self) -> int:
+        return 1
+
+    @property
+    def episode_length_buf(self) -> list[int]:
+        return [self._episode_length_buf]
+
+    @property
+    def device(self) -> torch.device:
+        return torch.device("cpu")
+
+    # Compatibility
+    @property
+    def robot(self) -> RobotCfg:
+        return self.robots[0]

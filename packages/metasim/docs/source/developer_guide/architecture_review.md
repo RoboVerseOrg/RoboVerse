@@ -1,0 +1,1158 @@
+# RoboVerse Architecture Review & Improvement Roadmap
+
+> **Document Version**: 1.1
+> **Last Updated**: 2026-05-26
+> **Status**: Active Development
+
+This document provides a comprehensive architecture review of the RoboVerse codebase and outlines a structured improvement roadmap. It is intended for core maintainers and contributors who want to understand the current state of the codebase and contribute to its improvement.
+
+> **2026-05-26 update**: 4 of the originally-listed P0/P1 items have landed
+> as code + regression tests. They are kept in the document below for
+> historical context, but each is now annotated **STATUS: FIXED** with a
+> pointer to the test file that pins the fix in place. Forward / backward
+> compatibility statements are included so existing users can adopt the
+> changes without surprise — every fix is either a pure warning, a stale-
+> cache eviction, or an information upgrade to a previously-silent failure
+> mode.
+
+---
+
+## Table of Contents
+
+1. [Executive Summary](#executive-summary)
+2. [Architecture Overview](#architecture-overview)
+3. [Identified Issues](#identified-issues)
+4. [Improvement Roadmap](#improvement-roadmap)
+5. [Detailed TODO List](#detailed-todo-list)
+6. [Implementation Guidelines](#implementation-guidelines)
+7. [Testing Strategy](#testing-strategy)
+
+---
+
+## Executive Summary
+
+### Strengths
+
+RoboVerse is a well-architected multi-simulator robotics framework with several notable strengths:
+
+| Aspect | Assessment | Details |
+|--------|------------|---------|
+| **Modularity** | Excellent | Clear separation between `metasim`, `roboverse_pack`, and `roboverse_learn` |
+| **Simulator Abstraction** | Good | Unified interface across MuJoCo, IsaacSim, SAPIEN, PyBullet, Genesis |
+| **Configuration System** | Good | Type-safe `@configclass` decorator with validation |
+| **Domain Randomization** | Excellent | Comprehensive DR system with hybrid simulation support |
+| **Documentation** | Good | Extensive tutorials and API documentation |
+
+### Critical Issues Requiring Attention
+
+| Priority | Issue | Impact | Effort | Status |
+|----------|-------|--------|--------|--------|
+| P0 | State cache consistency bug | Data corruption | Low | ✅ FIXED — see Issue 1 |
+| P0 | `set_states` silent-drop of control-input keys | Silent no-op | Low | ✅ FIXED — see Issue 8 |
+| P0 | `set_dof_targets` cache staleness | Silent stale state | Low | ✅ FIXED — see Issue 9 |
+| P0 | Test coverage severely lacking | Reliability | High | 🟡 PARTIAL — see Issue 4 |
+| P1 | Parallel-sim error handling | Silent worker death | Medium | ✅ FIXED — see Issue 7 |
+| P1 | Backend interface drift (`@abstractmethod` gaps) | Late-bind failures | Low | ✅ FIXED via contract test — see Issue 2 |
+| P1 | Configuration system fragmentation | Usability | Medium | ⏳ Open |
+| P1 | Environment creation interface inconsistency | Usability | Medium | ⏳ Open |
+| P2 | Code quality issues | Maintainability | Low | ⏳ Open |
+
+---
+
+## Architecture Overview
+
+### Module Structure
+
+```
+RoboVerse/
+├── metasim/                 # Core simulation framework
+│   ├── sim/                 # Simulator handlers (MuJoCo, Isaac, SAPIEN, etc.)
+│   ├── scenario/            # Scene configuration (robots, objects, cameras)
+│   ├── task/                # Task environment abstraction
+│   ├── randomization/       # Domain randomization system
+│   ├── queries/             # Extended query system (contacts, sensors)
+│   └── utils/               # Utilities (configclass, math, state conversion)
+│
+├── roboverse_pack/          # Assets and task definitions
+│   ├── robots/              # 50+ robot configurations
+│   ├── tasks/               # 200+ task environments
+│   ├── scenes/              # Scene configurations
+│   └── queries/             # Custom query implementations
+│
+├── roboverse_learn/         # Learning algorithms
+│   ├── il/                  # Imitation learning (ACT, Diffusion Policy, etc.)
+│   ├── rl/                  # Reinforcement learning (PPO, TD3, SAC)
+│   └── vla/                 # Vision-Language-Action models
+│
+└── generation/              # Asset generation and conversion tools
+```
+
+### Core Abstractions
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        BaseSimHandler                            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+│  │ MujocoHandler│  │IsaacHandler │  │SAPIENHandler│  ...        │
+│  └─────────────┘  └─────────────┘  └─────────────┘             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        BaseTaskEnv                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+│  │PickPlaceTask│  │LocomotionTask│  │ManipulationTask│  ...     │
+│  └─────────────┘  └─────────────┘  └─────────────┘             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        ScenarioCfg                               │
+│  robots[] + objects[] + cameras[] + lights[] + sim_params       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Identified Issues
+
+### Issue 1: State Cache Consistency Bug (P0 - FIXED 2026-05-26)
+
+**Location**: `metasim/sim/base.py`
+
+**Problem (historical)**: The state cache was modified in-place when switching between `tensor` and `dict` modes, causing data corruption.
+
+**Status**: ✅ **FIXED**. ``BaseSimHandler`` now keeps two independent
+caches (``_tensor_state_cache`` / ``_dict_state_cache``). On a miss for
+the requested mode it lazily converts from the other. ``set_states``,
+``set_dof_targets`` and ``simulate`` all call ``_invalidate_state_caches``.
+
+**Tests pinning the fix**:
+- ``metasim/test/sim/test_state_modes.py::test_state_cache_mode_independence`` —
+  integration (mujoco / sapien3 / isaacsim / isaacgym / newton)
+- ``metasim/test/sim/test_state_modes.py::test_set_dof_targets_invalidates_state_cache`` —
+  integration; specifically catches the staleness regressed in Issue 9
+- ``metasim/test/test_backend_contract_general.py::test_set_states_invalidates_cache_on_all_backends`` —
+  static AST check on ``base.py``; runs in ``-k general``
+- ``metasim/test/test_set_states_key_validation.py::test_set_dof_targets_invalidates_state_cache_unit`` —
+  unit-level stub guard
+
+**Forward / backward compat**: Pure bugfix. Callers that previously
+received corrupted data now receive consistent data — there is no API
+surface change. The lazy-conversion path was already the documented
+intent; only the in-place mutation was wrong.
+
+---
+
+### Issue 2: Incomplete Abstract Method Declarations (P1 — FIXED via contract test 2026-05-26)
+
+**Location**: `metasim/sim/base.py`
+
+**Status**: ✅ **FIXED in spirit**. ``_set_dof_targets`` is now actually
+decorated ``@abstractmethod``. Two other contract methods
+(``_get_joint_names`` / ``_get_body_names``) remain commented out
+because flipping the decorator would break ``PyrepHandler`` /
+partial ``SinglePybulletHandler`` / partial ``GenesisHandler`` at
+import time — those backends genuinely do not implement them yet.
+
+Instead of breaking imports, ``metasim/test/test_backend_contract_general.py``
+statically asserts every concrete ``BaseSimHandler`` subclass overrides
+every documented contract method, with ``xfail`` markers for known
+gaps. When a backend catches up, its ``xfail`` flips to ``xpass`` —
+that's the signal to enable the decorator for real.
+
+**Forward / backward compat**: Pure additive contract enforcement. No
+existing backend was broken. New backends added later will get a
+clear failing test on day one if they forget a method.
+
+---
+
+### Issue 3: Configuration System Fragmentation (P1)
+
+**Problem**: Three different configuration systems are used across modules:
+
+| Module | System | Tools |
+|--------|--------|-------|
+| `metasim` | `@configclass` | Python dataclass + custom wrapper |
+| `roboverse_learn/il` | Hydra | YAML + OmegaConf |
+| `roboverse_learn/rl` | Mixed | YAML + tyro + argparse |
+
+**Impact**:
+- Steep learning curve for contributors
+- Configuration cannot be easily shared between modules
+- Inconsistent user experience
+
+---
+
+### Issue 4: Test Coverage Severely Lacking (P0)
+
+**Current Coverage Estimate**:
+
+| Module | Test Files | Estimated Coverage |
+|--------|------------|-------------------|
+| `metasim` | 29 | ~60-70% |
+| `roboverse_pack` | 0 | 0% |
+| `roboverse_learn` | 1 | <5% |
+| `generation` | 1 | ~20% |
+| **Overall** | 31 | **~15-20%** |
+
+**Critical Gaps**:
+- 50+ robot configurations have no validation tests
+- 200+ task environments have no tests
+- All learning algorithms (ACT, Diffusion Policy, PPO, TD3) have no tests
+- No code coverage reporting in CI
+
+---
+
+### Issue 5: Environment Creation Interface Inconsistency (P1)
+
+**Problem**: Two different ways to create environments:
+
+```python
+# Method 1: Gymnasium style (used in clean_rl, vla)
+from gymnasium import make_vec
+env = make_vec("RoboVerse/task", robots=[...], simulator=sim)
+
+# Method 2: Direct task class (used in fast_td3, rsl_rl, il)
+from metasim.task.registry import get_task_class
+env = get_task_class(task)(scenario)
+```
+
+**Impact**: Confusion for new users; inconsistent integration patterns.
+
+---
+
+### Issue 6: Code Quality Issues (P2)
+
+| Issue | Location | Count |
+|-------|----------|-------|
+| Commented-out code | Multiple files | ~15 instances |
+| Magic numbers | `sim/isaacsim/`, `sim/mujoco/` | ~20 instances |
+| Missing type annotations | Various | ~100+ functions |
+| Inconsistent error handling | All simulator handlers | Varies |
+
+---
+
+### Issue 7: Parallel Simulation Error Handling (P1 — FIXED 2026-05-26)
+
+**Location**: `metasim/sim/parallel.py`
+
+**Problem (historical)**: ``_check_error()`` was only called from
+``launch()``. A worker that died on any other operation (OOM, GPU
+failure, asset load error) left the parent process either hanging on
+``remote.recv()`` or eventually raising a cryptic ``EOFError`` — the
+real traceback in ``error_queue`` was never surfaced.
+
+**Status**: ✅ **FIXED**. Three changes:
+
+1. ``_check_error`` now also detects workers that died without
+   reporting (e.g. OOM-killed / SIGKILL) via ``process.is_alive()``.
+   Queue messages are drained with full traceback formatting.
+2. Every public method on ``ParallelHandler`` (``_set_states``,
+   ``_set_dof_targets``, ``_simulate``, ``get_joint_names``,
+   ``get_body_names``, ``device``, ``_get_states``) calls
+   ``_check_error`` after wire I/O.
+3. A new ``_recv_or_surface`` wraps ``remote.recv()`` and translates
+   ``EOFError`` / ``BrokenPipeError`` / ``ConnectionResetError`` into
+   a ``RuntimeError`` carrying the real worker traceback — instead of
+   the user chasing a cryptic IPC exception.
+
+**Tests pinning the fix**:
+- ``metasim/test/test_parallel_error_handling_general.py`` — 6 unit
+  tests using a sync queue stub (mp.Queue's async put races with the
+  immediate empty-check, so a sync stand-in keeps the tests
+  deterministic without requiring a real worker process)
+
+**Forward / backward compat**: Pure information upgrade. A call that
+previously hung or raised ``EOFError`` now raises ``RuntimeError`` with
+the actual worker traceback. Calls that previously succeeded continue
+to succeed unchanged.
+
+---
+
+### Issue 8: `set_states` silently dropped control-input keys (P0 — FIXED 2026-05-26)
+
+**Location**: `metasim/sim/base.py` (boundary), every backend `_set_states`
+
+**Problem (historical)**: ``DictRobotState`` advertises
+``dof_pos_target`` / ``dof_vel_target`` / ``dof_torque`` as valid keys,
+but every backend's ``_set_states`` only honours ``pos`` / ``rot`` /
+``dof_pos``. Callers mistakenly passing ``dof_pos_target`` to
+``set_states`` got a silent no-op — the joints never moved. This cost
+~15 downstream BC experiments before the cause was found.
+
+**Status**: ✅ **FIXED**. ``BaseSimHandler.set_states`` now runs
+``_warn_set_states_keys`` before dispatching to the backend. Unknown
+keys log a one-shot warning per ``(role, key)`` with the list of valid
+keys; the three control-input keys get a specific
+``"this is a control input — use set_dof_targets(...) instead"`` hint.
+Deduplicated per handler instance so the hot path stays quiet.
+
+**Tests pinning the fix**:
+- ``metasim/test/test_set_states_key_validation.py`` — 9 unit tests
+  (known-keys-quiet, control-input-hint, unknown-key-message,
+  deduplication, per-role labelling, TensorState fast-path, plus the
+  ``set_dof_targets`` cache-invalidation guard from Issue 9)
+
+**Forward / backward compat**: Pure warning addition — runtime behaviour
+of ``set_states`` is unchanged for code that passed valid keys. Code
+that previously silently no-op'd now produces a clear log line; the
+hot path overhead is one set membership check per (role, key) seen.
+
+---
+
+### Issue 9: `set_dof_targets` left state cache stale (P0 — FIXED 2026-05-26)
+
+**Location**: `metasim/sim/base.py`
+
+**Problem (historical)**: MuJoCo writes actuator ctrl in
+``_set_dof_targets``, and ``_get_states`` reads ctrl back as
+``joint_pos_target``. The base class's public ``set_dof_targets``
+forgot to invalidate the state cache. Any ``get_states`` between
+``set_dof_targets`` and the next ``simulate`` returned the previous
+``joint_pos_target``.
+
+**Status**: ✅ **FIXED**. ``BaseSimHandler.set_dof_targets`` now calls
+``_invalidate_state_caches()`` before dispatching to the backend.
+Universal because no concrete handler overrides the public
+``set_dof_targets`` — every backend benefits.
+
+**Tests pinning the fix**:
+- ``metasim/test/sim/test_state_modes.py::test_set_dof_targets_invalidates_state_cache`` —
+  integration; verified on mujoco / sapien3 in ``roboverse`` env, marker
+  also covers isaacsim / isaacgym / newton
+- ``metasim/test/test_set_states_key_validation.py::test_set_dof_targets_invalidates_state_cache_unit`` —
+  fast unit-level guard with stub handler
+
+**Forward / backward compat**: Pure bugfix. The first ``get_states``
+after a ``set_dof_targets`` now reflects the fresh action; previously
+it returned stale data. No API surface change.
+
+---
+
+### Issue 10: Robot config drift (P0 — FIXED via test 2026-05-26)
+
+**Location**: `roboverse_pack/robots/*.py`
+
+**Problem (historical)**: 50+ `RobotCfg` subclasses with zero
+validation tests. Typos in ``default_joint_positions`` (joints that
+aren't in ``joint_limits``) and out-of-limit defaults were silently
+clamped or ignored at sim launch — observable as wrong reset states
+rather than as a config error.
+
+**Status**: ✅ **FIXED via test gate**.
+``metasim/test/test_robot_cfg_validation_general.py`` and
+``RoboVerse/tests/test_roboverse_robot_cfg_validation.py`` walk every
+discoverable ``RobotCfg`` subclass and assert: instantiation, non-empty
+``name``, ``default_joint_positions`` keys ⊆ ``joint_limits`` keys,
+defaults ∈ limit intervals.
+
+**Bugs surfaced** (xfail-documented, not fixed in this pass to preserve
+backward compat for trained policies):
+
+1. ``AlohaAgilexCfg`` — 16 ``fl_/fr_joint{1..8}`` keys in
+   ``default_joint_positions`` but only single-arm names in
+   ``joint_limits`` (bimanual override gap)
+2. ``G1TrackingCfg`` — regex keys like ``.*_ankle_pitch_joint`` in
+   ``default_joint_positions`` not expanded; ``joint_limits`` has the
+   concrete ``left_/right_`` names
+3. ``YamCfg`` — joint2 / joint4 defaults copy-pasted from Franka home
+   pose but ``joint_limits`` are Yam's narrower ranges
+4. ``ArxL5Cfg`` — same Franka copy-paste, different limit ranges
+5. ``VegaCfg`` — ``torso_j1`` ``joint_limits`` is the single-point
+   ``[0.2, 0.2]`` — looks like a fixed offset, not a range
+6. ``SoArm100Cfg`` — ``Wrist_Pitch`` default ``-2.356`` outside
+   ``[-0.192, 3.927]``
+7. ``KochCfg`` — same shape as SoArm100
+8. ``Go2Cfg`` — ``RL/RR_thigh_joint`` default ``1.0`` outside
+   ``[-4.54, 0.52]`` (sign error)
+9. ``AllegroHandCfg`` — ``thumb_joint_0`` default ``0`` below lower
+   limit ``0.263``
+
+When a robot is fixed, its ``xfail`` flips to ``xpass`` — the
+``test_known_gap_dicts_match_actual_failures`` self-check then tells
+the maintainer to remove the entry so the contract tightens.
+
+**Forward / backward compat**: Pure additive contract enforcement. No
+``RobotCfg`` was modified — the test only documents the gaps so
+production behaviour (silent clamp / silent ignore) is preserved for
+anyone training against the current defaults.
+
+---
+
+## Warning Catalog (added 2026-05-30)
+
+As part of the 2026-05 hardening pass, ``BaseSimHandler`` and several
+concrete backends started emitting one-shot warnings for the silent-
+drop / cross-backend asymmetry patterns previously hidden inside
+``_set_states`` / ``_set_dof_targets`` / actuator wiring / scenario
+setup. Each warning fires at most once per (handler, gap-identity)
+so hot-path replay does not spam the log; each tells you exactly
+what was dropped and how to make it stop.
+
+| Source | Trigger | Meaning | Fix |
+|---|---|---|---|
+| ``set_states`` | dict has ``dof_pos_target`` / ``dof_vel_target`` / ``dof_torque`` | These are control inputs, not state — every backend silently drops them. | Call ``set_dof_targets(...)`` instead. |
+| ``set_states`` | dict has unknown key | Typo or a field no backend honours. | Use one of ``pos`` / ``rot`` / ``dof_pos``; the warning lists the valid set. |
+| ``set_states`` | dict has ``vel`` / ``ang_vel`` / ``dof_vel`` | Velocity fields are populated by ``get_states`` for inspection, but no backend writes them in ``_set_states`` today (MuJoCo zeros qvel, Sapien3 ignores). | Initialise momentum via ``simulate()`` with a non-zero initial action, or open a feature request for backend-side velocity write. |
+| ``set_states`` | dict has only one of ``pos`` / ``rot`` for an entity | Cross-backend divergence: MuJoCo silently fills the missing component with a default, Sapien3 raises ``KeyError``. | Pass both ``pos`` and ``rot``, or neither. |
+| ``set_dof_targets`` | action targets unknown robot name | Robot not in ``scenario.robots`` — every backend silently drops the action. | Use a robot name listed in the warning's "Known robots" suffix. |
+| ``set_dof_targets`` | dict has unknown joint name under a robot | Joint not in ``handler.get_joint_names(robot.name)`` — silently dropped. | Use one of the joint names from ``get_joint_names``; the warning lists them. |
+| ``set_dof_targets`` | unknown top-level key under a robot | Typo like ``dof_pos_targt``; nothing reaches the actuator. | Use ``dof_pos_target`` / ``dof_vel_target`` / ``dof_torque`` / ``dof_effort_target``. |
+| ``MujocoHandler._apply_actuator_settings`` | ``stiffness`` / ``damping`` set but ``effort_limit_sim`` unset | MJCF-authored ``forcerange`` stays active and silently dominates the new PD gain. Same RoboVerse config → different effective torque per backend. | Set ``effort_limit_sim`` on the actuator cfg to the value you want, or accept the asset-file clamp deliberately. |
+| ``NewtonHandler._apply_actuator_settings`` | same as MuJoCo above | Newton inherits ``joint_effort_limit`` from the asset file. | Same — set ``effort_limit_sim``. |
+| ``NewtonHandler._set_dof_targets`` | ``self._control`` has no ``joint_target_pos`` / ``joint_target_vel`` / ``joint_f`` buffer | Newton model has no position / velocity / effort actuator for the targeted joint. Every action write is dropped. | Verify the MJCF / URDF has actuators on the joints you control, or use ``control_type="effort"`` deliberately. |
+| ``ScenarioCfg.__post_init__`` | duplicate name across robots + objects | ``object_dict = {obj.name: obj for ...}`` in every handler collapses the duplicate. Set / get / step all silently reference the wrong entity. | Give each robot and object a unique ``name``. |
+| ``TaskBase.reset`` / ``RLTaskEnv.reset`` | ``seed=N`` passed but handler has no ``set_seed`` | Reproducibility contract: rollouts are not bit-reproducible on that backend's simulator side. (Won't fire on backends that inherit ``BaseSimHandler.set_seed`` — included for forward-compat against future backends that override.) | Implement ``set_seed`` on the handler, or call ``random.seed`` / ``np.random.seed`` / ``torch.manual_seed`` directly. |
+| ``ParallelHandler._check_error`` | worker process not alive | A multiprocessing worker died (OOM-kill, SIGKILL, segfault) without writing to ``error_queue``. | The exit code is reported in the exception; check the worker log or run with a smaller ``num_envs`` to bisect. |
+| ``ParallelHandler._recv_or_surface`` | ``EOFError`` / ``BrokenPipeError`` on ``remote.recv()`` | Worker closed its pipe — typically the worker process is dead and ``error_queue`` carries the real Python traceback. | The wrapped exception's ``__cause__`` is the original IPC error; the message describes which worker died. |
+
+When you fix a warning's root cause, the warning stops firing — it
+does NOT need a separate "silence" flag. The dedupe lives on the
+handler instance, so each Python process emits each warning at most
+once.
+
+---
+
+## Improvement Roadmap
+
+### Phase 1: Critical Fixes (Weeks 1-2)
+
+```
+┌────────────────────────────────────────────────────────┐
+│ PHASE 1: Critical Fixes                                │
+│                                                        │
+│ □ TODO-001: Fix state cache consistency                │
+│ □ TODO-002: Add @abstractmethod decorators             │
+│ □ TODO-003: Add robot configuration validation tests   │
+│ □ TODO-004: Integrate pytest-cov in CI                 │
+└────────────────────────────────────────────────────────┘
+```
+
+### Phase 2: Test Coverage (Weeks 3-6)
+
+```
+┌────────────────────────────────────────────────────────┐
+│ PHASE 2: Test Coverage Improvement                     │
+│                                                        │
+│ □ TODO-005: Add task environment integration tests     │
+│ □ TODO-006: Add learning algorithm unit tests          │
+│ □ TODO-007: Add state conversion tests                 │
+│ □ TODO-008: Add domain randomization tests             │
+└────────────────────────────────────────────────────────┘
+```
+
+### Phase 3: Interface Unification (Weeks 7-10)
+
+```
+┌────────────────────────────────────────────────────────┐
+│ PHASE 3: Interface Unification                         │
+│                                                        │
+│ □ TODO-009: Create unified environment factory         │
+│ □ TODO-010: Standardize configuration loading          │
+│ □ TODO-011: Unify error handling across simulators     │
+│ □ TODO-012: Add deprecation warnings for old APIs      │
+└────────────────────────────────────────────────────────┘
+```
+
+### Phase 4: Code Quality (Weeks 11-14)
+
+```
+┌────────────────────────────────────────────────────────┐
+│ PHASE 4: Code Quality                                  │
+│                                                        │
+│ □ TODO-013: Remove commented-out code                  │
+│ □ TODO-014: Extract magic numbers to constants         │
+│ □ TODO-015: Add comprehensive type annotations         │
+│ □ TODO-016: Add performance benchmarks                 │
+└────────────────────────────────────────────────────────┘
+```
+
+### Phase 5: Architecture Evolution (Long-term)
+
+```
+┌────────────────────────────────────────────────────────┐
+│ PHASE 5: Architecture Evolution                        │
+│                                                        │
+│ □ TODO-017: Implement plugin architecture for sims     │
+│ □ TODO-018: Create unified configuration system        │
+│ □ TODO-019: Add async simulation support               │
+│ □ TODO-020: Performance profiling integration          │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Detailed TODO List
+
+### TODO-001: Fix State Cache Consistency
+
+**Priority**: P0 (Critical)  
+**Effort**: Low (1-2 days)  
+**Risk**: Low  
+
+**Description**: Fix the state cache to maintain separate caches for tensor and dict formats.
+
+**Implementation**:
+
+```python
+# metasim/sim/base.py
+
+class BaseSimHandler(ABC):
+    def __init__(self, scenario, optional_queries=None):
+        # ... existing code ...
+        self._state_cache_expire = True
+        self._tensor_state_cache: TensorState | None = None
+        self._dict_state_cache: list[DictEnvState] | None = None
+
+    def _invalidate_cache(self) -> None:
+        """Invalidate all state caches."""
+        self._state_cache_expire = True
+        self._tensor_state_cache = None
+        self._dict_state_cache = None
+
+    def set_states(self, states, env_ids=None) -> None:
+        """Set states and invalidate cache."""
+        self._invalidate_cache()
+        self._set_states(states, env_ids)
+
+    def get_states(
+        self, 
+        env_ids: list[int] | None = None, 
+        mode: Literal["tensor", "dict"] = "tensor"
+    ) -> TensorState | list[DictEnvState]:
+        """Get states with independent caching for each mode."""
+        if self._state_cache_expire:
+            self._tensor_state_cache = self._get_states(env_ids=env_ids)
+            self._dict_state_cache = None  # Lazy conversion
+            self._state_cache_expire = False
+
+        if mode == "tensor":
+            return self._tensor_state_cache
+        else:
+            if self._dict_state_cache is None:
+                self._dict_state_cache = state_tensor_to_nested(
+                    self, self._tensor_state_cache
+                )
+            return self._dict_state_cache
+```
+
+**Test Case**:
+
+```python
+# metasim/test/sim/test_state_cache.py
+
+@pytest.mark.general
+def test_state_cache_mode_independence():
+    """Verify that switching modes doesn't corrupt cache."""
+    handler = create_test_handler()
+    handler.launch()
+    
+    # Get tensor state
+    states_t1 = handler.get_states(mode="tensor")
+    assert isinstance(states_t1, TensorState)
+    
+    # Get dict state (should not affect tensor cache)
+    states_d = handler.get_states(mode="dict")
+    assert isinstance(states_d, list)
+    
+    # Get tensor state again (should return same type)
+    states_t2 = handler.get_states(mode="tensor")
+    assert isinstance(states_t2, TensorState)
+    
+    # Values should match
+    assert torch.allclose(states_t1.pos, states_t2.pos)
+```
+
+**Acceptance Criteria**:
+- [ ] Test case passes
+- [ ] Existing tests still pass
+- [ ] No breaking changes to public API
+
+---
+
+### TODO-002: Add @abstractmethod Decorators
+
+**Priority**: P1  
+**Effort**: Very Low (1 hour)  
+**Risk**: Very Low  
+
+**Files to modify**:
+- `metasim/sim/base.py`
+
+**Changes**:
+
+```python
+# Before
+# @abstractmethod
+def _set_dof_targets(self, actions: list[Action]) -> None:
+    raise NotImplementedError
+
+# After
+@abstractmethod
+def _set_dof_targets(self, actions: list[Action]) -> None:
+    """Set DOF targets. Subclasses must implement this method."""
+    raise NotImplementedError
+```
+
+**Verification**:
+```bash
+# Run mypy to verify abstract method detection
+mypy metasim/sim/base.py
+```
+
+---
+
+### TODO-003: Add Robot Configuration Validation Tests
+
+**Priority**: P0  
+**Effort**: Medium (2-3 days)  
+**Risk**: Low  
+
+**Implementation**:
+
+```python
+# metasim/test/test_robot_configs.py
+
+import pytest
+from pathlib import Path
+import importlib
+import pkgutil
+
+def get_all_robot_configs():
+    """Dynamically discover all robot configuration classes."""
+    import roboverse_pack.robots as robots_module
+    
+    configs = []
+    for importer, modname, ispkg in pkgutil.iter_modules(robots_module.__path__):
+        if modname.endswith('_cfg'):
+            module = importlib.import_module(f'roboverse_pack.robots.{modname}')
+            for name in dir(module):
+                obj = getattr(module, name)
+                if (isinstance(obj, type) and 
+                    hasattr(obj, 'name') and 
+                    name.endswith('Cfg')):
+                    configs.append(obj)
+    return configs
+
+ALL_ROBOT_CONFIGS = get_all_robot_configs()
+
+@pytest.mark.general
+@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS, 
+                         ids=lambda x: x.__name__)
+def test_robot_config_instantiation(robot_cfg_cls):
+    """Verify robot config can be instantiated."""
+    cfg = robot_cfg_cls()
+    assert cfg.name is not None
+    assert isinstance(cfg.name, str)
+    assert len(cfg.name) > 0
+
+@pytest.mark.general
+@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS,
+                         ids=lambda x: x.__name__)
+def test_robot_config_has_asset_path(robot_cfg_cls):
+    """Verify robot config has at least one asset path."""
+    cfg = robot_cfg_cls()
+    
+    asset_paths = [
+        getattr(cfg, 'usd_path', None),
+        getattr(cfg, 'urdf_path', None),
+        getattr(cfg, 'mjcf_path', None),
+    ]
+    
+    valid_paths = [p for p in asset_paths if p is not None and len(p) > 0]
+    assert len(valid_paths) > 0, f"{cfg.name} has no valid asset path"
+
+@pytest.mark.general
+@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS,
+                         ids=lambda x: x.__name__)
+def test_robot_config_has_actuators(robot_cfg_cls):
+    """Verify robot config has actuator definitions."""
+    cfg = robot_cfg_cls()
+    
+    if hasattr(cfg, 'actuators'):
+        assert len(cfg.actuators) > 0, f"{cfg.name} has no actuators defined"
+
+@pytest.mark.general
+@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS,
+                         ids=lambda x: x.__name__)
+def test_robot_config_joint_limits_valid(robot_cfg_cls):
+    """Verify joint limits are valid (lower < upper)."""
+    cfg = robot_cfg_cls()
+    
+    if hasattr(cfg, 'joint_limits'):
+        for joint_name, (lower, upper) in cfg.joint_limits.items():
+            assert lower < upper, \
+                f"{cfg.name}.{joint_name}: lower ({lower}) >= upper ({upper})"
+```
+
+---
+
+### TODO-004: Integrate pytest-cov in CI
+
+**Priority**: P0  
+**Effort**: Low (1 day)  
+**Risk**: Very Low  
+
+**Changes to `.github/workflows/premerge-ci.yml`**:
+
+```yaml
+# Add coverage reporting step
+- name: Run tests with coverage
+  run: |
+    pytest metasim/test \
+      --cov=metasim \
+      --cov-report=xml \
+      --cov-report=html \
+      --cov-fail-under=30 \
+      -k ${{ matrix.test_type }}
+
+- name: Upload coverage to Codecov
+  uses: codecov/codecov-action@v4
+  with:
+    file: ./coverage.xml
+    flags: ${{ matrix.test_type }}
+    fail_ci_if_error: false
+```
+
+**Add `pyproject.toml` configuration**:
+
+```toml
+[tool.coverage.run]
+source = ["metasim"]
+omit = ["metasim/test/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+```
+
+---
+
+### TODO-005: Add Task Environment Integration Tests
+
+**Priority**: P1  
+**Effort**: High (1 week)  
+**Risk**: Medium  
+
+**Implementation**:
+
+```python
+# metasim/test/test_task_environments.py
+
+import pytest
+from metasim.task.registry import get_task_class, TASK_REGISTRY
+
+# Select representative tasks for testing
+CORE_TASKS = [
+    "pick_cube",
+    "place_cube", 
+    "open_drawer",
+    "close_drawer",
+    "push_button",
+]
+
+@pytest.mark.mujoco
+@pytest.mark.parametrize("task_name", CORE_TASKS)
+def test_task_reset_step_mujoco(task_name):
+    """Test basic reset/step cycle for core tasks on MuJoCo."""
+    task_cls = get_task_class(task_name)
+    scenario = task_cls.scenario.copy()
+    scenario.update(
+        simulator="mujoco",
+        num_envs=1,
+        headless=True,
+    )
+    
+    env = task_cls(scenario, device="cpu")
+    env.launch()
+    
+    try:
+        # Test reset
+        obs, info = env.reset()
+        assert obs is not None
+        
+        # Test step
+        action = env.action_space.sample()
+        obs, reward, terminated, truncated, info = env.step(action)
+        
+        assert obs is not None
+        assert isinstance(reward, (int, float, torch.Tensor))
+        assert isinstance(terminated, (bool, torch.Tensor))
+        assert isinstance(truncated, (bool, torch.Tensor))
+    finally:
+        env.close()
+```
+
+---
+
+### TODO-006: Add Learning Algorithm Unit Tests
+
+**Priority**: P1  
+**Effort**: High (1-2 weeks)  
+**Risk**: Medium  
+
+**Example for Diffusion Policy**:
+
+```python
+# roboverse_learn/il/tests/test_diffusion_policy.py
+
+import pytest
+import torch
+from roboverse_learn.il.policies.dp.ddpm_dit_image_policy import DDPMDiTImagePolicy
+
+@pytest.fixture
+def sample_obs():
+    """Create sample observation for testing."""
+    return {
+        "image": torch.randn(1, 3, 224, 224),
+        "agent_pos": torch.randn(1, 7),
+    }
+
+def test_diffusion_policy_forward():
+    """Test forward pass of diffusion policy."""
+    policy = DDPMDiTImagePolicy(
+        obs_dim=7,
+        action_dim=7,
+        horizon=16,
+        # ... minimal config
+    )
+    
+    obs = sample_obs()
+    action = policy.predict_action(obs)
+    
+    assert action.shape == (1, 16, 7)  # (batch, horizon, action_dim)
+
+def test_diffusion_policy_training_step():
+    """Test single training step."""
+    policy = DDPMDiTImagePolicy(...)
+    optimizer = torch.optim.Adam(policy.parameters())
+    
+    batch = create_training_batch()
+    loss = policy.compute_loss(batch)
+    
+    assert loss.requires_grad
+    loss.backward()
+    optimizer.step()
+```
+
+---
+
+### TODO-009: Create Unified Environment Factory
+
+**Priority**: P1  
+**Effort**: Medium (3-5 days)  
+**Risk**: Medium  
+
+**Implementation**:
+
+```python
+# metasim/env_factory.py
+
+from typing import Union, List, Optional
+from metasim.scenario.robot import RobotCfg
+
+def make_env(
+    task: str,
+    robots: Optional[List[Union[str, RobotCfg]]] = None,
+    simulator: str = "mujoco",
+    num_envs: int = 1,
+    headless: bool = True,
+    device: str = "cuda",
+    cameras: Optional[List] = None,
+    **kwargs
+):
+    """
+    Unified environment factory for RoboVerse.
+    
+    This is the recommended way to create environments.
+    
+    Args:
+        task: Task name (e.g., "pick_cube", "locomotion_walk")
+        robots: List of robot names or RobotCfg instances
+        simulator: Simulator backend ("mujoco", "isaacsim", "sapien3", etc.)
+        num_envs: Number of parallel environments
+        headless: Whether to run in headless mode
+        device: Device for tensor computations
+        cameras: Camera configurations for observations
+        **kwargs: Additional task-specific arguments
+    
+    Returns:
+        BaseTaskEnv: Configured environment instance
+    
+    Example:
+        >>> env = make_env(
+        ...     task="pick_cube",
+        ...     robots=["franka"],
+        ...     simulator="mujoco",
+        ...     num_envs=16,
+        ... )
+        >>> obs, info = env.reset()
+        >>> obs, reward, term, trunc, info = env.step(action)
+    """
+    from metasim.task.registry import get_task_class
+    from metasim.utils.setup_util import get_robot
+    
+    # Resolve task class
+    task_cls = get_task_class(task)
+    
+    # Build scenario from task default
+    scenario = task_cls.scenario.copy()
+    
+    # Resolve robots
+    if robots is not None:
+        resolved_robots = []
+        for robot in robots:
+            if isinstance(robot, str):
+                resolved_robots.append(get_robot(robot))
+            else:
+                resolved_robots.append(robot)
+        scenario.robots = resolved_robots
+    
+    # Apply overrides
+    scenario.update(
+        simulator=simulator,
+        num_envs=num_envs,
+        headless=headless,
+        cameras=cameras or [],
+    )
+    
+    # Create and return environment
+    env = task_cls(scenario, device=device, **kwargs)
+    env.launch()
+    
+    return env
+
+# Also register with gymnasium for compatibility
+def register_gymnasium_envs():
+    """Register all RoboVerse tasks with Gymnasium."""
+    import gymnasium
+    from metasim.task.registry import TASK_REGISTRY
+    
+    for task_name in TASK_REGISTRY:
+        gymnasium.register(
+            id=f"RoboVerse/{task_name}",
+            entry_point="metasim.env_factory:make_env",
+            kwargs={"task": task_name},
+        )
+```
+
+---
+
+### TODO-013: Remove Commented-Out Code
+
+**Priority**: P2  
+**Effort**: Very Low (2 hours)  
+**Risk**: Very Low  
+
+**Files to clean**:
+
+| File | Line | Content |
+|------|------|---------|
+| `metasim/sim/base.py` | 18 | `# from metasim.utils.hf_util import FileDownloader` |
+| `metasim/sim/base.py` | 36 | `# FileDownloader(scenario).do_it()` |
+| `metasim/sim/base.py` | 86 | `# @abstractmethod` |
+| `metasim/scenario/scenario.py` | 72 | Various commented code |
+
+**Approach**: 
+1. Search for `# ` patterns followed by code
+2. Review each instance
+3. Either remove or convert to proper TODO comment
+
+---
+
+### TODO-014: Extract Magic Numbers to Constants
+
+**Priority**: P2  
+**Effort**: Low (1-2 days)  
+**Risk**: Low  
+
+**Create constants file**:
+
+```python
+# metasim/constants.py
+
+"""Framework-wide constants."""
+
+# Simulation defaults
+DEFAULT_DT = 0.015  # 15ms physics timestep
+DEFAULT_DECIMATION = 2
+DEFAULT_GRAVITY = (0.0, 0.0, -9.81)
+
+# Cache settings
+STATE_CACHE_SIZE = 1000
+MAX_PARALLEL_ENVS = 4096
+
+# Timeouts
+DEFAULT_LAUNCH_TIMEOUT = 30.0
+DEFAULT_STEP_TIMEOUT = 5.0
+
+# Numerical tolerances
+POSITION_TOLERANCE = 1e-5
+ROTATION_TOLERANCE = 1e-4
+```
+
+---
+
+## Implementation Guidelines
+
+### Safe Modification Protocol
+
+Before making any changes, follow this checklist:
+
+```
+□ Pre-modification
+  ├── □ Read existing tests for the module
+  ├── □ Run existing tests (ensure they pass)
+  ├── □ Understand the change's impact scope
+  └── □ Check for downstream dependencies
+
+□ Implementation
+  ├── □ Write tests first (TDD preferred)
+  ├── □ Make small, focused commits
+  ├── □ Maintain backward compatibility
+  └── □ Add deprecation warnings if needed
+
+□ Post-modification
+  ├── □ Run full test suite locally
+  ├── □ Check for linter errors
+  ├── □ Update documentation if needed
+  └── □ Create detailed PR description
+```
+
+### Feature Flag Pattern
+
+For high-risk changes, use feature flags:
+
+```python
+# metasim/config.py
+
+class FeatureFlags:
+    """Feature flags for gradual rollout of changes."""
+    
+    # State cache v2 with independent tensor/dict caches
+    USE_INDEPENDENT_STATE_CACHE = False
+    
+    # New unified environment factory
+    USE_UNIFIED_ENV_FACTORY = False
+    
+    # Strict type checking in configs
+    STRICT_CONFIG_VALIDATION = False
+```
+
+### Deprecation Pattern
+
+```python
+import warnings
+from functools import wraps
+
+def deprecated(message: str, removal_version: str = "0.3.0"):
+    """Decorator to mark functions as deprecated."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            warnings.warn(
+                f"{func.__name__} is deprecated: {message}. "
+                f"Will be removed in version {removal_version}.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+# Usage
+@deprecated("Use make_env() instead", removal_version="0.4.0")
+def create_environment_legacy(...):
+    ...
+```
+
+---
+
+## Testing Strategy
+
+### Test Hierarchy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    End-to-End Tests                         │
+│              (Full training pipeline tests)                 │
+│                      ~5% of tests                           │
+├─────────────────────────────────────────────────────────────┤
+│                   Integration Tests                         │
+│         (Task reset/step, multi-env, rendering)             │
+│                     ~25% of tests                           │
+├─────────────────────────────────────────────────────────────┤
+│                      Unit Tests                             │
+│    (Individual functions, state conversion, configs)        │
+│                     ~70% of tests                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Running Tests Locally
+
+```bash
+# Run all general tests (no simulator required)
+pytest metasim/test -k general -v
+
+# Run MuJoCo tests
+pytest metasim/test -k mujoco -v
+
+# Run with coverage
+pytest metasim/test --cov=metasim --cov-report=html
+
+# Run specific test file
+pytest metasim/test/sim/test_state_cache.py -v
+```
+
+### Coverage Targets
+
+| Phase | Target Coverage | Timeline |
+|-------|-----------------|----------|
+| Current | ~15-20% | - |
+| Phase 1 | 30% | Week 2 |
+| Phase 2 | 50% | Week 6 |
+| Phase 3 | 60% | Week 10 |
+| Long-term | 70%+ | Week 14+ |
+
+---
+
+## Appendix: Quick Reference
+
+### Priority Definitions
+
+| Priority | Definition | Response Time |
+|----------|------------|---------------|
+| P0 | Critical - blocks users or causes data corruption | Immediate |
+| P1 | High - significant usability or reliability issue | 1-2 weeks |
+| P2 | Medium - code quality or maintainability | 2-4 weeks |
+| P3 | Low - nice to have improvements | Backlog |
+
+### Effort Definitions
+
+| Effort | Time Estimate | Description |
+|--------|---------------|-------------|
+| Very Low | < 4 hours | Single file, obvious change |
+| Low | 1-2 days | Few files, clear scope |
+| Medium | 3-5 days | Multiple files, some complexity |
+| High | 1-2 weeks | Significant refactoring |
+| Very High | 2+ weeks | Architecture-level changes |
+
+---
+
+## Contributing
+
+If you want to contribute to any of these improvements:
+
+1. Comment on the relevant GitHub issue (or create one)
+2. Follow the [Safe Modification Protocol](#safe-modification-protocol)
+3. Start with lower-risk items to familiarize yourself with the codebase
+4. Ask questions in discussions if anything is unclear
+
+Recommended starting points for new contributors:
+- TODO-002: Add @abstractmethod decorators (Very Low effort)
+- TODO-013: Remove commented-out code (Very Low effort)
+- TODO-003: Add robot configuration validation tests (Medium effort, high impact)

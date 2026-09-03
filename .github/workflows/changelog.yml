@@ -23,11 +23,16 @@ jobs:
           set -euo pipefail
           if [[ ",$LABELS," == *",no-changelog,"* ]]; then echo "no-changelog label present"; exit 0; fi
           changed=$(git diff --name-only "$BASE" "$HEAD")
-          if ! grep -qP '^(roboverse_pack|roboverse_learn|scripts|get_started)/' <<<"$changed"; then
-            echo "no library files changed"; exit 0
+          has_entry() { grep -qx "$1" <<<"$changed" && git diff "$BASE" "$HEAD" -- "$1" | grep -q '^+.*- '; }
+          status=0
+          # RoboVerse content / learning / examples -> CHANGELOG.md
+          if grep -qP '^(roboverse_pack|roboverse_learn|scripts|get_started)/' <<<"$changed"; then
+            if has_entry CHANGELOG.md; then echo "RoboVerse CHANGELOG entry found"; else
+              echo "::error::This PR changes roboverse_pack/, roboverse_learn/, scripts/ or get_started/ but adds no line under '## [Unreleased]' in CHANGELOG.md (or add the no-changelog label)."; status=1; fi
           fi
-          if grep -qx 'CHANGELOG.md' <<<"$changed" && git diff "$BASE" "$HEAD" -- CHANGELOG.md | grep -q '^+.*- '; then
-            echo "CHANGELOG entry found"; exit 0
+          # MetaSim library (not its tests) -> packages/metasim/CHANGELOG.md
+          if grep -qP '^packages/metasim/metasim/(?!test/)' <<<"$changed"; then
+            if has_entry packages/metasim/CHANGELOG.md; then echo "MetaSim CHANGELOG entry found"; else
+              echo "::error::This PR changes packages/metasim/metasim/ but adds no line under '## [Unreleased]' in packages/metasim/CHANGELOG.md (or add the no-changelog label)."; status=1; fi
           fi
-          echo "::error::This PR changes roboverse_pack/, roboverse_learn/, scripts/ or get_started/ but adds no line under '## [Unreleased]' in CHANGELOG.md (or add the no-changelog label)."
-          exit 1
+          exit $status

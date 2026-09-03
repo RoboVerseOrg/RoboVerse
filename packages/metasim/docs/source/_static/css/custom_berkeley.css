@@ -1,0 +1,122 @@
+/*
+ * For reference: https://pydata-sphinx-theme.readthedocs.io/en/v0.9.0/user_guide/customizing.html
+ * For colors: https://clrs.cc/
+ */
+
+html {
+    --pst-font-size-h0: 2.5rem;
+    --pst-font-size-h2: 2.2rem;
+    --pst-font-size-h3: 1.7rem;
+    --pst-font-size-h4: 1.3rem;
+    --pst-font-size-h5: 1rem;
+    --pst-font-size-h6: 1rem;
+}
+
+/* Redesigned Color Theme */
+
+/* Light Theme */
+html[data-theme="light"] {
+    --pst-color-primary: #003263;         /* Berkeley Blue for primary actions */
+    --pst-color-secondary: #fdb515;         /* California Gold for secondary accents */
+    --pst-color-secondary-highlight: #fdb515;
+    --pst-color-inline-code-links: #003263;  /* Keeping inline code links consistent with primary */
+    --pst-color-info: #003263;               /* Info text uses the primary color */
+    --pst-color-info-highlight: #003263;
+    --pst-color-info-bg: #c2b9a7;             /* Bay Fog as a soft background for info sections */
+    --pst-color-attention: #e09e19;          /* Medallist used for attention alerts */
+    --pst-color-text-base: #212121;          /* Dark grey for base text for good readability */
+    --pst-color-text-muted: #727272;         /* Medium grey for muted text */
+    --pst-color-shadow: #bdbdbd;
+    --pst-color-border: #e0e0e0;             /* Light grey border */
+    --pst-color-inline-code: #003263;
+    --pst-color-target: #bc9b6a;             /* Metallic Gold as target mark */
+    --pst-color-background: #fafafa;         /* Bright, clean background */
+    --pst-color-on-background: #fafafa;
+    --pst-color-surface: #f5f5f5;            /* For cards or panels */
+    --pst-color-on-surface: #eeeeee;
+    --pst-color-link: #003263;
+    --pst-color-link-hover: #2d637f;         /* Founder's Rock adds a subtle contrast on hover */
+    --pst-color-table-row-hover-bg: #e8eaf6;   /* Light indigo tint (or close to a tint of primary) */
+    --pst-color-accent: #9dad33;             /* Soybean as an accent color */
+}
+
+/* Dark Theme */
+html[data-theme="dark"] {
+    --pst-color-primary: #00b0da;         /* Brighter (Lawrence) for contrasting dark backgrounds */
+    --pst-color-secondary: #fdb515;         /* California Gold remains to define secondary actions */
+    --pst-color-secondary-highlight: #fdb515;
+    --pst-color-inline-code-links: #00b0da;
+    --pst-color-info: #00b0da;
+    --pst-color-info-highlight: #00b0da;
+    --pst-color-info-bg: #2e2e2e;           /* Dark grey info background for readability */
+    --pst-color-attention: #e09e19;          /* Medallist as the attention color */
+    --pst-color-text-base: #f5f5f5;          /* Much lighter text on dark surfaces */
+    --pst-color-text-muted: #d1d1d1;
+    --pst-color-shadow: #000000;
+    --pst-color-border: #757575;
+    --pst-color-inline-code: #00b0da;
+    --pst-color-target: #bc9b6a;
+    --pst-color-background: #121212;         /* Deep dark background */
+    --pst-color-on-background: #1e1e1e;
+    --pst-color-surface: #212121;
+    --pst-color-on-surface: #373737;
+    --pst-color-link: #00b0da;
+    --pst-color-link-hover: #2d637f;
+    --pst-color-table-row-hover-bg: #2e2e2e;
+    --pst-color-accent: #9dad33;
+}
+
+a {
+    text-decoration: none !important;
+}
+
+/* for the announcement link */
+.bd-header-announcement a,
+.bd-header-version-warning a {
+    color: #7FDBFF;
+}
+
+/* for the search box in the navbar */
+.form-control {
+    border-radius: 0 !important;
+    border: none !important;
+    outline: none !important;
+}
+
+/* reduce padding for logo */
+.navbar-brand {
+    padding-top: 0.0rem !important;
+    padding-bottom: 0.0rem !important;
+}
+
+.navbar-icon-links {
+    padding-top: 0.0rem !important;
+    padding-bottom: 0.0rem !important;
+}
+
+.bd-main .bd-content .bd-article-container {
+    /* min-width: 100%; */
+    max-width: 100%;  /* default is 60em */
+}
+/* .bd-page-width {
+    max-width: 90%;
+} */
+
+.bd-sidebar-primary {
+    width: 19em;
+    padding-left: 3rem;
+}
+
+.bd-links__title {
+    /* Hide the original text visually */
+    position: relative;
+    color: transparent;
+}
+
+.bd-links__title::before {
+    content: "Navigation";
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: #000; /* Set your desired color */
+}

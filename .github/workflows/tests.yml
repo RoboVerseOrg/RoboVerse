@@ -1,6 +1,7 @@
 name: Tests
 
-# Runs lint + the whole RoboVerse content suite (tests/) on CPU.
+# Runs lint + MetaSim's simulator-free suite (packages/metasim, 3.10/3.11) + the whole RoboVerse
+# content suite (tests/) on CPU. Everything installs from this checkout: packages/metasim first.
 #
 # Until this existed, CI ran exactly one test file (see task-contract.yml), so regressions in
 # the other ~50 files went unnoticed. metasim is a declared git dependency, so a CPU job can
@@ -14,7 +15,7 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -37,6 +38,33 @@ jobs:
       - name: ruff format --check
         run: python -m ruff format --check .
 
+  metasim-general:
+    # MetaSim's own PR gate: the simulator-free suite on both supported CPython versions.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    name: metasim general (${{ matrix.python-version }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: packages/metasim/pyproject.toml
+      - name: Install MetaSim (CPU torch first so pip cannot pick a CUDA wheel)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e "packages/metasim[dev,examples,mujoco]"
+      - name: Simulator-free test suite
+        working-directory: packages/metasim
+        env:
+          MUJOCO_GL: disable
+        run: python -m pytest -k general -q -rs
+
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -52,7 +80,7 @@ jobs:
           python -m pip install --upgrade pip
           # CPU torch first: with only --extra-index-url pip may still pick the CUDA wheel from PyPI
           python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          python -m pip install -e ".[dev,mujoco]"
+          python -m pip install -e "packages/metasim[dev,examples,mujoco]" -e ".[dev,mujoco]"
       - name: Run test suite
         env:
           # Hosted runners have no EGL/GLX; with MUJOCO_GL=egl `import mujoco` itself fails
