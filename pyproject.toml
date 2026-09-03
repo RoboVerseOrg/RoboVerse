@@ -1,7 +1,7 @@
 [build-system]
 # setuptools >= 84.0.0 is the first release where [tool.setuptools] license-files is stable under PEP 639;
 # an older builder would silently drop NOTICE and the vendored LICENSE files from the wheel.
-requires = ["setuptools>=77", "wheel"]
+requires = ["setuptools>=84.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
