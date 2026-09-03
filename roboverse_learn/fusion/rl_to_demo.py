@@ -78,7 +78,7 @@ def _mlp_from_linear_state_dict(sd, device, activation=None):
     # state_dict keys for the Sequential are 0.weight, 2.weight, ... (ELU has none)
     remap = {}
     seq_linear_pos = [p for p, m in enumerate(layers) if isinstance(m, nn.Linear)]
-    for pos, i in zip(seq_linear_pos, idxs):
+    for pos, i in zip(seq_linear_pos, idxs, strict=False):
         remap[f"{pos}.weight"] = sd[f"mlp.{i}.weight"]
         remap[f"{pos}.bias"] = sd[f"mlp.{i}.bias"]
     mlp.load_state_dict(remap)

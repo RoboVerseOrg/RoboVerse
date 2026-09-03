@@ -49,7 +49,9 @@ def check_elements(target, values):
                 raise ValueError(f"Dtype of {elem} should be {target[elem]['dtype']} but is {values[elem].dtype}")
             if target[elem]["range"] is not None:
                 if isinstance(target[elem]["range"], list):
-                    for vmin, vmax, val in zip(target[elem]["range"][0], target[elem]["range"][1], values[elem]):
+                    for vmin, vmax, val in zip(
+                        target[elem]["range"][0], target[elem]["range"][1], values[elem], strict=False
+                    ):
                         if not (val >= vmin and val <= vmax):
                             raise ValueError(
                                 f"{elem} is out of range. Should be in {target[elem]['range']} but is {values[elem]}."
