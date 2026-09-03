@@ -241,11 +241,11 @@ if __name__ == "__main__":
                 actor_optimizer.step()
 
                 # update the target network
-                for param, target_param in zip(actor.parameters(), target_actor.parameters()):
+                for param, target_param in zip(actor.parameters(), target_actor.parameters(), strict=False):
                     target_param.data.copy_(args.tau * param.data + (1 - args.tau) * target_param.data)
-                for param, target_param in zip(qf1.parameters(), qf1_target.parameters()):
+                for param, target_param in zip(qf1.parameters(), qf1_target.parameters(), strict=False):
                     target_param.data.copy_(args.tau * param.data + (1 - args.tau) * target_param.data)
-                for param, target_param in zip(qf2.parameters(), qf2_target.parameters()):
+                for param, target_param in zip(qf2.parameters(), qf2_target.parameters(), strict=False):
                     target_param.data.copy_(args.tau * param.data + (1 - args.tau) * target_param.data)
 
             if global_step % 100 == 0:

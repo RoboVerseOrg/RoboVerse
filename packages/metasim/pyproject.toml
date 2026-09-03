@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "roboverse-metasim"  # PyPI name; the import name stays `metasim` (`metasim` on PyPI is an unrelated project)
 version = "1.0.0b0"  # lockstep with roboverse-py (one tag releases both packages)
 description = "MetaSim: A unified simulation framework for robotics"
+readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = { file = "LICENSE" }
 dependencies = [

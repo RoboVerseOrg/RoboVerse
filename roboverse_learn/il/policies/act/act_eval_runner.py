@@ -475,7 +475,9 @@ def main():
                 reorder_idx = env.handler.get_joint_reindex(args.robot)
                 inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
                 actions = action[inverse_reorder_idx]
-                inner_actions = {"dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), actions))}
+                inner_actions = {
+                    "dof_pos_target": dict(zip(scenario.robots[0].joint_limits.keys(), actions, strict=False))
+                }
                 # Format: actions[env_id][robot_name][action_type]
                 actions = [{"franka": inner_actions}]
                 # log.debug(f"Actions: {actions}")
