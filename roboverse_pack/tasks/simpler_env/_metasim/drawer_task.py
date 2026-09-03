@@ -32,7 +32,7 @@ from .._native.robot_config import (
     google_robot_deployed_controller_configs,
 )
 from .._native.scene import INIT_QPOS, ROBOT_INIT_HEIGHT, SCENE_OFFSET
-from .base import SimplerMetaSimTask
+from .base import SimplerMetaSimTask, apply_external_states
 
 ROBOT_NAME, CAB_NAME, CAM_NAME = "google_robot", "cabinet", "overhead_camera"
 CABINET_POSE_P = (-0.295, 0.0, 0.017)
@@ -157,7 +157,10 @@ class SimplerDrawerTask(SimplerMetaSimTask):
             j.set_drive_property(stiffness=0, damping=1)
         self.joint_names = [j.name for j in self.cabinet.get_active_joints()]
 
-    def reset(self, env_ids=None, options=None, seed=0):
+    def reset(self, states=None, env_ids=None, seed=0, options=None):
+        """Reset the task. ``states``/``env_ids``/``seed`` are the ``BaseTaskEnv.reset`` contract;
+        ``options`` is the SimplerEnv episode spec (robot init options / station) from the gym
+        adapter."""
         options = options or {}
         rng = np.random.RandomState(seed)
         self.drawer_id = str(rng.choice(list(self.drawer_ids)))
@@ -178,6 +181,7 @@ class SimplerDrawerTask(SimplerMetaSimTask):
             qpos[self.joint_idx] = CLOSE_INIT_QPOS
         self.cabinet.set_qpos(qpos)
         self.cabinet.set_qvel(np.zeros(self.cabinet.dof))
+        apply_external_states(self, states, env_ids)
         self.controller.reset()
         self._elapsed = 0
         return self.get_obs(), {"drawer_id": self.drawer_id}

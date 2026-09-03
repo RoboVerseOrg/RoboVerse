@@ -61,6 +61,31 @@ def candidate_mesh_objects(models_dir, model_ids, *, friction=None, damping=0.1,
     return cfgs
 
 
+def apply_external_states(task, states, env_ids=None) -> bool:
+    """Apply caller-supplied ``states`` on top of a SimplerEnv task's scripted reset.
+
+    ``BaseTaskEnv.reset(states=...)`` means "put the selected envs in these states instead of the
+    task's initial ones"; the IL/VLA eval runners replay demo initial states that way. A SimplerEnv
+    reset scripts its own layout (per-episode RNG, fall-and-settle), so external states are applied
+    once that layout is in place and before the controller / success checker latch onto it — the
+    caller's states win, exactly as in the base contract.
+
+    Args:
+        task: The SimplerEnv task (any ``BaseTaskEnv``; used for its handler).
+        states: External states, or None to keep the task's scripted initial states.
+        env_ids: The environment ids the states apply to.
+
+    Returns:
+        True if states were applied, False if ``states`` was None. Callers use this to refresh any
+        cached quantity they derived from the scripted layout (e.g. post-settle object heights).
+    """
+    if states is None:
+        return False
+    task.handler.set_states(states=states, env_ids=env_ids)
+    task.handler.refresh_render()
+    return True
+
+
 class SimplerMetaSimTask(BaseTaskEnv):
     """Base task: handler loads the scenario; SimplerEnv control/overlay/checker layer on top."""
 

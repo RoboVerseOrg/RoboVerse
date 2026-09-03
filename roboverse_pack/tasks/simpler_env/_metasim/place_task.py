@@ -26,7 +26,7 @@ from .._native.grasp import compute_total_impulse, get_pairwise_contacts
 from .._native.overlay import load_overlay_image
 from .._native.robot_config import google_robot_deployed_controller_configs
 from .._native.scene import INIT_QPOS, ROBOT_INIT_HEIGHT
-from .base import HIDDEN_POS, SimplerMetaSimTask, candidate_mesh_objects, set_actor_collision
+from .base import HIDDEN_POS, SimplerMetaSimTask, apply_external_states, candidate_mesh_objects, set_actor_collision
 from .drawer_task import CABINET_POSE_P, _google_robot_cfg, _overhead_camera_cfg, dummy_drawer_floor_cfg
 
 CAB_NAME = "cabinet"
@@ -123,7 +123,9 @@ class SimplerPlaceTask(SimplerMetaSimTask):
             o.lock_motion(1, 1, 1, 1, 1, 1)
             set_actor_collision(o, False)
 
-    def reset(self, env_ids=None, options=None, seed=0):
+    def reset(self, states=None, env_ids=None, seed=0, options=None):
+        """Reset the task. ``states``/``env_ids``/``seed`` are the ``BaseTaskEnv.reset`` contract;
+        ``options`` is the SimplerEnv episode spec (obj/robot init options) from the gym adapter."""
         options = options or {}
         if self.fixed_model_id is not None:
             self.model_id = self.fixed_model_id
@@ -169,6 +171,9 @@ class SimplerPlaceTask(SimplerMetaSimTask):
         self.robot.set_root_pose(sapien.Pose([rxy[0], rxy[1], ROBOT_INIT_HEIGHT], rquat))
         self.robot.set_qpos(INIT_QPOS)
         self.robot.set_qvel(np.zeros(self.robot.dof))
+        if apply_external_states(self, states, env_ids):
+            # the success checker keys off the settled height, so re-read it from the applied states
+            self.obj_height_after_settle = float(self.obj.pose.p[2])
         self.controller.reset()
         self.drawer_link = next(x for x in self.cabinet.get_links() if x.get_name() == f"{self.drawer_id}_drawer")
         self.drawer_collision = self.drawer_link.get_collision_shapes()[2]
