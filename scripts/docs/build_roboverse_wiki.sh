@@ -3,9 +3,11 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 output_dir="${1:-"$repo_root/public"}"
-metasim_repo="${METASIM_REPO:-https://github.com/RoboVerseOrg/MetaSim.git}"
+# MetaSim lives in this repository (packages/metasim); METASIM_DIR overrides for out-of-tree builds
+# and METASIM_REPO/METASIM_REF are kept for building an older, pre-monorepo MetaSim.
+metasim_repo="${METASIM_REPO:-}"
 metasim_ref="${METASIM_REF:-main}"
-metasim_dir="${METASIM_DIR:-}"
+metasim_dir="${METASIM_DIR:-$repo_root/packages/metasim}"
 cname="${ROBOVERSE_WIKI_CNAME:-roboverse.wiki}"
 python_bin="${PYTHON:-python}"
 
@@ -22,7 +24,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ -z "$metasim_dir" ]]; then
+if [[ -n "$metasim_repo" ]]; then
     tmp_dir="$(mktemp -d)"
     metasim_dir="$tmp_dir/MetaSim"
     git clone --depth 1 --branch "$metasim_ref" "$metasim_repo" "$metasim_dir"
