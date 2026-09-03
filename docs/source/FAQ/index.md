@@ -144,7 +144,7 @@ GPU-accelerated simulators (Isaac Sim, MJX, Genesis) provide best performance fo
 
 **Reinforcement Learning:**
 ```bash
-python roboverse_learn/rl/train_ppo.py --task pick_cube --robot franka
+python examples/rl/0_ppo.py --task pick_cube --robot franka
 ```
 
 **Imitation Learning:**

@@ -1,4 +1,4 @@
-"""Direct control of Inspire Hand - Stable version based on random_action_notik.py"""
+"""Direct control of the Inspire Hand (joint targets without IK)."""
 
 from __future__ import annotations
 
