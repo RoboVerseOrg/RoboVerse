@@ -1,0 +1,62 @@
+name: Tests
+
+# Runs lint + the whole RoboVerse content suite (tests/) on CPU.
+#
+# Until this existed, CI ran exactly one test file (see task-contract.yml), so regressions in
+# the other ~50 files went unnoticed. metasim is a declared git dependency, so a CPU job can
+# install the real thing and exercise the backend-free tasks/robots/learning code for real.
+#
+# GPU simulators (isaacgym/isaacsim/newton), the heavier optional extras (learn/examples/vla)
+# and the roboverse_data asset checkout are NOT available on a stock runner. Tests that need
+# them SKIP with a reason naming what is missing (see tests/conftest.py) — they must never be
+# skipped to paper over a real failure.
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    # Same ruff version as .pre-commit-config.yaml so local pre-commit and CI agree.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install "ruff==0.14.5"
+      - name: ruff check
+        run: python -m ruff check --output-format=github .
+      - name: ruff format --check
+        run: python -m ruff format --check .
+
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install RoboVerse (CPU) with test deps
+        run: |
+          python -m pip install --upgrade pip
+          # CPU torch first: with only --extra-index-url pip may still pick the CUDA wheel from PyPI
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e ".[dev,mujoco]"
+      - name: Run test suite
+        env:
+          # Hosted runners have no EGL/GLX; with MUJOCO_GL=egl `import mujoco` itself fails
+          # (eglQueryString on a None library). `disable` skips GL context creation entirely;
+          # nothing in tests/ renders on MuJoCo, and the suite is identical locally with this value.
+          MUJOCO_GL: disable
+        run: python -m pytest tests/ -rs

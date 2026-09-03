@@ -15,6 +15,10 @@ import numpy as np
 import pytest
 import torch
 
+# SequenceSampler is stubbed below, but importing the dataset module still pulls in
+# zarr/numcodecs at module scope, so the `learn` extra is required to get this far.
+pytestmark = pytest.mark.requires_optional("zarr", "numcodecs", extra="learn")
+
 
 @pytest.mark.general
 def test_validation_dataset_has_independent_buffers(monkeypatch):
