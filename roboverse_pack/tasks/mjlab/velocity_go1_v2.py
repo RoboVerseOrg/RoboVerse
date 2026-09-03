@@ -545,6 +545,8 @@ class VelocityFlatGo1EnvCfg(ManagerBasedRVEnvCfg):
 class _Go1TaskBase(ManagerBasedRVEnv):
     """Shared scaffold for all go1 velocity variants (flat / rough)."""
 
+    supported_simulators = ("mujoco", "newton")
+
     scenario = lazy_scenario(_go1_scenario)
     # Subclasses override these: rough adds the height_scan obs + terrain_scan sensor.
     _obs_cfg_cls: type = _Go1ObsCfg
