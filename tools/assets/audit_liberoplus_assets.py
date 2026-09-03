@@ -21,7 +21,7 @@ opening pixels) and are reported for completeness, not asserted on pixels.
 Run::
 
     LIBERO_PLUS_MAX_TASKS_PER_SUITE=1 MUJOCO_GL=egl \\
-    python -m scripts.audit_liberoplus_assets --suites libero_spatial libero_object
+    python -m tools.assets.audit_liberoplus_assets --suites libero_spatial libero_object
 """
 
 from __future__ import annotations

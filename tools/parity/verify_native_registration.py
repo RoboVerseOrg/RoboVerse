@@ -8,7 +8,7 @@ Installs a meta-path blocker so ``mani_skill2_real2sim`` / ``simpler_env`` are u
                     asserting zero upstream import.
   (default driver runs the registry check in-process, then each of the 25 tasks in a subprocess.)
 
-Run:  JAX_PLATFORMS=cpu python scripts/verify_native_registration.py
+Run:  JAX_PLATFORMS=cpu python tools/parity/verify_native_registration.py
 """
 
 from __future__ import annotations

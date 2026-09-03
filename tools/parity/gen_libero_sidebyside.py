@@ -7,7 +7,7 @@ Composes a side-by-side (native | MetaSim) mp4 + a poster frame.
 
 Run (liberoplus env):
     LIBERO_CONFIG_PATH=$HOME/.libero_plus MUJOCO_GL=egl \\
-    python -m scripts.gen_libero_sidebyside --suite libero_object \\
+    python -m tools.parity.gen_libero_sidebyside --suite libero_object \\
         --base pick_up_the_alphabet_soup_and_place_it_in_the_basket \\
         --variant _table_5 --frames 60 --out docs/source/_static/integrations/libero/sb_object_texture
 """
@@ -23,7 +23,9 @@ import numpy as np
 from roboverse_pack.tasks.libero.native_repro import make_native_handler, render_cam, set_flat_state
 from roboverse_pack.tasks.libero_plus import _passthrough as pt
 
-DEMO_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "third_party", "libero_datasets")
+DEMO_ROOT = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "third_party", "libero_datasets"
+)
 
 
 def _u8(a):

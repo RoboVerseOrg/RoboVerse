@@ -10,8 +10,8 @@ reach-close-lift motion, and writes an MP4 whose frames are side-by-side:
 both produced by the native pipeline (scene + robot + objects + vendored overlay). This proves the
 deletable port can generate complete task visualizations with the upstream package absent.
 
-Run (driver, one subprocess per task):  JAX_PLATFORMS=cpu python scripts/render_native_gallery.py
-Single task:                            python scripts/render_native_gallery.py --task google_robot_pick_coke_can
+Run (driver, one subprocess per task):  JAX_PLATFORMS=cpu python tools/parity/render_native_gallery.py
+Single task:                            python tools/parity/render_native_gallery.py --task google_robot_pick_coke_can
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ import sys
 
 import numpy as np
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tools/parity/ -> root
 RV = os.environ.get("ROBOVERSE_DATA_DIR", os.path.join(_REPO_ROOT, "roboverse_data"))
 RVA = f"{RV}/assets/simpler_env"
 URDF_G = f"{RV}/robots/google_robot/urdf/google_robot_meta_sim_fix_wheel_fix_fingertip.urdf"

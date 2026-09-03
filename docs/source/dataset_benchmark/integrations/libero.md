@@ -33,9 +33,9 @@ bitwise (0 mismatch vs `env._check_success`) on all 130
 |---|---|---|
 | LIBERO passthrough | **130 / 130** tasks, obs+step bitwise (Δ=0) | `roboverse_pack/tasks/libero/` |
 | LIBERO-plus passthrough | **10,120 / 10,120** tasks, state/reward/done bitwise (Δ=0) | `roboverse_pack/tasks/libero_plus/` |
-| demo-replay parity | passthrough == native, Δ=0 (380 demos) | `scripts/parity_liberoplus_passthrough.py` |
-| asset audit | 7/7 perturbation dims genuinely applied, **0 silent fallback** | `scripts/audit_liberoplus_assets.py` |
-| MetaSim MuJoCo migration | 6/6 dims: state-set Δ=0, **engine Δ=0** | `scripts/migrate_liberoplus_metasim.py` |
+| demo-replay parity | passthrough == native, Δ=0 (380 demos) | `tools/parity/parity_liberoplus_passthrough.py` |
+| asset audit | 7/7 perturbation dims genuinely applied, **0 silent fallback** | `tools/assets/audit_liberoplus_assets.py` |
+| MetaSim MuJoCo migration | 6/6 dims: state-set Δ=0, **engine Δ=0** | `tools/assets/migrate_liberoplus_metasim.py` |
 | OSC_POSE port | **bitwise** — per-state joint-torque Δ = 5.55e-15 N·m | `scripts/osc/` |
 | BC policy (closed-loop) | clean 100 % / light 0 % / camera 50 % / noise 75 %; passthrough==native Δ=0 | `scripts/policy/` |
 | **Native tasks (no libero/robosuite)** | **130 / 130** base tasks: ported BDDL checker bitwise (0 mismatch vs `env._check_success` over state-replay); `BaseTaskEnv` on MetaSim's handler, discoverable via `get_task_class("libero_native.<task>")` | `roboverse_pack/tasks/libero/native_libero.py` |
@@ -1487,15 +1487,15 @@ MUJOCO_GL=egl python -m pytest tests/test_liberoplus_passthrough.py -v    # in l
 
 # --- LIBERO-plus passthrough == native, all 7 perturbation dimensions ---
 LIBERO_CONFIG_PATH=$HOME/.libero_plus MUJOCO_GL=egl \
-  python -m scripts.parity_liberoplus_passthrough --per-dim 1 --steps 8
+  python -m tools.parity.parity_liberoplus_passthrough --per-dim 1 --steps 8
 
 # --- asset audit: prove every perturbation actually changes the render ---
 LIBERO_CONFIG_PATH=$HOME/.libero_plus MUJOCO_GL=egl \
-  python -m scripts.audit_liberoplus_assets --suites libero_spatial libero_object libero_goal libero_10
+  python -m tools.assets.audit_liberoplus_assets --suites libero_spatial libero_object libero_goal libero_10
 
 # --- migrate the scene into MetaSim's own MuJoCo backend (state + engine 1:1) ---
 LIBERO_CONFIG_PATH=$HOME/.libero_plus MUJOCO_GL=egl \
-  python -m scripts.migrate_liberoplus_metasim --suite libero_spatial
+  python -m tools.assets.migrate_liberoplus_metasim --suite libero_spatial
 
 # --- OSC_POSE controller bitwise parity vs robosuite (for in-MetaSim control) ---
 LIBERO_CONFIG_PATH=$HOME/.libero_plus MUJOCO_GL=egl \
@@ -1527,7 +1527,7 @@ proving the MetaSim backend reproduces the *perturbed* LIBERO-plus scene 1:1.
 In each clip, **left = native LIBERO-plus `agentview`, right = MetaSim render**;
 both are upright and the demo arm motion is identical.
 
-Generated with `scripts/gen_libero_sidebyside.py` (current code, real demo
+Generated with `tools/parity/gen_libero_sidebyside.py` (current code, real demo
 motion). The animated GIFs below play inline everywhere; the full-quality mp4 is
 linked next to each.
 

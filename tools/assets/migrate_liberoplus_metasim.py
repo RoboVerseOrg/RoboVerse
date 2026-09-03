@@ -23,7 +23,7 @@ For one task per perturbation dimension it:
 Run (env ``liberoplus`` with ``dm_control`` + ``metasim`` installed)::
 
     LIBERO_CONFIG_PATH=$HOME/.libero_plus MUJOCO_GL=egl \\
-    python -m scripts.migrate_liberoplus_metasim --suite libero_spatial
+    python -m tools.assets.migrate_liberoplus_metasim --suite libero_spatial
 """
 
 from __future__ import annotations

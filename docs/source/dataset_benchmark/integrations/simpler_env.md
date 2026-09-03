@@ -29,9 +29,9 @@ RoboVerse integrates SimplerEnv on **two tracks**:
 | Capability | Result | Where |
 |---|---|---|
 | MetaSim-native tasks | **25 / 25** built via `ScenarioCfg` + handler + `@register_task` | `roboverse_pack/tasks/simpler_env/_metasim/` |
-| Obs matches upstream | initial render vs `simpler_env` **mean-abs ≤ ~2/255** all 6 families (coke/pick/move-near bitwise; drawer 0.01, place 1.94, widowx 0.0) | `scripts/render_policy_gallery.py` |
-| Real-policy success (RT-1/Octo) | **13/25** solved on MetaSim-native envs (RT-1 13/21 · Octo 0/4) | `scripts/render_policy_gallery.py` |
-| Zero-upstream / deletable | meta-path block + grep test green; runs with the clone absent | `scripts/verify_native_registration.py` |
+| Obs matches upstream | initial render vs `simpler_env` **mean-abs ≤ ~2/255** all 6 families (coke/pick/move-near bitwise; drawer 0.01, place 1.94, widowx 0.0) | `tools/parity/render_policy_gallery.py` |
+| Real-policy success (RT-1/Octo) | **13/25** solved on MetaSim-native envs (RT-1 13/21 · Octo 0/4) | `tools/parity/render_policy_gallery.py` |
+| Zero-upstream / deletable | meta-path block + grep test green; runs with the clone absent | `tools/parity/verify_native_registration.py` |
 | Passthrough | bitwise 1:1 by construction (forwards `reset`/`step` verbatim) | `roboverse_pack/tasks/simpler_env/_passthrough.py` |
 | Registration | 25 gym ids (`SimplerEnv/<task>`) + 25 MetaSim ids (`simpler.<task>`) | `roboverse_pack/tasks/simpler_env/_metasim/registry.py` |
 
@@ -94,14 +94,14 @@ to keep the GPU for SAPIEN rendering only).
 
 ```bash
 # --- native registration + 25/25 make/reset/step with the upstream clone DELETED ---
-JAX_PLATFORMS=cpu python scripts/verify_native_registration.py
+JAX_PLATFORMS=cpu python tools/parity/verify_native_registration.py
 
 # --- exhaustive MetaSim-native vs upstream-equivalent parity over all 25 tasks ---
 #     (per-task subprocess-isolated; writes /tmp/metasim_full_parity.json)
-JAX_PLATFORMS=cpu python scripts/spike_metasim_full_parity.py
+JAX_PLATFORMS=cpu python tools/parity/spike_metasim_full_parity.py
 
 # --- 25 side-by-side 1:1 galleries [native | reference | diff x30] ---
-JAX_PLATFORMS=cpu python scripts/render_metasim_1to1_gallery.py
+JAX_PLATFORMS=cpu python tools/parity/render_metasim_1to1_gallery.py
 
 # --- tests ---
 python -m pytest tests/test_simpler_env_native.py -v        # registry(25) + zero-import + smoke
@@ -434,7 +434,7 @@ These are **real pretrained policies driving our MetaSim-native env** (`SimplerE
 
 ## Implementation fidelity (obs matches upstream)
 
-Separately from policy capability, the MetaSim-native env is verified to reproduce the **upstream `simpler_env` observation**: for the same task + seed + station, the initial render matches upstream by **mean-abs ≤ ~2/255** across all six families (coke/pick/move-near bitwise; drawer 0.01, place 1.94, widowx 0.0). This is a stronger check than the earlier native-vs-reference parity — it catches station / overlay / asset-recolor deviations that an internal self-comparison cannot. Regenerate side-by-side `[ MetaSim-native | reference | abs-diff x30 ]` clips with `scripts/render_metasim_1to1_gallery.py`; the per-task obs-vs-upstream check is in `scripts/render_policy_gallery.py`.
+Separately from policy capability, the MetaSim-native env is verified to reproduce the **upstream `simpler_env` observation**: for the same task + seed + station, the initial render matches upstream by **mean-abs ≤ ~2/255** across all six families (coke/pick/move-near bitwise; drawer 0.01, place 1.94, widowx 0.0). This is a stronger check than the earlier native-vs-reference parity — it catches station / overlay / asset-recolor deviations that an internal self-comparison cannot. Regenerate side-by-side `[ MetaSim-native | reference | abs-diff x30 ]` clips with `tools/parity/render_metasim_1to1_gallery.py`; the per-task obs-vs-upstream check is in `tools/parity/render_policy_gallery.py`.
 
 <!-- SIMPLER-GALLERY-END -->
 

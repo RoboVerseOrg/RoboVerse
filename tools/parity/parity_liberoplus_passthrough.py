@@ -17,7 +17,7 @@ reward and done at every step. The load-bearing number is
 Run (in the dedicated ``liberoplus`` conda env, headless EGL)::
 
     LIBERO_PLUS_MAX_TASKS_PER_SUITE=1 \\
-    MUJOCO_GL=egl python -m scripts.parity_liberoplus_passthrough --steps 10
+    MUJOCO_GL=egl python -m tools.parity.parity_liberoplus_passthrough --steps 10
 
 (The ``LIBERO_PLUS_MAX_TASKS_PER_SUITE`` cap only speeds the import-time gym
 registration; the harness builds envs directly via the factory and ignores it.)

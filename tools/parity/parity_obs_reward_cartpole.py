@@ -12,7 +12,7 @@ aggregation surfaces. State is injected directly (no integrator stepping),
 so this isolates the MDP layer from backend physics.
 
 Run:
-    MUJOCO_GL=egl python scripts/parity_obs_reward_cartpole.py
+    MUJOCO_GL=egl python tools/parity/parity_obs_reward_cartpole.py
 """
 
 from __future__ import annotations

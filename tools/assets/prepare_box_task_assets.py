@@ -24,7 +24,7 @@ What this script does:
 
 Usage::
 
-    python scripts/prepare_box_task_assets.py \\
+    python tools/assets/prepare_box_task_assets.py \\
         --bundle ~/projects/RoboVerse/box_task_replay_render_bundle_clean
 """
 
@@ -127,7 +127,7 @@ def main() -> None:
     parser.add_argument(
         "--repo-root",
         type=Path,
-        default=Path(__file__).resolve().parents[1],
+        default=Path(__file__).resolve().parents[2],  # tools/assets/<this>.py -> repo root
         help="RoboVerse repo root (defaults to the repo that contains this script).",
     )
     args = parser.parse_args()

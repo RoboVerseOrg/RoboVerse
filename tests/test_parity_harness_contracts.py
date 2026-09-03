@@ -24,10 +24,10 @@ import os
 import numpy as np
 import pytest
 
-import scripts.eval_liberoplus_policy_consistency as evalc
-import scripts.parity_liberoplus_passthrough as parity_pt
-import scripts.parity_simpler_env as parity_se
-import scripts.spike_metasim_full_parity as spike
+import tools.parity.eval_liberoplus_policy_consistency as evalc
+import tools.parity.parity_liberoplus_passthrough as parity_pt
+import tools.parity.parity_simpler_env as parity_se
+import tools.parity.spike_metasim_full_parity as spike
 
 
 class _Boom(RuntimeError):
@@ -208,7 +208,7 @@ def test_spike_full_parity_exits_zero_on_success(monkeypatch):
 
 def test_spike_full_parity_data_root_is_env_or_repo_local():
     """The asset root follows ``ROBOVERSE_DATA_DIR`` or the repo checkout — never a developer's home."""
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(spike.__file__)))
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # tests/ -> repo root
     expected = os.environ.get("ROBOVERSE_DATA_DIR", os.path.join(repo_root, "roboverse_data"))
     assert spike.RV == expected
     assert "/home/ghr" not in spike.RV

@@ -17,7 +17,7 @@ The recording artifact lives outside the repo at
 canonical `roboverse_data/` layout with:
 
 ```bash
-python scripts/prepare_box_task_assets.py \
+python tools/assets/prepare_box_task_assets.py \
     --bundle ~/projects/RoboVerse/box_task_replay_render_bundle_clean
 ```
 
