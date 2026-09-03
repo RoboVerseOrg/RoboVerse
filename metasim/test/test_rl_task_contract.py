@@ -211,7 +211,6 @@ def test_rl_task_step_applies_process_action_hook():
     env._episode_steps = torch.zeros(1, dtype=torch.int32)
     env._action_low = torch.tensor([-10.0])
     env._action_high = torch.tensor([10.0])
-    env._raw_observation_cache = torch.zeros(1, 1)
     env._observation = lambda states: torch.zeros(1, 1)
     env._privileged_observation = lambda states: torch.zeros(1, 1)
     env._reward = lambda states: torch.zeros(1)
@@ -223,4 +222,65 @@ def test_rl_task_step_applies_process_action_hook():
     RLTaskEnv.step(env, torch.tensor([2.0]))
     assert torch.allclose(captured["applied"], torch.tensor([[3.0]])), (
         f"_process_action not applied before set_dof_targets: got {captured.get('applied')}"
+    )
+
+
+@pytest.mark.general
+def test_step_publishes_the_terminal_observation_not_the_post_reset_one():
+    """``info["observations"]["raw"]["obs"]`` must be the obs the episode ended in.
+
+    ``step`` auto-resets done envs in place, so the returned ``obs`` already holds the next
+    episode's first observation for those envs. Off-policy learners bootstrap truncated
+    episodes off the raw key -- ``V(s_T)`` for a time-out is a real value, ``V(reset state)``
+    is not -- so publishing anything but the pre-reset observation silently corrupts the
+    target on every episode boundary.
+
+    This used to be served from a ``_raw_observation_cache`` that was written only in
+    ``reset()``: the update branch ran solely when *no* env was done, where ``terminated`` is
+    all-False and its ``torch.where`` was a no-op. The key therefore carried the episode's
+    *first* observation for the whole episode -- not the terminal one, and not even the
+    post-reset one.
+    """
+    step_count = {"n": 0}
+
+    class _H:
+        num_envs = 1
+
+        def set_dof_targets(self, a):
+            return None
+
+        def simulate(self):
+            step_count["n"] += 1
+
+        def get_states(self, mode="tensor"):
+            return None
+
+    env = RLTaskEnv.__new__(RLTaskEnv)
+    env.device = torch.device("cpu")
+    env.num_envs = 1
+    env.handler = _H()
+    env._episode_steps = torch.zeros(1, dtype=torch.int32)
+    env._action_low = torch.tensor([-10.0])
+    env._action_high = torch.tensor([10.0])
+    # The observation is the step counter, so the terminal obs is distinguishable from the
+    # post-reset one by value alone.
+    env._observation = lambda states: torch.full((1, 1), float(step_count["n"]))
+    env._privileged_observation = lambda states: torch.zeros(1, 1)
+    env._reward = lambda states: torch.zeros(1)
+    env._terminated = lambda states: torch.zeros(1, dtype=torch.bool)
+    env._time_out = lambda states: torch.ones(1, dtype=torch.bool)  # always truncate
+    env._process_action = lambda actions: actions
+    # reset() zeroes the counter, standing in for the state being destroyed.
+    env.reset = lambda states=None, env_ids=None, seed=None: step_count.update(n=0)
+
+    obs, _, _, time_out, info = RLTaskEnv.step(env, torch.tensor([0.0]))
+
+    assert bool(time_out[0]), "sanity: this env truncates every step"
+    raw = info["observations"]["raw"]["obs"]
+    assert torch.allclose(raw, torch.tensor([[1.0]])), (
+        f"raw obs must be the terminal observation (1.0, the state the episode ended in), got {raw.tolist()}"
+    )
+    assert torch.allclose(obs, torch.tensor([[0.0]])), (
+        "sanity: the returned obs is the post-reset one (0.0) -- which is exactly why the raw "
+        "key must not be taken from it"
     )

@@ -148,7 +148,6 @@ class RLTaskEnv(BaseTaskEnv):
 
         states = self.handler.get_states(mode="tensor")
         first_obs = self._observation(states).to(self.device)
-        self._raw_observation_cache = first_obs.clone()
         priv_obs = self._privileged_observation(states)
 
         # Update observation buffers for RSL-RL compatibility
@@ -208,7 +207,11 @@ class RLTaskEnv(BaseTaskEnv):
         info = {
             "privileged_observation": priv_obs,
             "episode_steps": self._episode_steps.clone(),
-            "observations": {"raw": {"obs": self._raw_observation_cache.clone()}},
+            # The terminal observation, snapshotted before the auto-reset below overwrites `obs`
+            # in place for the done envs. Off-policy learners bootstrap truncated episodes from
+            # this (V(s_T) for a time-out is a real value; V(reset state) is not), so it must be
+            # the state the episode actually ended in.
+            "observations": {"raw": {"obs": obs.clone()}},
         }
 
         done_indices = episode_done.nonzero(as_tuple=False).squeeze(-1)
@@ -217,10 +220,6 @@ class RLTaskEnv(BaseTaskEnv):
             states_after = self.handler.get_states(mode="tensor")
             obs_after = self._observation(states_after).to(self.device)
             obs[done_indices] = obs_after[done_indices]
-            self._raw_observation_cache[done_indices] = obs_after[done_indices]
-        else:
-            keep_mask = (~terminated).unsqueeze(-1)
-            self._raw_observation_cache = torch.where(keep_mask, self._raw_observation_cache, obs)
 
         return obs, reward, terminated, time_out, info
 
