@@ -211,4 +211,6 @@ convention = "google"
 testpaths = ["tests"]
 markers = [
     "general: lightweight test that needs no simulator backend",
+    "requires_optional(*modules, extra=None): skip unless the optional dependencies are installed",
+    "requires_asset(*relpaths): skip unless the roboverse_data assets are present",
 ]

@@ -14,6 +14,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+# The modules under test import zarr/numcodecs at module scope (the replay-buffer format),
+# so they need the `learn` extra even though what is being tested here is numba-independence.
+pytestmark = pytest.mark.requires_optional("zarr", "numcodecs", extra="learn")
+
 
 @pytest.mark.general
 def test_dataset_and_sampler_import_without_numba():

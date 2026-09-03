@@ -1,8 +1,10 @@
 """Tests for the MetaSim-native (zero-dependency) SimplerEnv registration.
 
-The registration test runs anywhere and must NOT need the cloned ``simpler_env`` /
-``mani_skill2_real2sim`` packages. The make/reset/step smoke test is gated on the migrated
-``roboverse_data`` assets being present (they ship via HF / a roboverse_data checkout).
+The registration test must NOT need the cloned ``simpler_env`` / ``mani_skill2_real2sim``
+packages — only ``ruckig``, which the native EE-delta controller imports (it is a genuine
+runtime dependency of the native port, not of the clone; note it is not declared in any
+pyproject extra today). The make/reset/step smoke test additionally needs sapien and the
+migrated ``roboverse_data`` assets (they ship via HF / a roboverse_data checkout).
 """
 
 from __future__ import annotations
@@ -11,22 +13,14 @@ import importlib.util
 
 import pytest
 
-
-def _assets_present() -> bool:
-    try:
-        from roboverse_pack.tasks.simpler_env._native._assets import data_root
-
-        data_root()
-        return True
-    except Exception:
-        return False
-
-
+# NB: probe the assets with the `requires_asset` marker (a plain on-disk check), NOT with
+# ``_native._assets.data_root()`` — that helper falls back to a multi-GB HuggingFace
+# snapshot_download, which this module used to trigger at *collection* time.
 sapien_available = importlib.util.find_spec("sapien") is not None
-assets_present = _assets_present()
 
 
 @pytest.mark.general
+@pytest.mark.requires_optional("ruckig")
 def test_metasim_registers_all_25_without_clone():
     """All 25 SimplerEnv ids register via the MetaSim-native registry, no cloned packages needed."""
     import gymnasium as gym
@@ -59,7 +53,9 @@ def test_native_env_path_has_zero_upstream_imports():
     assert not offenders, f"native code imports the clone: {offenders}"
 
 
-@pytest.mark.skipif(not (sapien_available and assets_present), reason="sapien / roboverse_data assets absent")
+@pytest.mark.skipif(not sapien_available, reason="sapien not installed")
+@pytest.mark.requires_optional("ruckig")
+@pytest.mark.requires_asset("assets/simpler_env")
 def test_metasim_make_reset_step():
     """Smoke-test the MetaSim-native gym.make + reset + step for one task (zero upstream)."""
     import gymnasium as gym
