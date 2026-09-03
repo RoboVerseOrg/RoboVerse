@@ -131,6 +131,7 @@ def test_pyproject_runtime_dependencies_are_metasim_owned():
         "numpy",
         "numpy-quaternion",
         "opencv-python>=4.11,<4.12",
+        "packaging>=23",
         "pillow",
         "portalocker",
         "pyyaml",
