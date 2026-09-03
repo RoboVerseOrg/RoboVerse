@@ -103,7 +103,10 @@ def rollout(sim: str, n_envs: int, ckpt_path: str, steps: int, task_name: str, r
     return {"ep_r": ep_r, "n_eps": n_eps, "fell": fell_count, "upright_cos": upr}
 
 
-def main():
+def main() -> int:
+    """Roll the checkpoint out on each backend. A sim that fails to run is not a result:
+    it makes the cross-sim comparison unevaluable, so the exit status must reflect it.
+    """
     p = argparse.ArgumentParser()
     p.add_argument("--ckpt", required=True)
     p.add_argument("--task", default="mjlab.velocity_flat_go1_v2")
@@ -111,6 +114,7 @@ def main():
     p.add_argument("--steps", type=int, default=1000)
     args = p.parse_args()
 
+    failed = []
     for sim, n_envs in [("newton", 16), ("mujoco", 1)]:
         print(f"=== {sim} (n_envs={n_envs}) ===")
         try:
@@ -122,7 +126,12 @@ def main():
 
             traceback.print_exc()
             print(f"  FAIL: {type(exc).__name__}: {str(exc)[:120]}")
+            failed.append(sim)
+    if failed:
+        print(f"RESULT: ERROR — {', '.join(failed)} did not run; there is no cross-sim comparison.")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -67,14 +67,19 @@ def _act(policy, obs, p_mean, p_std):
 
 
 def _check_success(env) -> bool:
+    """Task success from the env's own checker.
+
+    An error (or a missing checker) is **not** a failed episode: swallowing it into
+    ``False`` silently reports a 0% success rate for a policy that may be fine, and --
+    when both sides of a parity check do it -- makes two broken envs agree. Fail loudly.
+    """
     for attr in ("_check_success", "check_success"):
         fn = getattr(env.env, attr, None) or getattr(env, attr, None)
         if fn is not None:
-            try:
-                return bool(fn())
-            except Exception:
-                return False
-    return False
+            return bool(fn())
+    raise RuntimeError(
+        f"{type(env).__name__} exposes no _check_success()/check_success(); success cannot be evaluated."
+    )
 
 
 def _init_obs(env, init_state):
