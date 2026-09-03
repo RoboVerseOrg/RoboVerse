@@ -18,6 +18,9 @@ Shims provided
 - Model attribute aliases body_key / joint_key / shape_key -> *_label
 - add_mjcf(builder, path, **kw): ModelBuilder.add_mjcf method removed
   in 1.2 but parse_mjcf in newton._src.utils.import_mjcf still works
+- Model/Control joint_target_pos / joint_target_vel -> joint_target_q /
+  joint_target_qd (removed in 1.5; the new names are forwarded read/write)
+- Model.num_worlds -> Model.world_count (renamed in 1.6)
 
 Backward-compat guarantee:
 - Anything that worked on newton < 1.2 still works.
@@ -121,6 +124,71 @@ def _install_model_attr_aliases():
 
 
 _install_model_attr_aliases()
+
+
+def _install_removed_attr_aliases():
+    """Route attributes newton 1.5 removed back to their replacements.
+
+    newton 1.5 renamed ``joint_target_pos`` / ``joint_target_vel`` to ``joint_target_q`` /
+    ``joint_target_qd`` on both ``Model`` and ``Control`` and shadows the old names with a
+    ``RemovedAttribute`` descriptor that raises on read *and* write. The handler reads and
+    assigns both, so install read/write properties that forward to the new instance attributes.
+    Older newton (real attributes, no descriptor) is left untouched.
+    """
+    try:
+        import newton
+    except ImportError:
+        return
+    renames = [("joint_target_pos", "joint_target_q"), ("joint_target_vel", "joint_target_qd")]
+    for cls_name in ("Model", "Control"):
+        cls = getattr(newton, cls_name, None)
+        if cls is None:
+            continue
+        for old, new in renames:
+            current = cls.__dict__.get(old)
+            if current is None or type(current).__name__ != "RemovedAttribute":
+                continue
+
+            def _get(self, _n=new):
+                return getattr(self, _n)
+
+            def _set(self, value, _n=new):
+                setattr(self, _n, value)
+
+            setattr(cls, old, property(_get, _set))
+
+
+_install_removed_attr_aliases()
+
+
+def _install_renamed_attr_aliases():
+    """Forward attribute names newton renamed *without* leaving a descriptor behind.
+
+    ``Model.num_worlds`` became ``Model.world_count`` in newton 1.6 and simply disappeared. The
+    alias reads the instance attribute when an older newton still sets it and falls back to the
+    new name otherwise, so both spellings work on every version.
+    """
+    try:
+        import newton
+    except ImportError:
+        return
+    for cls_name, old, new in [("Model", "num_worlds", "world_count")]:
+        cls = getattr(newton, cls_name, None)
+        if cls is None or old in cls.__dict__:
+            continue
+
+        def _get(self, _old=old, _new=new):
+            if _old in self.__dict__:
+                return self.__dict__[_old]
+            return getattr(self, _new)
+
+        def _set(self, value, _old=old):
+            self.__dict__[_old] = value
+
+        setattr(cls, old, property(_get, _set))
+
+
+_install_renamed_attr_aliases()
 
 
 def add_mjcf(builder, mjcf_path: str, **kwargs):

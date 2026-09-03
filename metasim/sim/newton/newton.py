@@ -48,6 +48,10 @@ from metasim.utils.state import (
 # auto-populated by solver). See _newton_compat.py.
 from ._newton_compat import JointType, add_mjcf, populate_contacts, set_current_world
 
+# newton < 1.4 exposes ``SensorTiledCamera.Options`` and a per-sensor resolution; newer releases
+# render model-wide through ``sensor.utils`` / ``sensor.update``.
+_TILED_CAMERA_LEGACY_API = hasattr(SensorTiledCamera, "Options")
+
 
 def _physics_mode_name(obj) -> str | None:
     physics = getattr(obj, "physics", None)
@@ -789,6 +793,13 @@ class NewtonHandler(BaseSimHandler):
         # Access start indices for fast lookup
         self._joint_q_starts = self._model.joint_q_start.numpy()
         self._joint_qd_starts = self._model.joint_qd_start.numpy()
+        # newton >= 1.5 lays ``joint_target_q`` out like ``joint_q`` (a free joint takes 7 slots,
+        # not 6) and publishes ``joint_target_q_start``; older releases index position targets by
+        # dof. Using the dof layout on new newton shifts every env after a free joint — env 1's
+        # targets land three joints off. Velocity targets (``joint_target_qd``) stay dof-indexed.
+        target_starts = getattr(self._model, "joint_target_q_start", None)
+        self._joint_target_starts = target_starts.numpy() if target_starts is not None else self._joint_qd_starts
+        self._target_uses_q_layout = target_starts is not None
         self._joint_types = self._model.joint_type.numpy()
 
         # Build per-object joint name maps to disambiguate duplicate joint names
@@ -829,6 +840,7 @@ class NewtonHandler(BaseSimHandler):
         self._obj_sorted_joint_names = {}
         self._obj_joint_q_idx = {}
         self._obj_joint_qd_idx = {}
+        self._obj_joint_target_idx = {}
         self._obj_joint_valid = {}
         self._obj_root_joint_idx = {}
         self._obj_root_joint_type = {}
@@ -932,6 +944,8 @@ class NewtonHandler(BaseSimHandler):
 
             self._obj_joint_q_idx[name] = q_idx_tensor
             self._obj_joint_qd_idx[name] = qd_idx_tensor
+            # For 1-DoF joints the target slot is the q slot on newton >= 1.5, the qd slot before.
+            self._obj_joint_target_idx[name] = q_idx_tensor if self._target_uses_q_layout else qd_idx_tensor
             self._obj_joint_valid[name] = valid_mask
 
         if self._joint_q_starts is not None:
@@ -1138,7 +1152,7 @@ class NewtonHandler(BaseSimHandler):
                     # Initialize target position from the current joint state for 1-DoF joints
                     if qd_end - qd_start == 1:
                         q_start = self._joint_q_starts[joint_idx]
-                        joint_target_pos[qd_start] = joint_q[q_start]
+                        joint_target_pos[self._joint_target_starts[joint_idx]] = joint_q[q_start]
                         joint_target_vel[qd_start] = 0.0
                         updated = True
 
@@ -1432,26 +1446,49 @@ class NewtonHandler(BaseSimHandler):
         try:
             with wp.ScopedDevice(self._model.device):
                 for (width, height), cam_indices in cam_groups.items():
-                    sensor = SensorTiledCamera(
-                        model=self._model,
-                        num_cameras=len(cam_indices),
-                        width=width,
-                        height=height,
-                        options=SensorTiledCamera.Options(
-                            default_light=True,
-                            default_light_shadows=True,
-                        ),
-                    )
-                    if self._shape_color_overrides:
-                        colors = np.ones((self._model.shape_count, 4), dtype=np.float32)
-                        for shape_idx, color in self._shape_color_overrides.items():
-                            if 0 <= shape_idx < colors.shape[0]:
-                                colors[shape_idx] = color
-                        sensor.render_context.shape_colors = wp.array(colors, dtype=wp.vec4f)
                     fovs = [math.radians(self.scenario.cameras[i].vertical_fov) for i in cam_indices]
-                    camera_rays = sensor.compute_pinhole_camera_rays(fovs)
-                    color_image = sensor.create_color_image_output()
-                    depth_image = sensor.create_depth_image_output()
+                    if _TILED_CAMERA_LEGACY_API:
+                        sensor = SensorTiledCamera(
+                            model=self._model,
+                            num_cameras=len(cam_indices),
+                            width=width,
+                            height=height,
+                            options=SensorTiledCamera.Options(
+                                default_light=True,
+                                default_light_shadows=True,
+                            ),
+                        )
+                        if self._shape_color_overrides:
+                            colors = np.ones((self._model.shape_count, 4), dtype=np.float32)
+                            for shape_idx, color in self._shape_color_overrides.items():
+                                if 0 <= shape_idx < colors.shape[0]:
+                                    colors[shape_idx] = color
+                            sensor.render_context.shape_colors = wp.array(colors, dtype=wp.vec4f)
+                        camera_rays = sensor.compute_pinhole_camera_rays(fovs)
+                        color_image = sensor.create_color_image_output()
+                        depth_image = sensor.create_depth_image_output()
+                    else:
+                        # newton >= 1.4: the sensor is model-wide; resolution, rays, outputs and
+                        # lights come from ``sensor.utils`` and rendering is ``sensor.update``.
+                        render_config = SensorTiledCamera.RenderConfig(enable_shadows=True)
+                        try:
+                            sensor = SensorTiledCamera(model=self._model, default_render_config=render_config)
+                        except Exception as texture_err:  # e.g. RGB textures where the sensor expects RGBA
+                            log.warning(
+                                f"SensorTiledCamera could not load textures ({texture_err}); rendering untextured."
+                            )
+                            sensor = SensorTiledCamera(
+                                model=self._model, default_render_config=render_config, load_textures=False
+                            )
+                        sensor.utils.create_default_light(enable_shadows=True)
+                        if self._shape_color_overrides:
+                            log.warning(
+                                "Per-shape color overrides are not supported by this newton version's "
+                                "SensorTiledCamera; rendering with model colors."
+                            )
+                        camera_rays = sensor.utils.compute_camera_rays_pinhole(width, height, camera_fovs=fovs)
+                        color_image = sensor.utils.create_color_image_output(width, height, len(cam_indices))
+                        depth_image = sensor.utils.create_depth_image_output(width, height, len(cam_indices))
                     camera_transforms = self._build_camera_transforms(cam_indices)
 
                     self._camera_groups.append({
@@ -1487,13 +1524,24 @@ class NewtonHandler(BaseSimHandler):
         with wp.ScopedDevice(self._model.device):
             for group in self._camera_groups:
                 sensor: SensorTiledCamera = group["sensor"]
-                sensor.render(
-                    self._state_0,
-                    group["camera_transforms"],
-                    group["camera_rays"],
-                    color_image=group["color_image"],
-                    depth_image=group["depth_image"],
-                )
+                if _TILED_CAMERA_LEGACY_API:
+                    sensor.render(
+                        self._state_0,
+                        group["camera_transforms"],
+                        group["camera_rays"],
+                        color_image=group["color_image"],
+                        depth_image=group["depth_image"],
+                    )
+                else:
+                    # Shape BVHs are built for the initial state at finalize; refit for moved bodies.
+                    self._model.bvh_refit_shapes(self._state_0)
+                    sensor.update(
+                        self._state_0,
+                        group["camera_transforms"],
+                        group["camera_rays"],
+                        color_image=group["color_image"],
+                        depth_image=group["depth_image"],
+                    )
 
                 color_np = group["color_image"].numpy() if group["color_image"] is not None else None
                 depth_np = group["depth_image"].numpy() if group["depth_image"] is not None else None
@@ -1517,8 +1565,8 @@ class NewtonHandler(BaseSimHandler):
                             rgb_tensor = rgb_tensor[use_env_ids]
 
                     if depth_np is not None:
-                        depth_cam = depth_np[:, local_idx, :].reshape(num_worlds, height, width)
-                        depth = depth_cam[..., None]
+                        # CameraState.depth is (num_envs, H, W) — no trailing channel axis.
+                        depth = depth_np[:, local_idx, :].reshape(num_worlds, height, width)
                         depth_tensor = torch.from_numpy(depth).to(self._device)
                         if len(use_env_ids) != num_worlds:
                             depth_tensor = depth_tensor[use_env_ids]
@@ -1687,13 +1735,14 @@ class NewtonHandler(BaseSimHandler):
             valid_mask = self._obj_joint_valid[robot_name]
             q_idx = q_idx_all[env_ids_t]
             qd_idx = qd_idx_all[env_ids_t]
+            t_idx = self._obj_joint_target_idx[robot_name][env_ids_t]
 
             if joint_q is not None:
                 joint_pos = _gather_dof(joint_q, q_idx, valid_mask)
             if joint_qd is not None:
                 joint_vel = _gather_dof(joint_qd, qd_idx, valid_mask)
             if joint_target_pos is not None:
-                joint_pos_target = _gather_dof(joint_target_pos, qd_idx, valid_mask)
+                joint_pos_target = _gather_dof(joint_target_pos, t_idx, valid_mask)
             if joint_target_vel is not None:
                 joint_vel_target = _gather_dof(joint_target_vel, qd_idx, valid_mask)
             if joint_f is not None:
@@ -1716,7 +1765,7 @@ class NewtonHandler(BaseSimHandler):
                     if joint_qd is not None:
                         joint_vel[row, col] = joint_qd[qd_start]
                     if joint_target_pos is not None:
-                        joint_pos_target[row, col] = joint_target_pos[qd_start]
+                        joint_pos_target[row, col] = joint_target_pos[self._joint_target_starts[joint_idx]]
                     if joint_target_vel is not None:
                         joint_vel_target[row, col] = joint_target_vel[qd_start]
                     if joint_f is not None:
@@ -1990,7 +2039,7 @@ class NewtonHandler(BaseSimHandler):
                         dirty_joint_vels = True
 
                     if control_joint_target_pos is not None:
-                        control_joint_target_pos[qd_start] = values[0]
+                        control_joint_target_pos[self._joint_target_starts[j_idx]] = values[0]
                     if control_joint_target_vel is not None:
                         control_joint_target_vel[qd_start] = 0.0
 
@@ -2231,7 +2280,8 @@ class NewtonHandler(BaseSimHandler):
                         _scatter_values(joint_qd_targets, qd_idx, torch.zeros_like(joint_pos), valid_mask)
 
                     if control_joint_target_pos is not None:
-                        _scatter_values([control_joint_target_pos], qd_idx, joint_pos, valid_mask)
+                        t_idx = self._obj_joint_target_idx[robot.name][env_ids_t]
+                        _scatter_values([control_joint_target_pos], t_idx, joint_pos, valid_mask)
                     if control_joint_target_vel is not None:
                         if joint_vel is None:
                             joint_vel = torch.zeros_like(joint_pos)
@@ -2321,8 +2371,10 @@ class NewtonHandler(BaseSimHandler):
                         continue
 
                     qd_idx = qd_idx_all[:robot_env_count, :max_joints]
+                    t_idx = self._obj_joint_target_idx[robot_name][:robot_env_count, :max_joints]
                     if qd_idx.device != target_device:
                         qd_idx = qd_idx.to(target_device)
+                        t_idx = t_idx.to(target_device)
                     action_slice = robot_actions[:robot_env_count, :max_joints]
 
                     if isinstance(valid_mask, torch.Tensor):
@@ -2330,18 +2382,19 @@ class NewtonHandler(BaseSimHandler):
                             mask = valid_mask[:max_joints]
                             if mask.device != target_device:
                                 mask = mask.to(target_device)
-                            qd_idx_sel = qd_idx[:, mask]
-                            action_sel = action_slice[:, mask]
-                            idx_flat = qd_idx_sel.reshape(-1)
-                            val_flat = action_sel.reshape(-1)
+                            idx_flat = qd_idx[:, mask].reshape(-1)
+                            tidx_flat = t_idx[:, mask].reshape(-1)
+                            val_flat = action_slice[:, mask].reshape(-1)
                         else:
                             mask = valid_mask[:robot_env_count, :max_joints]
                             if mask.device != target_device:
                                 mask = mask.to(target_device)
                             idx_flat = qd_idx[mask]
+                            tidx_flat = t_idx[mask]
                             val_flat = action_slice[mask]
                     else:
                         idx_flat = qd_idx.reshape(-1)
+                        tidx_flat = t_idx.reshape(-1)
                         val_flat = action_slice.reshape(-1)
 
                     if idx_flat.numel() == 0:
@@ -2351,7 +2404,7 @@ class NewtonHandler(BaseSimHandler):
                         joint_f[idx_flat] = val_flat
                     else:
                         if joint_target_pos is not None:
-                            joint_target_pos[idx_flat] = val_flat
+                            joint_target_pos[tidx_flat] = val_flat
                         if joint_target_vel is not None:
                             joint_target_vel[idx_flat] = 0.0
                     continue
@@ -2373,7 +2426,7 @@ class NewtonHandler(BaseSimHandler):
                             joint_f[qd_start] = value
                         else:
                             if joint_target_pos is not None:
-                                joint_target_pos[qd_start] = value
+                                joint_target_pos[self._joint_target_starts[joint_idx]] = value
                             if joint_target_vel is not None:
                                 joint_target_vel[qd_start] = 0.0
             return
@@ -2399,7 +2452,7 @@ class NewtonHandler(BaseSimHandler):
                         values = self._coerce_dof_values(target, qd_end - qd_start)
                         if values is None:
                             continue
-                        joint_target_pos[qd_start] = values[0]
+                        joint_target_pos[self._joint_target_starts[joint_idx]] = values[0]
                         if joint_target_vel is not None and joint_name not in dof_vel_target:
                             joint_target_vel[qd_start] = 0.0
 
