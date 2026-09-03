@@ -41,7 +41,7 @@ class eval_mode:
     def __exit__(self, *args):
         if self.no_grad:
             self.no_grad_context.__exit__(*args)
-        for model, state in zip(self.models, self.prev_states):
+        for model, state in zip(self.models, self.prev_states, strict=False):
             model.train(state)
         return False
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, Dict, Optional
 
 import torch
 import torch.nn.functional as F

@@ -1,7 +1,7 @@
 import numbers
 from multiprocessing.managers import SharedMemoryManager
 from queue import Empty, Full
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import numpy as np
 
@@ -51,7 +51,7 @@ class SharedMemoryQueue:
     def create_from_examples(
         cls,
         shm_manager: SharedMemoryManager,
-        examples: Dict[str, Union[np.ndarray, numbers.Number]],
+        examples: Dict[str, np.ndarray | numbers.Number],
         buffer_size: int,
     ):
         specs = list()
@@ -87,7 +87,7 @@ class SharedMemoryQueue:
     def clear(self):
         self.read_counter.store(self.write_counter.load())
 
-    def put(self, data: Dict[str, Union[np.ndarray, numbers.Number]]):
+    def put(self, data: Dict[str, np.ndarray | numbers.Number]):
         read_count = self.read_counter.load()
         write_count = self.write_counter.load()
         n_data = write_count - read_count

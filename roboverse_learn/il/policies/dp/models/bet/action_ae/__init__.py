@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -56,7 +56,7 @@ class AbstractActionAE(utils.SaveModule, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def num_latents(self) -> Union[int, float]:
+    def num_latents(self) -> int | float:
         """
         Number of possible latents for this generator, useful for state priors that use softmax.
         """

@@ -86,7 +86,9 @@ def extract_state_dict(env, scenario, env_idx=0):
                     # Joint names are sorted alphabetically (standard in handlers)
                     joint_names = sorted(obj_cfg.actuators.keys())
                     joint_positions = obj_state.joint_pos[env_idx].cpu().numpy()
-                    state_entry["dof_pos"] = {name: float(pos) for name, pos in zip(joint_names, joint_positions)}
+                    state_entry["dof_pos"] = {
+                        name: float(pos) for name, pos in zip(joint_names, joint_positions, strict=False)
+                    }
 
             state_dict[obj_name] = state_entry
 
@@ -108,7 +110,9 @@ def extract_state_dict(env, scenario, env_idx=0):
                     # Joint names are sorted alphabetically (standard in handlers)
                     joint_names = sorted(robot_cfg.actuators.keys())
                     joint_positions = robot_state.joint_pos[env_idx].cpu().numpy()
-                    state_entry["dof_pos"] = {name: float(pos) for name, pos in zip(joint_names, joint_positions)}
+                    state_entry["dof_pos"] = {
+                        name: float(pos) for name, pos in zip(joint_names, joint_positions, strict=False)
+                    }
 
             state_dict[robot_name] = state_entry
 
@@ -235,7 +239,7 @@ def evaluate_lift_collection(
                 joint_positions = robot_state.joint_pos[i].cpu().numpy()
 
             action_record = {
-                "dof_pos_target": {name: float(pos) for name, pos in zip(joint_names, joint_positions)},
+                "dof_pos_target": {name: float(pos) for name, pos in zip(joint_names, joint_positions, strict=False)},
             }
 
             current_episode_actions[i].append(action_record)

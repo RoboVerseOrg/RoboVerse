@@ -121,7 +121,7 @@ def all_gather(data):
     dist.all_gather(tensor_list, tensor)
 
     data_list = []
-    for size, tensor in zip(size_list, tensor_list):
+    for size, tensor in zip(size_list, tensor_list, strict=False):
         buffer = tensor.cpu().numpy().tobytes()[:size]
         data_list.append(pickle.loads(buffer))
 
@@ -151,7 +151,7 @@ def reduce_dict(input_dict, average=True):
         dist.all_reduce(values)
         if average:
             values /= world_size
-        reduced_dict = {k: v for k, v in zip(names, values)}
+        reduced_dict = {k: v for k, v in zip(names, values, strict=False)}
     return reduced_dict
 
 
@@ -270,7 +270,7 @@ def get_sha():
 
 
 def collate_fn(batch):
-    batch = list(zip(*batch))
+    batch = list(zip(*batch, strict=False))
     batch[0] = nested_tensor_from_tensor_list(batch[0])
     return tuple(batch)
 
@@ -324,7 +324,7 @@ def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
         device = tensor_list[0].device
         tensor = torch.zeros(batch_shape, dtype=dtype, device=device)
         mask = torch.ones((b, h, w), dtype=torch.bool, device=device)
-        for img, pad_img, m in zip(tensor_list, tensor, mask):
+        for img, pad_img, m in zip(tensor_list, tensor, mask, strict=False):
             pad_img[: img.shape[0], : img.shape[1], : img.shape[2]].copy_(img)
             m[: img.shape[1], : img.shape[2]] = False
     else:
@@ -349,7 +349,7 @@ def _onnx_nested_tensor_from_tensor_list(tensor_list: List[Tensor]) -> NestedTen
     padded_imgs = []
     padded_masks = []
     for img in tensor_list:
-        padding = [(s1 - s2) for s1, s2 in zip(max_size, tuple(img.shape))]
+        padding = [(s1 - s2) for s1, s2 in zip(max_size, tuple(img.shape), strict=False)]
         padded_img = torch.nn.functional.pad(img, (0, padding[2], 0, padding[1], 0, padding[0]))
         padded_imgs.append(padded_img)
 

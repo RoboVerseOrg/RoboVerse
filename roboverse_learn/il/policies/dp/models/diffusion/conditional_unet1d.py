@@ -1,5 +1,4 @@
 import logging
-from typing import Union
 
 import einops
 import torch
@@ -101,7 +100,7 @@ class ConditionalUnet1D(nn.Module):
         # print("!!cond dim", cond_dim)
         # print("!!global cond dim", global_cond_dim)
 
-        in_out = list(zip(all_dims[:-1], all_dims[1:]))
+        in_out = list(zip(all_dims[:-1], all_dims[1:], strict=False))
 
         local_cond_encoder = None
         if local_cond_dim is not None:
@@ -214,7 +213,7 @@ class ConditionalUnet1D(nn.Module):
     def forward(
         self,
         sample: torch.Tensor,
-        timestep: Union[torch.Tensor, float, int],
+        timestep: torch.Tensor | float | int,
         local_cond=None,
         global_cond=None,
         **kwargs,

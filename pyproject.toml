@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "roboverse-py"
 version = "1.0.0b0"
 description = "RoboVerse content, learning, and examples built on MetaSim"
+readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
@@ -187,7 +188,7 @@ roboverse_pack = [
 # roboverse_learn was excluded from ruff entirely until 2026-09; it now runs with the same F/E/I
 # rules as the rest of the tree. The style families below are tracked debt for this directory
 # (505 findings at inclusion time): remove a code from this list when its findings are fixed.
-"roboverse_learn/**.py" = ["D", "T20", "FA100", "UP006", "UP045", "E731", "B006", "RUF013", "F811"]
+"roboverse_learn/**.py" = ["D", "T20", "FA100", "UP006", "UP007", "UP035", "UP045", "E731", "B006", "RUF007", "RUF013", "F811"]
 "roboverse_learn/vla/pi0/train_config_snippet.py" = ["F821"]  # paste-in snippet for an openpi config, not a module
 "tools/**.py" = ["T20", "D"]  # research / diagnostic harnesses
 "roboverse_pack/tasks/maniskill/utils/**.py" = ["T20", "D"]

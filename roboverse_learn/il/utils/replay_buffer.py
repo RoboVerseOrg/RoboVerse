@@ -2,7 +2,7 @@ import math
 import numbers
 import os
 from functools import cached_property
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 import numcodecs
 import numpy as np
@@ -85,7 +85,7 @@ class ReplayBuffer:
     Assumes first dimension to be time. Only chunk in time dimension.
     """
 
-    def __init__(self, root: Union[zarr.Group, Dict[str, dict]]):
+    def __init__(self, root: zarr.Group | Dict[str, dict]):
         """
         Dummy constructor. Use copy_from* and create_from* class methods instead.
         """
@@ -150,7 +150,7 @@ class ReplayBuffer:
         store=None,
         keys=None,
         chunks: Dict[str, tuple] = dict(),
-        compressors: Union[dict, str, numcodecs.abc.Codec] = dict(),
+        compressors: dict | str | numcodecs.abc.Codec = dict(),
         if_exists="replace",
         **kwargs,
     ):
@@ -224,7 +224,7 @@ class ReplayBuffer:
         store=None,
         keys=None,
         chunks: Dict[str, tuple] = dict(),
-        compressors: Union[dict, str, numcodecs.abc.Codec] = dict(),
+        compressors: dict | str | numcodecs.abc.Codec = dict(),
         if_exists="replace",
         **kwargs,
     ):
@@ -251,7 +251,7 @@ class ReplayBuffer:
         self,
         store,
         chunks: Optional[Dict[str, tuple]] = dict(),
-        compressors: Union[str, numcodecs.abc.Codec, dict] = dict(),
+        compressors: str | numcodecs.abc.Codec | dict = dict(),
         if_exists="replace",
         **kwargs,
     ):
@@ -307,7 +307,7 @@ class ReplayBuffer:
         self,
         zarr_path,
         chunks: Optional[Dict[str, tuple]] = dict(),
-        compressors: Union[str, numcodecs.abc.Codec, dict] = dict(),
+        compressors: str | numcodecs.abc.Codec | dict = dict(),
         if_exists="replace",
         **kwargs,
     ):
@@ -323,7 +323,7 @@ class ReplayBuffer:
         return compressor
 
     @classmethod
-    def _resolve_array_compressor(cls, compressors: Union[dict, str, numcodecs.abc.Codec], key, array):
+    def _resolve_array_compressor(cls, compressors: dict | str | numcodecs.abc.Codec, key, array):
         # allows compressor to be explicitly set to None
         cpr = "nil"
         if isinstance(compressors, dict):
@@ -339,7 +339,7 @@ class ReplayBuffer:
         return cpr
 
     @classmethod
-    def _resolve_array_chunks(cls, chunks: Union[dict, tuple], key, array):
+    def _resolve_array_chunks(cls, chunks: dict | tuple, key, array):
         cks = None
         if isinstance(chunks, dict):
             if key in chunks:
@@ -472,7 +472,7 @@ class ReplayBuffer:
         self,
         data: Dict[str, np.ndarray],
         chunks: Optional[Dict[str, tuple]] = dict(),
-        compressors: Union[str, numcodecs.abc.Codec, dict] = dict(),
+        compressors: str | numcodecs.abc.Codec | dict = dict(),
     ):
         assert len(data) > 0
         is_zarr = self.backend == "zarr"

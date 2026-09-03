@@ -60,7 +60,7 @@ def align_linear_layers(
             f"the same MLP depth (and obs/action dims) to warm-start."
         )
     pairs = []
-    for sk, dk in zip(src_keys, dst_keys):
+    for sk, dk in zip(src_keys, dst_keys, strict=False):
         if src_sd[sk].shape != dst_sd[dk].shape:
             raise ValueError(
                 f"Shape mismatch for layer {sk} {tuple(src_sd[sk].shape)} -> "
@@ -101,7 +101,7 @@ def load_bc_into_actor_critic(
     else:
         bc_keys, actor_keys = _ordered_linear_keys(bc_sd), _ordered_linear_keys(actor_sd)
         pairs = []
-        for sk, dk in zip(bc_keys, actor_keys):
+        for sk, dk in zip(bc_keys, actor_keys, strict=False):
             if bc_sd[sk].shape != actor_sd[dk].shape:
                 break
             pairs.append((sk, dk))

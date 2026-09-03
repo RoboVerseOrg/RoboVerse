@@ -39,7 +39,8 @@ __all__ = [
     "to_pygame",
 ]
 
-from typing import Sequence, Tuple
+from collections.abc import Sequence
+from typing import Tuple
 
 import numpy as np
 import pygame
