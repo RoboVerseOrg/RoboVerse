@@ -29,6 +29,8 @@ except ImportError:
     pass
 
 REPO_ID = "RoboVerseOrg/roboverse_data"
+DOWNLOAD_LOCK_TIMEOUT_S = 3600.0
+"""How long a process waits for another process's in-flight download of the same asset tree."""
 DATA_REPO_IDS = (REPO_ID, "SomaStacksOrg/roboverse_data")
 
 
@@ -135,7 +137,9 @@ def check_and_download_single(filepath: str):
     else:
         ## In this case, we didn't find the file in the local directory, the circumstance is complicated.
         # Use POSIX-style paths for the HF dataset API (Windows uses backslashes by default)
-        relpath = os.path.relpath(filepath, LOCAL_DIR)
+        # Compare *real* paths: LOCAL_DIR is commonly a symlink to a shared asset checkout (CI caches,
+        # git worktrees), and a symlink-vs-target mismatch must not be mistaken for traversal.
+        relpath = os.path.relpath(os.path.realpath(filepath), os.path.realpath(LOCAL_DIR))
         is_optional_file = filepath.endswith((".mtl", ".png", ".jpg", ".jpeg", ".bmp", ".tga"))
         # A malformed asset descriptor with ``..`` segments would resolve
         # outside LOCAL_DIR — refuse it rather than send the escaped path
@@ -196,7 +200,11 @@ def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
     os.makedirs(LOCAL_DIR, exist_ok=True)
 
     lock_path = os.path.join(LOCAL_DIR, "download.lock")
-    with portalocker.Lock(lock_path):
+    # portalocker.Lock defaults to a 5 s timeout, after which a sibling process that is merely
+    # *waiting* for another process's download raises AlreadyLocked. Parallel-env workers and any
+    # two scripts sharing a roboverse_data checkout hit this whenever a fetch takes longer than 5 s
+    # (mesh-heavy assets routinely do). Wait for the download instead.
+    with portalocker.Lock(lock_path, timeout=DOWNLOAD_LOCK_TIMEOUT_S, check_interval=0.5):
         # in parallel env settings, we need to prevent child processes from downloading the same file.
 
         # check if current process is the main process

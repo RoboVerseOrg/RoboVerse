@@ -138,3 +138,31 @@ def test_local_existing_file_short_circuits(tmp_path, monkeypatch):
     monkeypatch.setattr(hf_util.hf_api, "file_exists", lambda *a, **kw: pytest.fail("HfApi reached"))
 
     hf_util.check_and_download_single(str(real_file))
+
+
+@pytest.mark.general
+def test_symlinked_local_dir_is_not_traversal(monkeypatch, tmp_path):
+    """A LOCAL_DIR that is a symlink to the real asset checkout must pass the traversal guard.
+
+    Regression: with a symlinked ``roboverse_data`` (git worktrees, shared CI caches) every fetch
+    was refused as "resolves outside LOCAL_DIR" because the guard compared the symlink path with
+    the already-resolved target path.
+    """
+    from metasim.utils import hf_util
+
+    real_dir = tmp_path / "real_roboverse_data"
+    real_dir.mkdir()
+    link_dir = tmp_path / "roboverse_data"
+    link_dir.symlink_to(real_dir, target_is_directory=True)
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(link_dir))
+    seen = {}
+
+    def _fake_find(relpath_posix, is_optional_file=False):
+        seen["relpath"] = relpath_posix
+        return None
+
+    monkeypatch.setattr(hf_util, "_find_data_repo", _fake_find)
+    with pytest.raises(Exception, match="neither exists") as excinfo:
+        hf_util.check_and_download_single(str(real_dir / "robots" / "g1" / "meshes" / "pelvis.STL"))
+    assert "Refusing to fetch" not in str(excinfo.value)
+    assert seen["relpath"] == "robots/g1/meshes/pelvis.STL"
