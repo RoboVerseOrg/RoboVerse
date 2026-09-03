@@ -1,0 +1,41 @@
+name: mirror-metasim
+
+# Keep the former standalone repository RoboVerseOrg/MetaSim usable as a read-only mirror of
+# packages/metasim for one release cycle: every push to main (and every tag) is split with
+# `git subtree` and force-pushed there, so `pip install git+https://github.com/RoboVerseOrg/MetaSim.git`
+# keeps resolving to current code. Needs the METASIM_MIRROR_TOKEN secret (a fine-grained PAT with
+# contents:write on RoboVerseOrg/MetaSim). Remove the workflow when the mirror is retired.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "packages/metasim/**"
+      - ".github/workflows/mirror-metasim.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: mirror-metasim
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    if: ${{ vars.METASIM_MIRROR_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Split packages/metasim and push to the mirror
+        env:
+          TOKEN: ${{ secrets.METASIM_MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "roboverse-bot"
+          git config user.email "bot@roboverse.wiki"
+          split=$(git subtree split --prefix=packages/metasim HEAD)
+          git push --force "https://x-access-token:${TOKEN}@github.com/RoboVerseOrg/MetaSim.git" "${split}:refs/heads/main"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            git push --force "https://x-access-token:${TOKEN}@github.com/RoboVerseOrg/MetaSim.git" "${split}:refs/tags/${GITHUB_REF_NAME}"
+          fi
