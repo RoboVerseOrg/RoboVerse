@@ -1,0 +1,1389 @@
+{
+ "metasim": {
+  "register_gym_envs": {
+   "kind": "function",
+   "signature": "() -> 'None'"
+  }
+ },
+ "metasim.constants": {
+  "PhysicStateType": {
+   "bases": [
+    "IntEnum"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "SimType": {
+   "bases": [
+    "Enum"
+   ],
+   "kind": "class",
+   "methods": {}
+  }
+ },
+ "metasim.queries.base": {
+  "BaseQueryType": {
+   "bases": [],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, **kwargs)",
+    "bind_handler": "(self, handler, *args: 'Any', **kwargs)"
+   }
+  }
+ },
+ "metasim.scenario.cameras": {
+  "BaseCameraCfg": {
+   "bases": [],
+   "fields": [
+    "name",
+    "data_types",
+    "width",
+    "height",
+    "pos",
+    "look_at",
+    "mount_to",
+    "mount_link",
+    "mount_pos",
+    "mount_quat",
+    "intrinsic"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, data_types: \"list[Literal['rgb', 'depth', 'instance_seg', 'instance_id_seg']]\" = <factory>, width: 'int' = <factory>, height: 'int' = <factory>, pos: 'tuple[float, float, float]' = <factory>, look_at: 'tuple[float, float, float]' = <factory>, mount_to: 'str | tuple[str, str] | None' = <factory>, mount_link: 'str | tuple[str, str] | None' = <factory>, mount_pos: 'tuple[float, float, float] | None' = <factory>, mount_quat: 'tuple[float, float, float, float] | None' = <factory>, intrinsic: 'list[list[float]] | None' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "PinholeCameraCfg": {
+   "bases": [
+    "BaseCameraCfg"
+   ],
+   "fields": [
+    "name",
+    "data_types",
+    "width",
+    "height",
+    "pos",
+    "look_at",
+    "mount_to",
+    "mount_link",
+    "mount_pos",
+    "mount_quat",
+    "intrinsic",
+    "focal_length",
+    "focus_distance",
+    "horizontal_aperture",
+    "clipping_range"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, data_types: \"list[Literal['rgb', 'depth', 'instance_seg', 'instance_id_seg']]\" = <factory>, width: 'int' = <factory>, height: 'int' = <factory>, pos: 'tuple[float, float, float]' = <factory>, look_at: 'tuple[float, float, float]' = <factory>, mount_to: 'str | tuple[str, str] | None' = <factory>, mount_link: 'str | tuple[str, str] | None' = <factory>, mount_pos: 'tuple[float, float, float] | None' = <factory>, mount_quat: 'tuple[float, float, float, float] | None' = <factory>, intrinsic: 'list[list[float]] | None' = <factory>, focal_length: 'float' = <factory>, focus_distance: 'float' = <factory>, horizontal_aperture: 'float' = <factory>, clipping_range: 'tuple[float, float]' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "horizontal_fov": "<property>",
+    "intrinsics": "<property>",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'",
+    "vertical_aperture": "<property>",
+    "vertical_fov": "<property>"
+   }
+  }
+ },
+ "metasim.scenario.grounds": {
+  "BaseTerrainCfg": {
+   "bases": [],
+   "fields": [
+    "type",
+    "origin",
+    "size",
+    "platform_size"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "GapCfg": {
+   "bases": [
+    "BaseTerrainCfg"
+   ],
+   "fields": [
+    "type",
+    "origin",
+    "size",
+    "platform_size",
+    "gap_size"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, gap_size: 'float' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "GroundCfg": {
+   "bases": [],
+   "fields": [
+    "width",
+    "length",
+    "horizontal_scale",
+    "vertical_scale",
+    "margin",
+    "max_mesh_triangles",
+    "elements",
+    "repeat_direction_gap",
+    "difficulty",
+    "static_friction",
+    "dynamic_friction",
+    "restitution"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, width: 'float' = <factory>, length: 'float' = <factory>, horizontal_scale: 'float' = <factory>, vertical_scale: 'float' = <factory>, margin: 'float' = <factory>, max_mesh_triangles: 'int' = <factory>, elements: 'dict[str, list[BaseTerrainCfg]]' = <factory>, repeat_direction_gap: \"list[int, Literal['row', 'column'], float]\" = <factory>, difficulty: \"list[float, float, Literal['linear']]\" = <factory>, static_friction: float = <factory>, dynamic_friction: float = <factory>, restitution: float = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "ObstacleCfg": {
+   "bases": [
+    "BaseTerrainCfg"
+   ],
+   "fields": [
+    "type",
+    "origin",
+    "size",
+    "platform_size",
+    "rectangle_params",
+    "max_height"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, rectangle_params: 'list[int, float, float]' = <factory>, max_height: 'float' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "PitCfg": {
+   "bases": [
+    "BaseTerrainCfg"
+   ],
+   "fields": [
+    "type",
+    "origin",
+    "size",
+    "platform_size",
+    "depth"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, depth: 'float' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "SlopeCfg": {
+   "bases": [
+    "BaseTerrainCfg"
+   ],
+   "fields": [
+    "type",
+    "origin",
+    "size",
+    "platform_size",
+    "slope",
+    "random"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, slope: 'float' = <factory>, random: 'bool' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "StairCfg": {
+   "bases": [
+    "BaseTerrainCfg"
+   ],
+   "fields": [
+    "type",
+    "origin",
+    "size",
+    "platform_size",
+    "step"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, step: 'list[float]' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "StoneCfg": {
+   "bases": [
+    "BaseTerrainCfg"
+   ],
+   "fields": [
+    "type",
+    "origin",
+    "size",
+    "platform_size",
+    "stone_params",
+    "max_height"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, stone_params: 'list[float, float]' = <factory>, max_height: 'float' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  }
+ },
+ "metasim.scenario.lights": {
+  "BaseLightCfg": {
+   "bases": [],
+   "fields": [
+    "name",
+    "intensity",
+    "color",
+    "is_global"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "CylinderLightCfg": {
+   "bases": [
+    "BaseLightCfg"
+   ],
+   "fields": [
+    "name",
+    "intensity",
+    "color",
+    "is_global",
+    "length",
+    "radius",
+    "pos",
+    "rot"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, length: 'float' = <factory>, radius: 'float' = <factory>, pos: 'tuple[float, float, float]' = <factory>, rot: 'tuple[float, float, float, float]' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "DiskLightCfg": {
+   "bases": [
+    "BaseLightCfg"
+   ],
+   "fields": [
+    "name",
+    "intensity",
+    "color",
+    "is_global",
+    "radius",
+    "pos",
+    "rot",
+    "normalize"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, radius: 'float' = <factory>, pos: 'tuple[float, float, float]' = <factory>, rot: 'tuple[float, float, float, float]' = <factory>, normalize: 'bool' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "DistantLightCfg": {
+   "bases": [
+    "BaseLightCfg"
+   ],
+   "fields": [
+    "name",
+    "intensity",
+    "color",
+    "is_global",
+    "polar",
+    "azimuth"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, polar: 'float' = <factory>, azimuth: 'float' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "quat": "<property>",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "DomeLightCfg": {
+   "bases": [
+    "BaseLightCfg"
+   ],
+   "fields": [
+    "name",
+    "intensity",
+    "color",
+    "is_global",
+    "texture_file"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, texture_file: 'str | None' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "SphereLightCfg": {
+   "bases": [
+    "BaseLightCfg"
+   ],
+   "fields": [
+    "name",
+    "intensity",
+    "color",
+    "is_global",
+    "radius",
+    "pos",
+    "normalize"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, radius: 'float' = <factory>, pos: 'tuple[float, float, float]' = <factory>, normalize: 'bool' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  }
+ },
+ "metasim.scenario.objects": {
+  "ArticulationObjCfg": {
+   "bases": [
+    "_FileBasedMixin",
+    "BaseArticulationObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "mesh_path",
+    "usd_path",
+    "urdf_path",
+    "mjcf_path",
+    "mjx_mjcf_path",
+    "file_type",
+    "extra_resources"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "BaseArticulationObjCfg": {
+   "bases": [
+    "BaseObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "BaseObjCfg": {
+   "bases": [],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "BaseRigidObjCfg": {
+   "bases": [
+    "BaseObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "collision_enabled",
+    "physics",
+    "mesh_density",
+    "collision_mesh_path",
+    "static_friction",
+    "dynamic_friction",
+    "restitution",
+    "linear_damping",
+    "angular_damping"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "NonConvexRigidObjCfg": {
+   "bases": [
+    "RigidObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "collision_enabled",
+    "physics",
+    "mesh_density",
+    "collision_mesh_path",
+    "static_friction",
+    "dynamic_friction",
+    "restitution",
+    "linear_damping",
+    "angular_damping",
+    "mesh_path",
+    "usd_path",
+    "urdf_path",
+    "mjcf_path",
+    "mjx_mjcf_path",
+    "file_type",
+    "extra_resources",
+    "collapse_fixed_joints",
+    "mesh_pose"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, collapse_fixed_joints: 'bool' = <factory>, mesh_pose: 'list[float]' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "PrimitiveCubeCfg": {
+   "bases": [
+    "_PrimitiveMixin",
+    "BaseRigidObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "collision_enabled",
+    "physics",
+    "mesh_density",
+    "collision_mesh_path",
+    "static_friction",
+    "dynamic_friction",
+    "restitution",
+    "linear_damping",
+    "angular_damping",
+    "mass",
+    "color",
+    "size"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>, size: 'list[float]' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "half_size": "<property>",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'",
+    "volume": "<property>"
+   }
+  },
+  "PrimitiveCylinderCfg": {
+   "bases": [
+    "_PrimitiveMixin",
+    "BaseRigidObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "collision_enabled",
+    "physics",
+    "mesh_density",
+    "collision_mesh_path",
+    "static_friction",
+    "dynamic_friction",
+    "restitution",
+    "linear_damping",
+    "angular_damping",
+    "mass",
+    "color",
+    "radius",
+    "height"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>, radius: 'float' = <factory>, height: 'float' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'",
+    "volume": "<property>"
+   }
+  },
+  "PrimitiveFrameCfg": {
+   "bases": [
+    "RigidObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "collision_enabled",
+    "physics",
+    "mesh_density",
+    "collision_mesh_path",
+    "static_friction",
+    "dynamic_friction",
+    "restitution",
+    "linear_damping",
+    "angular_damping",
+    "mesh_path",
+    "usd_path",
+    "urdf_path",
+    "mjcf_path",
+    "mjx_mjcf_path",
+    "file_type",
+    "extra_resources",
+    "collapse_fixed_joints",
+    "base_link"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, collapse_fixed_joints: 'bool' = <factory>, base_link: 'str | tuple[str, str] | None' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "PrimitiveMultiBoxCfg": {
+   "bases": [
+    "BaseRigidObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "collision_enabled",
+    "physics",
+    "mesh_density",
+    "collision_mesh_path",
+    "static_friction",
+    "dynamic_friction",
+    "restitution",
+    "linear_damping",
+    "angular_damping",
+    "boxes",
+    "mass",
+    "color"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, boxes: 'list' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "density": "<property>",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "total_volume": "<property>",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "PrimitiveSphereCfg": {
+   "bases": [
+    "_PrimitiveMixin",
+    "BaseRigidObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "collision_enabled",
+    "physics",
+    "mesh_density",
+    "collision_mesh_path",
+    "static_friction",
+    "dynamic_friction",
+    "restitution",
+    "linear_damping",
+    "angular_damping",
+    "mass",
+    "color",
+    "radius"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>, radius: 'float' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'",
+    "volume": "<property>"
+   }
+  },
+  "RigidObjCfg": {
+   "bases": [
+    "_FileBasedMixin",
+    "BaseRigidObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "collision_enabled",
+    "physics",
+    "mesh_density",
+    "collision_mesh_path",
+    "static_friction",
+    "dynamic_friction",
+    "restitution",
+    "linear_damping",
+    "angular_damping",
+    "mesh_path",
+    "usd_path",
+    "urdf_path",
+    "mjcf_path",
+    "mjx_mjcf_path",
+    "file_type",
+    "extra_resources",
+    "collapse_fixed_joints"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, collapse_fixed_joints: 'bool' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  }
+ },
+ "metasim.scenario.render": {
+  "RenderCfg": {
+   "bases": [],
+   "fields": [
+    "mode",
+    "samples",
+    "device",
+    "hdri_path"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, mode: \"Literal['rasterization', 'raytracing', 'pathtracing', 'realtime_pathtracing']\" = <factory>, samples: 'int | None' = <factory>, device: 'str' = <factory>, hdri_path: 'str | None' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  }
+ },
+ "metasim.scenario.robot": {
+  "BaseActuatorCfg": {
+   "bases": [],
+   "fields": [
+    "effort_limit_sim",
+    "velocity_limit",
+    "velocity_limit_sim",
+    "armature",
+    "frictionloss",
+    "damping",
+    "stiffness",
+    "fully_actuated",
+    "is_ee"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, effort_limit_sim: 'float | None' = <factory>, velocity_limit: 'float | None' = <factory>, velocity_limit_sim: 'float | None' = <factory>, armature: 'float | None' = <factory>, frictionloss: 'float | None' = <factory>, damping: 'float | None' = <factory>, stiffness: 'float | None' = <factory>, fully_actuated: 'bool' = <factory>, is_ee: 'bool' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  },
+  "RobotCfg": {
+   "bases": [
+    "ArticulationObjCfg"
+   ],
+   "fields": [
+    "name",
+    "default_position",
+    "default_orientation",
+    "fix_base_link",
+    "enabled_gravity",
+    "scale",
+    "mesh_path",
+    "usd_path",
+    "urdf_path",
+    "mjcf_path",
+    "mjx_mjcf_path",
+    "file_type",
+    "extra_resources",
+    "num_joints",
+    "joint_limits",
+    "default_joint_positions",
+    "actuators",
+    "control_type",
+    "isaacgym_flip_visual_attachments",
+    "collapse_fixed_joints",
+    "enabled_self_collisions",
+    "curobo_ref_cfg_name",
+    "gripper_joint_name",
+    "gripper_open_q",
+    "gripper_close_q",
+    "curobo_tcp_rel_pos",
+    "curobo_tcp_rel_rot"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, name: 'str | None' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, num_joints: 'int | None' = <factory>, joint_limits: 'dict[str, tuple[float, float]] | None' = <factory>, default_joint_positions: 'dict[str, float] | None' = <factory>, actuators: 'dict[str, BaseActuatorCfg] | None' = <factory>, control_type: \"dict[str, Literal['position', 'effort']] | None\" = <factory>, isaacgym_flip_visual_attachments: 'bool' = <factory>, collapse_fixed_joints: 'bool' = <factory>, enabled_self_collisions: 'bool' = <factory>, curobo_ref_cfg_name: 'str | None' = <factory>, gripper_joint_name: 'str | None' = <factory>, gripper_open_q: 'list[float] | None' = <factory>, gripper_close_q: 'list[float] | None' = <factory>, curobo_tcp_rel_pos: 'tuple[float, float, float] | None' = <factory>, curobo_tcp_rel_rot: 'tuple[float, float, float] | None' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  }
+ },
+ "metasim.scenario.scenario": {
+  "ScenarioCfg": {
+   "bases": [],
+   "fields": [
+    "scene",
+    "robots",
+    "lights",
+    "objects",
+    "cameras",
+    "gs_scene",
+    "ground",
+    "add_default_ground",
+    "render",
+    "sim_params",
+    "simulator",
+    "num_envs",
+    "headless",
+    "env_spacing",
+    "decimation",
+    "gravity"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, scene: 'SceneCfg | None' = <factory>, robots: 'list[RobotCfg]' = <factory>, lights: 'list[BaseLightCfg]' = <factory>, objects: 'list[BaseObjCfg]' = <factory>, cameras: 'list[BaseCameraCfg]' = <factory>, gs_scene: 'GSSceneCfg | None' = <factory>, ground: 'GroundCfg | None' = <factory>, add_default_ground: 'bool' = <factory>, render: 'RenderCfg' = <factory>, sim_params: 'SimParamCfg' = <factory>, simulator: \"Literal['blender', 'genesis', 'isaacgym', 'isaacsim', 'mjx', 'mujoco', 'newton', 'superdex', 'pybullet', 'pyrep', 'sapien2', 'sapien3'] | None\" = <factory>, num_envs: 'int' = <factory>, headless: 'bool' = <factory>, env_spacing: 'float' = <factory>, decimation: 'int' = <factory>, gravity: 'tuple[float, float, float]' = <factory>) -> None",
+    "check_assets": "(self)",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "update": "(self, **kwargs)",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  }
+ },
+ "metasim.scenario.simulator_params": {
+  "SimParamCfg": {
+   "bases": [],
+   "fields": [
+    "dt",
+    "bounce_threshold_velocity",
+    "contact_offset",
+    "num_position_iterations",
+    "num_velocity_iterations",
+    "friction_correlation_distance",
+    "friction_offset_threshold",
+    "replace_cylinder_with_capsule",
+    "rest_offset",
+    "solver_type",
+    "substeps",
+    "max_depenetration_velocity",
+    "default_buffer_size_multiplier",
+    "sapien_enable_tgs",
+    "sapien_enable_pcm",
+    "sapien_default_static_friction",
+    "sapien_default_dynamic_friction",
+    "sapien_default_restitution",
+    "sapien_apply_scene_solver",
+    "sapien_disable_default_lights",
+    "sapien_load_multiple_collisions",
+    "sapien_apply_global_physx",
+    "sapien_sleep_threshold",
+    "sapien_bounce_threshold",
+    "sapien_enable_ccd",
+    "sapien_enable_enhanced_determinism",
+    "sapien_enable_friction_every_iteration",
+    "sapien_disable_robot_gravity",
+    "sapien_ground_altitude",
+    "sapien_drive_force_mode",
+    "superdex_control_mode",
+    "nconmax",
+    "njmax",
+    "newton_use_mujoco_contacts",
+    "newton_mujoco_iterations",
+    "newton_mujoco_ls_iterations",
+    "newton_mujoco_disable_contacts",
+    "num_threads",
+    "use_gpu_pipeline",
+    "use_gpu"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, dt: 'float | None' = <factory>, bounce_threshold_velocity: 'float' = <factory>, contact_offset: 'float' = <factory>, num_position_iterations: 'int' = <factory>, num_velocity_iterations: 'int' = <factory>, friction_correlation_distance: 'float' = <factory>, friction_offset_threshold: 'float' = <factory>, replace_cylinder_with_capsule: 'bool' = <factory>, rest_offset: 'float' = <factory>, solver_type: 'int' = <factory>, substeps: 'int' = <factory>, max_depenetration_velocity: 'float' = <factory>, default_buffer_size_multiplier: 'int' = <factory>, sapien_enable_tgs: 'bool | None' = <factory>, sapien_enable_pcm: 'bool | None' = <factory>, sapien_default_static_friction: 'float | None' = <factory>, sapien_default_dynamic_friction: 'float | None' = <factory>, sapien_default_restitution: 'float | None' = <factory>, sapien_apply_scene_solver: 'bool | None' = <factory>, sapien_disable_default_lights: 'bool | None' = <factory>, sapien_load_multiple_collisions: 'bool | None' = <factory>, sapien_apply_global_physx: 'bool | None' = <factory>, sapien_sleep_threshold: 'float | None' = <factory>, sapien_bounce_threshold: 'float | None' = <factory>, sapien_enable_ccd: 'bool | None' = <factory>, sapien_enable_enhanced_determinism: 'bool | None' = <factory>, sapien_enable_friction_every_iteration: 'bool | None' = <factory>, sapien_disable_robot_gravity: 'bool | None' = <factory>, sapien_ground_altitude: 'float | None' = <factory>, sapien_drive_force_mode: 'str | None' = <factory>, superdex_control_mode: \"Literal['pd', 'implicit']\" = <factory>, nconmax: 'int | None' = <factory>, njmax: 'int | None' = <factory>, newton_use_mujoco_contacts: 'bool | None' = <factory>, newton_mujoco_iterations: 'int | None' = <factory>, newton_mujoco_ls_iterations: 'int | None' = <factory>, newton_mujoco_disable_contacts: 'bool' = <factory>, num_threads: 'int' = <factory>, use_gpu_pipeline: 'bool' = <factory>, use_gpu: 'bool' = <factory>) -> None",
+    "copy": "(obj: 'object') -> 'object'",
+    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
+    "replace": "(obj: 'object', **kwargs) -> 'object'",
+    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
+    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+   }
+  }
+ },
+ "metasim.sim._versions": {
+  "BackendVersionError": {
+   "bases": [
+    "RuntimeError"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "BackendVersionReport": {
+   "bases": [],
+   "fields": [
+    "sim",
+    "statuses"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, sim: 'SimType', statuses: 'list[RequirementStatus]' = <factory>) -> None",
+    "installed": "<property>",
+    "unsupported": "<property>",
+    "untested": "<property>"
+   }
+  },
+  "Requirement": {
+   "bases": [],
+   "fields": [
+    "dist",
+    "spec",
+    "tested",
+    "optional"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, dist: 'str', spec: 'str', tested: 'str' = '', optional: 'bool' = False) -> None"
+   }
+  },
+  "RequirementStatus": {
+   "bases": [],
+   "fields": [
+    "requirement",
+    "installed",
+    "in_spec",
+    "is_tested"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, requirement: 'Requirement', installed: 'str | None', in_spec: 'bool | None', is_tested: 'bool | None') -> None",
+    "label": "<property>"
+   }
+  },
+  "check_backend": {
+   "kind": "function",
+   "signature": "(sim: 'SimType') -> 'BackendVersionReport'"
+  },
+  "doctor": {
+   "kind": "function",
+   "signature": "(sims: 'list[SimType] | None' = None) -> 'list[BackendVersionReport]'"
+  },
+  "enforce_backend_versions": {
+   "kind": "function",
+   "signature": "(sim: 'SimType') -> 'BackendVersionReport'"
+  },
+  "format_reports": {
+   "kind": "function",
+   "signature": "(reports: 'list[BackendVersionReport]') -> 'str'"
+  }
+ },
+ "metasim.sim.base": {
+  "BaseSimHandler": {
+   "bases": [
+    "ABC"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, scenario: 'ScenarioCfg', optional_queries: 'dict[str, BaseQueryType] | None' = None)",
+    "actions_cache": "<property>",
+    "close": "(self) -> 'None'",
+    "device": "<property>",
+    "flush_visual_updates": "(self, *, wait_for_materials: 'bool' = False, settle_passes: 'int' = 2) -> 'None'",
+    "get_action_dim": "(self) -> 'int'",
+    "get_action_joint_names": "(self) -> 'dict[str, list[str]]'",
+    "get_body_names": "(self, obj_name: 'str', sort: 'bool' = True) -> 'list[str]'",
+    "get_body_reindex": "(self, obj_name: 'str') -> 'list[int]'",
+    "get_extra": "(self)",
+    "get_joint_names": "(self, obj_name: 'str', sort: 'bool' = True) -> 'list[str]'",
+    "get_joint_reindex": "(self, obj_name: 'str', inverse: 'bool' = False) -> 'list[int]'",
+    "get_states": "(self, env_ids: 'list[int] | None' = None, mode: 'StateMode' = 'dict') -> 'StateOutput'",
+    "invalidate_state_caches": "(self) -> 'None'",
+    "launch": "(self) -> 'None'",
+    "num_envs": "<property>",
+    "refresh_render": "(self) -> 'None'",
+    "render": "(self) -> 'None'",
+    "set_dof_targets": "(self, actions: 'CompatActionInput') -> 'None'",
+    "set_seed": "(self, seed: 'int') -> 'None'",
+    "set_states": "(self, states: 'TensorState | DictStateBatch', env_ids: 'list[int] | None' = None) -> 'None'",
+    "simulate": "(self)"
+   }
+  }
+ },
+ "metasim.sim.hybrid": {
+  "HybridSimHandler": {
+   "bases": [
+    "BaseSimHandler"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, scenario: 'ScenarioCfg', physics_handler: 'BaseSimHandler', render_handler: 'BaseSimHandler', optional_queries: 'dict[str, BaseQueryType] | None' = None)",
+    "close": "(self) -> 'None'",
+    "device": "<property>",
+    "launch": "(self) -> 'None'",
+    "render": "(self) -> 'None'",
+    "render_frame": "(self, view: 'str')",
+    "render_frames": "(self, views)",
+    "set_seed": "(self, seed: 'int') -> 'None'"
+   }
+  }
+ },
+ "metasim.sim.parallel": {
+  "ParallelSimWrapper": {
+   "kind": "function",
+   "signature": "(base_cls: 'type[BaseSimHandler]') -> 'type[BaseSimHandler]'"
+  }
+ },
+ "metasim.sim.sim_context": {
+  "HandlerContext": {
+   "bases": [],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, scenario: 'ScenarioCfg', simulation_app: 'Any | None' = None)"
+   }
+  }
+ },
+ "metasim.task.base": {
+  "BaseTaskEnv": {
+   "bases": [],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, scenario: 'BaseSimHandler | ScenarioCfg | None' = None, device: 'str | torch.device | None' = None) -> 'None'",
+    "action_space": "<property>",
+    "close": "(self) -> 'None'",
+    "extra_spec": "<property>",
+    "observation_space": "<property>",
+    "reset": "(self, states=None, env_ids: 'list[int] | None' = None, seed: 'int | None' = None) -> 'tuple[Obs, Info | None]'",
+    "step": "(self, actions: 'CompatActionInput') -> 'tuple[Obs, Reward, Success, TimeOut, Info | None]'"
+   }
+  }
+ },
+ "metasim.task.registry": {
+  "get_task_class": {
+   "kind": "function",
+   "signature": "(name: 'str') -> 'type[BaseTaskEnv]'"
+  },
+  "list_tasks": {
+   "kind": "function",
+   "signature": "()"
+  },
+  "register_task": {
+   "kind": "function",
+   "signature": "(*names)"
+  }
+ },
+ "metasim.task.rl_task": {
+  "RLTaskEnv": {
+   "bases": [
+    "BaseTaskEnv"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, scenario: 'ScenarioCfg', device: 'str | torch.device | None' = None) -> 'None'",
+    "action_space": "<property>",
+    "obs_buf": "<property>",
+    "observation_space": "<property>",
+    "priv_obs_buf": "<property>",
+    "render": "(self) -> 'np.ndarray'",
+    "reset": "(self, states=None, env_ids=None, seed: 'int | None' = None) -> 'tuple[torch.Tensor, Info]'",
+    "step": "(self, actions: 'CompatActionInput') -> 'tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]'",
+    "unnormalise_action": "(self, action: 'torch.Tensor') -> 'torch.Tensor'"
+   }
+  }
+ },
+ "metasim.types": {
+  "CameraState": {
+   "bases": [],
+   "fields": [
+    "rgb",
+    "depth",
+    "instance_id_seg",
+    "instance_id_seg_id2label",
+    "instance_seg",
+    "instance_seg_id2label",
+    "pos",
+    "quat_world",
+    "intrinsics"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, rgb: 'CameraRgbTensor | None', depth: 'CameraDepthTensor | None', instance_id_seg: 'CameraSegmentationTensor | None' = None, instance_id_seg_id2label: 'dict[int, str] | None' = None, instance_seg: 'CameraSegmentationTensor | None' = None, instance_seg_id2label: 'dict[int, str] | None' = None, pos: 'CameraPosTensor | None' = None, quat_world: 'CameraQuatTensor | None' = None, intrinsics: 'CameraIntrinsicsTensor | None' = None) -> None",
+    "quat_opengl": "<property>",
+    "quat_ros": "<property>"
+   }
+  },
+  "DictEnvState": {
+   "bases": [
+    "dict"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "DictObjectState": {
+   "bases": [
+    "dict"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "DictRobotState": {
+   "bases": [
+    "dict"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "ObjectState": {
+   "bases": [],
+   "fields": [
+    "root_state",
+    "body_names",
+    "body_state",
+    "joint_pos",
+    "joint_vel"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, root_state: 'RootStateTensor', body_names: 'list[str] | None' = None, body_state: 'BodyStateTensor | None' = None, joint_pos: 'JointStateTensor | None' = None, joint_vel: 'JointStateTensor | None' = None) -> None"
+   }
+  },
+  "ObservationInfo": {
+   "bases": [
+    "dict"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "RawObservationInfo": {
+   "bases": [
+    "dict"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "RobotAction": {
+   "bases": [
+    "dict"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "RobotState": {
+   "bases": [],
+   "fields": [
+    "root_state",
+    "body_names",
+    "body_state",
+    "joint_pos",
+    "joint_vel",
+    "joint_pos_target",
+    "joint_vel_target",
+    "joint_effort_target"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, root_state: 'RootStateTensor', body_names: 'list[str] | None' = None, body_state: 'BodyStateTensor | None' = None, joint_pos: 'JointStateTensor | None' = None, joint_vel: 'JointStateTensor | None' = None, joint_pos_target: 'JointStateTensor | None' = None, joint_vel_target: 'JointStateTensor | None' = None, joint_effort_target: 'JointStateTensor | None' = None) -> None"
+   }
+  },
+  "ShapeSpec": {
+   "bases": [],
+   "fields": [
+    "dims"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, dims: 'Tuple[Union[str, int], ...]') -> None"
+   }
+  },
+  "TaskInfo": {
+   "bases": [
+    "dict"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "TensorState": {
+   "bases": [],
+   "fields": [
+    "objects",
+    "robots",
+    "cameras",
+    "extras"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, objects: 'dict[str, ObjectState]', robots: 'dict[str, RobotState]', cameras: 'dict[str, CameraState]', extras: 'dict' = <factory>) -> None"
+   }
+  }
+ },
+ "metasim.utils.configclass": {
+  "configclass": {
+   "kind": "function",
+   "signature": "(cls, **kwargs)"
+  }
+ },
+ "metasim.utils.log": {
+  "configure_logging": {
+   "kind": "function",
+   "signature": "(level: 'str | None' = None, *, force: 'bool' = False) -> 'str | None'"
+  },
+  "reset_warn_once": {
+   "kind": "function",
+   "signature": "() -> 'None'"
+  },
+  "warn_once": {
+   "kind": "function",
+   "signature": "(key: 'Hashable', message: 'str') -> 'bool'"
+  }
+ },
+ "metasim.utils.replay": {
+  "ReplayReport": {
+   "bases": [],
+   "fields": [
+    "level",
+    "passed",
+    "tolerance",
+    "worst",
+    "worst_step",
+    "worst_key",
+    "per_step"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, level: 'str', passed: 'bool', tolerance: 'float', worst: 'float' = 0.0, worst_step: 'int' = -1, worst_key: 'str' = '', per_step: 'list[float]' = <factory>) -> None"
+   }
+  },
+  "Trajectory": {
+   "bases": [],
+   "fields": [
+    "states",
+    "actions"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, states: 'list[TensorState]', actions: 'list[torch.Tensor]') -> None"
+   }
+  },
+  "record": {
+   "kind": "function",
+   "signature": "(handler, initial_state: 'TensorState', actions: 'list[torch.Tensor]') -> 'Trajectory'"
+  },
+  "state_distance": {
+   "kind": "function",
+   "signature": "(a: 'TensorState', b: 'TensorState') -> 'tuple[float, str]'"
+  },
+  "verify_action_replay": {
+   "kind": "function",
+   "signature": "(handler, traj: 'Trajectory', *, tol: 'float' = 0.0001) -> 'ReplayReport'"
+  },
+  "verify_state_replay": {
+   "kind": "function",
+   "signature": "(handler, traj: 'Trajectory', *, every: 'int' = 10, tol_roundtrip: 'float' = 1e-06, tol_step: 'float' = 0.0001) -> 'tuple[ReplayReport, ReplayReport]'"
+  }
+ },
+ "metasim.utils.setup_util": {
+  "BackendSpec": {
+   "bases": [],
+   "fields": [
+    "module",
+    "cls",
+    "parallel",
+    "install_hint"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": "(self, module: 'str', cls: 'str', parallel: 'bool' = False, install_hint: 'str' = '') -> None"
+   }
+  },
+  "get_ground": {
+   "kind": "function",
+   "signature": "(ground_name: 'str') -> 'GroundCfg'"
+  },
+  "get_handler": {
+   "kind": "function",
+   "signature": "(scenario, optional_queries=None)"
+  },
+  "get_robot": {
+   "kind": "function",
+   "signature": "(robot_name: 'str') -> 'RobotCfg'"
+  },
+  "get_scene": {
+   "kind": "function",
+   "signature": "(scene_name: 'str') -> 'SceneCfg'"
+  },
+  "get_sim_handler_class": {
+   "kind": "function",
+   "signature": "(sim: 'SimType')"
+  }
+ },
+ "metasim.utils.state": {
+  "action_input_to_dict_batch": {
+   "kind": "function",
+   "signature": "(handler: 'BaseSimHandler', actions: 'CompatActionInput') -> 'ActionBatch'"
+  },
+  "action_input_to_tensor": {
+   "kind": "function",
+   "signature": "(handler: 'BaseSimHandler', actions: 'CompatActionInput', device: 'str | torch.device' = 'cpu') -> 'torch.Tensor'"
+  },
+  "adapt_actions_to_dict": {
+   "kind": "function",
+   "signature": "(handler: 'BaseSimHandler', actions: 'CompatActionInput') -> 'dict[str, dict[str, dict[str, float]]]'"
+  },
+  "join_tensor_states": {
+   "kind": "function",
+   "signature": "(tensor_states: 'list[TensorState]') -> 'TensorState'"
+  },
+  "list_state_to_tensor": {
+   "kind": "function",
+   "signature": "(handler: 'BaseSimHandler', env_states: 'list[DictEnvState]', device: 'torch.device | str' = 'cpu') -> 'TensorState'"
+  },
+  "select_envs": {
+   "kind": "function",
+   "signature": "(state: 'TensorState', env_ids: 'list[int]') -> 'TensorState'"
+  },
+  "state_tensor_to_nested": {
+   "kind": "function",
+   "signature": "(handler: 'BaseSimHandler', tensor_state: 'TensorState') -> 'list[DictEnvState]'"
+  }
+ }
+}

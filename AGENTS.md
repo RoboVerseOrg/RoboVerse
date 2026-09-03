@@ -142,6 +142,11 @@ tree. Attribution (rule 1) is the correct way to acknowledge an upstream; a tear
 - For composite configs, hold sub-module `.Config` objects rather than flattening their fields, so
   sub-modules can be swapped without changing the composite surface.
 - Keep public APIs stable. If you must break one, document a migration path.
+- The public surface of MetaSim is pinned in `packages/metasim/metasim/test/api_snapshot.json`
+  (modules listed in `metasim.utils.api_surface.PUBLIC_MODULES`). A removed symbol, method or
+  dataclass field, or a changed signature, fails `test_public_api_general.py`. Break it on purpose:
+  `python -m metasim api-snapshot --update`, then a `Changed` / `Removed` / `Deprecated` CHANGELOG
+  line with the migration path.
 
 ## Code Style
 

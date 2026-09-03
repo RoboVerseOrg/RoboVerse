@@ -1,5 +1,6 @@
 """``python -m metasim <command>``.
 
+* ``api-snapshot`` — public API surface vs ``metasim/test/api_snapshot.json`` (``--update`` to accept).
 * ``doctor`` — every simulator backend: installed package versions vs the supported range and the
   last verified version (``metasim/sim/_versions.py``). Exit status 1 when an installed backend is
   outside its supported range, so it can gate an environment in CI or a Dockerfile.
@@ -45,6 +46,26 @@ def _doctor(args: argparse.Namespace) -> int:
     return 1 if any(r.unsupported for r in reports) else 0
 
 
+def _api_snapshot(args: argparse.Namespace) -> int:
+    from metasim.utils.api_surface import SNAPSHOT_PATH, collect_api, diff_api, load_snapshot, write_snapshot
+
+    current = collect_api()
+    if args.update or not SNAPSHOT_PATH.exists():
+        write_snapshot(current)
+        print(f"wrote {SNAPSHOT_PATH} ({sum(len(v) for v in current.values())} symbols)")
+        return 0
+    breaking, additions = diff_api(load_snapshot(), current)
+    for line in additions:
+        print(f"+ {line}")
+    for line in breaking:
+        print(f"! {line}")
+    if breaking:
+        print(f"{len(breaking)} breaking change(s); run `python -m metasim api-snapshot --update` to accept them.")
+        return 1
+    print("public API unchanged" if not additions else f"{len(additions)} addition(s), nothing broken")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Parse ``argv`` and run the selected sub-command; returns the process exit status."""
     parser = argparse.ArgumentParser(prog="python -m metasim")
@@ -58,6 +79,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     d.add_argument("--json", action="store_true")
     d.set_defaults(func=_doctor)
+    a = sub.add_parser("api-snapshot", help="compare the public API against metasim/test/api_snapshot.json")
+    a.add_argument("--update", action="store_true", help="rewrite the snapshot from the current code")
+    a.set_defaults(func=_api_snapshot)
     args = parser.parse_args(argv)
     return args.func(args)
 

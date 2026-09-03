@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Public API snapshot: `metasim.utils.api_surface` records every public function/class (methods, dataclass fields, signatures) of the modules in `PUBLIC_MODULES` into `metasim/test/api_snapshot.json`; `test_public_api_general.py` fails on a removed symbol or changed signature (additions are reported). `python -m metasim api-snapshot [--update]` regenerates or diffs it. Breaking the surface now requires the explicit update plus a CHANGELOG line.
+
 ### Changed
 - Logging: `metasim.utils.log.warn_once` deduplicates a warning per process (the MuJoCo / Newton "forcerange stays active" warnings printed once per env per actuator — 1,018 copies in a 128-env run); `hf_util`'s "found in local directory" moves to DEBUG (it was 70% of a typical log); `METASIM_LOG_LEVEL` (opt-in, applied at import) sets loguru's level for the library without touching an application's own sinks.
 - `metasim/utils/{configclass,dict,math,string_util}.py` carry their Isaac Lab (BSD-3-Clause) attribution header with the license text at `packages/metasim/LICENSE.isaaclab`.
