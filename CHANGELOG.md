@@ -12,7 +12,25 @@ release.
 
 ## [Unreleased]
 
-Nothing yet — open a PR to add entries here.
+### Added
+
+- `--sim superdex` in every MuJoCo-capable `get_started` tutorial and a `roboverse-py[superdex]`
+  extra (needs the MetaSim SuperDex backend, Python >= 3.12).
+- `scripts/parity_superdex_tracking.py`: seeded joint-target tracking and rigid-object drop
+  comparisons between two backends (record per backend, compare + plot).
+- CI (`.github/workflows/tests.yml`): ruff lint job + the whole `tests/` suite on CPU for every PR;
+  `tests/conftest.py` markers `requires_optional` / `requires_asset` skip with a reason instead of
+  failing when optional deps or `roboverse_data` assets are absent.
+
+### Fixed
+
+- Native LIBERO `Open`/`Close`/`TurnOn`/`TurnOff` predicates always evaluated False on
+  mujoco >= 3.x (`numpy.int32 in (mjtJoint...)` membership).
+- `get_started/multiple_cameras.py` passed a removed `ScenarioCfg` kwarg.
+- Stale test expectations (docs build layout, `LiberoBaseTask.reset` stubs after the `seed` change).
+- Red flags: SSH submodule URL, dangling `release/metasim` symlink, silent `except: pass` around
+  passthrough registration, hard-coded personal paths in scripts/tests, untruthful
+  `requires-python >= 3.8` (now 3.10), wheels missing LIBERO json/npz bundles, stale ruff ignores.
 
 ## [1.0.0-beta] - 2026-05-31
 
