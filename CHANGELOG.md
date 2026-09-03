@@ -43,6 +43,7 @@ release.
 - FastTD3: the nine stub configs that say `# Inherits from base.yaml` now actually inherit (`load_config` deep-merges over `configs/base.yaml`; previously `float(None)` at startup); `mjx_walk.yaml` `headless: flase` typo.
 - IL `DefaultRunner`: validation loss is computed on the deployed policy (EMA model in `eval()` mode) instead of the train-mode raw model.
 - `ManagerBasedRVEnv.reset` returned `None` (Gym wrappers expect `(obs, info)`), had no `num_obs`/`observation_space`, and mjlab cartpole reset noise ignored `set_seed`; all three fixed with a gym-reset regression test.
+- ManiSkill task leaves declared `ScenarioCfg(objects=[...])` with no robot, so 2,648 registered tasks crashed with `IndexError` on reset; the family now defaults to `franka` (leaf-declared robots win) and raises a clear `ValueError` when no robot resolves.
 - Native LIBERO `Open`/`Close`/`TurnOn`/`TurnOff` predicates always evaluated False on
   mujoco >= 3.x (`numpy.int32 in (mjtJoint...)` membership).
 - `get_started/multiple_cameras.py` passed a removed `ScenarioCfg` kwarg.

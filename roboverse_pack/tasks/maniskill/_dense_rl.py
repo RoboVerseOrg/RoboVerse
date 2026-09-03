@@ -34,8 +34,12 @@ class DenseRLResetMixin:
     traj_filepath = None
 
     # Skip ManiskillBaseTask's demo-trajectory download — call BaseTaskEnv
-    # directly so the dense task doesn't depend on replay data.
-    def __init__(self, scenario, device=None) -> None:
+    # directly so the dense task doesn't depend on replay data. Still apply the
+    # family's default robot: bypassing ManiskillBaseTask.__init__ must not also
+    # bypass the robot fill-in, or _get_initial_states below would index robots[0]
+    # on an empty list.
+    def __init__(self, scenario=None, device=None) -> None:
+        scenario = self._apply_default_robots(scenario)
         BaseTaskEnv.__init__(self, scenario, device)
 
     def _get_initial_states(self) -> list[dict]:
