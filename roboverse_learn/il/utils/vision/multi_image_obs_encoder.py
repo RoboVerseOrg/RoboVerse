@@ -4,8 +4,9 @@ from typing import Dict, Tuple, Union
 import torch
 import torch.nn as nn
 import torchvision
-from roboverse_learn.il.utils.pytorch_util import dict_apply, replace_submodules
+
 from roboverse_learn.il.utils.module_attr_mixin import ModuleAttrMixin
+from roboverse_learn.il.utils.pytorch_util import replace_submodules
 from roboverse_learn.il.utils.vision.crop_randomizer import CropRandomizer
 
 

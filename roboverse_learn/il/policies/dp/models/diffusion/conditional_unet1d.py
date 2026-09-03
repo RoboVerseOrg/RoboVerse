@@ -4,13 +4,14 @@ from typing import Union
 import einops
 import torch
 import torch.nn as nn
+from einops.layers.torch import Rearrange
+
 from roboverse_learn.il.policies.dp.models.diffusion.conv1d_components import (
     Conv1dBlock,
     Downsample1d,
     Upsample1d,
 )
 from roboverse_learn.il.policies.dp.models.diffusion.positional_embedding import SinusoidalPosEmb
-from einops.layers.torch import Rearrange
 
 logger = logging.getLogger(__name__)
 
@@ -216,7 +217,7 @@ class ConditionalUnet1D(nn.Module):
         timestep: Union[torch.Tensor, float, int],
         local_cond=None,
         global_cond=None,
-        **kwargs
+        **kwargs,
     ):
         """
         x: (B,T,input_dim)

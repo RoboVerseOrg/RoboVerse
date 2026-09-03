@@ -1,5 +1,4 @@
 import torch
-from functools import partial
 
 from roboverse_learn.il.utils.flow.base_flow_matcher import BaseFlowMatcher
 
@@ -12,7 +11,7 @@ def adaptive_l2_loss(error, gamma=0.5, c=1e-3):
     """
     Adaptive L2 loss.
     """
-    delta_sq = torch.mean(error ** 2, dim=tuple(range(1, error.ndim)))
+    delta_sq = torch.mean(error**2, dim=tuple(range(1, error.ndim)))
     p = 1.0 - gamma
     w = 1.0 / (delta_sq + c).pow(p)
     loss = delta_sq
@@ -62,10 +61,7 @@ class MeanFlowMatcher(BaseFlowMatcher):
         Samples t and r from a log-normal distribution.
         """
         # Log-normal distribution
-        normal_samples = (
-            torch.randn(batch_size, 2, device=device) * self.time_dist_sigma
-            + self.time_dist_mu
-        )
+        normal_samples = torch.randn(batch_size, 2, device=device) * self.time_dist_sigma + self.time_dist_mu
         samples = torch.sigmoid(normal_samples)
 
         # t = max, r = min
@@ -127,7 +123,7 @@ class MeanFlowMatcher(BaseFlowMatcher):
         meanflow_loss = adaptive_l2_loss(error, gamma=self.adaptive_loss_gamma)
 
         loss = meanflow_loss
-        metrics = {'meanflow_loss': meanflow_loss.item()}
+        metrics = {"meanflow_loss": meanflow_loss.item()}
 
         # Dispersive Loss
         if self.dispersive_loss_weight > 0 and internal_features is not None:
@@ -136,10 +132,10 @@ class MeanFlowMatcher(BaseFlowMatcher):
             for features in internal_features:
                 dis_loss_total += dispersive_loss(features, tau=self.dispersive_loss_tau)
 
-            metrics['dispersive_loss'] = dis_loss_total.item()
+            metrics["dispersive_loss"] = dis_loss_total.item()
             loss += self.dispersive_loss_weight * dis_loss_total
 
-        metrics['loss'] = loss.item()
+        metrics["loss"] = loss.item()
         return loss, metrics
 
     def sample(self, model, shape, device, num_steps=None, return_traces=False, start=None, **kwargs):

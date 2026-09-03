@@ -9,18 +9,20 @@ try:
 except ImportError:
     pass
 
+import datetime
+
 import numpy as np
 import rootutils
 import torch
 import tyro
-import datetime
 from loguru import logger as log
 
 rootutils.setup_root(__file__, pythonpath=True)
 
+from metasim.task.registry import get_task_class
 from roboverse_learn.rl.configs.rsl_rl.ppo import RslRlPPOConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
-from metasim.task.registry import get_task_class
+
 
 def get_log_dir(exp_name: str, task_name: str, now=None) -> str:
     """Get the log directory (aligned with ppo.py saving logic)."""
@@ -48,16 +50,13 @@ def get_load_path(load_root: str, checkpoint: int | str = None) -> str:
     log.info(f"Loading checkpoint {checkpoint} from {load_root}")
     return load_path
 
+
 def make_roboverse_env(args: RslRlPPOConfig):
     """Create RoboVerse task environment"""
     task_cls = get_task_class(args.task)
 
     scenario = task_cls.scenario.update(
-        robots=[args.robot],
-        simulator=args.sim,
-        num_envs=args.num_envs,
-        headless=args.headless,
-        cameras=[]
+        robots=[args.robot], simulator=args.sim, num_envs=args.num_envs, headless=args.headless, cameras=[]
     )
     if args.sim == "newton":
         if args.newton_use_mujoco_contacts is None:
@@ -115,7 +114,6 @@ def evaluate(args: RslRlPPOConfig):
     wrapped_env = RslRlEnvWrapper(env, train_cfg=args.train_cfg)
 
     # Get observations from environment (needed for resolve_obs_groups)
-    from rsl_rl.utils import resolve_obs_groups
     from rsl_rl.modules import ActorCritic
 
     obs = wrapped_env.get_observations()
@@ -136,8 +134,8 @@ def evaluate(args: RslRlPPOConfig):
         init_noise_std=policy_cfg.init_noise_std,
     ).to(device)
 
-    state_dict = checkpoint['model_state_dict']
-    state_dict = {k: v for k, v in state_dict.items() if 'critic' not in k}
+    state_dict = checkpoint["model_state_dict"]
+    state_dict = {k: v for k, v in state_dict.items() if "critic" not in k}
     # Load the model weights
     actor_critic.load_state_dict(state_dict, strict=False)
     actor_critic.to(device)
@@ -164,7 +162,9 @@ def evaluate(args: RslRlPPOConfig):
         actions = policy(obs)
         obs, _, _, _ = wrapped_env.step(actions)
         if (i + 1) % 100 == 0:
-            print(f"Step {i + 1}/1000000 | Simulation time: {(i + 1) * env.step_dt:.2f}s | Elapsed time: {time.time() - t0:.2f}s")
+            print(
+                f"Step {i + 1}/1000000 | Simulation time: {(i + 1) * env.step_dt:.2f}s | Elapsed time: {time.time() - t0:.2f}s"
+            )
     print("Evaluation complete!")
 
 

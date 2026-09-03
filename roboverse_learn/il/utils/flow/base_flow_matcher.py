@@ -1,4 +1,4 @@
-class BaseFlowMatcher():
+class BaseFlowMatcher:
     def compute_loss(self, model, target, **kwargs):
         raise NotImplementedError
 

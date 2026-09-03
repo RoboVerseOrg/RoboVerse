@@ -1,10 +1,10 @@
-import torch
 import numpy as np
+import torch
 import torchcfm.conditional_flow_matching as cfm
 
 from roboverse_learn.il.utils.flow.base_flow_matcher import BaseFlowMatcher
-from roboverse_learn.il.utils.flow.mean_flow_matcher import MeanFlowMatcher
 from roboverse_learn.il.utils.flow.consistency_flow_matcher import ConsistencyFlowMatcher
+from roboverse_learn.il.utils.flow.mean_flow_matcher import MeanFlowMatcher
 
 
 class TorchFlowMatcher(BaseFlowMatcher):
@@ -36,7 +36,7 @@ class TorchFlowMatcher(BaseFlowMatcher):
         loss = torch.mean((vt - ut) ** 2)
         # Use L1 loss
         # loss = torch.mean(torch.abs(vt - ut))
-        return loss, {'loss': loss.item()}
+        return loss, {"loss": loss.item()}
 
     def sample(self, model, shape, device, num_steps=None, return_traces=False, start=None, **kwargs):
         """
@@ -100,12 +100,13 @@ class ExactOptimalTransportConditionalFlowMatcher(TorchFlowMatcher):
 
 
 class MeanFlowConditionalFlowMatcher(TorchFlowMatcher):
-    '''
+    """
     Implementation of MeanFlow, a 1-step flow matching method.
     [1] Geng, Zhengyang, et al. "Mean flows for one-step generative modeling." arXiv preprint arXiv:2505.13447 (2025).
     Used dispersive losses:
     [2] Sheng, Juyi, et al. "MP1: MeanFlow Tames Policy Learning in 1-step for Robotic Manipulation." arXiv preprint arXiv:2507.10543 (2025).
-    '''
+    """
+
     def __init__(self, num_sampling_steps=1, **kwargs):
         if num_sampling_steps != 1:
             print("Warning: MeanFlow is designed for 1-NFE generation.")
@@ -113,13 +114,14 @@ class MeanFlowConditionalFlowMatcher(TorchFlowMatcher):
 
 
 class ImprovedMeanFlowConditionalFlowMatcher(TorchFlowMatcher):
-    '''
+    """
     Implementation of Improved MeanFlow, a 1-step flow matching method.
     [1] Geng, Zhengyang, et al. "Improved Mean Flows: On the Challenges of Fastforward Generative Models." arXiv preprint arXiv:2512.02012 (2025).
-    '''
+    """
+
     def __init__(self, num_sampling_steps=1, **kwargs):
         # Overwrite use_imf to True
-        kwargs['use_imf'] = True
+        kwargs["use_imf"] = True
         if num_sampling_steps != 1:
             print("Warning: Improved MeanFlow is designed for 1-NFE generation.")
         super().__init__(MeanFlowMatcher(**kwargs), num_sampling_steps)

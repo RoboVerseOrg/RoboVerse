@@ -1,10 +1,10 @@
 import numpy as np
+
+from roboverse_learn.il.utils.normalizer import SingleFieldLinearNormalizer
 from roboverse_learn.il.utils.pytorch_util import (
-    dict_apply,
     dict_apply_reduce,
     dict_apply_split,
 )
-from roboverse_learn.il.utils.normalizer import SingleFieldLinearNormalizer
 
 
 def get_range_normalizer_from_stat(stat, output_max=1, output_min=-1, range_eps=1e-7):

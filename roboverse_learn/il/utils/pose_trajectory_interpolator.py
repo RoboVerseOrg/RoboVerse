@@ -88,7 +88,7 @@ class PoseTrajectoryInterpolator:
         pos_min_duration = pos_dist / max_pos_speed
         rot_min_duration = rot_dist / max_rot_speed
         duration = time - curr_time
-        duration = max(duration, max(pos_min_duration, rot_min_duration))
+        duration = max(duration, pos_min_duration, rot_min_duration)
         assert duration >= 0
         last_waypoint_time = curr_time + duration
 
@@ -173,7 +173,7 @@ class PoseTrajectoryInterpolator:
         pos_dist, rot_dist = pose_distance(pose, end_pose)
         pos_min_duration = pos_dist / max_pos_speed
         rot_min_duration = rot_dist / max_rot_speed
-        duration = max(duration, max(pos_min_duration, rot_min_duration))
+        duration = max(duration, pos_min_duration, rot_min_duration)
         assert duration >= 0
         last_waypoint_time = end_time + duration
 

@@ -1,10 +1,10 @@
 import numbers
 import time
 from multiprocessing.managers import SharedMemoryManager
-from queue import Empty
 from typing import Dict, List, Union
 
 import numpy as np
+
 from roboverse_learn.il.policies.dp.shared_memory.shared_memory_util import (
     ArraySpec,
     SharedAtomicCounter,
@@ -136,7 +136,7 @@ class SharedMemoryRingBuffer:
                 # throw an error
                 past_iters = self.buffer_size - self.get_max_k
                 hz = past_iters / deltat
-                raise TimeoutError("Put executed too fast {}items/{:.4f}s ~= {}Hz".format(past_iters, deltat, hz))
+                raise TimeoutError(f"Put executed too fast {past_iters}items/{deltat:.4f}s ~= {hz}Hz")
 
         # write to shared memory
         for key, value in data.items():

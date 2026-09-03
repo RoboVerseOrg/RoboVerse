@@ -3,15 +3,15 @@ from typing import Dict
 import torch
 import torch.nn.functional as F
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+from einops import reduce
+
+from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
 from roboverse_learn.il.policies.dp.models.diffusion.conditional_unet1d import ConditionalUnet1D
 from roboverse_learn.il.policies.dp.models.diffusion.mask_generator import LowdimMaskGenerator
-from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
-from einops import rearrange, reduce
-
 from roboverse_learn.il.utils.module_attr_mixin import ModuleAttrMixin
 from roboverse_learn.il.utils.normalizer import LinearNormalizer
 from roboverse_learn.il.utils.pytorch_util import dict_apply
-from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
+from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
 
 
 class BaseImagePolicy(ModuleAttrMixin):
@@ -134,7 +134,6 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         scheduler.eta = self.eta  # set eta for DDIM
 
         for t in scheduler.timesteps:
-
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]
 

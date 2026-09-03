@@ -1,8 +1,9 @@
 import abc
 from typing import Optional, Tuple
 
-import roboverse_learn.il.policies.dp.models.bet.utils as utils
 import torch
+
+import roboverse_learn.il.policies.dp.models.bet.utils as utils
 
 
 class AbstractLatentGenerator(abc.ABC, utils.SaveModule):

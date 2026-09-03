@@ -1,11 +1,10 @@
 # Training configuration snippet to add to openpi/src/openpi/training/config.py
 # This file is used by train_pi0.sh to automatically register training configs
 
+from openpi.policies import pi0_config
 from openpi.training import config as _config
 from openpi.training import optimizer as _optimizer
 from openpi.training import weight_loaders
-from openpi.policies import pi0_config
-
 
 # π₀.₅ with LoRA configuration
 TrainConfig(
@@ -29,9 +28,7 @@ TrainConfig(
         decay_lr=5e-5,
     ),
     optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
-    weight_loader=weight_loaders.CheckpointWeightLoader(
-        "gs://openpi-assets/checkpoints/pi05_base/params"
-    ),
+    weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
     num_train_steps=30_000,
     freeze_filter=pi0_config.Pi0Config(
         paligemma_variant="gemma_2b_lora",
@@ -62,9 +59,7 @@ TrainConfig(
         decay_lr=5e-5,
     ),
     optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
-    weight_loader=weight_loaders.CheckpointWeightLoader(
-        "gs://openpi-assets/checkpoints/pi0_base/params"
-    ),
+    weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi0_base/params"),
     num_train_steps=30_000,
     freeze_filter=pi0_config.Pi0Config(
         paligemma_variant="gemma_2b_lora",

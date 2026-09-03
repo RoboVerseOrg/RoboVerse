@@ -10,25 +10,24 @@ from typing import Any, Dict
 
 import numpy as np
 import torch
-from PIL import Image
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-import metasim
 from gymnasium import make_vec
+
+import metasim
 from metasim.scenario.cameras import PinholeCameraCfg
 
 metasim.register_gym_envs()
-from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
-from metasim.utils import configclass
-from metasim.utils.obs_utils import ObsSaver
-from metasim.utils.ik_solver import process_gripper_command, setup_ik_solver
-from metasim.utils.demo_util import get_traj
-from metasim.utils.setup_util import get_robot
-from metasim.randomization import DomainRandomizationManager, DRConfig
-
 from openpi_client import image_tools, websocket_client_policy
 
+from metasim.randomization import DomainRandomizationManager, DRConfig
+from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
+from metasim.utils import configclass
+from metasim.utils.demo_util import get_traj
+from metasim.utils.ik_solver import process_gripper_command, setup_ik_solver
+from metasim.utils.obs_utils import ObsSaver
+from metasim.utils.setup_util import get_robot
 from roboverse_learn.il.configs.base_config import ActionCfg, BasePolicyCfg, ObsCfg
 
 
@@ -142,22 +141,13 @@ class PiPolicyRunner:
         joint_target = torch.cat([arm_target, gripper_widths], dim=-1)
 
         joint_names = list(self.robot_cfg.joint_limits.keys())
-        assert len(joint_names) == joint_target.shape[1], \
+        assert len(joint_names) == joint_target.shape[1], (
             f"Joint count mismatch: {len(joint_names)} names vs {joint_target.shape[1]} targets"
-        dof_pos_target = {
-            joint_name: float(joint_target[0, i].item())
-            for i, joint_name in enumerate(joint_names)
-        }
+        )
+        dof_pos_target = {joint_name: float(joint_target[0, i].item()) for i, joint_name in enumerate(joint_names)}
 
-        actions = [
-            {
-                self.robot_name: {
-                    "dof_pos_target": dof_pos_target
-                }
-            }
-        ]
+        actions = [{self.robot_name: {"dof_pos_target": dof_pos_target}}]
         return actions
-
 
     def _request_action_chunk(self, policy_obs: Dict[str, Any]) -> None:
         response = self.client.infer(policy_obs)
@@ -173,11 +163,7 @@ class PiPolicyRunner:
     def infer_action(self, obs) -> list[dict]:
         current_q = self._extract_robot_state(obs)
 
-        if (
-            self.cached_actions is None
-            or self.cache_remaining <= 0
-            or self.cache_index >= len(self.cached_actions)
-        ):
+        if self.cached_actions is None or self.cache_remaining <= 0 or self.cache_index >= len(self.cached_actions):
             policy_obs = self._build_policy_observation(obs)
             self._request_action_chunk(policy_obs)
 
@@ -220,6 +206,7 @@ def evaluate_episode(
     # Reset environment
     if randomization_manager is not None and init_states is not None:
         from roboverse_learn.il.act.act_eval_runner import ensure_clean_state
+
         # Use task_env.reset() directly to pass states parameter
         obs, info = env.task_env.reset(states=[init_states[demo_idx]])
         ensure_clean_state(env.task_env.handler, expected_state=init_states[demo_idx])
@@ -269,43 +256,60 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate π policies via websocket server")
     parser.add_argument("--task", type=str, default="pick_butter")
     parser.add_argument("--robot", type=str, default="franka")
-    parser.add_argument("--sim", type=str, default="mujoco",
-                        choices=["isaacgym", "isaacsim", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"])
+    parser.add_argument(
+        "--sim",
+        type=str,
+        default="mujoco",
+        choices=["isaacgym", "isaacsim", "isaaclab", "genesis", "pybullet", "sapien2", "sapien3", "mujoco", "mjx"],
+    )
     parser.add_argument("--policy-host", type=str, default="localhost")
     parser.add_argument("--policy-port", type=int, default=8000)
     parser.add_argument("--num_envs", type=int, default=1)
     parser.add_argument("--num_episodes", type=int, default=1)
     parser.add_argument("--max_steps", type=int, default=250)
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
-    parser.add_argument("--solver", type=str, default="pyroki", choices=["curobo", "pyroki"],
-                        help="IK backend used for composing joint commands")
+    parser.add_argument(
+        "--solver",
+        type=str,
+        default="pyroki",
+        choices=["curobo", "pyroki"],
+        help="IK backend used for composing joint commands",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output-dir", type=str, default="./pi_eval_output")
     parser.add_argument("--image-size", type=int, default=224)
-    parser.add_argument("--gripper-threshold", type=float, default=0.02,
-                        help="Threshold on finger joint values to treat the gripper as open")
-    parser.add_argument("--actions-per-call", type=int, default=0,
-                        help="Number of cached actions to use before requesting a new chunk (0 = consume entire chunk)")
+    parser.add_argument(
+        "--gripper-threshold",
+        type=float,
+        default=0.02,
+        help="Threshold on finger joint values to treat the gripper as open",
+    )
+    parser.add_argument(
+        "--actions-per-call",
+        type=int,
+        default=0,
+        help="Number of cached actions to use before requesting a new chunk (0 = consume entire chunk)",
+    )
     # Domain Randomization options
     parser.add_argument(
         "--level",
         type=int,
         default=0,
         choices=[0, 1, 2, 3],
-        help="Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera"
+        help="Randomization level: 0=None, 1=Scene+Material, 2=+Light, 3=+Camera",
     )
     parser.add_argument(
         "--scene_mode",
         type=int,
         default=0,
         choices=[0, 1, 2, 3],
-        help="Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD"
+        help="Scene mode: 0=Manual, 1=USD Table, 2=USD Scene, 3=Full USD",
     )
     parser.add_argument(
         "--randomization_seed",
         type=int,
         default=None,
-        help="Seed for reproducible randomization. If None, uses random seed"
+        help="Seed for reproducible randomization. If None, uses random seed",
     )
     return parser.parse_args()
 
@@ -414,6 +418,7 @@ def main() -> bool:
     randomization_manager = None
     if args.level > 0:
         from dataclasses import dataclass as dc
+
         @dc
         class SimpleRenderCfg:
             mode: str = render_mode
@@ -427,9 +432,11 @@ def main() -> bool:
             scenario=env.scenario,
             handler=env.task_env.handler,
             init_states=init_states,
-            render_cfg=SimpleRenderCfg(mode=render_mode)
+            render_cfg=SimpleRenderCfg(mode=render_mode),
         )
-        print(f"Domain Randomization enabled: level={args.level}, scene_mode={args.scene_mode}, seed={args.randomization_seed}")
+        print(
+            f"Domain Randomization enabled: level={args.level}, scene_mode={args.scene_mode}, seed={args.randomization_seed}"
+        )
 
     start_time = time.time()
     aggregate = {
@@ -447,10 +454,14 @@ def main() -> bool:
         demo_idx = ep % len(init_states) if randomization_manager is not None else 0
 
         result = evaluate_episode(
-            env, runner, args.max_steps, ep + 1, args.output_dir,
+            env,
+            runner,
+            args.max_steps,
+            ep + 1,
+            args.output_dir,
             randomization_manager=randomization_manager,
             demo_idx=demo_idx,
-            init_states=init_states if randomization_manager is not None else None
+            init_states=init_states if randomization_manager is not None else None,
         )
 
         aggregate["total_episodes"] += 1
@@ -482,12 +493,16 @@ def main() -> bool:
     ts = time.strftime("%Y%m%d_%H%M%S")
     report_path = os.path.join(args.output_dir, f"pi_eval_{args.task}_{ts}.json")
     with open(report_path, "w", encoding="utf-8") as f:
-        json.dump({
-            "config": vars(args),
-            "stats": aggregate,
-            "timestamp": ts,
-            "dr_config": {"level": args.level, "scene_mode": args.scene_mode, "seed": args.randomization_seed}
-        }, f, indent=2)
+        json.dump(
+            {
+                "config": vars(args),
+                "stats": aggregate,
+                "timestamp": ts,
+                "dr_config": {"level": args.level, "scene_mode": args.scene_mode, "seed": args.randomization_seed},
+            },
+            f,
+            indent=2,
+        )
     print(f"Saved results to {report_path}")
 
     try:

@@ -5,10 +5,10 @@ import dataclasses
 import pathlib
 from typing import override
 
+from openpi.policies import roboverse_policy
 from openpi.training import config as _config
 from openpi.training import model as _model
 from openpi.training import transforms as _transforms
-from openpi.policies import roboverse_policy
 
 
 @dataclasses.dataclass(frozen=True)
@@ -18,20 +18,16 @@ class LeRobotRoboVerseDataConfig(_config.DataConfigFactory):
     extra_delta_transform: bool = True
 
     @override
-    def create(
-        self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig
-    ) -> _config.DataConfig:
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> _config.DataConfig:
         repack_transform = _transforms.Group(
             inputs=[
-                _transforms.RepackTransform(
-                    {
-                        "observation/image": "image",
-                        # "observation/wrist_image": "wrist_image",  # RoboVerse has a single view now
-                        "observation/state": "state",
-                        "actions": "actions",
-                        "prompt": "prompt",
-                    }
-                )
+                _transforms.RepackTransform({
+                    "observation/image": "image",
+                    # "observation/wrist_image": "wrist_image",  # RoboVerse has a single view now
+                    "observation/state": "state",
+                    "actions": "actions",
+                    "prompt": "prompt",
+                })
             ]
         )
 

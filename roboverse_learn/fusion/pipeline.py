@@ -78,28 +78,55 @@ def build_commands(args: Args) -> list[list[str]]:
     for stage in args.stages:
         if stage == "rl-train":
             cmds.append([
-                py, os.path.join(_REPO, "roboverse_learn", "rl", "rsl_rl", "ppo.py"),
-                "--task", args.task, "--robot", args.robot, "--sim", args.sim,
-                "--model_dir", model_dir, "--max_iterations", str(args.rl_iterations),
+                py,
+                os.path.join(_REPO, "roboverse_learn", "rl", "rsl_rl", "ppo.py"),
+                "--task",
+                args.task,
+                "--robot",
+                args.robot,
+                "--sim",
+                args.sim,
+                "--model_dir",
+                model_dir,
+                "--max_iterations",
+                str(args.rl_iterations),
             ])
         elif stage == "collect":
             cmd = [
-                py, "-m", "roboverse_learn.fusion.collect",
-                "--task", args.task, "--robot", args.robot, "--sim", args.sim,
-                "--checkpoint", checkpoint, "--out_dir", demo_dir, "--num_demos", str(args.num_demos),
+                py,
+                "-m",
+                "roboverse_learn.fusion.collect",
+                "--task",
+                args.task,
+                "--robot",
+                args.robot,
+                "--sim",
+                args.sim,
+                "--checkpoint",
+                checkpoint,
+                "--out_dir",
+                demo_dir,
+                "--num_demos",
+                str(args.num_demos),
             ]
             if args.keep_all:
                 cmd.append("--keep_all")
             cmds.append(cmd)
         elif stage == "to-zarr":
             cmds.append([
-                py, os.path.join(_REPO, "roboverse_learn", "il", "data2zarr_dp.py"),
-                "--task_name", args.name, "--metadata_dir", os.path.join(demo_dir, "success"),
-                "--expert_data_num", str(args.num_demos),
+                py,
+                os.path.join(_REPO, "roboverse_learn", "il", "data2zarr_dp.py"),
+                "--task_name",
+                args.name,
+                "--metadata_dir",
+                os.path.join(demo_dir, "success"),
+                "--expert_data_num",
+                str(args.num_demos),
             ])
         elif stage == "il-train":
             cmds.append([
-                py, os.path.join(_REPO, "roboverse_learn", "il", "train.py"),
+                py,
+                os.path.join(_REPO, "roboverse_learn", "il", "train.py"),
                 f"task.dataset.zarr_path=data_policy/{args.name}_{args.num_demos}.zarr",
             ])
     return cmds
