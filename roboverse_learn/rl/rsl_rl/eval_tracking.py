@@ -8,20 +8,20 @@ try:
 except ImportError:
     pass
 
+import datetime
+
 import numpy as np
 import rootutils
 import torch
 import tyro
-import datetime
 from loguru import logger as log
 from rsl_rl.runners import OnPolicyRunner
 
 rootutils.setup_root(__file__, pythonpath=True)
 
+from metasim.task.registry import get_task_class
 from roboverse_learn.rl.configs.rsl_rl.ppo_tracking import RslRlPPOTrackingConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
-from metasim.task.registry import get_task_class
-
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -60,11 +60,7 @@ def make_roboverse_env(args: RslRlPPOTrackingConfig):
     task_cls = get_task_class(args.task)
 
     scenario = task_cls.scenario.update(
-        robots=[args.robot],
-        simulator=args.sim,
-        num_envs=args.num_envs,
-        headless=args.headless,
-        cameras=[]
+        robots=[args.robot], simulator=args.sim, num_envs=args.num_envs, headless=args.headless, cameras=[]
     )
     device = torch.device(args.device if torch.cuda.is_available() and args.cuda else "cpu")
 
@@ -103,7 +99,9 @@ def evaluate(args: RslRlPPOTrackingConfig):
 
         # checkpoint = torch.load(checkpoint_path, map_location=device)
     else:
-        raise ValueError("Please provide either --wandb-path (WandB run path / model file path) or --resume (timestamp / log dir) for evaluation.")
+        raise ValueError(
+            "Please provide either --wandb-path (WandB run path / model file path) or --resume (timestamp / log dir) for evaluation."
+        )
 
     # Create environment
     print(f"Creating environment: {args.task} with {args.num_envs} environments")
@@ -114,12 +112,7 @@ def evaluate(args: RslRlPPOTrackingConfig):
     # Create environment wrapper
     env_wrapper = RslRlEnvWrapper(env, train_cfg=args.train_cfg)
 
-    runner = OnPolicyRunner(
-        env=env_wrapper,
-        train_cfg=args.train_cfg,
-        log_dir=None,
-        device=device
-    )
+    runner = OnPolicyRunner(env=env_wrapper, train_cfg=args.train_cfg, log_dir=None, device=device)
     runner.load(checkpoint_path)
     policy = runner.get_inference_policy(device=device)
 

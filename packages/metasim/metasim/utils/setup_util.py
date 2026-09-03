@@ -149,25 +149,42 @@ def _local_python_modules(cwd: str) -> list[str]:
     ]
 
 
+_SHADOW_WARNED: set[tuple[str, str]] = set()
+
+
 def _lookup_cfg(attr_name: str, candidate_packages: list[str], cfg_kind: str):
+    """Instantiate ``attr_name`` from the first candidate package that defines it.
+
+    Every candidate is inspected so a name defined in more than one package is reported once (the
+    first, highest-precedence package wins; see ``get_package_candidates`` for the order). A silent
+    first-match used to hide that MetaSim's example pack was shadowing a content pack's config.
+    """
     errors: list[str] = []
+    found: list[tuple[str, type]] = []
     for pkg_name in candidate_packages:
         try:
             pkg = importlib.import_module(pkg_name)
         except Exception as e:
             errors.append(f"{pkg_name}: import failed ({e})")
             continue
+        cfg_cls = getattr(pkg, attr_name, None)
+        if cfg_cls is not None:
+            found.append((pkg_name, cfg_cls))
 
-        try:
-            cfg_cls = getattr(pkg, attr_name)
-            return cfg_cls()
-        except AttributeError:
-            continue
-        except Exception as e:
-            errors.append(f"{pkg_name}: lookup failed ({e})")
-
-    searched_in = ", ".join(candidate_packages)
-    raise ValueError(f"{cfg_kind} config class '{attr_name}' not found in [{searched_in}]. Errors: {errors}")
+    if not found:
+        searched_in = ", ".join(candidate_packages)
+        raise ValueError(f"{cfg_kind} config class '{attr_name}' not found in [{searched_in}]. Errors: {errors}")
+    if len(found) > 1 and (attr_name, found[0][0]) not in _SHADOW_WARNED:
+        _SHADOW_WARNED.add((attr_name, found[0][0]))
+        others = ", ".join(p for p, _ in found[1:])
+        log.warning(
+            f"{cfg_kind} config '{attr_name}' is defined in several packages; using {found[0][0]} (also in: {others})."
+        )
+    pkg_name, cfg_cls = found[0]
+    try:
+        return cfg_cls()
+    except Exception as e:
+        raise ValueError(f"{cfg_kind} config class '{attr_name}' from {pkg_name} could not be instantiated: {e}") from e
 
 
 def get_robot(robot_name: str) -> RobotCfg:

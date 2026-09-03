@@ -1,6 +1,5 @@
-import torch
 import numpy as np
-import torchcfm.conditional_flow_matching as cfm
+import torch
 
 from roboverse_learn.il.utils.flow.base_flow_matcher import BaseFlowMatcher
 
@@ -27,7 +26,7 @@ class ConsistencyFlowMatcher(BaseFlowMatcher):
         self.noise_scale = noise_scale
         self.sigma_var = sigma_var
         self.ode_tol = ode_tol
-        self.sigma_t = lambda t: (1. - t) * sigma_var
+        self.sigma_t = lambda t: (1.0 - t) * sigma_var
         self.num_sampling_steps = num_sampling_steps
 
     def compute_loss(self, model, target, start=None, **kwargs):
@@ -65,9 +64,9 @@ class ConsistencyFlowMatcher(BaseFlowMatcher):
 
         loss = torch.mean(losses_f + self.alpha * losses_v)
         return loss, {
-            'loss': loss.item(),
-            'flow_loss': torch.mean(losses_f).item(),
-            'velocity_loss': torch.mean(losses_v).item()
+            "loss": loss.item(),
+            "flow_loss": torch.mean(losses_f).item(),
+            "velocity_loss": torch.mean(losses_v).item(),
         }
 
     def sample(self, model, shape, device, num_steps=None, return_traces=False, start=None, **kwargs):
@@ -92,8 +91,9 @@ class ConsistencyFlowMatcher(BaseFlowMatcher):
             vt = model(z, t, **kwargs)
             sigma_t = self.sigma_t(num_t)
             if sigma_t > 0:
-                pred_sigma = vt + (sigma_t**2) / (2 * (self.noise_scale**2) * ((1-num_t)**2)) * \
-                    (0.5 * num_t * (1-num_t) * vt - 0.5 * (2-num_t) * z.detach().clone())
+                pred_sigma = vt + (sigma_t**2) / (2 * (self.noise_scale**2) * ((1 - num_t) ** 2)) * (
+                    0.5 * num_t * (1 - num_t) * vt - 0.5 * (2 - num_t) * z.detach().clone()
+                )
                 z = z.detach().clone() + pred_sigma * dt + sigma_t * np.sqrt(dt) * torch.randn_like(pred_sigma)
             else:
                 z = z.detach().clone() + vt * dt
@@ -113,8 +113,10 @@ class ConsistencyFlowMatcher(BaseFlowMatcher):
         if isinstance(threshold, int) and threshold == 0:
             return x_at_segment_ends
         less_than_threshold = t_expand < threshold
-        return less_than_threshold * self._f_euler(t_expand, segment_ends_expand, xt, vt) + \
-            (~less_than_threshold) * x_at_segment_ends
+        return (
+            less_than_threshold * self._f_euler(t_expand, segment_ends_expand, xt, vt)
+            + (~less_than_threshold) * x_at_segment_ends
+        )
 
     def _masked_losses_v(self, vt, vr, threshold, segment_ends, t, batch_size):
         if isinstance(threshold, int) and threshold == 0:

@@ -5,17 +5,16 @@ from typing import Any, Dict, Mapping, Optional
 import torch
 import torch.nn.functional as F
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-from roboverse_learn.il.policies.dp.models.diffusion.mask_generator import LowdimMaskGenerator
-from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
 from einops import reduce
 
+from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
+from roboverse_learn.il.policies.dp.models.diffusion.mask_generator import LowdimMaskGenerator
 from roboverse_learn.il.utils.normalizer import LinearNormalizer
 from roboverse_learn.il.utils.pytorch_util import dict_apply
-from roboverse_learn.il.policies.base_image_policy import BaseImagePolicy
+from roboverse_learn.il.utils.vision.multi_image_obs_encoder import MultiImageObsEncoder
 
 
 class DiffusionDenoisingImagePolicy(BaseImagePolicy):
-
     def __init__(
         self,
         shape_meta: Mapping[str, Any],

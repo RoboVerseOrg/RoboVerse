@@ -16,9 +16,9 @@ from rsl_rl.runners import OnPolicyRunner
 
 rootutils.setup_root(__file__, pythonpath=True)
 
+from metasim.task.registry import _discover_task_modules, get_task_class
 from roboverse_learn.rl.configs.rsl_rl.ppo import RslRlPPOConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
-from metasim.task.registry import _discover_task_modules, get_task_class
 
 
 def make_roboverse_env(args: RslRlPPOConfig):
@@ -35,11 +35,7 @@ def make_roboverse_env(args: RslRlPPOConfig):
     # Load environment configuration from task
 
     scenario = task_cls.scenario.update(
-        robots=[args.robot],
-        simulator=args.sim,
-        num_envs=args.num_envs,
-        headless=args.headless,
-        cameras=[]
+        robots=[args.robot], simulator=args.sim, num_envs=args.num_envs, headless=args.headless, cameras=[]
     )
     if args.sim == "newton":
         if args.newton_use_mujoco_contacts is None:
@@ -67,12 +63,9 @@ def train(args: RslRlPPOConfig):
     # Initialize WandB
     if args.use_wandb:
         import wandb
+
         wandb.init(
-            project=args.wandb_project,
-            entity=args.wandb_entity,
-            config=vars(args),
-            name=args.exp_name,
-            save_code=True
+            project=args.wandb_project, entity=args.wandb_entity, config=vars(args), name=args.exp_name, save_code=True
         )
 
     # Create environment and wrapper
@@ -85,21 +78,12 @@ def train(args: RslRlPPOConfig):
     # Create environment wrapper
     env_wrapper = RslRlEnvWrapper(env, train_cfg=train_cfg)
 
-
-    runner = OnPolicyRunner(
-        env=env_wrapper,
-        train_cfg=train_cfg,
-        log_dir=args.model_dir,
-        device=device
-    )
+    runner = OnPolicyRunner(env=env_wrapper, train_cfg=train_cfg, log_dir=args.model_dir, device=device)
 
     # Train
     print(f"Training RSL-RL PPO on {args.task} with {args.num_envs} environments")
     print(f"Model directory: {args.model_dir}")
-    runner.learn(
-        num_learning_iterations=args.max_iterations,
-        init_at_random_ep_len=True
-    )
+    runner.learn(num_learning_iterations=args.max_iterations, init_at_random_ep_len=True)
 
     # Export policy. Newer rsl_rl uses ``torch.distributions.Normal`` inside
     # ``GaussianDistribution``, which TorchScript cannot script. Fall back to a

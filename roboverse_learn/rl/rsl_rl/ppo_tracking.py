@@ -16,10 +16,9 @@ from rsl_rl.runners import OnPolicyRunner
 
 rootutils.setup_root(__file__, pythonpath=True)
 
+from metasim.task.registry import get_task_class
 from roboverse_learn.rl.configs.rsl_rl.ppo_tracking import RslRlPPOTrackingConfig
 from roboverse_learn.rl.rsl_rl.env_wrapper import RslRlEnvWrapper
-from metasim.task.registry import get_task_class
-
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -32,11 +31,7 @@ def make_roboverse_env(args: RslRlPPOTrackingConfig):
 
     # Load environment configuration from task
     scenario = task_cls.scenario.update(
-        robots=[args.robot],
-        simulator=args.sim,
-        num_envs=args.num_envs,
-        headless=args.headless,
-        cameras=[]
+        robots=[args.robot], simulator=args.sim, num_envs=args.num_envs, headless=args.headless, cameras=[]
     )
     device = torch.device(args.device if torch.cuda.is_available() and args.cuda else "cpu")
 
@@ -60,12 +55,9 @@ def train(args: RslRlPPOTrackingConfig):
     # Initialize WandB
     if args.use_wandb:
         import wandb
+
         wandb.init(
-            project=args.wandb_project,
-            entity=args.wandb_entity,
-            config=vars(args),
-            name=args.exp_name,
-            save_code=True
+            project=args.wandb_project, entity=args.wandb_entity, config=vars(args), name=args.exp_name, save_code=True
         )
         # use artifact for training
         if args.registry_name:
@@ -81,20 +73,12 @@ def train(args: RslRlPPOTrackingConfig):
     # Create environment wrapper
     env_wrapper = RslRlEnvWrapper(env, train_cfg=train_cfg)
 
-    runner = OnPolicyRunner(
-        env=env_wrapper,
-        train_cfg=train_cfg,
-        log_dir=args.model_dir,
-        device=device
-    )
+    runner = OnPolicyRunner(env=env_wrapper, train_cfg=train_cfg, log_dir=args.model_dir, device=device)
 
     # Train
     print(f"Training RSL-RL PPO on {args.task} with {args.num_envs} environments")
     print(f"Model directory: {args.model_dir}")
-    runner.learn(
-        num_learning_iterations=args.max_iterations,
-        init_at_random_ep_len=True
-    )
+    runner.learn(num_learning_iterations=args.max_iterations, init_at_random_ep_len=True)
 
     # Export policy
     print("Exporting policy...")

@@ -20,7 +20,7 @@ from collections import OrderedDict
 import torch
 
 
-def _ordered_linear_keys(state_dict: "OrderedDict[str, torch.Tensor]") -> list[str]:
+def _ordered_linear_keys(state_dict: OrderedDict[str, torch.Tensor]) -> list[str]:
     """Return ``*.weight`` keys of Linear layers, in declaration order.
 
     A key ``k.weight`` is treated as a Linear layer iff its tensor is 2-D and a
@@ -36,14 +36,14 @@ def _ordered_linear_keys(state_dict: "OrderedDict[str, torch.Tensor]") -> list[s
     return keys
 
 
-def _as_state_dict(obj) -> "OrderedDict[str, torch.Tensor]":
+def _as_state_dict(obj) -> OrderedDict[str, torch.Tensor]:
     sd = obj.state_dict() if hasattr(obj, "state_dict") else obj
     return OrderedDict(sd)
 
 
 def align_linear_layers(
-    src: "OrderedDict[str, torch.Tensor] | torch.nn.Module",
-    dst: "OrderedDict[str, torch.Tensor] | torch.nn.Module",
+    src: OrderedDict[str, torch.Tensor] | torch.nn.Module,
+    dst: OrderedDict[str, torch.Tensor] | torch.nn.Module,
 ) -> list[tuple[str, str]]:
     """Pair src->dst Linear layers in order, asserting matching shapes.
 
@@ -72,7 +72,7 @@ def align_linear_layers(
 
 def load_bc_into_actor_critic(
     actor_critic: torch.nn.Module,
-    bc_source: "OrderedDict[str, torch.Tensor] | torch.nn.Module",
+    bc_source: OrderedDict[str, torch.Tensor] | torch.nn.Module,
     *,
     actor_attr: str = "actor",
     strict: bool = True,
@@ -116,10 +116,10 @@ def load_bc_into_actor_critic(
 
 
 def extract_actor_mlp_state_dict(
-    actor_source: "OrderedDict[str, torch.Tensor] | torch.nn.Module",
+    actor_source: OrderedDict[str, torch.Tensor] | torch.nn.Module,
     *,
     actor_attr: str = "actor",
-) -> "OrderedDict[str, torch.Tensor]":
+) -> OrderedDict[str, torch.Tensor]:
     """Pull the actor's MLP Linear layers out as a standalone, BC-loadable dict.
 
     Keys are kept *relative to the actor and unchanged* (e.g. ``mlp.0.weight``,
@@ -131,7 +131,7 @@ def extract_actor_mlp_state_dict(
     """
     src = getattr(actor_source, actor_attr, actor_source) if hasattr(actor_source, actor_attr) else actor_source
     sd = _as_state_dict(src)
-    out: "OrderedDict[str, torch.Tensor]" = OrderedDict()
+    out: OrderedDict[str, torch.Tensor] = OrderedDict()
     for wk in _ordered_linear_keys(sd):
         bk = wk[: -len(".weight")] + ".bias"
         out[wk] = sd[wk].clone()

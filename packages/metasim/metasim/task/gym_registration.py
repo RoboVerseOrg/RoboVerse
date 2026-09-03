@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import inspect
 import warnings
 from collections.abc import Callable
@@ -76,7 +77,9 @@ class GymEnvWrapper(gym.Env):
         scenario_kwargs["num_envs"] = 1
         self.device = device
         self.task_cls = get_task_class(task_name)
-        updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
+        # ``update`` mutates in place; the class attribute is shared by every instance of the task,
+        # so work on a copy or ``gym.make`` would rewrite the task's defaults for the whole process.
+        updated_scenario_cfg = copy.deepcopy(self.task_cls.scenario).update(**scenario_kwargs)
         self.scenario = updated_scenario_cfg
         self.task_env = self.task_cls(updated_scenario_cfg, device)
         self.action_space = self.task_env.action_space
@@ -140,7 +143,9 @@ class GymVectorEnvAdapter(VectorEnv):
         **scenario_kwargs: Any,
     ) -> None:
         self.task_cls = get_task_class(task_name)
-        updated_scenario_cfg = self.task_cls.scenario.update(**scenario_kwargs)
+        updated_scenario_cfg = copy.deepcopy(self.task_cls.scenario).update(
+            **scenario_kwargs
+        )  # never the shared class cfg
         self.task_env = self.task_cls(updated_scenario_cfg, device)
         self.scenario = updated_scenario_cfg
         self.device = self.task_env.device

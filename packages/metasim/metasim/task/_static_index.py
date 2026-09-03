@@ -17,7 +17,6 @@ from __future__ import annotations
 import ast
 import json
 import os
-import tempfile
 from dataclasses import dataclass, field
 from importlib.util import find_spec
 
@@ -75,10 +74,16 @@ def _parse_registrations(path: str) -> tuple[list[str], bool]:
 
 
 def default_cache_path() -> str:
-    """Per-file index cache (JSON). ``$METASIM_CACHE_DIR`` overrides the temp-dir default."""
-    return os.path.join(
-        os.environ.get("METASIM_CACHE_DIR", os.path.join(tempfile.gettempdir(), "metasim_cache")), "task_index.json"
-    )
+    """Per-file index cache (JSON) in a per-user directory.
+
+    ``$METASIM_CACHE_DIR``, else ``$XDG_CACHE_HOME/metasim``, else ``~/.cache/metasim``; the shared
+    temp dir used before mixed users' caches.
+    """
+    base = os.environ.get("METASIM_CACHE_DIR")
+    if not base:
+        xdg = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
+        base = os.path.join(xdg, "metasim")
+    return os.path.join(base, "task_index.json")
 
 
 def _load_cache(path: str) -> dict:

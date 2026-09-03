@@ -6,11 +6,10 @@ Loops until collecting target number of successful trajectories (default: 100).
 
 from __future__ import annotations
 
-import os
-import sys
 import argparse
+import os
 import pickle
-from typing import Any
+import sys
 
 os.environ["TORCHDYNAMO_INLINE_INBUILT_NN_MODULES"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -30,16 +29,16 @@ try:
 except ImportError:
     pass
 
-import torch
-import numpy as np
-from loguru import logger as log
-from torch.amp import autocast
 from datetime import datetime
 
-from roboverse_learn.rl.fast_td3.fttd3_module import Actor, EmpiricalNormalization
-from metasim.scenario.cameras import PinholeCameraCfg
+import numpy as np
+import torch
+from loguru import logger as log
+from torch.amp import autocast
+
 from metasim.task.registry import get_task_class
 from metasim.utils.demo_util import save_traj_file
+from roboverse_learn.rl.fast_td3.fttd3_module import Actor, EmpiricalNormalization
 
 
 def extract_state_dict(env, scenario, env_idx=0):
@@ -56,7 +55,7 @@ def extract_state_dict(env, scenario, env_idx=0):
     state_dict = {}
 
     # Get states from handler (returns TensorState object)
-    if not hasattr(env, 'handler') or env.handler is None:
+    if not hasattr(env, "handler") or env.handler is None:
         log.warning("Handler not available, returning empty state")
         return state_dict
 
@@ -70,7 +69,7 @@ def extract_state_dict(env, scenario, env_idx=0):
     robot_cfg_dict = {robot.name: robot for robot in scenario.robots}
 
     # Extract object states
-    if hasattr(handler_states, 'objects'):
+    if hasattr(handler_states, "objects"):
         for obj_name, obj_state in handler_states.objects.items():
             pos = obj_state.root_state[env_idx, :3].cpu().numpy()  # [x, y, z]
             quat = obj_state.root_state[env_idx, 3:7].cpu().numpy()  # [w, x, y, z]
@@ -92,7 +91,7 @@ def extract_state_dict(env, scenario, env_idx=0):
             state_dict[obj_name] = state_entry
 
     # Extract robot states
-    if hasattr(handler_states, 'robots'):
+    if hasattr(handler_states, "robots"):
         for robot_name, robot_state in handler_states.robots.items():
             pos = robot_state.root_state[env_idx, :3].cpu().numpy()  # [x, y, z]
             quat = robot_state.root_state[env_idx, 3:7].cpu().numpy()  # [w, x, y, z]
@@ -215,7 +214,7 @@ def evaluate_lift_collection(
         dones = terminated | time_out
 
         handler_states = None
-        if hasattr(env, 'handler') and env.handler is not None:
+        if hasattr(env, "handler") and env.handler is not None:
             handler_states = env.handler.get_states(mode="tensor")
 
         for i in range(num_eval_envs):
@@ -228,7 +227,7 @@ def evaluate_lift_collection(
             robot_name = scenario.robots[0].name
             joint_names = sorted(scenario.robots[0].actuators.keys())
 
-            if handler_states is not None and hasattr(handler_states, 'robots') and robot_name in handler_states.robots:
+            if handler_states is not None and hasattr(handler_states, "robots") and robot_name in handler_states.robots:
                 robot_state = handler_states.robots[robot_name]
                 joint_positions = robot_state.joint_pos[i].cpu().numpy()
             else:
@@ -333,10 +332,11 @@ def evaluate_lift_collection(
             obs = next_obs
 
     # Treat each active env as an attempted episode, and count it as successful if it already
-    active_envs = (~done_masks).sum().item() if 'done_masks' in locals() else 0
+    active_envs = (~done_masks).sum().item() if "done_masks" in locals() else 0
     successes_in_active = sum(
-        1 for i in range(num_eval_envs)
-        if 'done_masks' in locals() and not done_masks[i] and success_in_episode.get(i, False)
+        1
+        for i in range(num_eval_envs)
+        if "done_masks" in locals() and not done_masks[i] and success_in_episode.get(i, False)
     )
     attempted_episodes = episodes_completed + active_envs
     total_successful_episodes = successful_episodes_count + successes_in_active
@@ -380,25 +380,31 @@ def evaluate_lift_collection(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='FastTD3 lift trajectory collection evaluation')
-    parser.add_argument('--checkpoint', type=str, default='models/pick_place.approach_grasp_simple_1210000.pt',
-                       help='Checkpoint file path')
-    parser.add_argument('--target_count', type=int, default=100,
-                       help='Target number of successful trajectories to collect (default: 100)')
+    parser = argparse.ArgumentParser(description="FastTD3 lift trajectory collection evaluation")
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="models/pick_place.approach_grasp_simple_1210000.pt",
+        help="Checkpoint file path",
+    )
+    parser.add_argument(
+        "--target_count",
+        type=int,
+        default=100,
+        help="Target number of successful trajectories to collect (default: 100)",
+    )
 
-    parser.add_argument('--device_rank', type=int, default=0,
-                       help='GPU device rank')
-    parser.add_argument('--num_envs', type=int, default=None,
-                       help='Number of parallel environments (default: from checkpoint config)')
-    parser.add_argument('--headless', action='store_true',
-                       help='Run in headless mode')
+    parser.add_argument("--device_rank", type=int, default=0, help="GPU device rank")
+    parser.add_argument(
+        "--num_envs", type=int, default=None, help="Number of parallel environments (default: from checkpoint config)"
+    )
+    parser.add_argument("--headless", action="store_true", help="Run in headless mode")
 
-    parser.add_argument('--traj_dir', type=str, default='eval_trajs',
-                       help='Trajectory save directory')
-    parser.add_argument('--state_dir', type=str, default='eval_states',
-                       help='State save directory')
-    parser.add_argument('--lift_stable_frames', type=int, default=10,
-                       help='Number of frames lift must be maintained (default: 10)')
+    parser.add_argument("--traj_dir", type=str, default="eval_trajs", help="Trajectory save directory")
+    parser.add_argument("--state_dir", type=str, default="eval_states", help="State save directory")
+    parser.add_argument(
+        "--lift_stable_frames", type=int, default=10, help="Number of frames lift must be maintained (default: 10)"
+    )
 
     args = parser.parse_args()
 
@@ -452,13 +458,7 @@ def main():
         obs_normalizer.load_state_dict(checkpoint["obs_normalizer_state"])
 
     amp_enabled = config.get("amp", False) and torch.cuda.is_available()
-    amp_device_type = (
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if torch.backends.mps.is_available()
-        else "cpu"
-    )
+    amp_device_type = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
     amp_dtype = torch.bfloat16 if config.get("amp_dtype") == "bf16" else torch.float16
 
     log.info("Starting lift trajectory collection...")

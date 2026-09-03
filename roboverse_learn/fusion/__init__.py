@@ -25,8 +25,8 @@ from __future__ import annotations
 
 __all__ = [
     "collect_demos_from_policy",
-    "load_bc_into_actor_critic",
     "extract_actor_mlp_state_dict",
+    "load_bc_into_actor_critic",
 ]
 
 

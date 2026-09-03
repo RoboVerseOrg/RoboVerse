@@ -13,7 +13,7 @@ def read_json_log(path: str, required_keys: Sequence[str] = tuple(), **kwargs) -
     kwargs passed to pd.read_json
     """
     lines = list()
-    with open(path, "r") as f:
+    with open(path) as f:
         while True:
             # one json per line
             line = f.readline()
@@ -32,7 +32,7 @@ def read_json_log(path: str, required_keys: Sequence[str] = tuple(), **kwargs) -
                 lines.append(line)
     if len(lines) < 1:
         return pd.DataFrame()
-    json_buf = f'[{",".join([line for line in (line.strip() for line in lines) if line])}]'
+    json_buf = f"[{','.join([line for line in (line.strip() for line in lines) if line])}]"
     df = pd.read_json(json_buf, **kwargs)
     return df
 

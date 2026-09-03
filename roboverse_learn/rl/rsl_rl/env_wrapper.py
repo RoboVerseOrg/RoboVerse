@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Union
+
 import torch
 from tensordict import TensorDict
+
 from roboverse_pack.tasks.humanoid.base import AgentTask
 
 
@@ -34,7 +35,7 @@ class RslRlEnvWrapper:
         dones = torch.logical_or(terminated, truncated)
 
         # Merge info into extras
-        extras = {**getattr(self.env, 'extras', {}), **info}
+        extras = {**getattr(self.env, "extras", {}), **info}
 
         # move time out information to the extras dict
         # this is only needed for infinite horizon tasks
@@ -88,7 +89,4 @@ class RslRlEnvWrapper:
         All RoboVerse RL environments provide
         obs_buf and priv_obs_buf properties, so we simply wrap them.
         """
-        return TensorDict(
-            policy=self.env.obs_buf,
-            critic=self.env.priv_obs_buf
-        )
+        return TensorDict(policy=self.env.obs_buf, critic=self.env.priv_obs_buf)

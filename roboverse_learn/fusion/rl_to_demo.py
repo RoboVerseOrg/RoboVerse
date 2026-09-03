@@ -62,7 +62,6 @@ def _mlp_from_linear_state_dict(sd, device, activation=None):
     """
     import re
 
-    import torch
     import torch.nn as nn
 
     activation = activation or nn.ELU
@@ -120,7 +119,9 @@ def _load_inference_policy(env_wrapper, train_cfg, checkpoint: str, device):
     if actor_sd is not None:
         mlp = _mlp_from_linear_state_dict(actor_sd, device)
         if mlp is not None:
-            log.info(f"[rl_to_demo] loaded actor MLP ({sum(1 for k in actor_sd if k.endswith('.weight'))} layers) from {checkpoint}")
+            log.info(
+                f"[rl_to_demo] loaded actor MLP ({sum(1 for k in actor_sd if k.endswith('.weight'))} layers) from {checkpoint}"
+            )
             return lambda obs: mlp(obs if isinstance(obs, torch.Tensor) else obs["policy"])
 
     # 3) rsl-rl runner checkpoint.
@@ -156,7 +157,7 @@ def collect_demos_from_policy(
     device: str = "cuda:0",
     train_cfg=None,
     camera_cfg=None,
-    success_fn: Callable[..., "Sequence[bool]"] | None = None,
+    success_fn: Callable[..., Sequence[bool]] | None = None,
     task_desc: str = "",
     deterministic: bool = True,
 ) -> int:
@@ -198,7 +199,8 @@ def collect_demos_from_policy(
     policy = _load_inference_policy(env_wrapper, train_cfg, checkpoint, dev)
 
     if success_fn is None:
-        def success_fn(terminated, cache, info):  # noqa: ANN001 - default checker-based
+
+        def success_fn(terminated, cache, info):
             return bool(terminated)
 
     os.makedirs(os.path.join(out_dir, "success"), exist_ok=True)

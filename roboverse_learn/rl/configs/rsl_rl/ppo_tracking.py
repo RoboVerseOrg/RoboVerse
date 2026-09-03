@@ -1,13 +1,13 @@
 import os
-import wandb
 import pathlib
 from typing import Literal, Optional
+
+import wandb
 from loguru import logger as log
 
 from metasim.utils import configclass
-from roboverse_learn.rl.configs.rsl_rl.ppo import RslRlPPOConfig
 from roboverse_learn.rl.configs.rsl_rl.algorithm import RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
-
+from roboverse_learn.rl.configs.rsl_rl.ppo import RslRlPPOConfig
 
 SimBackend = Literal[
     "isaacgym",
@@ -22,6 +22,7 @@ SimBackend = Literal[
 @configclass
 class RslRlPPOTrackingConfig(RslRlPPOConfig):
     """RSL-RL PPO configs for motion tracking task."""
+
     # Experiment / runner settings
     exp_name: str = "rsl_rl_ppo_tracking"
     max_iterations = 30000

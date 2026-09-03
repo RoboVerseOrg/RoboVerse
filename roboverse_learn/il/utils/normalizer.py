@@ -4,8 +4,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import zarr
-from roboverse_learn.il.utils.pytorch_util import dict_apply
+
 from roboverse_learn.il.utils.dict_of_tensor_mixin import DictOfTensorMixin
+from roboverse_learn.il.utils.pytorch_util import dict_apply
 
 
 class LinearNormalizer(DictOfTensorMixin):
