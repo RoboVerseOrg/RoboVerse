@@ -27,7 +27,7 @@ python scripts/advanced/replay_demo.py --sim=isaaclab --task=StackCube --num_env
 
 ## Retarget between Robots
 
-We provide `src/scripts/retarget_demo.py` to retarget trajectories from one source robot to one or multiple target robots.
+Trajectory retargeting between robots was provided by `scripts/advanced/retarget_demo.py`, which targeted a pre-1.0 API and has been removed; a maintained replacement is tracked in the roadmap (`TODO: verify` before relying on the command below, which documents the former interface).
 
 ### Requirements
 
