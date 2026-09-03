@@ -1,120 +1,62 @@
-# RoboVerse Development Roadmap
+# RoboVerse Roadmap
 
-This document provides a high-level overview of the RoboVerse improvement roadmap. For detailed analysis and implementation guidelines, see the [Architecture Review](docs/source/metasim/developer_guide/architecture_review.md).
+Where the project is going and in what order. Detailed per-change notes live in `CHANGELOG.md`
+(RoboVerse) and `packages/metasim/CHANGELOG.md` (MetaSim); the development and release rules are
+in `CONTRIBUTING.md` and `RELEASING.md`.
 
-## Current Status
+## Where we are (September 2026)
 
-| Aspect | Status | Notes |
-|--------|--------|-------|
-| Core Framework | Stable | Multi-simulator support working |
-| Test Coverage | Needs Work | ~15-20% estimated coverage |
-| Documentation | Good | Comprehensive tutorials available |
-| API Stability | Beta | Breaking changes possible |
+| Area | Status |
+|---|---|
+| Repository | Monorepo: MetaSim (`packages/metasim`, published as `roboverse-metasim`) and RoboVerse content / learning code (`roboverse-py`) are released together from one tag. |
+| Backends | MuJoCo, MJX, Newton, SuperDex, SAPIEN 2/3, PyBullet, Isaac Sim, Isaac Gym, Genesis, Blender behind one `BaseSimHandler` contract. MuJoCo, Newton and SuperDex are exercised by the record → replay contracts (L0 action replay, L1 state round-trip); the others are not yet. |
+| Tasks | ~6,000 registered tasks across LIBERO, ManiSkill, RLBench, mjlab, humanoid, robosuite, RoboTwin and more; `supported_simulators` is declared per task as it is verified (mjlab v2 first). |
+| CI | Lint, MetaSim simulator-free suite (3.10 / 3.11), RoboVerse suite, release dry-run on every PR; GPU backends run in the merge-queue workflow. |
+| Releases | `1.0.0b0` in both packages; PyPI trusted publishing wired, first lockstep release pending. |
 
-## Priority Issues
+## Roadmap
 
-### P0 - Critical (Immediate)
+The order follows the 2026-09 architecture review: first make the contracts hold, then converge
+the parallel implementations, then build the benchmark data model on top.
 
-- [x] **State Cache Consistency** - Fixed: dual tensor/dict caches in `BaseSimHandler`,
-  invalidated on `set_states` / `set_dof_targets` / `simulate`. Regression tests:
-  `metasim/test/sim/test_state_modes.py` (integration) + `metasim/test/test_set_states_key_validation.py`
-  (unit, no sim env).
-- [x] **`set_states` silent-drop guard** - Added: unknown / control-input keys now log a
-  one-shot warning (e.g. `dof_pos_target` → "use `set_dof_targets`"). Catches the silent
-  no-op bug that broke 15 downstream BC experiments.
-- [x] **Robot-config validation tests** - Added static `-k general` tests for every shipped
-  `RobotCfg`: instantiation, non-empty `name`, default joint positions match `joint_limits`
-  keys + lie inside the limit ranges. Surfaces 9 real config bugs (xfail-documented:
-  AlohaAgilex/G1Tracking orphan joints, YamCfg/ArxL5Cfg/Vega/SoArm100/Koch/Go2/AllegroHand
-  out-of-range defaults). `metasim/test/test_robot_cfg_validation_general.py` +
-  `tests/test_roboverse_robot_cfg_validation.py`.
-- [x] **Backend contract enforcement** - Static `-k general` test asserts every concrete
-  `BaseSimHandler` subclass overrides each documented contract method. Known incomplete
-  backends (pyrep, partial pybullet/genesis) are xfail-documented. Self-check guards the
-  xfail list against staleness. `metasim/test/test_backend_contract_general.py`.
-- [ ] **CI Coverage Reporting** - Integrate pytest-cov with Codecov
+### 1. Contracts (in progress)
 
-### P1 - High (Next Release)
+- [x] Content packs win over MetaSim's bundled example pack; shadowed config names are reported.
+- [x] `get_states(env_ids=...)` returns exactly those envs on every backend.
+- [x] `set_states` restores velocities; L0 / L1 replay contracts pinned per backend.
+- [x] `BaseTaskEnv.supported_simulators` declared and checked at construction.
+- [ ] `_set_states` accepts `TensorState` only; the dict/tensor dual paths go away.
+- [ ] Per-backend capability declaration (`BackendCapabilities`) checked against `RobotCfg` and
+      `SimParamCfg` at handler creation; `SimParamCfg` split into common fields + per-backend sections.
+- [ ] Queries (`metasim.queries`) call handler capability methods instead of backend privates; an
+      unsupported query fails at bind time.
+- [ ] One asset resolver (`metasim.assets.resolve`) and one conversion cache for every backend.
+- [ ] Cross-backend parity fixture (same task, same initial state, two backends, per-step drift) in
+      CI for the CPU backends; Newton / MJX / SuperDex suites in the merge queue.
+- [ ] Version policy for simulator packages: pinned ranges and feature flags instead of monkeypatches.
 
-- [x] **Parallel-sim error handling** - Fixed: every public method on `ParallelHandler`
-  now drains `error_queue` + checks `process.is_alive` after wire I/O. EOFError/BrokenPipe
-  on recv is translated into a `RuntimeError` carrying the real worker traceback instead
-  of a cryptic IPC exception. OOM-killed workers (queue stays empty) are surfaced via the
-  dead-process check. Tests: `metasim/test/test_parallel_error_handling_general.py`.
-- [x] **Newton joint-name parity** - Fixed: Newton's `_collect_joint_names` now strips
-  the object prefix (`box_base/box_joint` → `box_joint`) when the bare name is unambiguous,
-  matching mujoco / sapien3 / isaacgym / isaacsim. Cross-platform tasks doing
-  `dof_pos["box_joint"]` previously silently broke on Newton. Falls back to the full key
-  on collision so no information is lost. Verified by `test_dict_state_all_objects[newton-*]`
-  flipping from failed to passed.
-- [x] **Newton silent-action drop guard** - Added: Newton's `_set_dof_targets` now warns
-  once if `model.control()` has no `joint_target_pos` / `joint_target_vel` / `joint_f`
-  buffer — previously every action was silently swallowed. Same antipattern that broke
-  MuJoCo `set_states`.
-- [x] **Actuator partial-spec warning (MuJoCo + Newton)** - Identified as task #6 root
-  cause: when an actuator cfg overrides `stiffness` / `damping` but doesn't set
-  `effort_limit_sim`, the asset-authored force-range (MJCF `forcerange` / Newton
-  `joint_effort_limit`) silently dominates. Same `stiffness=1e5` config produces
-  different effective behaviour per backend. Both handlers now warn once per
-  (robot, joint) so the asymmetry is visible.
-- [x] **Benchmark reproducibility — `env.reset(seed=N)` now actually reseeds** -
-  End-to-end wired: `GymEnvAdapter.reset(seed=)` → `RLTaskEnv.reset(seed=)` /
-  `TaskBase.reset(seed=)` → `BaseSimHandler.set_seed`. Added a default
-  `set_seed` on the base handler that reseeds Python `random` + NumPy +
-  Torch (CPU and CUDA), so every backend gets reproducibility for free.
-  Backends with extra internal RNG (Newton warp kernels, Sapien physics
-  noise) can override and call `super().set_seed(seed)` first. Tests:
-  `test_set_seed_is_deterministic_on_numpy_and_torch` and
-  `test_set_seed_differs_with_different_seeds` in
-  `metasim/test/test_set_states_key_validation.py`. Backward-compat:
-  `seed` is a keyword-only parameter — every existing call site is
-  unchanged.
-- [ ] **Abstract Method Declarations** - Mostly covered by the new backend-contract test;
-  still want `@abstractmethod` on `_get_joint_names` / `_get_body_names` once pyrep /
-  partial pybullet / genesis catch up.
-- [ ] **Unified Environment Factory** - Create `roboverse.make_env()` API
-- [ ] **Configuration System** - Document and standardize config approaches
+### 2. Convergence
 
-### P2 - Medium (Future)
+- [ ] One environment loop: `RLTaskEnv` hooks replace the manager-based env and the two hand-written
+      locomotion loops; term configs (reward / termination / event) move into MetaSim.
+- [ ] Table-driven task families (`TASK_SPECS` + registration loop) replace the generated
+      ManiSkill task files.
+- [ ] `roboverse_learn/common`: one env factory, one checkpoint format, one seeding path.
+- [ ] `scripts/` folds into `tools/` and console entry points; the parity probes become
+      `python -m roboverse.parity`.
+- [ ] Logging owned by `metasim.utils.log` (`METASIM_LOG_LEVEL`); per-backend `set_seed`.
 
-- [ ] **Code Quality** - Remove commented code, extract magic numbers
-- [ ] **Type Annotations** - Complete type hints across codebase
-- [ ] **Performance Benchmarks** - Add regression testing for performance
+### 3. Benchmark data model (`metasim.bench`)
 
-### P3 - Long-term
+- [ ] `EnvSpec` → `TaskInstance` (content-addressed: assets, robot cfg, physics, initial state
+      with velocities, goal) → `Trajectory` (actions with control mode, full states, provenance)
+      → `TaskCategory` (generator + success checker + metrics) → `Benchmark` (protocol + metrics).
+- [ ] `verify_replay` as the ingest gate for every trajectory; migration of the existing v2
+      trajectory files with a pass-rate report.
+- [ ] Task generators and trajectory collectors (teleoperation, planning, RL policies, upstream
+      converters) behind one interface.
 
-- [ ] **Plugin Architecture** - Modular simulator registration
-- [ ] **Async Simulation** - Support for async environment stepping
-- [ ] **Unified Config System** - Single configuration approach across modules
+## How to help
 
-## Contributing
-
-We welcome contributions! Here's how to get started:
-
-1. **Read the detailed analysis**: [Architecture Review](docs/source/metasim/developer_guide/architecture_review.md)
-2. **Pick an issue**: Start with P2 items for low-risk contributions
-3. **Follow the protocol**: See "Safe Modification Protocol" in the review doc
-4. **Submit a PR**: Include tests and update documentation as needed
-
-### Recommended First Contributions
-
-| Task | Effort | File |
-|------|--------|------|
-| Add @abstractmethod to `_set_dof_targets` | Very Low | `metasim/sim/base.py` |
-| Remove commented-out code | Very Low | Multiple files |
-| Add robot config validation tests | Medium | New test file |
-
-## Release Timeline
-
-| Version | Target | Focus |
-|---------|--------|-------|
-| 0.2.x | Current | Bug fixes, stability |
-| 0.3.0 | TBD | Test coverage, API stabilization |
-| 0.4.0 | TBD | Unified interfaces, deprecation cleanup |
-| 1.0.0 | TBD | Stable API, comprehensive tests |
-
-## Questions?
-
-- [GitHub Discussions](https://github.com/RoboVerseOrg/RoboVerse/discussions)
-- [Discord](https://discord.gg/6e2CPVnAD3)
-- [Documentation](https://roboverse.wiki)
+Pick an unchecked item, open an issue describing the change, and follow `CONTRIBUTING.md`.
+Bug reports with a minimal scenario and the backend name are always welcome.
