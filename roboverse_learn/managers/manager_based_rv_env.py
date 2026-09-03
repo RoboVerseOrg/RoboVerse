@@ -32,10 +32,13 @@ from __future__ import annotations
 
 import math
 from copy import deepcopy
-from dataclasses import asdict, fields, is_dataclass
+from dataclasses import fields, is_dataclass
 from typing import Any, Sequence
 
+import numpy as np
 import torch
+from gymnasium import spaces
+from loguru import logger
 
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
@@ -162,9 +165,7 @@ class ManagerBasedRVEnv(RLTaskEnv):
 
         # Initial states are computed by the subclass (which knows the
         # robot's default joint pose etc.); cache as tensor state.
-        self._initial_states = list_state_to_tensor(
-            self.handler, self._get_initial_states(), self.device
-        )
+        self._initial_states = list_state_to_tensor(self.handler, self._get_initial_states(), self.device)
 
         # First reset must happen after managers are wired so we get a
         # valid observation tensor for the wrapper's lazy obs_buf path.
@@ -336,18 +337,41 @@ class ManagerBasedRVEnv(RLTaskEnv):
     # env api
     # ------------------------------------------------------------------
 
-    def reset(self, env_ids: Sequence[int] | None = None, seed: int | None = None):
-        """Reset selected envs (or all).
+    def reset(
+        self, env_ids: Sequence[int] | None = None, seed: int | None = None
+    ) -> tuple[dict[str, torch.Tensor], Info]:
+        """Reset selected envs (or all) and return the post-reset ``(obs, info)``.
 
         ``seed`` is forwarded to the handler when supported, honoring the
         ``env.reset(seed=)`` contract (this base reimplements ``reset`` and does
         not call ``super().reset``). Without this, ``gym.make(...).reset(seed=)``
-        raised ``TypeError`` for every manager-based (mjlab v2) task.
+        raised ``TypeError`` for every manager-based (mjlab v2) task. A handler
+        without ``set_seed`` warns once instead of dropping the seed silently
+        (same warn-if-unsupported semantics as ``RLTaskEnv.reset``).
+
+        Returns:
+            obs: The per-group observation dict — the exact structure ``step``
+                returns as its first element, so a gym caller sees the same
+                observation type from ``reset`` and ``step``. (``RLTaskEnv``
+                returns a flat tensor because its ``step`` does too; this env's
+                obs is grouped, so its ``observation_space`` is a ``spaces.Dict``.)
+            info: ``self.extras`` — again the same object ``step`` returns as info.
+                The privileged observation the base surfaces under
+                ``info["privileged_observation"]`` is the ``critic`` entry of the
+                obs dict here (also exposed via the ``priv_obs_buf`` property).
         """
         if seed is not None:
             set_seed = getattr(self.handler, "set_seed", None)
             if callable(set_seed):
                 set_seed(seed)
+            elif not getattr(self, "_seed_unsupported_warned", False):
+                # Warn once per env, not per reset — RL training resets constantly.
+                logger.warning(
+                    f"{type(self).__name__}: handler {type(self.handler).__name__} does not "
+                    f"implement set_seed; reset(seed={seed}) is a no-op on the simulator side "
+                    f"and rollouts will not be reproducible."
+                )
+                self._seed_unsupported_warned = True
         if env_ids is None:
             env_ids = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
         elif not isinstance(env_ids, torch.Tensor):
@@ -363,6 +387,7 @@ class ManagerBasedRVEnv(RLTaskEnv):
         self._obs_buf = self._observation(self.handler.get_states(mode="tensor"))
         # Lazy: extras['observations'] keeps last obs around for rsl-rl
         self.extras["observations"] = self._obs_buf
+        return self._obs_buf, self.extras
 
     def _reset_idx(self, env_ids: torch.Tensor) -> None:
         """Per-env reset (set initial state, run reset events, zero buffers)."""
@@ -401,16 +426,12 @@ class ManagerBasedRVEnv(RLTaskEnv):
         # Log + zero per-term episode reward sums.
         max_ep_s = max(self.cfg.max_episode_length_s, 1e-6)
         for key, buf in self.episode_rewards.items():
-            self.extras["episode"][f"Episode_Reward/{key}"] = (
-                torch.mean(buf[env_ids]) / max_ep_s
-            )
+            self.extras["episode"][f"Episode_Reward/{key}"] = torch.mean(buf[env_ids]) / max_ep_s
             buf[env_ids] = 0.0
 
         # Log + leave term-dones — they get overwritten next step.
         for key, buf in self._term_dones.items():
-            self.extras["episode"][f"Episode_Termination/{key}"] = (
-                torch.count_nonzero(buf[env_ids]).item()
-            )
+            self.extras["episode"][f"Episode_Termination/{key}"] = torch.count_nonzero(buf[env_ids]).item()
 
         # Curriculum: each term receives env_ids and returns a scalar/dict.
         for name, (func, params) in self.curriculum_terms.items():
@@ -549,8 +570,7 @@ class ManagerBasedRVEnv(RLTaskEnv):
             if group_name == "critic":
                 return self._observation_group("policy", env_states)
             raise AttributeError(
-                f"cfg.observations has no group '{group_name}' "
-                f"(expected one of {self.cfg.observation_group_names})"
+                f"cfg.observations has no group '{group_name}' (expected one of {self.cfg.observation_group_names})"
             )
         parts = []
         for name in self._term_names(group):
@@ -597,6 +617,34 @@ class ManagerBasedRVEnv(RLTaskEnv):
                 return self._obs_buf["critic"]
             return self.obs_buf
         return self._obs_buf
+
+    @property
+    def num_obs(self) -> int:
+        """Width of the actor/policy observation group.
+
+        ``RLTaskEnv`` sets this in its ``__init__``, which this class bypasses
+        (managers must exist before the first ``_observation``), so it is derived
+        from the obs buffer instead. ``RLTaskEnv.observation_space`` reads it.
+        """
+        return int(self.obs_buf.shape[-1])
+
+    @property
+    def observation_space(self) -> spaces.Space:
+        """Dict space with one ``Box`` per configured observation group.
+
+        ``RLTaskEnv.observation_space`` is a single ``Box(num_obs,)`` because its
+        obs is one flat tensor. This env emits ``{group: tensor}`` from both
+        ``reset`` and ``step``, so the space that actually describes it is a
+        ``spaces.Dict``. Without this override the inherited property raised
+        ``AttributeError: 'num_obs'`` inside ``GymEnvWrapper.__init__``, i.e.
+        ``gym.make`` failed before a task was ever reset.
+        """
+        if self._observation_space is None:
+            self._observation_space = spaces.Dict({
+                name: spaces.Box(low=-np.inf, high=np.inf, shape=(int(tensor.shape[-1]),), dtype=np.float32)
+                for name, tensor in self._obs_buf.items()
+            })
+        return self._observation_space
 
     @property
     def max_episode_steps(self) -> int:
