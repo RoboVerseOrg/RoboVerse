@@ -287,11 +287,12 @@ class SuperdexHandler(BaseSimHandler):
                 kwargs["density"] = float(density)
         contact = sdp.ContactParams()
         contact.coulomb_friction_coefficient = _friction(cfg)
+        position = self._lift_out_of_ground(cfg, mesh) if not is_static else tuple(cfg.default_position)
         actor = self._scene.create_rigid_actor(
             name=cfg.name,
             shape=shape,
             is_static=is_static,
-            world_from_local=_transform_from_wxyz(cfg.default_position, cfg.default_orientation),
+            world_from_local=_transform_from_wxyz(position, cfg.default_orientation),
             has_gravity=bool(cfg.enabled_gravity),
             contact=contact,
             **kwargs,
@@ -301,6 +302,34 @@ class SuperdexHandler(BaseSimHandler):
         self._rigids[cfg.name] = _Rigid(cfg=cfg, actor=actor, is_static=is_static)
         if self._renderer is not None:
             self._renderer.add_body(cfg.name, cfg.name, visuals)
+
+    GROUND_HEIGHT = 0.0  # the default ground plane is z = 0 (``create_plane_shape(distance=0.0)``)
+    GROUND_CLEARANCE = 1e-3  # m; a spawned body's hull is lifted to at least this far above the ground
+
+    def _lift_out_of_ground(self, cfg, mesh) -> tuple[float, float, float]:
+        """Spawn position for a dynamic rigid body, lifted so its collision hull clears the ground.
+
+        SuperDex resolves an initial interpenetration with the ground SDF as an impulse: a hull that
+        starts 10 cm inside the plane leaves at ~90 m/s on the first step (measured with a scaled
+        URDF whose origin sits at the mesh centre while the scenario height was authored for an MJCF
+        with a bottom-centred origin). MuJoCo tolerates the same overlap. Lifting the body is a
+        deterministic, loudly logged correction; a penetrating spawn is never silently accepted.
+        """
+        if not self.scenario.add_default_ground:
+            return tuple(cfg.default_position)
+        pos = np.asarray(cfg.default_position, dtype=np.float64)
+        rot = _matrix_from_transform(_transform_from_wxyz(cfg.default_position, cfg.default_orientation))[:3, :3]
+        lowest = float((np.asarray(mesh.vertices, dtype=np.float64) @ rot.T)[:, 2].min()) + pos[2]
+        ground_z = self.GROUND_HEIGHT
+        if lowest >= ground_z + self.GROUND_CLEARANCE:
+            return tuple(cfg.default_position)
+        lift = ground_z + self.GROUND_CLEARANCE - lowest
+        log.warning(
+            f"[superdex] '{cfg.name}' would spawn {lowest - ground_z:.4f} m into the ground (hull bottom below "
+            f"z={ground_z}); lifting it by {lift:.4f} m to avoid the depenetration impulse. Check the asset's "
+            "origin (URDF vs MJCF) or default_position."
+        )
+        return (float(pos[0]), float(pos[1]), float(pos[2] + lift))
 
     def _add_rigid_from_file(self, cfg: RigidObjCfg) -> None:
         import trimesh
@@ -777,7 +806,10 @@ class SuperdexHandler(BaseSimHandler):
             rot = obj_state.get("rot", cur_quat)
             rigid.actor.set_root_transform(_transform_from_wxyz(pos, rot))
         if not rigid.is_static:
-            rigid.actor.set_velocity(np.zeros(3), np.zeros(3))  # velocities are reset on set_states (as in MuJoCo)
+            # Restore recorded velocities so a state round-trips; missing keys mean rest.
+            lin = np.asarray(obj_state.get("vel", (0.0, 0.0, 0.0)), dtype=np.float64).reshape(3)
+            ang = np.asarray(obj_state.get("ang_vel", (0.0, 0.0, 0.0)), dtype=np.float64).reshape(3)
+            rigid.actor.set_velocity(lin, ang)
 
     def _set_articulation_state(self, art: _Articulation, obj_state) -> None:
         # Re-anchor the articulation root at the current world pose of link 0 (they differ once a free
@@ -796,7 +828,13 @@ class SuperdexHandler(BaseSimHandler):
         if art.base_dofs:
             pose[: art.base_dofs] = 0.0  # base offset is carried by the root transform
         art.actor.set_articulated_pose_from_joints(pose)
-        art.actor.set_articulated_joint_velocities(np.zeros(art.num_dofs))
+        vel = np.zeros(art.num_dofs)
+        for jn, value in (obj_state.get("dof_vel") or {}).items():
+            idx = art.joint_dof_index.get(jn)
+            if idx is None:
+                raise KeyError(f"[superdex] set_states: '{art.cfg.name}' has no joint '{jn}' (dof_vel)")
+            vel[idx] = float(_np(value))
+        art.actor.set_articulated_joint_velocities(vel)
         if art.controlled:
             art.target_pose = pose.copy()
             if self._control_mode == "implicit":

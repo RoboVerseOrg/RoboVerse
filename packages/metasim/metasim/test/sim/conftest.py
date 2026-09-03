@@ -188,4 +188,5 @@ register_shared_suite("metasim.test.sim.test_handler_lifecycle", get_init_pose_s
 register_shared_suite("metasim.test.sim.test_parallel_handler", get_init_pose_scenario)
 register_shared_suite("metasim.test.sim.test_state_modes", get_init_pose_scenario)
 register_shared_suite("metasim.test.sim.test_dof_control", get_init_pose_scenario)
+register_shared_suite("metasim.test.sim.test_replay", get_init_pose_scenario)
 register_shared_suite("metasim.test.sim.test_mujoco_arena_memory", get_init_pose_scenario)
