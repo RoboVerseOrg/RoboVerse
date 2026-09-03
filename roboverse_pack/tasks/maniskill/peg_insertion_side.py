@@ -20018,20 +20018,21 @@ class PegInsertionSide533Task(PegInsertionSideBaseTask):
 
 @register_task("maniskill.peg_insertion_side_81", "peg_insertion_side_81")
 class PegInsertionSide81Task(PegInsertionSideBaseTask):
-    scenario = ScenarioCfg
-    objects = [
-        RigidObjCfg(
-            name="box",
-            usd_path="roboverse_data/assets/maniskill/peg/base_81.usd",
-            physics=PhysicStateType.GEOM,
-            fix_base_link=True,
-        ),
-        RigidObjCfg(
-            name="stick",
-            usd_path="roboverse_data/assets/maniskill/peg/stick_81.usd",
-            physics=PhysicStateType.RIGIDBODY,
-        ),
-    ]
+    scenario = ScenarioCfg(
+        objects=[
+            RigidObjCfg(
+                name="box",
+                usd_path="roboverse_data/assets/maniskill/peg/base_81.usd",
+                physics=PhysicStateType.GEOM,
+                fix_base_link=True,
+            ),
+            RigidObjCfg(
+                name="stick",
+                usd_path="roboverse_data/assets/maniskill/peg/stick_81.usd",
+                physics=PhysicStateType.RIGIDBODY,
+            ),
+        ]
+    )
     traj_filepath = "roboverse_data/trajs/maniskill/peg_insertion_side/trajectory-franka-81_v2.pkl"
 
 
