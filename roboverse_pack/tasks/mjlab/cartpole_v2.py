@@ -37,7 +37,7 @@ from roboverse_learn.managers import (
     RewTerm,
 )
 
-from ._locator import mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset
 from .cartpole import _CARTPOLE_XML
 from .mdp import (
     SceneEntityCfg,
@@ -209,7 +209,7 @@ class CartpoleSwingupEnvCfg(CartpoleBalanceEnvCfg):
 class _CartpoleTaskBase(ManagerBasedRVEnv):
     """Common machinery for both balance + swingup variants."""
 
-    scenario = _cartpole_scenario()
+    scenario = lazy_scenario(lambda: _cartpole_scenario())
     _cfg_cls: type[ManagerBasedRVEnvCfg] = CartpoleBalanceEnvCfg
 
     def __init__(self, scenario: ScenarioCfg | None = None, device: str | torch.device | None = None) -> None:

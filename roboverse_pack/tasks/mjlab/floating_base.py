@@ -17,7 +17,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
 
-from ._locator import mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset
 
 _G1_XML = "asset_zoo/robots/unitree_g1/xmls/g1.xml"
 _GO1_XML = "asset_zoo/robots/unitree_go1/xmls/go1.xml"
@@ -48,7 +48,7 @@ def _floating_scenario(robot_name: str, mjcf_relpath: str, num_joints: int) -> S
 class MjlabVelocityFlatG1(BaseTaskEnv):
     """Unitree G1 humanoid scaffold (29 DoF)."""
 
-    scenario = _floating_scenario("g1", _G1_XML, num_joints=29)
+    scenario = lazy_scenario(lambda: _floating_scenario("g1", _G1_XML, num_joints=29))
     max_episode_steps = 4000  # mjlab episode_length_s = 20s / dt 0.005
 
 
@@ -56,7 +56,7 @@ class MjlabVelocityFlatG1(BaseTaskEnv):
 class MjlabVelocityRoughG1(BaseTaskEnv):
     """G1 humanoid on rough terrain (terrain wrapper not yet ported)."""
 
-    scenario = _floating_scenario("g1", _G1_XML, num_joints=29)
+    scenario = lazy_scenario(lambda: _floating_scenario("g1", _G1_XML, num_joints=29))
     max_episode_steps = 4000
 
 
@@ -64,7 +64,7 @@ class MjlabVelocityRoughG1(BaseTaskEnv):
 class MjlabVelocityFlatGo1(BaseTaskEnv):
     """Unitree Go1 quadruped scaffold (12 DoF)."""
 
-    scenario = _floating_scenario("go1", _GO1_XML, num_joints=12)
+    scenario = lazy_scenario(lambda: _floating_scenario("go1", _GO1_XML, num_joints=12))
     max_episode_steps = 4000
 
 
@@ -72,7 +72,7 @@ class MjlabVelocityFlatGo1(BaseTaskEnv):
 class MjlabVelocityRoughGo1(BaseTaskEnv):
     """Go1 quadruped on rough terrain (terrain wrapper not yet ported)."""
 
-    scenario = _floating_scenario("go1", _GO1_XML, num_joints=12)
+    scenario = lazy_scenario(lambda: _floating_scenario("go1", _GO1_XML, num_joints=12))
     max_episode_steps = 4000
 
 
@@ -80,7 +80,7 @@ class MjlabVelocityRoughGo1(BaseTaskEnv):
 class MjlabTrackingFlatG1(BaseTaskEnv):
     """G1 humanoid reference-trajectory tracking on flat ground."""
 
-    scenario = _floating_scenario("g1", _G1_XML, num_joints=29)
+    scenario = lazy_scenario(lambda: _floating_scenario("g1", _G1_XML, num_joints=29))
     max_episode_steps = 2000  # mjlab episode_length_s = 10s / dt 0.005
 
 
@@ -88,5 +88,5 @@ class MjlabTrackingFlatG1(BaseTaskEnv):
 class MjlabTrackingFlatG1NoStateEst(BaseTaskEnv):
     """Same physical scaffold as Tracking-Flat-G1; observation differs in mjlab."""
 
-    scenario = _floating_scenario("g1", _G1_XML, num_joints=29)
+    scenario = lazy_scenario(lambda: _floating_scenario("g1", _G1_XML, num_joints=29))
     max_episode_steps = 2000

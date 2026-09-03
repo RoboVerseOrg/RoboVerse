@@ -72,3 +72,23 @@ def mjlab_asset(relpath: str) -> str:
     # slowed task discovery and broke offline imports. ``ScenarioCfg.check_assets()`` (run by every
     # handler at construction) fetches the MJCF and its referenced meshes when the task is used.
     return hf_mjlab_path(relpath)
+
+
+class lazy_scenario:
+    """Class-level ``scenario`` built on first access instead of at import time.
+
+    The mjlab tasks patch an MJCF from ``roboverse_data`` to build their scenario. Doing that in the
+    class body meant ``import roboverse_pack.tasks.mjlab`` parsed asset files, so any process without
+    the asset checkout (CI runners, the task registry's discovery, ``list_tasks``) failed at import.
+    The descriptor keeps ``TaskClass.scenario`` working for readers such as ``gym_registration`` while
+    deferring the file access to the first real use. Assigning ``TaskClass.scenario = cfg`` replaces it.
+    """
+
+    def __init__(self, factory):
+        self._factory = factory
+        self._value = None
+
+    def __get__(self, instance, owner=None):
+        if self._value is None:
+            self._value = self._factory()
+        return self._value
