@@ -49,6 +49,42 @@ def look_at_pose(eye, target, up=(0.0, 0.0, 1.0)) -> np.ndarray:
     return pose
 
 
+def _has_texture(mesh) -> bool:
+    """True when the mesh carries an image texture pyrender can upload (UVs + material image)."""
+    import trimesh
+
+    vis = getattr(mesh, "visual", None)
+    if not isinstance(vis, trimesh.visual.texture.TextureVisuals) or getattr(vis, "uv", None) is None:
+        return False
+    mat = getattr(vis, "material", None)
+    image = getattr(mat, "image", None) or getattr(mat, "baseColorTexture", None)
+    return image is not None and len(vis.uv) == len(mesh.vertices)
+
+
+def _visual_color(mesh):
+    """A flat RGBA (0..1) from a mesh's own material / vertex colours, if it has any."""
+    import trimesh
+
+    vis = getattr(mesh, "visual", None)
+    try:
+        if isinstance(vis, trimesh.visual.texture.TextureVisuals):
+            mat = vis.material
+            base = getattr(mat, "baseColorFactor", None)
+            if base is None:
+                base = getattr(mat, "diffuse", None)
+            if base is not None:
+                rgba = np.asarray(base, dtype=np.float64).reshape(-1)[:4]
+                if rgba.max() > 1.0:
+                    rgba = rgba / 255.0
+                return tuple(float(v) for v in (list(rgba) + [1.0])[:4])
+        elif isinstance(vis, trimesh.visual.ColorVisuals) and vis.kind is not None:
+            rgba = np.asarray(vis.main_color, dtype=np.float64) / 255.0
+            return tuple(float(v) for v in rgba[:4])
+    except Exception:  # a broken material must not break the render
+        return None
+    return None
+
+
 class OffscreenRenderer:
     """Keeps a ``pyrender.Scene`` in sync with poses the handler pushes in, and renders cameras."""
 
@@ -92,18 +128,28 @@ class OffscreenRenderer:
         nodes = []
         for mesh, body_from_geom, color in geoms:
             mesh = mesh.copy()
-            if color is None and isinstance(mesh.visual, trimesh.visual.texture.TextureVisuals):
-                # Textured DAE/OBJ visuals are flattened to a plain colour: pyrender's texture upload
-                # is brittle across PyOpenGL/numpy versions and untextured shading is enough for
-                # debugging renders. (Tracked: proper material support.)
-                color = (0.75, 0.75, 0.78, 1.0)
-            if color is not None:
+            pose = np.asarray(body_from_geom, dtype=np.float64)
+            node = None
+            if _has_texture(mesh):
+                # A textured visual (OBJ+MTL/PNG, DAE, GLB) keeps its texture: the image travels in
+                # ``visual.material`` and pyrender uploads it. A URDF ``<material>`` colour does not
+                # override a real texture (it is usually the exporter's default grey).
+                try:
+                    node = self._scene.add(pyrender.Mesh.from_trimesh(mesh, smooth=False), pose=pose)
+                except Exception as exc:  # texture upload failed: fall back to a flat colour
+                    log.warning(
+                        f"[superdex] texture of {obj_name}/{body_name} not uploaded ({exc}); rendering untextured"
+                    )
+                    node = None
+            if node is None:
+                if color is None:
+                    color = _visual_color(mesh) or (0.75, 0.75, 0.78, 1.0)
                 rgba = (np.clip(np.asarray(color, dtype=np.float64), 0, 1) * 255).astype(np.uint8)
                 if len(rgba) == 3:
                     rgba = np.append(rgba, 255)
                 mesh.visual = trimesh.visual.ColorVisuals(mesh, face_colors=np.tile(rgba, (len(mesh.faces), 1)))
-            node = self._scene.add(pyrender.Mesh.from_trimesh(mesh, smooth=False), pose=np.asarray(body_from_geom))
-            nodes.append((node, np.asarray(body_from_geom, dtype=np.float64)))
+                node = self._scene.add(pyrender.Mesh.from_trimesh(mesh, smooth=False), pose=pose)
+            nodes.append((node, pose))
         self._nodes[(obj_name, body_name)] = nodes
 
     # ------------------------------------------------------------------ per-frame updates

@@ -111,7 +111,8 @@ def resolve_mesh_path(filename: str, urdf_dir: str) -> str:
 def _load_mesh(path: str):
     """Load a mesh file as a single ``trimesh.Trimesh`` (scenes are concatenated)."""
     _require_trimesh()
-    mesh = trimesh.load(path, force="mesh")
+    # ``process=False``: vertex merging would break the UV mapping of textured visuals.
+    mesh = trimesh.load(path, force="mesh", process=False)
     if isinstance(mesh, trimesh.Scene):  # pragma: no cover - ``force="mesh"`` normally prevents this
         mesh = trimesh.util.concatenate(tuple(mesh.dump()))
     return mesh
