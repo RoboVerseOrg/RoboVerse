@@ -19,7 +19,6 @@ from metasim.constants import SimType
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import get_sim_handler_class
 
-
 # ``ISAACLAB`` is a deprecated alias kept for backward compatibility with
 # downstream callers (e.g. RoboVerse's ``scripts/conversion/convert_traj_v1_to_v2.py``).
 # The dispatcher rewrites it to ``ISAACSIM`` with a DeprecationWarning.
@@ -48,8 +47,7 @@ def test_no_dead_isaaclab_reference():
                 sim_args = inner
                 break
     assert "isaaclab" not in sim_args, (
-        "ScenarioCfg.simulator Literal must not advertise isaaclab — "
-        "new code should use isaacsim instead"
+        "ScenarioCfg.simulator Literal must not advertise isaaclab — new code should use isaacsim instead"
     )
 
 
@@ -96,9 +94,7 @@ def test_every_sim_type_has_handler_dispatch(sim_type):
         # absent (acceptable).
         missing = str(exc.name) if exc.name else str(exc)
         if missing.startswith("metasim.sim.") and "_handler" not in missing:
-            raise AssertionError(
-                f"Dispatch for {sim_type} points at a deleted metasim submodule: {exc}"
-            ) from exc
+            raise AssertionError(f"Dispatch for {sim_type} points at a deleted metasim submodule: {exc}") from exc
         return
     except (ImportError, AttributeError, OSError):
         # Backend native lib failed to load (e.g. jax/numpy skew on MJX,

@@ -12,10 +12,11 @@ from __future__ import annotations
 import logging
 import math
 import os
-from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from pathlib import Path
 
 import numpy as np
+
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 
 try:
     import rerun as rr

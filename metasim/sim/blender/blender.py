@@ -29,7 +29,6 @@ from metasim.scenario.objects import (
 )
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim import BaseSimHandler
-from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from metasim.types import (
     CameraState,
     CompatActionInput,
@@ -42,6 +41,7 @@ from metasim.types import (
     Termination,
 )
 from metasim.utils.state import state_tensor_to_nested
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 
 from .importers import MJCF_SUFFIXES, USD_SUFFIXES, import_usd_visuals
 from .lights import add_scenario_lights
@@ -112,9 +112,7 @@ def _import_mujoco_msh(path: str):
 
     vertices = np.frombuffer(vertex_bytes, dtype="<f4").reshape((nv, 3)) if nv else np.empty((0, 3))
     faces = np.frombuffer(face_bytes, dtype="<i4").reshape((nf, 3)) if nf else np.empty((0, 3), dtype=np.int32)
-    texcoords = (
-        np.frombuffer(texcoord_bytes, dtype="<f4").reshape((nt, 2)) if nt else None
-    )
+    texcoords = np.frombuffer(texcoord_bytes, dtype="<f4").reshape((nt, 2)) if nt else None
 
     name = Path(path).stem
     mesh_data = bpy.data.meshes.new(f"{name}_mesh")
@@ -263,7 +261,8 @@ def _is_visible_object(obj) -> bool:
 
 def _has_collection_instance_child(obj) -> bool:
     return any(
-        getattr(child, "instance_type", None) == "COLLECTION" and getattr(child, "instance_collection", None) is not None
+        getattr(child, "instance_type", None) == "COLLECTION"
+        and getattr(child, "instance_collection", None) is not None
         for child in getattr(obj, "children", ())
     )
 
@@ -285,9 +284,7 @@ def _choose_body_object(candidates: list) -> object:
         [
             obj
             for obj in candidates
-            if _is_visible_object(obj)
-            and getattr(obj, "type", None) == "EMPTY"
-            and _has_renderable_descendant(obj)
+            if _is_visible_object(obj) and getattr(obj, "type", None) == "EMPTY" and _has_renderable_descendant(obj)
         ],
         [obj for obj in candidates if getattr(obj, "type", None) == "EMPTY" and _has_renderable_descendant(obj)],
         [obj for obj in candidates if getattr(obj, "type", None) == "EMPTY" and len(obj.children) > 0],
@@ -659,8 +656,7 @@ def _usd_reference_xforms_by_name(usd_path: str | Path) -> dict[str, list[Matrix
         entries.setdefault(prim.GetName(), []).append((str(prim.GetPath()), _gf_matrix_to_blender(world_matrix)))
 
     return {
-        name: [matrix for _path, matrix in sorted(values, key=lambda item: item[0])]
-        for name, values in entries.items()
+        name: [matrix for _path, matrix in sorted(values, key=lambda item: item[0])] for name, values in entries.items()
     }
 
 
@@ -913,8 +909,7 @@ def _roboverse_custom_property_owners(material: object):
     if node_tree is None:
         return
     yield node_tree
-    for node in getattr(node_tree, "nodes", ()) or ():
-        yield node
+    yield from getattr(node_tree, "nodes", ()) or ()
 
 
 def has_preserved_roboverse_material_graph(material: object) -> bool:
@@ -961,7 +956,9 @@ def _apply_principled_material_inputs(node, material_name: str, rgba: tuple[floa
     transmissive = _is_transmissive_rgba(rgba)
     shader_rgba = (rgba[0], rgba[1], rgba[2], 1.0) if transmissive else rgba
     _set_principled_input(node, "Base Color", shader_rgba)
-    _set_principled_input(node, "Roughness", _roughness_for_transmissive_material(material_name) if transmissive else 0.55)
+    _set_principled_input(
+        node, "Roughness", _roughness_for_transmissive_material(material_name) if transmissive else 0.55
+    )
     _set_principled_input(node, "Metallic", 0.0)
     _set_principled_input(node, "Alpha", shader_rgba[3])
     _set_principled_input(node, "Transmission Weight", 1.0 if transmissive else 0.0)
@@ -1124,9 +1121,7 @@ def _apply_texture_to_material(material, texture_path: Path) -> None:
     nt.links.new(tex_node.outputs["Color"], bsdf.inputs["Base Color"])
 
 
-def _dedupe_overlapping_geoms(
-    geoms: list[ET.Element], geom_defaults: dict[str, dict[str, str]]
-) -> list[ET.Element]:
+def _dedupe_overlapping_geoms(geoms: list[ET.Element], geom_defaults: dict[str, dict[str, str]]) -> list[ET.Element]:
     """Drop duplicate geoms at the same (type, size, pos, quat) within a body.
 
     URDF→MJCF converters (notably the one RLBench uses for close_box) emit
@@ -1138,6 +1133,7 @@ def _dedupe_overlapping_geoms(
     assignments where the material name matches the class name — that's the
     classic "this is just a placeholder colour" pattern.
     """
+
     def key(geom):
         a = _mjcf_geom_resolved_attrs(geom, geom_defaults)
         return (
@@ -1258,9 +1254,7 @@ def _mjcf_geom_default_attrs(root: ET.Element) -> dict[str, dict[str, str]]:
     return result
 
 
-def _mjcf_geom_resolved_attrs(
-    geom: ET.Element, defaults: dict[str, dict[str, str]]
-) -> dict[str, str]:
+def _mjcf_geom_resolved_attrs(geom: ET.Element, defaults: dict[str, dict[str, str]]) -> dict[str, str]:
     """Merge a geom's own attrs over its class default attrs."""
     class_name = geom.get("class")
     merged: dict[str, str] = dict(defaults.get(class_name, {})) if class_name else {}
@@ -1268,9 +1262,7 @@ def _mjcf_geom_resolved_attrs(
     return merged
 
 
-def _mjcf_mesh_assets(
-    root: ET.Element, mjcf_dir: Path
-) -> dict[str, tuple[Path, tuple[float, float, float]]]:
+def _mjcf_mesh_assets(root: ET.Element, mjcf_dir: Path) -> dict[str, tuple[Path, tuple[float, float, float]]]:
     """Parse ``<asset><mesh name=... file=... scale=...>`` references.
 
     Honours ``<compiler meshdir="...">`` for path resolution. Returns a map
@@ -1419,9 +1411,7 @@ def _create_mjcf_geom_visual(
     elif geom_type == "mesh":
         mesh_ref = attrs.get("mesh")
         if not mesh_ref or mesh_assets is None or mesh_ref not in mesh_assets:
-            raise ValueError(
-                f"MJCF mesh geom {name!r} references unknown mesh asset {mesh_ref!r}"
-            )
+            raise ValueError(f"MJCF mesh geom {name!r} references unknown mesh asset {mesh_ref!r}")
         mesh_path, mesh_scale = mesh_assets[mesh_ref]
         obj = import_mesh(str(mesh_path))
         obj.scale = mesh_scale
@@ -1471,14 +1461,8 @@ def _create_compiled_mjcf_mesh_visual(
     vert_num = int(model.mesh_vertnum[mesh_id])
     face_adr = int(model.mesh_faceadr[mesh_id])
     face_num = int(model.mesh_facenum[mesh_id])
-    vertices = [
-        tuple(float(value) for value in vertex)
-        for vertex in model.mesh_vert[vert_adr : vert_adr + vert_num]
-    ]
-    faces = [
-        tuple(int(value) for value in face)
-        for face in model.mesh_face[face_adr : face_adr + face_num]
-    ]
+    vertices = [tuple(float(value) for value in vertex) for vertex in model.mesh_vert[vert_adr : vert_adr + vert_num]]
+    faces = [tuple(int(value) for value in face) for face in model.mesh_face[face_adr : face_adr + face_num]]
 
     mesh = bpy.data.meshes.new(f"{name}_mesh")
     mesh.from_pydata(vertices, [], faces)
@@ -1569,7 +1553,9 @@ def _import_mjcf_visual_tree(
             if mesh_name and compiled_model is not None:
                 mesh_id = mesh_name_to_id.get(mesh_name)
                 if mesh_id is None:
-                    raise ValueError(f"MJCF mesh geom {geom.get('name') or mesh_name!r} references unknown mesh {mesh_name!r}")
+                    raise ValueError(
+                        f"MJCF mesh geom {geom.get('name') or mesh_name!r} references unknown mesh {mesh_name!r}"
+                    )
                 _create_compiled_mjcf_mesh_visual(
                     model=compiled_model,
                     mesh_id=mesh_id,
@@ -1660,7 +1646,7 @@ def _blender_body_name_alias(body_name: str) -> str:
     for prefix in ("left_", "right_"):
         hand_prefix = f"{prefix}hand_"
         if body_name.startswith(hand_prefix):
-            return f"{prefix}{body_name[len(hand_prefix):]}"
+            return f"{prefix}{body_name[len(hand_prefix) :]}"
     return body_name
 
 
@@ -1905,7 +1891,7 @@ class BlenderHandler(BaseSimHandler):
         return True
 
     def _add_default_ground(self, scene) -> None:
-        """Add a 4×4m neutral ground plane *just below* z=0 so renders have a
+        """Add a 4x4m neutral ground plane *just below* z=0 so renders have a
         floor instead of objects floating in a void. The slight downward
         offset avoids z-fighting when callers add their own ground at z=0
         (e.g. ``scene_aug.add_ground_plane`` in the photoreal demo). To opt
@@ -1935,7 +1921,7 @@ class BlenderHandler(BaseSimHandler):
             self._add_default_table(scene)
 
     def _add_default_table(self, scene) -> None:
-        """Wooden tabletop at z=0 (~1.6×1.2 m), warm tan with subtle noise.
+        """Wooden tabletop at z=0 (~1.6x1.2 m), warm tan with subtle noise.
 
         Sits ~10 mm above the floor, slightly larger than typical
         manipulation workspaces so robot bases + scene objects all rest on
@@ -2154,11 +2140,7 @@ class BlenderHandler(BaseSimHandler):
         missing = []
         mapped = []
         for body_index, body_name in enumerate(obj_state.body_names):
-            obj = (
-                _resolve_robot_body_object(body_map, body_name)
-                if use_robot_aliases
-                else body_map.get(body_name)
-            )
+            obj = _resolve_robot_body_object(body_map, body_name) if use_robot_aliases else body_map.get(body_name)
             if obj is None:
                 missing.append(body_name)
                 continue

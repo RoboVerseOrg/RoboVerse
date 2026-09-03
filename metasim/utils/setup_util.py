@@ -65,8 +65,7 @@ def get_sim_handler_class(sim: SimType):
         import warnings
 
         warnings.warn(
-            "SimType.ISAACLAB is deprecated; use SimType.ISAACSIM. "
-            "Dispatching to the IsaacSim handler.",
+            "SimType.ISAACLAB is deprecated; use SimType.ISAACSIM. Dispatching to the IsaacSim handler.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -165,9 +164,7 @@ def get_sim_handler_class(sim: SimType):
 
 def _local_python_modules(cwd: str) -> list[str]:
     return [
-        os.path.splitext(fname)[0]
-        for fname in os.listdir(cwd)
-        if fname.endswith(".py") and not fname.startswith("_")
+        os.path.splitext(fname)[0] for fname in os.listdir(cwd) if fname.endswith(".py") and not fname.startswith("_")
     ]
 
 

@@ -61,6 +61,5 @@ def test_isaaclab_not_in_scenario_simulator_literal():
     for arg in typing.get_args(hint):
         literal_values.update(str(v) for v in typing.get_args(arg))
     assert "isaaclab" not in literal_values, (
-        "isaaclab should not be in the Literal; the ISAACLAB enum is only a "
-        "deprecated alias for existing call sites."
+        "isaaclab should not be in the Literal; the ISAACLAB enum is only a deprecated alias for existing call sites."
     )

@@ -124,7 +124,7 @@ class BaseRandomizerType:
         self._scan_and_register_handler_objects(self._actual_handler, self.registry)
 
     @staticmethod
-    def _maybe_build_isaacsim_adapter(actual_handler) -> "IsaacSimAdapter | None":
+    def _maybe_build_isaacsim_adapter(actual_handler) -> IsaacSimAdapter | None:
         """Return an IsaacSimAdapter for IsaacSim handlers, else None.
 
         The check is duck-typed (class-name match) to avoid importing the

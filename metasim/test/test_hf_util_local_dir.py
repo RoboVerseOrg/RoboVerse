@@ -24,7 +24,6 @@ After the fix:
 
 from __future__ import annotations
 
-import importlib
 import os
 
 import pytest
@@ -35,9 +34,7 @@ def test_local_dir_is_absolute():
     """The resolved cache root must not be CWD-relative at runtime."""
     from metasim.utils import hf_util
 
-    assert os.path.isabs(hf_util.LOCAL_DIR), (
-        f"LOCAL_DIR={hf_util.LOCAL_DIR!r} should have been abspath-resolved"
-    )
+    assert os.path.isabs(hf_util.LOCAL_DIR), f"LOCAL_DIR={hf_util.LOCAL_DIR!r} should have been abspath-resolved"
 
 
 @pytest.mark.general

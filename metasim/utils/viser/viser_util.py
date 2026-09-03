@@ -12,7 +12,6 @@ import os
 import tempfile
 import threading
 import time
-from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from dataclasses import MISSING
 from pathlib import Path
 from typing import Any
@@ -29,6 +28,7 @@ from metasim.scenario.objects import (
     RigidObjCfg,
 )
 from metasim.scenario.robot import RobotCfg as BaseRobotCfg
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 
 # Configure logging
 logger = logging.getLogger(__name__)

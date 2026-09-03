@@ -41,7 +41,7 @@ class _RecordingHandler(BaseSimHandler):
     seen_during_set: ClassVar[list] = []
     seen_during_sim: ClassVar[list] = []
 
-    def __init__(self):  # noqa: D401 — minimal stub init
+    def __init__(self):
         self._tensor_state_cache = None
         self._dict_state_cache = None
         self._state_value = "initial"

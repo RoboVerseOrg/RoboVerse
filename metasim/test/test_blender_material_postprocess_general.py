@@ -30,9 +30,7 @@ def _target_names(node: ast.Assign | ast.AnnAssign) -> set[str]:
 def _load_blender_material_helpers() -> types.ModuleType:
     source = BLENDER_PATH.read_text(encoding="utf-8")
     parsed = ast.parse(source, filename=str(BLENDER_PATH))
-    selected: list[ast.stmt] = [
-        ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0)
-    ]
+    selected: list[ast.stmt] = [ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0)]
     for node in parsed.body:
         if isinstance(node, ast.FunctionDef) and node.name in _HELPER_NAMES:
             selected.append(node)
@@ -79,7 +77,7 @@ class FakeObject:
         self,
         name: str,
         materials: list[FakeMaterial],
-        children: tuple["FakeObject", ...] = (),
+        children: tuple[FakeObject, ...] = (),
     ):
         self.name = name
         self.type = "MESH"
@@ -104,12 +102,10 @@ def test_has_preserved_roboverse_material_graph_detects_material_and_node_tags()
         "NodeTagged",
         node_tree=FakeNodeTree(
             nodes=[
-                FakeNode(
-                    {
-                        "roboverse:material_conversion_policy": "mdl_bake",
-                        "roboverse:material_graph_version": "v1",
-                    }
-                )
+                FakeNode({
+                    "roboverse:material_conversion_policy": "mdl_bake",
+                    "roboverse:material_graph_version": "v1",
+                })
             ]
         ),
     )

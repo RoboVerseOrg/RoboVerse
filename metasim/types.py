@@ -23,7 +23,7 @@ Dof = Dict[str, float]
 class ShapeSpec:
     """Machine-readable shape metadata for tensor annotations."""
 
-    dims: Tuple[Union[str, int], ...]
+    dims: Tuple[Union[str, int], ...]  # noqa: UP006, UP007 — kept typing-style to match the runtime Union aliases below
 
 
 RootStateTensor = Annotated[torch.Tensor, ShapeSpec(("num_envs", 13))]
@@ -394,14 +394,20 @@ TimeOut = torch.BoolTensor
 
 
 class RawObservationInfo(TypedDict):
+    """Raw observation payload attached to ``TaskInfo``."""
+
     obs: torch.Tensor
 
 
 class ObservationInfo(TypedDict):
+    """Observation info block: wraps :class:`RawObservationInfo`."""
+
     raw: RawObservationInfo
 
 
 class TaskInfo(TypedDict, total=False):
+    """Per-step info dict returned by task environments (all keys optional)."""
+
     privileged_observation: Obs
     episode_steps: torch.Tensor
     observations: ObservationInfo

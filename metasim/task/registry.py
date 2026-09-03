@@ -53,9 +53,7 @@ def _discover_task_modules() -> None:
         sys.path.insert(0, cwd)
 
     local_task_modules = [
-        os.path.splitext(fname)[0]
-        for fname in os.listdir(cwd)
-        if fname.endswith("task.py") and fname.startswith("_")
+        os.path.splitext(fname)[0] for fname in os.listdir(cwd) if fname.endswith("task.py") and fname.startswith("_")
     ]
     packages_to_scan = get_package_candidates(
         "tasks",

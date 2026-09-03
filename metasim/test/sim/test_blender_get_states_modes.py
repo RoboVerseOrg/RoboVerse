@@ -13,8 +13,6 @@ state to nestify (Blender is render-only).
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 
 

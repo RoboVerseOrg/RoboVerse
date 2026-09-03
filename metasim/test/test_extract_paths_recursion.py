@@ -122,8 +122,7 @@ def test_meshdir_compiler_attribute_honoured(tmp_path):
     f = _mjcf(
         tmp_path,
         "with_meshdir.xml",
-        '<compiler meshdir="shared_meshes"/>'
-        '<asset><mesh file="shared.stl"/></asset>',
+        '<compiler meshdir="shared_meshes"/><asset><mesh file="shared.stl"/></asset>',
     )
     paths = extract_paths_from_mjcf(str(f))
     assert any(p.endswith("shared_meshes/shared.stl") for p in paths), paths

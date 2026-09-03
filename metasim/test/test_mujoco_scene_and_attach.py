@@ -33,7 +33,6 @@ from pathlib import Path
 
 import pytest
 
-
 pytestmark = pytest.mark.mujoco
 
 
@@ -134,11 +133,7 @@ def test_add_default_ground_default_keeps_legacy_behavior(tmp_path):
         import mujoco
 
         model = handler.physics.model.ptr
-        plane_count = sum(
-            1
-            for i in range(model.ngeom)
-            if model.geom_type[i] == int(mujoco.mjtGeom.mjGEOM_PLANE)
-        )
+        plane_count = sum(1 for i in range(model.ngeom) if model.geom_type[i] == int(mujoco.mjtGeom.mjGEOM_PLANE))
         assert plane_count >= 1, "expected at least one ground plane under default behavior"
     finally:
         try:
@@ -264,8 +259,6 @@ def test_inner_freejoint_is_promoted_to_wrapper(tmp_path):
         # The freejoint must be on a body that is a direct child of world (id 0).
         free_body = int(model.jnt_bodyid[free_jnts[0]])
         free_parent = int(model.body_parentid[free_body])
-        assert free_parent == 0, (
-            f"freejoint body {free_body} parented to {free_parent}, not world; promotion failed"
-        )
+        assert free_parent == 0, f"freejoint body {free_body} parented to {free_parent}, not world; promotion failed"
     finally:
         handler.close()

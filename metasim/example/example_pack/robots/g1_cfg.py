@@ -114,7 +114,9 @@ class G1Dof23Cfg(G1Dof12Cfg):  # noqa: D101
         "left_shoulder_yaw_joint": BaseActuatorCfg(stiffness=40, damping=1, effort_limit_sim=25, velocity_limit=37.0),
         "left_elbow_joint": BaseActuatorCfg(stiffness=40, damping=1, effort_limit_sim=25, velocity_limit=37.0),
         "left_wrist_roll_joint": BaseActuatorCfg(stiffness=40, damping=1, effort_limit_sim=25, velocity_limit=37.0),
-        "right_shoulder_pitch_joint": BaseActuatorCfg(stiffness=40, damping=1, effort_limit_sim=25, velocity_limit=37.0),
+        "right_shoulder_pitch_joint": BaseActuatorCfg(
+            stiffness=40, damping=1, effort_limit_sim=25, velocity_limit=37.0
+        ),
         "right_shoulder_roll_joint": BaseActuatorCfg(stiffness=40, damping=1, effort_limit_sim=25, velocity_limit=37.0),
         "right_shoulder_yaw_joint": BaseActuatorCfg(stiffness=40, damping=1, effort_limit_sim=25, velocity_limit=37.0),
         "right_elbow_joint": BaseActuatorCfg(stiffness=40, damping=1, effort_limit_sim=25, velocity_limit=37.0),

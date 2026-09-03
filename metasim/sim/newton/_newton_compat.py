@@ -37,9 +37,11 @@ def _resolve_joint_type():
     """Return ``newton.JointType`` enum (location moved in 1.2)."""
     try:
         from newton._src.sim.joints import JointType  # newton < 1.2
+
         return JointType
     except ModuleNotFoundError:
         from newton import JointType  # newton >= 1.2
+
         return JointType
 
 
@@ -56,11 +58,13 @@ def _resolve_populate_contacts():
     """
     try:
         from newton.sensors import populate_contacts  # newton < 1.2
+
         return populate_contacts
     except ImportError:
         # Newton >= 1.2: contacts populated by solver step automatically.
         def _no_op(contacts, solver):
             return None
+
         return _no_op
 
 
@@ -110,9 +114,7 @@ def _install_model_attr_aliases():
     if not hasattr(newton, "Model"):
         return
     M = newton.Model
-    for old, new in [("body_key", "body_label"),
-                     ("joint_key", "joint_label"),
-                     ("shape_key", "shape_label")]:
+    for old, new in [("body_key", "body_label"), ("joint_key", "joint_label"), ("shape_key", "shape_label")]:
         if old in M.__dict__:
             continue
         setattr(M, old, property(lambda self, _n=new: getattr(self, _n)))
@@ -139,6 +141,7 @@ def add_mjcf(builder, mjcf_path: str, **kwargs):
     if hasattr(builder, "add_mjcf"):
         return builder.add_mjcf(mjcf_path, **kwargs)
     from newton._src.utils.import_mjcf import parse_mjcf
+
     return parse_mjcf(builder, mjcf_path, **kwargs)
 
 
@@ -156,12 +159,22 @@ def _install_modelbuilder_key_to_label_shim():
     if MB is None or getattr(MB, "_metasim_key_label_shim_installed", False):
         return
     import inspect
+
     for method_name in (
-        "add_body", "add_articulation",
-        "add_shape_box", "add_shape_sphere", "add_shape_capsule",
-        "add_shape_cylinder", "add_shape_mesh", "add_shape_plane",
-        "add_joint_revolute", "add_joint_prismatic", "add_joint_fixed",
-        "add_joint_free", "add_joint_ball", "add_joint_compound",
+        "add_body",
+        "add_articulation",
+        "add_shape_box",
+        "add_shape_sphere",
+        "add_shape_capsule",
+        "add_shape_cylinder",
+        "add_shape_mesh",
+        "add_shape_plane",
+        "add_joint_revolute",
+        "add_joint_prismatic",
+        "add_joint_fixed",
+        "add_joint_free",
+        "add_joint_ball",
+        "add_joint_compound",
     ):
         meth = getattr(MB, method_name, None)
         if meth is None:
@@ -178,6 +191,7 @@ def _install_modelbuilder_key_to_label_shim():
                 if "key" in kwargs:
                     kwargs.setdefault("label", kwargs.pop("key"))
                 return original(self, *args, **kwargs)
+
             wrapper.__name__ = original.__name__
             wrapper.__doc__ = original.__doc__
             wrapper.__wrapped__ = original
@@ -200,6 +214,7 @@ def _check_newton_version():
     """
     try:
         import newton
+
         ver = getattr(newton, "__version__", "unknown")
         if ver.startswith("1.0") or ver.startswith("1.1"):
             return  # supported, fully working
@@ -218,4 +233,4 @@ def _check_newton_version():
 _check_newton_version()
 
 
-__all__ = ["JointType", "populate_contacts", "set_current_world", "add_mjcf"]
+__all__ = ["JointType", "add_mjcf", "populate_contacts", "set_current_world"]

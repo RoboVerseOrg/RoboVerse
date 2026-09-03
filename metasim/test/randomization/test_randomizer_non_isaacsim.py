@@ -14,7 +14,6 @@ module's own omni import). Non-IsaacSim handlers get ``adapter = None``.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -29,9 +28,7 @@ class _FakeMujocoHandler:
     """
 
     def __init__(self) -> None:
-        self.scenario = SimpleNamespace(
-            robots=[], objects=[], cameras=[], scene=None, ground=None
-        )
+        self.scenario = SimpleNamespace(robots=[], objects=[], cameras=[], scene=None, ground=None)
 
     def get_extra(self):
         return {}
@@ -67,9 +64,12 @@ def test_base_randomizer_binds_on_non_isaacsim_handler_without_omni():
 def test_base_randomizer_skips_isaacsim_adapter_for_blender_class_name():
     """Class-name detection: anything that's not IsaacsimHandler / IsaaclabHandler
     is treated as non-Isaac. Blender / sapien / etc. quack into this branch."""
+
     class _BlenderHandler:
         scenario = SimpleNamespace(robots=[], objects=[], cameras=[], scene=None, ground=None)
-        def get_extra(self): return {}
+
+        def get_extra(self):
+            return {}
 
     randomizer = _SimpleRandomizer()
     randomizer.bind_handler(_BlenderHandler())
@@ -89,11 +89,14 @@ def test_base_randomizer_attempts_isaacsim_adapter_when_handler_named_isaacsim(m
             self.handler = h
 
     import metasim.randomization.base as base_mod
+
     monkeypatch.setattr(base_mod, "IsaacSimAdapter", _FakeAdapter)
 
     class IsaacsimHandler:  # name matters for the duck-typed check
         scenario = SimpleNamespace(robots=[], objects=[], cameras=[], scene=None, ground=None)
-        def get_extra(self): return {}
+
+        def get_extra(self):
+            return {}
 
     randomizer = _SimpleRandomizer()
     randomizer.bind_handler(IsaacsimHandler())

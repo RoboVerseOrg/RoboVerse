@@ -30,7 +30,7 @@ class _StubHandler:
         self._dict_state_cache = None
         self.device = torch.device("cpu")
 
-    def launch(self) -> None:  # noqa: D401
+    def launch(self) -> None:
         return None
 
     def close(self) -> None:

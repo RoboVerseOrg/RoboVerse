@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import os
 import tempfile
-from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from pathlib import Path
 
 from loguru import logger as log
+
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 
 
 def _patch_urdf_mesh_paths_to_absolute(urdf_path: Path) -> str:
@@ -186,6 +187,5 @@ def resolve_isaacsim_file_path(cfg) -> str:
 
     name = getattr(cfg, "name", "<unnamed>")
     raise ValueError(
-        f"{type(cfg).__name__} '{name}' requires an existing usd_path, "
-        "urdf_path, or mjcf_path for isaacsim"
+        f"{type(cfg).__name__} '{name}' requires an existing usd_path, urdf_path, or mjcf_path for isaacsim"
     )

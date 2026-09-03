@@ -17,7 +17,6 @@ no mjx / jax dependency required.
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 import pytest

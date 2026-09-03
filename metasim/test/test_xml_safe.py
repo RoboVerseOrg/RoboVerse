@@ -53,11 +53,11 @@ def test_xml_safe_rejects_billion_laughs_when_defused():
 
     bomb = (
         '<?xml version="1.0"?>'
-        '<!DOCTYPE lolz ['
+        "<!DOCTYPE lolz ["
         '  <!ENTITY lol "lol">'
         '  <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">'
-        ']>'
-        '<lolz>&lol2;</lolz>'
+        "]>"
+        "<lolz>&lol2;</lolz>"
     )
     with pytest.raises(EntitiesForbidden):
         ET.fromstring(bomb)
@@ -71,13 +71,7 @@ def test_xml_safe_rejects_external_entity_when_defused(tmp_path):
 
     secret = tmp_path / "secret.txt"
     secret.write_text("SHOULD-NOT-LEAK")
-    payload = (
-        f'<?xml version="1.0"?>'
-        f'<!DOCTYPE foo ['
-        f'  <!ENTITY xxe SYSTEM "file://{secret}">'
-        f']>'
-        f'<foo>&xxe;</foo>'
-    )
+    payload = f'<?xml version="1.0"?><!DOCTYPE foo [  <!ENTITY xxe SYSTEM "file://{secret}">]><foo>&xxe;</foo>'
 
     from metasim.utils.xml_safe import ET
 

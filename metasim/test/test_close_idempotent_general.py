@@ -40,9 +40,7 @@ _CONTRACTS = [
 def _load_close_body(path: str, class_name: str) -> ast.FunctionDef:
     source = (REPO_ROOT / path).read_text(encoding="utf-8")
     tree = ast.parse(source)
-    cls = next(
-        n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == class_name
-    )
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == class_name)
     return next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "close")
 
 
@@ -90,11 +88,7 @@ def test_close_wraps_handle_close_in_try_except(path: str, class_name: str, hand
         if not isinstance(node, ast.Try):
             continue
         for inner in ast.walk(node):
-            if (
-                isinstance(inner, ast.Call)
-                and isinstance(inner.func, ast.Attribute)
-                and inner.func.attr == "close"
-            ):
+            if isinstance(inner, ast.Call) and isinstance(inner.func, ast.Attribute) and inner.func.attr == "close":
                 # The receiver is the handle we're closing.
                 if isinstance(inner.func.value, ast.Attribute):
                     safely_closed_handles.add(inner.func.value.attr)

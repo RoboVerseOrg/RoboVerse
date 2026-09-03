@@ -22,7 +22,6 @@ import pytest
 from metasim.constants import SimType
 from metasim.scenario.scenario import ScenarioCfg
 
-
 # ``ISAACLAB`` is a deprecated alias kept for backward compatibility with
 # downstream callers. The dispatcher rewrites it to ``ISAACSIM`` with a
 # DeprecationWarning. It must NOT appear in the Literal — new code should
@@ -54,9 +53,7 @@ def test_scenario_simulator_literal_matches_simtype():
     assert not missing_from_literal, (
         f"ScenarioCfg.simulator is missing these SimType values: {sorted(missing_from_literal)}"
     )
-    assert not extra_in_literal, (
-        f"ScenarioCfg.simulator carries values not in SimType: {sorted(extra_in_literal)}"
-    )
+    assert not extra_in_literal, f"ScenarioCfg.simulator carries values not in SimType: {sorted(extra_in_literal)}"
 
 
 @pytest.mark.general

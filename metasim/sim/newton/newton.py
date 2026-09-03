@@ -3,11 +3,12 @@ from __future__ import annotations
 import gc
 import os
 import tempfile
-from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from typing import TYPE_CHECKING
 
 import torch
 from loguru import logger as log
+
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
@@ -1037,9 +1038,7 @@ class NewtonHandler(BaseSimHandler):
         # from the resolved gains/control_type so the solver builds the matching
         # servo. ``joint_target_mode`` is a newton >= 1.2 field; guard for None
         # so older builds keep their prior (no-synthesis) behaviour.
-        joint_target_mode = (
-            self._model.joint_target_mode.numpy() if self._model.joint_target_mode is not None else None
-        )
+        joint_target_mode = self._model.joint_target_mode.numpy() if self._model.joint_target_mode is not None else None
 
         updated = False
 
@@ -1525,8 +1524,7 @@ class NewtonHandler(BaseSimHandler):
                             depth_tensor = depth_tensor[use_env_ids]
 
                     intrinsics = (
-                        torch
-                        .tensor(cam_cfg.intrinsics, dtype=torch.float32, device=self.device)
+                        torch.tensor(cam_cfg.intrinsics, dtype=torch.float32, device=self.device)
                         .unsqueeze(0)
                         .expand(len(use_env_ids), -1, -1)
                     )

@@ -148,6 +148,4 @@ def test_known_dict_only_backends_declare_their_input_type():
         except ImportError:
             pytest.skip(f"{module_path} backend not installed in this env")
         cls = getattr(module, cls_name)
-        assert cls._set_states_input_type == "dict", (
-            f"{cls_name} should declare _set_states_input_type='dict'"
-        )
+        assert cls._set_states_input_type == "dict", f"{cls_name} should declare _set_states_input_type='dict'"

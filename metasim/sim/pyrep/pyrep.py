@@ -28,7 +28,7 @@ _UNMAINTAINED_MSG = (
 class PyrepHandler(BaseSimHandler):
     """Placeholder PyRep handler — raises ``NotImplementedError`` on construction."""
 
-    def __init__(self, *args, **kwargs):  # noqa: D401
+    def __init__(self, *args, **kwargs):
         raise NotImplementedError(_UNMAINTAINED_MSG)
 
     # Abstract methods kept with their BaseSimHandler signatures so the

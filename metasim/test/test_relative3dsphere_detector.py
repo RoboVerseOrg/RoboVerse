@@ -23,7 +23,6 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-
 pytestmark = pytest.mark.general
 
 

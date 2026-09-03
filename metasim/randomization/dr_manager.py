@@ -40,6 +40,7 @@ def _derive_seed(base_seed: int | None, key: str) -> int | None:
     digest = hashlib.blake2b(f"{int(base_seed)}/{key}".encode(), digest_size=4).digest()
     return int.from_bytes(digest, "little")
 
+
 # Try to import randomization components
 try:
     from .camera_randomizer import (

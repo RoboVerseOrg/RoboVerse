@@ -21,8 +21,6 @@ Tests inspect the source rather than spawning Sapien (which needs the
 
 from __future__ import annotations
 
-import inspect
-
 import pytest
 
 
@@ -38,7 +36,7 @@ def _get_close_source() -> str:
     marker = "    def close(self):"
     start = text.index(marker)
     # close runs until the next ``def `` at the same indent.
-    after = text[start + len(marker):]
+    after = text[start + len(marker) :]
     end = after.find("\n    def ")
     return text[start : start + len(marker) + (end if end != -1 else len(after))]
 

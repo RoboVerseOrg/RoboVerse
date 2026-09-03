@@ -10,7 +10,6 @@ import pytest
 
 from metasim.utils import package_discovery
 
-
 _ENV_VARS = (
     "METASIM_CONFIG",
     "METASIM_PACKAGES",
@@ -111,12 +110,10 @@ def test_package_candidates_merge_sources_in_order(tmp_path, monkeypatch):
     monkeypatch.setattr(
         package_discovery,
         "entry_points",
-        lambda: _FakeEntryPoints(
-            {
-                "metasim.packages": ["entry_root"],
-                "metasim.robots": ["entry_robot"],
-            }
-        ),
+        lambda: _FakeEntryPoints({
+            "metasim.packages": ["entry_root"],
+            "metasim.robots": ["entry_robot"],
+        }),
     )
     monkeypatch.setenv("METASIM_CONFIG", str(explicit_cfg))
     monkeypatch.setenv("METASIM_PACKAGES", "env_root:entry_root")
@@ -176,7 +173,7 @@ def test_metasim_config_missing_file_fails_fast(tmp_path, monkeypatch):
     monkeypatch.setattr(package_discovery, "entry_points", lambda: _FakeEntryPoints({}))
     monkeypatch.setenv("METASIM_CONFIG", str(tmp_path / "missing.toml"))
 
-    with pytest.raises(FileNotFoundError, match="missing.toml"):
+    with pytest.raises(FileNotFoundError, match=r"missing\.toml"):
         package_discovery.get_package_candidates("robots", cwd=tmp_path)
 
 

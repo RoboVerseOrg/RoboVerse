@@ -10,7 +10,6 @@ clean up local state, so always-close is safe.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -66,9 +65,7 @@ def test_handler_context_closes_on_clean_exit(_stub_dispatch, simulator):
     normal exit."""
     with sim_context_module.HandlerContext(_scenario(simulator)) as h:
         assert h.launch_called
-    assert _stub_dispatch["instance"].close_called, (
-        f"close() should have been called for {simulator} on clean exit"
-    )
+    assert _stub_dispatch["instance"].close_called, f"close() should have been called for {simulator} on clean exit"
 
 
 @pytest.mark.general
@@ -90,9 +87,7 @@ def test_handler_context_closes_after_launch_failure(monkeypatch, simulator):
     with pytest.raises(RuntimeError, match="simulated launch failure"):
         with sim_context_module.HandlerContext(_scenario(simulator)):
             pass  # never reached
-    assert holder["instance"].close_called, (
-        f"close() should have been called for {simulator} after launch failure"
-    )
+    assert holder["instance"].close_called, f"close() should have been called for {simulator} after launch failure"
 
 
 @pytest.mark.general

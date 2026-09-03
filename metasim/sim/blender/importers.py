@@ -75,11 +75,7 @@ def _collection_parent_map() -> dict[object, object]:
 
 
 def _imported_prototype_collections(imported: list[object]) -> set[object]:
-    return {
-        obj.instance_collection
-        for obj in imported
-        if getattr(obj, "instance_collection", None) is not None
-    }
+    return {obj.instance_collection for obj in imported if getattr(obj, "instance_collection", None) is not None}
 
 
 def _prototype_collection_closure(prototype_collections: set[object]) -> set[object]:

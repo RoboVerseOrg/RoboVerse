@@ -217,9 +217,7 @@ def test_get_states_dict_mode_subset_not_cached():
         def _get_states(self, env_ids=None):
             self.calls.append(env_ids)
             n = len(env_ids) if env_ids is not None else 5  # 5 == "all envs"
-            robot = RobotState(
-                root_state=torch.zeros(n, 13), joint_pos=torch.zeros(n, 1), joint_vel=torch.zeros(n, 1)
-            )
+            robot = RobotState(root_state=torch.zeros(n, 13), joint_pos=torch.zeros(n, 1), joint_vel=torch.zeros(n, 1))
             return TensorState(objects={}, robots={"r0": robot}, cameras={})
 
     h = _DictEnvIdsHandler()

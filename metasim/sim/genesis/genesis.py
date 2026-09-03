@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 import os
-from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -10,6 +9,8 @@ import genesis as gs
 import numpy as np
 import torch
 from loguru import logger as log
+
+from metasim.utils.xml_safe import ET  # defused parser for untrusted MJCF/URDF
 
 if TYPE_CHECKING:
     from genesis.engine.entities.rigid_entity import RigidEntity, RigidJoint
