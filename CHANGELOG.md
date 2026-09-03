@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Distribution renamed to `roboverse-metasim`** (`metasim` on PyPI is an unrelated project); the
+  import name stays `metasim`. Downstream requirements must say `roboverse-metasim @ git+...`.
+  `metasim.__version__` now reads the installed version from package metadata.
+
 ### Added
 
 - **SuperDex backend** (`metasim/sim/superdex/`, `simulator="superdex"`, extra `metasim[superdex]`,
@@ -21,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SimType` value plus one entry.
 - `metasim/test/sim/test_superdex_floating_base.py`, `metasim/test/test_superdex_assets_general.py`,
   `metasim/test/sim/test_mujoco_arena_memory.py`.
+- `RELEASING.md` + `CONTRIBUTING.md`: branching, PR gates, SemVer, release checklist, PyPI
+  trusted publishing, branch-protection settings.
+- CI on every PR without a GPU: `ci.yml` (ruff + `-k general` on 3.10/3.11), `pr-title.yml`
+  (Conventional Commit titles), `changelog.yml` (entry required for library changes),
+  `release.yml` (tag → build, GitHub Release, PyPI), `CODEOWNERS`.
 
 ### Fixed
 
@@ -30,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   processes wait for an in-flight download instead of failing after 5 s (`ParallelSimWrapper`
   workers, get_started/3_parallel_envs.py).
 - Tree is `ruff check` / `ruff format` clean at the pre-commit pin (0.14.5).
+
 
 ## [0.2.0] - 2026-05-31
 

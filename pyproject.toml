@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "metasim"
+name = "roboverse-metasim"  # PyPI name; the import name stays `metasim` (`metasim` on PyPI is an unrelated project)
 version = "0.2.0"
 description = "MetaSim: A unified simulation framework for robotics"
 requires-python = ">=3.8"

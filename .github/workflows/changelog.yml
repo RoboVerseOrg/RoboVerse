@@ -1,0 +1,33 @@
+name: changelog
+
+# Every PR that changes the library must add its line under "## [Unreleased]" in CHANGELOG.md,
+# unless it carries the `no-changelog` label (tests-only, refactors with no user-visible change).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a CHANGELOG entry for library changes
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ ",$LABELS," == *",no-changelog,"* ]]; then echo "no-changelog label present"; exit 0; fi
+          changed=$(git diff --name-only "$BASE" "$HEAD")
+          if ! grep -qP '^metasim/(?!test/)' <<<"$changed"; then
+            echo "no library files changed"; exit 0
+          fi
+          if grep -qx 'CHANGELOG.md' <<<"$changed" && git diff "$BASE" "$HEAD" -- CHANGELOG.md | grep -q '^+.*- '; then
+            echo "CHANGELOG entry found"; exit 0
+          fi
+          echo "::error::This PR changes metasim/ but adds no line under '## [Unreleased]' in CHANGELOG.md (or add the no-changelog label)."
+          exit 1
