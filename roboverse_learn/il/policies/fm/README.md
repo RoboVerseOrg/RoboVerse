@@ -5,8 +5,7 @@ Flow Matching variants (UNet and DiT) live here and use the shared IL runners un
 ## Install
 
 ```bash
-cd roboverse_learn/il/policies/fm
-pip install -r requirements.txt
+python -m pip install -e ".[learn]"   # from the repository root
 ```
 
 Create a Weights & Biases account to obtain an API key for logging.

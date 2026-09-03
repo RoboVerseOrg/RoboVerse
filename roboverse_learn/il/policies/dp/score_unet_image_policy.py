@@ -1,3 +1,14 @@
+# Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from diffusion_policy (https://github.com/real-stanford/diffusion_policy).
+# Derived from diffusion_policy/policy/diffusion_unet_image_policy.py.
+# Changes: reworked into a score-matching variant of diffusion_policy's
+#   DiffusionUnetImagePolicy: the network predicts the score, training uses a sigma-weighted
+#   denoising-score-matching loss, and sampling runs a reverse-SDE Euler-Maruyama loop instead
+#   of the scheduler's step(). Import paths retargeted.
+# Full license: roboverse_learn/il/policies/dp/LICENSE
+
 from typing import Dict
 
 import torch

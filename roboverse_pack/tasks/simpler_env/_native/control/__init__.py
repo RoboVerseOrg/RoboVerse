@@ -1,3 +1,10 @@
+# Copyright (c) ManiSkill2-real2sim contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from ManiSkill2-real2sim (https://github.com/simpler-env/ManiSkill2_real2sim).
+# Changes: package __init__ rewritten as a re-export shim for the vendored modules (replaces upstream's
+#   `agents/controllers/__init__.py`); contains no upstream controller code.
+# Full license: roboverse_pack/tasks/simpler_env/_native/control/LICENSE
 """Vendored SimplerEnv (ManiSkill2-real2sim) controller stack — pure SAPIEN, no upstream dep.
 
 Provenance: simpler-env/ManiSkill2_real2sim @ ef7a4d4 (ManiSkill2 0.5.3 fork),

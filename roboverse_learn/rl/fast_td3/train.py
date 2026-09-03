@@ -1,3 +1,12 @@
+# Copyright (c) 2025 Younggyo Seo
+# SPDX-License-Identifier: MIT
+#
+# Adapted from FastTD3 (https://github.com/younggyoseo/FastTD3).
+# Changes: training script wired to the MetaSim task/scenario APIs (get_task_class, scenario.update) in place
+#   of the upstream environment wrappers; the tyro CLI is replaced by YAML files under configs/; adds
+#   RoboVerse EpisodeTracker logging, viser visualization and video capture. The FastTD3 algorithm and its
+#   networks (imported from fttd3_module) are unchanged.
+# Full license: roboverse_learn/rl/fast_td3/LICENSE
 from __future__ import annotations
 
 import argparse

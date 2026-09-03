@@ -10,7 +10,26 @@ from metasim.utils.state import TensorState
 
 
 class LiberoBaseTask(BaseTaskEnv):
-    """Configuration for the Libero pick butter task.
+    """Base class for the LIBERO **config ports** (``libero.<task>``).
+
+    LIBERO is integrated into RoboVerse on **two tiers** — pick the one that matches
+    your goal:
+
+    * **Config port (this class, ``libero.pick_*``)** — a MetaSim ``ScenarioCfg`` +
+      RoboVerse-format ``roboverse_data`` trajectory, runnable across *any* backend
+      (MuJoCo/SAPIEN/Isaac/…). Meant for cross-simulator training and data; it is
+      **not** a bit-exact reproduction of LIBERO's original robosuite physics — do
+      **not** expect 1:1 official-demo replay from these ids.
+    * **Native 1:1 port (``libero_native.*`` — see ``native_libero.py``)** — loads
+      LIBERO's *own* compiled MJCF onto MetaSim's MuJoCo handler and is **bitwise 1:1**
+      with LIBERO (engine + state-replay ``max|Δ|=0``, recorded demo success
+      reproduced), runnable with ``libero`` / ``robosuite`` uninstalled. **Use these
+      ids for 1:1 replay / the documented parity videos.** A transparent
+      ``_passthrough.py`` (needs ``libero`` installed) forwards to upstream verbatim
+      and is used only for native-vs-upstream comparison.
+
+    See ``release/benchmark/CROSS_BENCHMARK_1TO1.md`` and
+    ``docs/source/dataset_benchmark/integrations/libero.md``.
 
     This task is transferred from https://github.com/Lifelong-Robot-Learning/LIBERO/blob/master/libero/libero/bddl_files/libero_object/pick_up_the_butter_and_place_it_in_the_basket.bddl
     """

@@ -1,3 +1,15 @@
+# Copyright (c) 2022 Stanford Vision and Learning Lab and UT Robot Perception and Learning Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from robosuite (https://github.com/ARISE-Initiative/robosuite).
+# Changes: robosuite's manipulation tasks are reproduced natively on MetaSim's MujocoHandler with
+#   no robosuite import at runtime. Each task's success condition is ported from the matching
+#   robosuite environment's `_check_success`, the dense reward keeps robosuite's reach/grasp/
+#   success shaping, and constants (Panda rest pose, table height, object placements) are lifted
+#   from robosuite. Env construction, the placement sampler and the observation layout are
+#   RoboVerse's own; control lives in `_osc.py`.
+# Full license: roboverse_pack/tasks/robosuite/LICENSE
+
 """Fully robosuite-free robosuite tasks on MetaSim's MujocoHandler.
 
 This module imports **no robosuite**. Each task loads a vendored, standalone MJCF

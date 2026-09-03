@@ -1,3 +1,10 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: port of mjlab's `tasks/cartpole/cartpole_env_cfg.py` to RoboVerse's declarative `ManagerBasedRVEnv`
+#   config (term functions live in `mdp/`); term semantics follow mjlab, the manager/env plumbing is RoboVerse's.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 r"""Cartpole balance / swingup ported to the canonical ManagerBasedRVEnv pattern.
 
 Successor to ``roboverse_pack/tasks/mjlab/cartpole_train.py`` (the

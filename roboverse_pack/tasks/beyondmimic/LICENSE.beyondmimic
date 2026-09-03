@@ -1,0 +1,30 @@
+Upstream license file of BeyondMimic (https://github.com/HybridRobotics/whole_body_tracking),
+reproduced verbatim below as required by the MIT license.
+
+CAVEAT (RoboVerse note, not part of the upstream text): upstream's copyright line names
+"The Isaac Lab Project Developers" — almost certainly because the project was forked from
+Isaac Lab's extension template and the holder was never updated (Isaac Lab itself is
+BSD-3-Clause, not MIT). We reproduce the notice as published rather than guess at the
+intended holder. Confirm with the BeyondMimic authors before redistributing.
+
+---------------------------------- upstream LICENCE ----------------------------------
+
+Copyright (c) 2024, The Isaac Lab Project Developers.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

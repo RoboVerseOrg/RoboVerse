@@ -1,3 +1,12 @@
+# Copyright (c) Facebook, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from DETR (https://github.com/facebookresearch/detr), file
+# models/position_encoding.py, via ACT's fork of DETR (https://github.com/tonyzhaozh/act), which
+# made PositionEmbeddingSine.forward take a plain image tensor instead of a NestedTensor.
+# Changes: none (vendored verbatim from ACT).
+# Full license: roboverse_learn/il/policies/act/detr/LICENSE
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 Various positional encodings for the transformer.

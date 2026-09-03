@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: RoboVerse task scaffold that loads mjlab's `tasks/cartpole/cartpole.xml` and mirrors mjlab's sim
+#   settings (dt / decimation / episode length); the env itself is written against MetaSim's `BaseTaskEnv`, not
+#   ported from mjlab's manager code.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """mjlab cartpole tasks (balance + swingup).
 
 mjlab's `cartpole.xml` is a *complete* scene — its own floor, rails,

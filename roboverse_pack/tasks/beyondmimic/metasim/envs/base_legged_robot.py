@@ -1,3 +1,10 @@
+# Copyright (c) The BeyondMimic authors (HybridRobotics/whole_body_tracking)
+# SPDX-License-Identifier: MIT
+#
+# Adapted from BeyondMimic / whole_body_tracking (https://github.com/HybridRobotics/whole_body_tracking).
+# Changes: upstream's Isaac Lab manager-based env ported onto MetaSim's RLTaskEnv/TensorState APIs; managers replaced by explicit callbacks.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.beyondmimic
+
 from __future__ import annotations
 
 import math

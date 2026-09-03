@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: quaternion / frame-transform helpers reimplemented in torch against RoboVerse's `TensorState` layout;
+#   they reproduce the body-frame quantities (base lin/ang velocity, projected gravity, incl. mjlab's normalized
+#   gravity vector) that mjlab's `Entity` computes internally.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Quaternion / frame-transform helpers used by velocity MDP rewards.
 
 Mjlab's reward functions expect body-frame quantities (e.g.

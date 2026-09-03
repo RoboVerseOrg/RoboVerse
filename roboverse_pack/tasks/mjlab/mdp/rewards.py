@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: reward terms ported from mjlab's `tasks/{velocity,manipulation,tracking}/mdp/rewards.py` to RoboVerse's
+#   `func(env, env_states, **params) -> Tensor` convention; sensor-dependent terms are stubbed (one-shot warning +
+#   zeros) where the sensor wiring is still in progress.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Reward term functions ported from mjlab.
 
 Signature: ``func(env: ManagerBasedRVEnv, env_states: TensorState, **params) -> torch.Tensor``

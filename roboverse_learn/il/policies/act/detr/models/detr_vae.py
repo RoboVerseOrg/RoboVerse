@@ -1,3 +1,16 @@
+# Copyright (c) 2023 Tony Z. Zhao
+# Copyright (c) Facebook, Inc. and its affiliates
+# SPDX-License-Identifier: MIT AND Apache-2.0
+#
+# Adapted from ACT (https://github.com/tonyzhaozh/act), file detr/models/detr_vae.py. This file
+# has no counterpart in DETR (https://github.com/facebookresearch/detr): DETRVAE, CNNMLP and the
+# build_ACT_model path are ACT's own CVAE (MIT, Tony Z. Zhao). It keeps DETR's copyright line as
+# shipped by ACT and builds on DETR's backbone and transformer modules (Apache-2.0, Facebook).
+# Changes: the state dimension is taken from args.state_dim (falling back to 14) instead of being
+#   hardcoded to 14 in build() and in the robot-state / action / qpos projections; loguru is
+#   imported for logging.
+# Full license: roboverse_learn/il/policies/act/LICENSE (MIT), roboverse_learn/il/policies/act/detr/LICENSE (Apache-2.0)
+
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 DETR model and criterion classes.

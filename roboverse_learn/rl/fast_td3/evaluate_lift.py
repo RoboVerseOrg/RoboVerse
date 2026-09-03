@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Younggyo Seo
+# SPDX-License-Identifier: MIT
+#
+# Adapted from FastTD3 (https://github.com/younggyoseo/FastTD3).
+# Changes: RoboVerse-specific evaluation script for collecting successful lift trajectories; reuses the
+#   FastTD3 Actor/EmpiricalNormalization inference path from fttd3_module and the upstream environment-setup
+#   preamble, and drives MetaSim tasks via get_task_class/handler state APIs.
+# Full license: roboverse_learn/rl/fast_td3/LICENSE
 """Evaluation script for collecting successful lift trajectories.
 
 Records state when first entering lift phase, saves traj and state after successful lift (maintained for 10 frames).

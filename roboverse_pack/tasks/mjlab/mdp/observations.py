@@ -1,3 +1,10 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: observation terms ported from mjlab's task MDP modules to RoboVerse's `func(env, env_states, **params)
+#   -> Tensor` convention, reading `TensorState` / MuJoCo data instead of mjlab's `Entity` data.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Observation term functions ported from mjlab.
 
 Signature: ``func(env: ManagerBasedRVEnv, env_states: TensorState, **params) -> torch.Tensor``

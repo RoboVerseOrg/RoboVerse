@@ -1,3 +1,11 @@
+# Copyright (c) 2023 Tony Z. Zhao
+# SPDX-License-Identifier: MIT
+#
+# Adapted from ACT (https://github.com/tonyzhaozh/act), file constants.py.
+# Changes: DATA_DIR points at 'sim_data' instead of the upstream placeholder, and
+#   sim_transfer_cube_scripted's num_episodes is 5 instead of 50. Otherwise verbatim.
+# Full license: roboverse_learn/il/policies/act/LICENSE
+
 import pathlib
 
 ### Task parameters

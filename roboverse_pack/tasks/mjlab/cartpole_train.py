@@ -1,3 +1,11 @@
+# Copyright (c) mjlab contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from mjlab (https://github.com/mujocolab/mjlab).
+# Changes: port of mjlab's `tasks/cartpole/cartpole_env_cfg.py` (action, observation, dm_control-style smooth
+#   reward, termination, reset) to a numpy `BaseTaskEnv` running on MetaSim's MujocoHandler; term semantics follow
+#   mjlab, mjlab's manager classes are not used.
+# Full license: roboverse_pack/tasks/mjlab/LICENSE
 """Full RL-trainable port of mjlab cartpole tasks to MetaSim.
 
 Mirrors mjlab/src/mjlab/tasks/cartpole/cartpole_env_cfg.py one-for-one:

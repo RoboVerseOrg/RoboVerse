@@ -1,3 +1,10 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: only the helpers below the in-file 'adapted from Isaac Lab' marker (randomize_prop_by_op, _validate_scale_range) and part of MaterialRandomizer are Isaac Lab-derived; the randomizer classes themselves are RoboVerse/MetaSim code written for the BeyondMimic port.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.isaaclab
+
 from __future__ import annotations
 
 from copy import deepcopy

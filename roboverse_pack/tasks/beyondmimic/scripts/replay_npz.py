@@ -1,3 +1,10 @@
+# Copyright (c) The BeyondMimic authors (HybridRobotics/whole_body_tracking)
+# SPDX-License-Identifier: MIT
+#
+# Adapted from BeyondMimic / whole_body_tracking (https://github.com/HybridRobotics/whole_body_tracking).
+# Changes: import paths rewired to RoboVerse; docstrings added.
+# Full license: roboverse_pack/tasks/beyondmimic/LICENSE.beyondmimic
+
 """This script demonstrates how to use the interactive scene interface to setup a scene with multiple prims.
 
 .. code-block:: bash

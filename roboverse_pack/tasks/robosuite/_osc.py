@@ -1,3 +1,13 @@
+# Copyright (c) 2022 Stanford Vision and Learning Lab and UT Robot Perception and Learning Lab
+# SPDX-License-Identifier: MIT
+#
+# Adapted from robosuite (https://github.com/ARISE-Initiative/robosuite).
+# Changes: port of robosuite v1.5.2's `OperationalSpaceController` (OSC_POSE) to a standalone numpy/MuJoCo
+#   implementation that reads `MjModel`/`MjData` directly, so no `robosuite` import is needed at runtime; the
+#   operational-space math helpers (`opspace_matrices`, `nullspace_torques`, `orientation_error`, and the
+#   axis-angle/quaternion/matrix conversions) are ported from `robosuite.utils.{control_utils,transform_utils}`;
+#   the parallel-jaw gripper mapping is reimplemented as a ramped position target.
+# Full license: roboverse_pack/tasks/robosuite/LICENSE
 """Native OSC_POSE controller — robosuite-free reimplementation.
 
 A faithful port of robosuite v1.5.2's ``OperationalSpaceController`` (the BASIC

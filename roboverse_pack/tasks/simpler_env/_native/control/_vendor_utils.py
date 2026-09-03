@@ -1,3 +1,11 @@
+# Copyright (c) ManiSkill2-real2sim contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Adapted from ManiSkill2-real2sim (https://github.com/simpler-env/ManiSkill2_real2sim).
+# Changes: helpers collected from `mani_skill2_real2sim.utils.{common,sapien_utils,geometry}` into one module so
+#   the vendored controllers import nothing from upstream; function bodies unchanged (one docstring re-wrapped; the
+#   `sapien.Pose` annotation on `vectorize_pose` dropped along with the sapien import).
+# Full license: roboverse_pack/tasks/simpler_env/_native/control/LICENSE
 """Vendored helper functions for the SimplerEnv native controller stack.
 
 Copied verbatim (byte-identical bodies) from ``mani_skill2_real2sim.utils.common`` /

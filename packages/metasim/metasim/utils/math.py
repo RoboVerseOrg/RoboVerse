@@ -2,6 +2,10 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
+# Changes: math utilities trimmed to the functions MetaSim uses; torch/numpy dual signatures kept.
+# Full license: packages/metasim/LICENSE.isaaclab
 
 """Sub-module containing utilities for various math operations."""
 

@@ -83,6 +83,43 @@ PyBullet, IsaacSim, etc. Treat parity as a correctness contract:
 - Register learning entry points and example usage where the existing ones live
   (`roboverse_learn/{rl,il,vla}`, `examples/`); don't scatter new top-level scripts.
 
+## Third-Party Code: Attribution Is Mandatory
+
+RoboVerse is Apache-2.0 and integrates heavily with other projects. Two rules, both
+non-negotiable.
+
+**1. If you copy or adapt someone else's code, acknowledge it — in the file.** Every such
+file carries this header (after any shebang, before the module docstring):
+
+```python
+# Copyright (c) <year> <upstream copyright holder>
+# SPDX-License-Identifier: <MIT|Apache-2.0|BSD-3-Clause|...>
+#
+# Adapted from <Project> (<upstream url>).
+# Changes: <what we changed>, or "none (vendored verbatim)."
+# Full license: <path to the license text in this repo>
+```
+
+Then add a row to `THIRD_PARTY_NOTICES.md` and, if the upstream ships a `LICENSE`, copy it
+verbatim next to the vendored code. A `# copied from X` comment is an *admission* of copying,
+not a license grant — it is not sufficient. Apache-2.0 §4(b) and BSD-3 both require the
+statement of changes / notice retention, so the header is legally load-bearing, not decoration.
+
+If you cannot name the upstream and its license, do not merge the code. The only files in the
+tree without such a header are the ones recorded under "Unresolved" in `THIRD_PARTY_NOTICES.md`
+— code whose provenance or license we could not establish, and which must be settled or removed
+before release. Do not add to that list.
+
+`roboverse_pack/tasks/mujoco_playground/` (reimplementation, cites source *and* license) and
+`scripts/mesh_tools/mesh2obj.py` (full upstream header + explicit statement of changes) are the
+in-repo templates. Follow them.
+
+**2. Don't brand our code after someone else's project, and don't define it against theirs.**
+No module named after an external library; RoboVerse-native naming only. Docstrings and docs
+describe what *our* code does — not what a competitor's code does wrong. Never audit another
+project's source by file:line in our docs, and don't keep clones of other repos in the working
+tree. Attribution (rule 1) is the correct way to acknowledge an upstream; a teardown is not.
+
 ## Design Principles
 
 - Be a library, not a framework. Keep public APIs small, orthogonal, and composable.
