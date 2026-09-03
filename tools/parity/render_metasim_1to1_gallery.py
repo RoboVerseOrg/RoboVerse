@@ -8,7 +8,7 @@ and compose a side-by-side mp4:
 
 The diff panel is (near-)black -> the two are 1:1. Reuses the builders from spike_metasim_full_parity.
 
-Run:  JAX_PLATFORMS=cpu python scripts/render_metasim_1to1_gallery.py
+Run:  JAX_PLATFORMS=cpu python tools/parity/render_metasim_1to1_gallery.py
 """
 
 from __future__ import annotations

@@ -5,8 +5,8 @@ Re-exports task classes so importing `roboverse_pack.tasks.mjlab` triggers
 the `@register_task` side-effects and makes the tasks visible to
 MetaSim's CLI / registry queries.
 
-Parity numbers vs raw mujoco (verified by scripts/parity_obs_reward_cartpole.py
-and scripts/test_mjlab_v2_backward_compat.py):
+Parity numbers vs raw mujoco (verified by tools/parity/parity_obs_reward_cartpole.py
+and tools/parity/test_mjlab_v2_backward_compat.py):
 - mjlab.cartpole_balance / .cartpole_swingup: bitwise identical
 - mjlab.velocity_flat_g1: machine-epsilon (~1e-13)
 - mjlab.velocity_flat_go1: 0.16 residual (contact-exclude semantics)

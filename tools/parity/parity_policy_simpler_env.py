@@ -26,7 +26,7 @@ Octo runs on CPU jax (``JAX_PLATFORMS=cpu``); SAPIEN still renders on the GPU.
 Usage::
 
     JAX_PLATFORMS=cpu VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json \
-      python scripts/parity_policy_simpler_env.py \
+      python tools/parity/parity_policy_simpler_env.py \
         --tasks google_robot_pick_coke_can --seed 8 --steps 25 --json /tmp/policy_parity.json
 """
 

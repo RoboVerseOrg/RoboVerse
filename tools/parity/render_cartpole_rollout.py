@@ -1,7 +1,7 @@
 """Render a cartpole_balance_v2 rollout to mp4 using mujoco viewer.
 
 Usage:
-  python scripts/render_cartpole_rollout.py --ckpt path/to/model_200.pt --out /tmp/cartpole.mp4 --steps 400
+  python tools/parity/render_cartpole_rollout.py --ckpt path/to/model_200.pt --out /tmp/cartpole.mp4 --steps 400
 """
 
 from __future__ import annotations

@@ -25,11 +25,11 @@ harness handles).
 
 Usage::
 
-    python scripts/trajectory_simpler_env.py verify --task google_robot_pick_coke_can --steps 20
-    python scripts/trajectory_simpler_env.py record --all --steps 20 --out-dir /tmp/simpler_trajs
-    python scripts/trajectory_simpler_env.py record --task widowx_stack_cube --full --out-dir /tmp/simpler_trajs
-    python scripts/trajectory_simpler_env.py replay --path /tmp/simpler_trajs/google_robot_pick_coke_can.npz
-    python scripts/trajectory_simpler_env.py verify --all --steps 12 --json /tmp/simpler_traj_repro.json
+    python tools/parity/trajectory_simpler_env.py verify --task google_robot_pick_coke_can --steps 20
+    python tools/parity/trajectory_simpler_env.py record --all --steps 20 --out-dir /tmp/simpler_trajs
+    python tools/parity/trajectory_simpler_env.py record --task widowx_stack_cube --full --out-dir /tmp/simpler_trajs
+    python tools/parity/trajectory_simpler_env.py replay --path /tmp/simpler_trajs/google_robot_pick_coke_can.npz
+    python tools/parity/trajectory_simpler_env.py verify --all --steps 12 --json /tmp/simpler_traj_repro.json
 """
 
 from __future__ import annotations

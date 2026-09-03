@@ -64,7 +64,7 @@ PyBullet, IsaacSim, etc. Treat parity as a correctness contract:
 
 - **Run the task end-to-end first; chase numerical parity second.** A task that "matches" only
   because both sides are equally broken (e.g. both fall into the void) is not parity. See the parity
-  harness pattern in `scripts/parity_obs_reward_cartpole.py` and `scripts/eval_*_cross_sim.py`.
+  harness pattern in `tools/parity/parity_obs_reward_cartpole.py` and `scripts/eval_*_cross_sim.py`.
 - When porting a reward / observation / dynamics from another framework (mjlab, ManiSkill, …), aim
   for **bitwise or machine-eps agreement** on obs and reward, and verify with an actual cross-sim
   comparison rather than asserting it.

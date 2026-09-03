@@ -70,7 +70,7 @@ def test_passthrough_matches_native_bitwise():
     state, so two SAPIEN scenes alive at once perturb each other's success
     evaluation. We therefore roll the native env out **fully and close it before**
     creating the wrapped env — one scene alive at a time. (The cross-task parity
-    sweep in ``scripts/parity_simpler_env.py`` isolates each task in its own
+    sweep in ``tools/parity/parity_simpler_env.py`` isolates each task in its own
     subprocess for the same reason.)
     """
     import gc

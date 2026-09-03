@@ -5,9 +5,9 @@ backend and records, per env step, the commanded targets and the measured joint 
 SuperDex ships Python 3.12-only wheels while the MuJoCo env here is 3.11, each backend is recorded in
 its own environment and the two recordings are compared afterwards::
 
-    python scripts/parity_superdex_tracking.py record --sim mujoco   --out /tmp/parity/mujoco.npz
-    python scripts/parity_superdex_tracking.py record --sim superdex --out /tmp/parity/superdex.npz
-    python scripts/parity_superdex_tracking.py compare /tmp/parity/mujoco.npz /tmp/parity/superdex.npz --plot /tmp/parity/tracking.png
+    python tools/parity/parity_superdex_tracking.py record --sim mujoco   --out /tmp/parity/mujoco.npz
+    python tools/parity/parity_superdex_tracking.py record --sim superdex --out /tmp/parity/superdex.npz
+    python tools/parity/parity_superdex_tracking.py compare /tmp/parity/mujoco.npz /tmp/parity/superdex.npz --plot /tmp/parity/tracking.png
 
 ``compare`` prints, per backend, the mean / max absolute tracking error |q - q_target| over the run
 and the mean absolute difference between the two backends' joint trajectories. It does not claim
