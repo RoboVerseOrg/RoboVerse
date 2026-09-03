@@ -12,6 +12,13 @@ release.
 
 ## [Unreleased]
 
+### Fixed
+
+- `import roboverse_pack.tasks.benchmark` raised a circular-import error when the tasks package was
+  imported first (task discovery); `roboverse_pack.benchmark` now resolves its two helpers lazily.
+- `roboverse_pack.tasks.mjlab` no longer downloads assets from HuggingFace at import time; the
+  handler's `check_assets()` fetches them when a task is used.
+
 ### Changed
 
 - MetaSim dependency renamed to `roboverse-metasim @ git+...` (MetaSim's distribution was renamed;
