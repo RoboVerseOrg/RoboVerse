@@ -61,6 +61,7 @@ if __name__ == "__main__":
             "sapien2",
             "sapien3",
             "mujoco",
+            "superdex",
             "mjx",
         ] = "mujoco"
 

@@ -77,6 +77,7 @@ isaacsim211 = ["metasim[isaacsim211] @ git+https://github.com/RoboVerseOrg/MetaS
 mjx = ["metasim[mjx] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
 mujoco = ["metasim[mujoco] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
 newton = ["metasim[newton] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+superdex = ["metasim[superdex] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]  # Python 3.12 only
 pybullet = ["metasim[pybullet] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
 robosplatter = ["metasim[robosplatter] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
 sapien2 = ["metasim[sapien2] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]

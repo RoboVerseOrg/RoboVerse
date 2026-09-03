@@ -65,6 +65,7 @@ class Args:
         "sapien2",
         "sapien3",
         "mujoco",
+        "superdex",
     ] = "mujoco"
     """Simulator backend to use."""
 

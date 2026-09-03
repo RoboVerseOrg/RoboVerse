@@ -48,6 +48,7 @@ if __name__ == "__main__":
             "sapien2",
             "sapien3",
             "newton",
+            "superdex",
         ] = "mujoco"
 
         ## Others

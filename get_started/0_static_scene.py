@@ -53,6 +53,7 @@ if __name__ == "__main__":
             "mujoco",
             "mjx",
             "newton",
+            "superdex",
         ] = "mujoco"
 
         ## Others

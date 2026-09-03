@@ -36,7 +36,7 @@ class Args:
     task: str = "reach_origin"
     robot: str = "franka"
     num_envs: int = 128
-    sim: Literal["isaacsim", "isaaclab", "isaacgym", "mujoco", "genesis", "mjx"] = "isaacsim"
+    sim: Literal["isaacsim", "isaaclab", "isaacgym", "mujoco", "genesis", "mjx", "superdex"] = "isaacsim"
     headless: bool = True
     enable_viser: bool = True  # Enable real-time 3D visualization with Viser
     enable_rerun: bool = True  # Enable real-time 3D visualization with Rerun

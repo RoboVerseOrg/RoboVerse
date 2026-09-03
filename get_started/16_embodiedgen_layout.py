@@ -44,6 +44,7 @@ class LayoutInitCfg:
         "pybullet",
         "sapien3",
         "mujoco",
+        "superdex",
     ] = "isaacsim"
     num_envs: int = 1
     headless: bool = True
