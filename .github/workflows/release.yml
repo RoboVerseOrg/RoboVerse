@@ -25,19 +25,25 @@ jobs:
         run: |
           python -m pip install tomli
           pv=$(python -c "import tomli; print(tomli.load(open('pyproject.toml','rb'))['project']['version'])")
+          mv=$(python -c "import tomli; print(tomli.load(open('packages/metasim/pyproject.toml','rb'))['project']['version'])")
           tag="${GITHUB_REF_NAME#v}"
-          if [[ "$pv" != "$tag" ]]; then echo "::error::tag v$tag != pyproject version $pv"; exit 1; fi
+          if [[ "$pv" != "$tag" ]]; then echo "::error::tag v$tag != roboverse-py version $pv"; exit 1; fi
+          if [[ "$mv" != "$tag" ]]; then echo "::error::tag v$tag != roboverse-metasim version $mv (packages are released in lockstep)"; exit 1; fi
           echo "version=$pv" >> "$GITHUB_OUTPUT"
       - run: python -m pip install build twine
-      - run: python -m build
+      - run: python -m build --outdir dist packages/metasim && python -m build --outdir dist .
       - run: python -m twine check dist/*
       - name: Extract this version's CHANGELOG section
         run: |
           python - <<'PY'
           import re, os
-          v = os.environ["VERSION"]; text = open("CHANGELOG.md", encoding="utf-8").read()
-          m = re.search(rf"^## \[{re.escape(v)}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.S | re.M)
-          body = m.group(1).strip() if m else f"See CHANGELOG.md for {v}."
+          v = os.environ["VERSION"]
+          parts = []
+          for name, path in [("roboverse-py", "CHANGELOG.md"), ("roboverse-metasim", "packages/metasim/CHANGELOG.md")]:
+              text = open(path, encoding="utf-8").read()
+              m = re.search(rf"^## \[{re.escape(v)}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.S | re.M)
+              parts.append(f"## {name} {v}\n\n" + (m.group(1).strip() if m else f"See {path} for {v}."))
+          body = "\n\n".join(parts)
           open("release_notes.md", "w", encoding="utf-8").write(body + "\n")
           PY
         env:

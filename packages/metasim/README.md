@@ -1,5 +1,7 @@
 <h1 align="center">MetaSim</h1>
 
+> **MetaSim is developed in the [RoboVerse monorepo](https://github.com/RoboVerseOrg/RoboVerse) under `packages/metasim`** and released as `roboverse-metasim` in lockstep with `roboverse-py`. Open issues and pull requests there. The `RoboVerseOrg/MetaSim` repository is a read-only mirror kept for one release cycle.
+
 <p align="center">
   <strong>The standalone simulator core for RoboVerse and downstream robotics packages.</strong>
 </p>

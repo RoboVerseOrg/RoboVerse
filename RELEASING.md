@@ -1,8 +1,8 @@
 # Development and release protocol
 
 This is the contract for how code reaches `main` and how `main` reaches users, for **RoboVerse**
-(this repo, distribution `roboverse-py`) and its core dependency **MetaSim**
-(`roboverse-metasim`, import name `metasim`). The same protocol lives in MetaSim's `RELEASING.md`;
+(distribution `roboverse-py`, repo root) and its core **MetaSim**
+(`roboverse-metasim`, import name `metasim`, `packages/metasim` in this monorepo). One protocol, one tag, two packages;
 keep both in sync.
 
 ## 1. Branches
@@ -40,22 +40,20 @@ keep both in sync.
   - MINOR: new backends, new config fields, new queries; existing call sites keep working.
   - MAJOR: a documented breaking change to `BaseSimHandler`, the scenario cfg types, or the task
     registry contract.
-- The version is stored **once**, in `pyproject.toml` (`[project] version`). Never hand-edit a
-  version elsewhere. RoboVerse `MAJOR.MINOR` tracks the MetaSim `MAJOR.MINOR` it is built against
-  (RoboVerse 1.x ↔ MetaSim 0.x today; the mapping is stated in `README.md` and the changelog).
+- The version is stored in exactly two places that must agree: `pyproject.toml` and
+  `packages/metasim/pyproject.toml` (`[project] version`). The packages are released in **lockstep**:
+  one `vX.Y.Z` tag builds and publishes both, and `release.yml` refuses a tag that does not match
+  both versions. `roboverse-py` depends on `roboverse-metasim>=X.Y,<X.Y+1`.
 - Tags are `vX.Y.Z` on `main` and are immutable. A tag that turns out broken gets a new patch
   release, never a moved tag.
-- MetaSim pin: `pyproject.toml` depends on `roboverse-metasim @ git+https://github.com/RoboVerseOrg/MetaSim.git@vX.Y.Z`
-  (a **tag**, not `main`) and, once PyPI publishing is enabled, on `roboverse-metasim>=X.Y,<X.Y+1`.
-  The pin moves only through a `chore(deps): bump MetaSim to vX.Y.Z` PR whose CI runs the full
-  suite against the new MetaSim. (The pin is `@main` until the first tagged MetaSim release that
-  contains the SuperDex backend; the first release PR replaces it.)
+- Each package keeps its own `CHANGELOG.md` (`CHANGELOG.md`, `packages/metasim/CHANGELOG.md`);
+  `changelog.yml` requires an `[Unreleased]` line in the one whose library code a PR touches. The
+  GitHub Release body concatenates both sections for the version.
 
 ## 4. Release checklist (RoboVerse)
 
 1. `main` is green and the merge queue is empty.
-2. MetaSim has been released first; the pin-bump PR is merged and CI is green against it. Run
-   the `get_started` tutorials on MuJoCo and at least one other backend (`--headless`) and the
+2. Run the `get_started` tutorials on MuJoCo and at least one other backend (`--headless`) and the
    parity scripts; record pass/skip/xfail counts and parity numbers in the release notes.
 3. Open a `chore(release): vX.Y.Z` PR that
    - bumps `[project] version` in `pyproject.toml`,
@@ -101,9 +99,14 @@ JSON
 gh api -X PATCH repos/RoboVerseOrg/RoboVerse -f allow_squash_merge=true -f allow_merge_commit=false -f allow_rebase_merge=false -f delete_branch_on_merge=true -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY
 ```
 
-## 7. Cross-repo rule
+## 7. Package boundary
 
-MetaSim owns the simulator contract, config types and the registry; RoboVerse owns content,
-learning code and examples (see `AGENTS.md`). A feature that spans both lands in MetaSim first,
-gets released (or at least tagged as a pre-release), and only then does the RoboVerse PR bump the
-pin and use it. RoboVerse `main` must never depend on MetaSim `main`.
+MetaSim (`packages/metasim`) owns the simulator contract, config types and the registry; the repo
+root owns content, learning code and examples (see `AGENTS.md`). A feature that spans both lands in
+one PR with a CHANGELOG line in each package. The boundary is enforced by imports, not by repos:
+nothing outside `packages/metasim` may import a `metasim.sim.*` underscore name, and
+`roboverse_pack` must not import `roboverse_learn`.
+
+The former standalone repository `RoboVerseOrg/MetaSim` is a read-only mirror of `packages/metasim`
+kept for one release cycle so `git+https://github.com/RoboVerseOrg/MetaSim.git` installs keep
+working; new work happens here.

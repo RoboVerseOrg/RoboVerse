@@ -9,7 +9,7 @@ description = "RoboVerse content, learning, and examples built on MetaSim"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
-    "roboverse-metasim @ git+https://github.com/RoboVerseOrg/MetaSim.git@main",
+    "roboverse-metasim>=1.0.0b0,<1.1",
     "gymnasium",
     "loguru",
     "numpy",
@@ -23,7 +23,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "ruff",
-    "roboverse-metasim[dev] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main",
+    "roboverse-metasim[dev]>=1.0.0b0,<1.1",
 ]
 assets = ["huggingface-hub", "rootutils", "tyro"]
 examples = [
@@ -70,24 +70,33 @@ vla = [
     "tensorflow-hub",
     "transformers",
 ]
-genesis = ["roboverse-metasim[genesis] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-isaacgym = ["roboverse-metasim[isaacgym] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-isaacsim = ["roboverse-metasim[isaacsim] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-isaacsim211 = ["roboverse-metasim[isaacsim211] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-mjx = ["roboverse-metasim[mjx] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-mujoco = ["roboverse-metasim[mujoco] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-newton = ["roboverse-metasim[newton] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-superdex = ["roboverse-metasim[superdex] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]  # Python 3.12 only
-pybullet = ["roboverse-metasim[pybullet] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-robosplatter = ["roboverse-metasim[robosplatter] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-sapien2 = ["roboverse-metasim[sapien2] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-sapien3 = ["roboverse-metasim[sapien3] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+genesis = ["roboverse-metasim[genesis]>=1.0.0b0,<1.1"]
+isaacgym = ["roboverse-metasim[isaacgym]>=1.0.0b0,<1.1"]
+isaacsim = ["roboverse-metasim[isaacsim]>=1.0.0b0,<1.1"]
+isaacsim211 = ["roboverse-metasim[isaacsim211]>=1.0.0b0,<1.1"]
+mjx = ["roboverse-metasim[mjx]>=1.0.0b0,<1.1"]
+mujoco = ["roboverse-metasim[mujoco]>=1.0.0b0,<1.1"]
+newton = ["roboverse-metasim[newton]>=1.0.0b0,<1.1"]
+superdex = ["roboverse-metasim[superdex]>=1.0.0b0,<1.1"]  # Python 3.12 only
+pybullet = ["roboverse-metasim[pybullet]>=1.0.0b0,<1.1"]
+robosplatter = ["roboverse-metasim[robosplatter]>=1.0.0b0,<1.1"]
+sapien2 = ["roboverse-metasim[sapien2]>=1.0.0b0,<1.1"]
+sapien3 = ["roboverse-metasim[sapien3]>=1.0.0b0,<1.1"]
 
 [project.entry-points."metasim.packages"]
 roboverse_pack = "roboverse_pack"
 
 [tool.uv]
 index-strategy = "unsafe-best-match"
+
+# Monorepo: MetaSim lives in packages/metasim and is developed in lockstep with this package
+# (same version, same tag). Declared as a uv workspace member; install it first from the checkout:
+#   python -m pip install -e "packages/metasim[mujoco]" -e ".[mujoco]"
+[tool.uv.workspace]
+members = ["packages/metasim"]
+
+[tool.uv.sources]
+roboverse-metasim = { workspace = true }
 
 [tool.uv.pip]
 index-url = "https://download.pytorch.org/whl/cu128"

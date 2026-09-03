@@ -9,7 +9,6 @@ on:
       - auto_merge_enabled
     branches:
       - main
-      - develop
 
 env:
   REGION: us-west-2
@@ -139,7 +138,7 @@ jobs:
           ls ./
 
           # ==== before buildx build ====
-          DOCKERFILE_HASH=$(sha256sum Dockerfile | cut -c1-16)
+          DOCKERFILE_HASH=$(sha256sum packages/metasim/Dockerfile | cut -c1-16)
           IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:df-$DOCKERFILE_HASH"
           echo "IMAGE_URI=$IMAGE_URI"
 
@@ -204,8 +203,8 @@ jobs:
               --build-arg DOCKER_UID=1000 \
               --build-arg DOCKER_GID=1000 \
               --build-arg DOCKER_USER=$EC2_USER_NAME \
-              -f Dockerfile \
-              --load .
+              -f packages/metasim/Dockerfile \
+              --load packages/metasim
 
               docker push "$IMAGE_URI"
             fi
@@ -224,11 +223,11 @@ jobs:
             -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
             -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
             -v /usr/local/cuda:/usr/local/cuda \
-            -v "$(pwd)":/home/$EC2_USER_NAME/MetaSim \
+            -v "$(pwd)/packages/metasim":/home/$EC2_USER_NAME/MetaSim \
             "$IMAGE_URI" \
             -c "bash -lc 'set -o pipefail; \
             /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k general -vv \
-            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-general.log'" \
+            | tee /home/$EC2_USER_NAME/MetaSim/pytest-general.log'" \
             || GENERAL_TEST_EXIT_CODE=$?
 
             docker run --rm --entrypoint bash --runtime=nvidia --network=host \
@@ -237,11 +236,11 @@ jobs:
             -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
             -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
             -v /usr/local/cuda:/usr/local/cuda \
-            -v "$(pwd)":/home/$EC2_USER_NAME/MetaSim \
+            -v "$(pwd)/packages/metasim":/home/$EC2_USER_NAME/MetaSim \
             "$IMAGE_URI" \
             -c "bash -lc 'set -o pipefail; \
             /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k mujoco -vv \
-            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-mujoco.log'" \
+            | tee /home/$EC2_USER_NAME/MetaSim/pytest-mujoco.log'" \
             || MUJOCO_TEST_EXIT_CODE=$?
 
             docker run --rm --entrypoint bash --runtime=nvidia --network=host \
@@ -250,11 +249,11 @@ jobs:
             -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
             -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
             -v /usr/local/cuda:/usr/local/cuda \
-            -v "$(pwd)":/home/$EC2_USER_NAME/MetaSim \
+            -v "$(pwd)/packages/metasim":/home/$EC2_USER_NAME/MetaSim \
             "$IMAGE_URI" \
             -c "bash -lc 'set -o pipefail; \
             /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k sapien3 -vv \
-            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-sapien3.log'" \
+            | tee /home/$EC2_USER_NAME/MetaSim/pytest-sapien3.log'" \
             || SAPIEN3_TEST_EXIT_CODE=$?
 
             docker run --rm --entrypoint bash --runtime=nvidia --network=host \
@@ -263,11 +262,11 @@ jobs:
             -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
             -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
             -v /usr/local/cuda:/usr/local/cuda \
-            -v "$(pwd)":/home/$EC2_USER_NAME/MetaSim \
+            -v "$(pwd)/packages/metasim":/home/$EC2_USER_NAME/MetaSim \
             "$IMAGE_URI" \
             -c "bash -lc 'set -o pipefail; \
             /home/$EC2_USER_NAME/conda/envs/metasim/bin/python3 -m pytest -k isaacsim -vv \
-            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-isaacsim.log'" \
+            | tee /home/$EC2_USER_NAME/MetaSim/pytest-isaacsim.log'" \
             || ISAACSIM_TEST_EXIT_CODE=$?
 
             docker run --rm --entrypoint bash --runtime=nvidia --network=host \
@@ -276,11 +275,11 @@ jobs:
             -e LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu \
             -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ACCEPT_EULA=YES \
             -v /usr/local/cuda:/usr/local/cuda \
-            -v "$(pwd)":/home/$EC2_USER_NAME/MetaSim \
+            -v "$(pwd)/packages/metasim":/home/$EC2_USER_NAME/MetaSim \
             "$IMAGE_URI" \
             -c "bash -lc 'set -o pipefail; \
             /home/$EC2_USER_NAME/conda/envs/metasim_isaacgym/bin/python3 /home/$EC2_USER_NAME/MetaSim/metasim/test/isaacgym_entry.py -k isaacgym -vv \
-            | tee /home/$EC2_USER_NAME/${SRC_DIR}/pytest-isaacgym.log'" \
+            | tee /home/$EC2_USER_NAME/MetaSim/pytest-isaacgym.log'" \
             || ISAACGYM_TEST_EXIT_CODE=$?
 
             # TODO check if test_exit_code necessary
@@ -310,7 +309,7 @@ jobs:
           if [ "${GENERAL_TEST_EXIT_CODE:-0}" -ne 0 ]; then
             echo "=== General tests failed. Fetching logs... ==="
             scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-general.log \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/packages/metasim/pytest-general.log \
               $CODEBUILD_SRC_DIR/ || true
             echo "===== General pytest log ====="
             cat $CODEBUILD_SRC_DIR/pytest-general.log || true
@@ -320,7 +319,7 @@ jobs:
           if [ "${MUJOCO_TEST_EXIT_CODE:-0}" -ne 0 ]; then
             echo "=== Mujoco tests failed. Fetching logs... ==="
             scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-mujoco.log \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/packages/metasim/pytest-mujoco.log \
               $CODEBUILD_SRC_DIR/ || true
             echo "===== Mujoco pytest log ====="
             cat $CODEBUILD_SRC_DIR/pytest-mujoco.log || true
@@ -330,7 +329,7 @@ jobs:
           if [ "${SAPIEN3_TEST_EXIT_CODE:-0}" -ne 0 ]; then
             echo "=== Sapien3 tests failed. Fetching logs... ==="
             scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-sapien3.log \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/packages/metasim/pytest-sapien3.log \
               $CODEBUILD_SRC_DIR/ || true
             echo "===== Sapien3 pytest log ====="
             cat $CODEBUILD_SRC_DIR/pytest-sapien3.log || true
@@ -340,7 +339,7 @@ jobs:
           if [ "${ISAACSIM_TEST_EXIT_CODE:-0}" -ne 0 ]; then
             echo "=== IsaacSim tests failed. Fetching logs... ==="
             scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-isaacsim.log \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/packages/metasim/pytest-isaacsim.log \
               $CODEBUILD_SRC_DIR/ || true
             echo "===== IsaacSim pytest log ====="
             cat $CODEBUILD_SRC_DIR/pytest-isaacsim.log || true
@@ -350,7 +349,7 @@ jobs:
           if [ "${ISAACGYM_TEST_EXIT_CODE:-0}" -ne 0 ]; then
             echo "=== IsaacGym tests failed. Fetching logs... ==="
             scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/pytest-isaacgym.log \
+              $EC2_USER_NAME@$EC2_INSTANCE_IP:~/$SRC_DIR/packages/metasim/pytest-isaacgym.log \
               $CODEBUILD_SRC_DIR/ || true
             echo "===== IsaacGym pytest log ====="
             cat $CODEBUILD_SRC_DIR/pytest-isaacgym.log || true
