@@ -278,7 +278,6 @@ class PickPlaceTrackHu(PickPlaceBase):
 
     def _get_initial_states(self) -> list[dict] | None:
         """Load initial states from pkl file."""
-        # import ipdb; ipdb.set_trace()
         if self._loaded_states is not None:
             return self._loaded_states
 
@@ -320,12 +319,9 @@ class PickPlaceTrackHu(PickPlaceBase):
         for env_idx, initial_state in enumerate(initial_states):
             if "objects" not in initial_state:
                 initial_state["objects"] = {}
-                # import ipdb; ipdb.set_trace()
             for i in range(self.num_waypoints):
-                # import ipdb; ipdb.set_trace()
                 marker_name = f"traj_marker_{i}"
                 # if marker_name not in initial_state["objects"]:
-                # import ipdb; ipdb.set_trace()
                 if i < len(default_positions):
                     initial_state["objects"][marker_name] = {
                         "pos": default_positions[i].clone(),
@@ -333,7 +329,6 @@ class PickPlaceTrackHu(PickPlaceBase):
                     }
 
         self._loaded_states = initial_states
-        # import ipdb; ipdb.set_trace()
         log.info(f"Loaded {len(initial_states)} initial states from {self.state_file_path}")
         return initial_states
 

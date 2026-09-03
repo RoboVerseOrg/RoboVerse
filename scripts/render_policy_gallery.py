@@ -22,11 +22,12 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 
 import numpy as np
 
-RT1_CKPT = os.environ.get("RT1_CKPT", "/home/ghr/projects/SimplerEnv/checkpoints/rt_1_tf_trained_for_000400120")
-OUT = "/tmp/policy_gallery"
+RT1_CKPT = os.environ.get("RT1_CKPT")  # required: path to an RT-1 TF checkpoint dir
+OUT = os.environ.get("POLICY_GALLERY_OUT", os.path.join(tempfile.gettempdir(), "policy_gallery"))
 MAX_SEEDS = 8
 
 GOOGLE = [
@@ -70,6 +71,9 @@ def _make_policy(task):
     fam = _family(task)
     if fam == "google":
         from simpler_env.policies.rt1.rt1_model import RT1Inference
+
+        if not RT1_CKPT:
+            raise SystemExit("set $RT1_CKPT to an RT-1 TF checkpoint directory (e.g. rt_1_tf_trained_for_000400120)")
 
         return RT1Inference(saved_model_path=RT1_CKPT, policy_setup="google_robot")
     from simpler_env.policies.octo.octo_model import OctoInference

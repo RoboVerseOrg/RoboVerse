@@ -50,6 +50,8 @@ class Args:
     """Replay trajectory for a given task."""
 
     task: str = "put_banana"
+    traj_filepath: str = tyro.MISSING
+    """Trajectory pickle to replay, e.g. ``teleop_trajs/<task>_<robot>_<timestamp>_v2.pkl`` from teleop_keyboard.py."""
     robot: str = "franka"
     scene: str | None = None
     render: RenderCfg = RenderCfg()
@@ -488,7 +490,7 @@ def main():
     # ========================================
     # Step 3: Load trajectory (ONCE!)
     # ========================================
-    traj_filepath = "/home/priosin/murphy/ui/RoboVerse/teleop_trajs/put_banana_franka_20251029_220717_v2.pkl"
+    traj_filepath = args.traj_filepath
     assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
     t0 = time.time()
     init_states, all_actions, all_states = get_traj(traj_filepath, scenario.robots[0], env.handler)
