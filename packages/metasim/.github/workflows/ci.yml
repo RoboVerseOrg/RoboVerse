@@ -1,0 +1,53 @@
+name: CI
+
+# Pull-request gate that needs no simulator or GPU: lint at the pre-commit pin and the
+# simulator-free test suite (`-k general`) on the supported CPython versions. Simulator-backed
+# suites still run in the merge-queue workflow (premerge-ci.yml) on the GPU runner.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install "ruff==0.14.5"  # keep equal to .pre-commit-config.yaml
+      - run: python -m ruff check --output-format=github .
+      - run: python -m ruff format --check .
+
+  general:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    name: general (${{ matrix.python-version }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install (CPU torch first so pip cannot pick a CUDA wheel)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e ".[dev,examples,mujoco]"  # examples: rootutils/tyro used by test modules; mujoco: module-level imports in general tests
+      - name: Simulator-free test suite
+        env:
+          MUJOCO_GL: disable
+        run: python -m pytest -k "general and not falls_back_to_private" -q -rs

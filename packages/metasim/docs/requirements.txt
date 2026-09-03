@@ -1,0 +1,25 @@
+sphinx==8.1.3
+sphinx-autobuild==2024.10.3
+pydata_sphinx_theme==0.16.1
+# sphinx_book_theme
+# For spelling
+sphinxcontrib.spelling
+# Type hints support
+sphinx-autodoc-typehints
+# Copy button for code snippets
+sphinx_copybutton
+# Markdown parser
+myst-parser
+sphinx-subfigure
+sphinxcontrib-video
+sphinx-togglebutton
+sphinx_design
+psutil
+scikit-image
+numpy == 1.26.4
+six
+freetype-py
+# Mermaid parser
+sphinxcontrib-mermaid
+# Open external link in new tab
+sphinx-new-tab-link
