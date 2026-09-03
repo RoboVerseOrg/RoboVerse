@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- API snapshot diff is parameter-aware: a new optional parameter, a new `*args`/`**kwargs` sink or a parameter that gains a default is an addition; a removed/renamed parameter, a lost default, a new required parameter, reordered positionals or a kind change is breaking (`metasim.utils.api_surface.compare_params`). The snapshot stores parameters structurally (`params`) next to the signature string.
 - Public API snapshot: `metasim.utils.api_surface` records every public function/class (methods, dataclass fields, signatures) of the modules in `PUBLIC_MODULES` into `metasim/test/api_snapshot.json`; `test_public_api_general.py` fails on a removed symbol or changed signature (additions are reported). `python -m metasim api-snapshot [--update]` regenerates or diffs it. Breaking the surface now requires the explicit update plus a CHANGELOG line.
 
 ### Changed

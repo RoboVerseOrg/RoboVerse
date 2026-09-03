@@ -2,6 +2,7 @@
  "metasim": {
   "register_gym_envs": {
    "kind": "function",
+   "params": [],
    "signature": "() -> 'None'"
   }
  },
@@ -26,8 +27,46 @@
    "bases": [],
    "kind": "class",
    "methods": {
-    "__init__": "(self, **kwargs)",
-    "bind_handler": "(self, handler, *args: 'Any', **kwargs)"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(self, **kwargs)"
+    },
+    "bind_handler": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "VAR_POSITIONAL",
+       "name": "args"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(self, handler, *args: 'Any', **kwargs)"
+    }
    }
   }
  },
@@ -49,12 +88,136 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, data_types: \"list[Literal['rgb', 'depth', 'instance_seg', 'instance_id_seg']]\" = <factory>, width: 'int' = <factory>, height: 'int' = <factory>, pos: 'tuple[float, float, float]' = <factory>, look_at: 'tuple[float, float, float]' = <factory>, mount_to: 'str | tuple[str, str] | None' = <factory>, mount_link: 'str | tuple[str, str] | None' = <factory>, mount_pos: 'tuple[float, float, float] | None' = <factory>, mount_quat: 'tuple[float, float, float, float] | None' = <factory>, intrinsic: 'list[list[float]] | None' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data_types"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "width"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "height"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "look_at"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mount_to"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mount_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mount_pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mount_quat"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "intrinsic"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, data_types: \"list[Literal['rgb', 'depth', 'instance_seg', 'instance_id_seg']]\" = <factory>, width: 'int' = <factory>, height: 'int' = <factory>, pos: 'tuple[float, float, float]' = <factory>, look_at: 'tuple[float, float, float]' = <factory>, mount_to: 'str | tuple[str, str] | None' = <factory>, mount_link: 'str | tuple[str, str] | None' = <factory>, mount_pos: 'tuple[float, float, float] | None' = <factory>, mount_quat: 'tuple[float, float, float, float] | None' = <factory>, intrinsic: 'list[list[float]] | None' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "PinholeCameraCfg": {
@@ -80,16 +243,172 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, data_types: \"list[Literal['rgb', 'depth', 'instance_seg', 'instance_id_seg']]\" = <factory>, width: 'int' = <factory>, height: 'int' = <factory>, pos: 'tuple[float, float, float]' = <factory>, look_at: 'tuple[float, float, float]' = <factory>, mount_to: 'str | tuple[str, str] | None' = <factory>, mount_link: 'str | tuple[str, str] | None' = <factory>, mount_pos: 'tuple[float, float, float] | None' = <factory>, mount_quat: 'tuple[float, float, float, float] | None' = <factory>, intrinsic: 'list[list[float]] | None' = <factory>, focal_length: 'float' = <factory>, focus_distance: 'float' = <factory>, horizontal_aperture: 'float' = <factory>, clipping_range: 'tuple[float, float]' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "horizontal_fov": "<property>",
-    "intrinsics": "<property>",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'",
-    "vertical_aperture": "<property>",
-    "vertical_fov": "<property>"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data_types"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "width"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "height"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "look_at"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mount_to"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mount_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mount_pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mount_quat"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "intrinsic"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "focal_length"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "focus_distance"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "horizontal_aperture"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "clipping_range"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, data_types: \"list[Literal['rgb', 'depth', 'instance_seg', 'instance_id_seg']]\" = <factory>, width: 'int' = <factory>, height: 'int' = <factory>, pos: 'tuple[float, float, float]' = <factory>, look_at: 'tuple[float, float, float]' = <factory>, mount_to: 'str | tuple[str, str] | None' = <factory>, mount_link: 'str | tuple[str, str] | None' = <factory>, mount_pos: 'tuple[float, float, float] | None' = <factory>, mount_quat: 'tuple[float, float, float, float] | None' = <factory>, intrinsic: 'list[list[float]] | None' = <factory>, focal_length: 'float' = <factory>, focus_distance: 'float' = <factory>, horizontal_aperture: 'float' = <factory>, clipping_range: 'tuple[float, float]' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "horizontal_fov": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "intrinsics": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    },
+    "vertical_aperture": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "vertical_fov": {
+     "params": null,
+     "signature": "<property>"
+    }
    }
   }
  },
@@ -104,12 +423,101 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "origin"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "platform_size"
+      }
+     ],
+     "signature": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "GapCfg": {
@@ -125,12 +533,106 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, gap_size: 'float' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "origin"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "platform_size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "gap_size"
+      }
+     ],
+     "signature": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, gap_size: 'float' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "GroundCfg": {
@@ -151,12 +653,141 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, width: 'float' = <factory>, length: 'float' = <factory>, horizontal_scale: 'float' = <factory>, vertical_scale: 'float' = <factory>, margin: 'float' = <factory>, max_mesh_triangles: 'int' = <factory>, elements: 'dict[str, list[BaseTerrainCfg]]' = <factory>, repeat_direction_gap: \"list[int, Literal['row', 'column'], float]\" = <factory>, difficulty: \"list[float, float, Literal['linear']]\" = <factory>, static_friction: float = <factory>, dynamic_friction: float = <factory>, restitution: float = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "width"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "length"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "horizontal_scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "vertical_scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "margin"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "max_mesh_triangles"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "elements"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "repeat_direction_gap"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "difficulty"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      }
+     ],
+     "signature": "(self, width: 'float' = <factory>, length: 'float' = <factory>, horizontal_scale: 'float' = <factory>, vertical_scale: 'float' = <factory>, margin: 'float' = <factory>, max_mesh_triangles: 'int' = <factory>, elements: 'dict[str, list[BaseTerrainCfg]]' = <factory>, repeat_direction_gap: \"list[int, Literal['row', 'column'], float]\" = <factory>, difficulty: \"list[float, float, Literal['linear']]\" = <factory>, static_friction: float = <factory>, dynamic_friction: float = <factory>, restitution: float = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "ObstacleCfg": {
@@ -173,12 +804,111 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, rectangle_params: 'list[int, float, float]' = <factory>, max_height: 'float' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "origin"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "platform_size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "rectangle_params"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "max_height"
+      }
+     ],
+     "signature": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, rectangle_params: 'list[int, float, float]' = <factory>, max_height: 'float' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "PitCfg": {
@@ -194,12 +924,106 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, depth: 'float' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "origin"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "platform_size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "depth"
+      }
+     ],
+     "signature": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, depth: 'float' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "SlopeCfg": {
@@ -216,12 +1040,111 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, slope: 'float' = <factory>, random: 'bool' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "origin"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "platform_size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "slope"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "random"
+      }
+     ],
+     "signature": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, slope: 'float' = <factory>, random: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "StairCfg": {
@@ -237,12 +1160,106 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, step: 'list[float]' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "origin"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "platform_size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "step"
+      }
+     ],
+     "signature": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, step: 'list[float]' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "StoneCfg": {
@@ -259,12 +1276,111 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, stone_params: 'list[float, float]' = <factory>, max_height: 'float' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "origin"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "platform_size"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "stone_params"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "max_height"
+      }
+     ],
+     "signature": "(self, type: 'str' = <factory>, origin: 'list[float]' = <factory>, size: 'list[float]' = <factory>, platform_size: 'float' = <factory>, stone_params: 'list[float, float]' = <factory>, max_height: 'float' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   }
  },
@@ -279,12 +1395,101 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "intensity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "is_global"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "CylinderLightCfg": {
@@ -303,12 +1508,121 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, length: 'float' = <factory>, radius: 'float' = <factory>, pos: 'tuple[float, float, float]' = <factory>, rot: 'tuple[float, float, float, float]' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "intensity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "is_global"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "length"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "radius"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "rot"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, length: 'float' = <factory>, radius: 'float' = <factory>, pos: 'tuple[float, float, float]' = <factory>, rot: 'tuple[float, float, float, float]' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "DiskLightCfg": {
@@ -327,12 +1641,121 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, radius: 'float' = <factory>, pos: 'tuple[float, float, float]' = <factory>, rot: 'tuple[float, float, float, float]' = <factory>, normalize: 'bool' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "intensity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "is_global"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "radius"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "rot"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "normalize"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, radius: 'float' = <factory>, pos: 'tuple[float, float, float]' = <factory>, rot: 'tuple[float, float, float, float]' = <factory>, normalize: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "DistantLightCfg": {
@@ -349,13 +1772,115 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, polar: 'float' = <factory>, azimuth: 'float' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "quat": "<property>",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "intensity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "is_global"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "polar"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "azimuth"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, polar: 'float' = <factory>, azimuth: 'float' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "quat": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "DomeLightCfg": {
@@ -371,12 +1896,106 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, texture_file: 'str | None' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "intensity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "is_global"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "texture_file"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, texture_file: 'str | None' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "SphereLightCfg": {
@@ -394,12 +2013,116 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, radius: 'float' = <factory>, pos: 'tuple[float, float, float]' = <factory>, normalize: 'bool' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "intensity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "is_global"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "radius"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "normalize"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, intensity: 'float' = <factory>, color: 'tuple[float, float, float]' = <factory>, is_global: 'bool' = <factory>, radius: 'float' = <factory>, pos: 'tuple[float, float, float]' = <factory>, normalize: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   }
  },
@@ -426,12 +2149,146 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "usd_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "urdf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjx_mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "file_type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "extra_resources"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "BaseArticulationObjCfg": {
@@ -448,12 +2305,111 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "BaseObjCfg": {
@@ -468,12 +2424,111 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "BaseRigidObjCfg": {
@@ -499,12 +2554,156 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_enabled"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "physics"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_density"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "linear_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "angular_damping"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "NonConvexRigidObjCfg": {
@@ -539,12 +2738,201 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, collapse_fixed_joints: 'bool' = <factory>, mesh_pose: 'list[float]' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_enabled"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "physics"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_density"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "linear_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "angular_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "usd_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "urdf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjx_mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "file_type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "extra_resources"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collapse_fixed_joints"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_pose"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, collapse_fixed_joints: 'bool' = <factory>, mesh_pose: 'list[float]' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "PrimitiveCubeCfg": {
@@ -574,14 +2962,179 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>, size: 'list[float]' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "half_size": "<property>",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'",
-    "volume": "<property>"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_enabled"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "physics"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_density"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "linear_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "angular_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mass"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "size"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>, size: 'list[float]' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "half_size": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    },
+    "volume": {
+     "params": null,
+     "signature": "<property>"
+    }
    }
   },
   "PrimitiveCylinderCfg": {
@@ -612,13 +3165,180 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>, radius: 'float' = <factory>, height: 'float' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'",
-    "volume": "<property>"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_enabled"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "physics"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_density"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "linear_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "angular_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mass"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "radius"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "height"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>, radius: 'float' = <factory>, height: 'float' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    },
+    "volume": {
+     "params": null,
+     "signature": "<property>"
+    }
    }
   },
   "PrimitiveFrameCfg": {
@@ -653,12 +3373,201 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, collapse_fixed_joints: 'bool' = <factory>, base_link: 'str | tuple[str, str] | None' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_enabled"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "physics"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_density"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "linear_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "angular_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "usd_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "urdf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjx_mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "file_type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "extra_resources"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collapse_fixed_joints"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "base_link"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, collapse_fixed_joints: 'bool' = <factory>, base_link: 'str | tuple[str, str] | None' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "PrimitiveMultiBoxCfg": {
@@ -687,14 +3596,179 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, boxes: 'list' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "density": "<property>",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "total_volume": "<property>",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_enabled"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "physics"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_density"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "linear_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "angular_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "boxes"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mass"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, boxes: 'list' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "density": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "total_volume": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "PrimitiveSphereCfg": {
@@ -724,13 +3798,175 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>, radius: 'float' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'",
-    "volume": "<property>"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_enabled"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "physics"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_density"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "linear_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "angular_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mass"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "color"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "radius"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mass: 'float' = <factory>, color: 'list[float]' = <factory>, radius: 'float' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    },
+    "volume": {
+     "params": null,
+     "signature": "<property>"
+    }
    }
   },
   "RigidObjCfg": {
@@ -765,12 +4001,196 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, collapse_fixed_joints: 'bool' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_enabled"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "physics"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_density"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collision_mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "linear_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "angular_damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "usd_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "urdf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjx_mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "file_type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "extra_resources"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collapse_fixed_joints"
+      }
+     ],
+     "signature": "(self, name: 'str' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, collision_enabled: 'bool' = <factory>, physics: 'PhysicStateType | None' = <factory>, mesh_density: 'float | None' = <factory>, collision_mesh_path: 'str | None' = <factory>, static_friction: 'float | None' = <factory>, dynamic_friction: 'float | None' = <factory>, restitution: 'float | None' = <factory>, linear_damping: 'float | None' = <factory>, angular_damping: 'float | None' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, collapse_fixed_joints: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   }
  },
@@ -785,12 +4205,101 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, mode: \"Literal['rasterization', 'raytracing', 'pathtracing', 'realtime_pathtracing']\" = <factory>, samples: 'int | None' = <factory>, device: 'str' = <factory>, hdri_path: 'str | None' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mode"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "samples"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "device"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "hdri_path"
+      }
+     ],
+     "signature": "(self, mode: \"Literal['rasterization', 'raytracing', 'pathtracing', 'realtime_pathtracing']\" = <factory>, samples: 'int | None' = <factory>, device: 'str' = <factory>, hdri_path: 'str | None' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   }
  },
@@ -810,12 +4319,126 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, effort_limit_sim: 'float | None' = <factory>, velocity_limit: 'float | None' = <factory>, velocity_limit_sim: 'float | None' = <factory>, armature: 'float | None' = <factory>, frictionloss: 'float | None' = <factory>, damping: 'float | None' = <factory>, stiffness: 'float | None' = <factory>, fully_actuated: 'bool' = <factory>, is_ee: 'bool' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "effort_limit_sim"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "velocity_limit"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "velocity_limit_sim"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "armature"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "frictionloss"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "damping"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "stiffness"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fully_actuated"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "is_ee"
+      }
+     ],
+     "signature": "(self, effort_limit_sim: 'float | None' = <factory>, velocity_limit: 'float | None' = <factory>, velocity_limit_sim: 'float | None' = <factory>, armature: 'float | None' = <factory>, frictionloss: 'float | None' = <factory>, damping: 'float | None' = <factory>, stiffness: 'float | None' = <factory>, fully_actuated: 'bool' = <factory>, is_ee: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   },
   "RobotCfg": {
@@ -853,12 +4476,216 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, name: 'str | None' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, num_joints: 'int | None' = <factory>, joint_limits: 'dict[str, tuple[float, float]] | None' = <factory>, default_joint_positions: 'dict[str, float] | None' = <factory>, actuators: 'dict[str, BaseActuatorCfg] | None' = <factory>, control_type: \"dict[str, Literal['position', 'effort']] | None\" = <factory>, isaacgym_flip_visual_attachments: 'bool' = <factory>, collapse_fixed_joints: 'bool' = <factory>, enabled_self_collisions: 'bool' = <factory>, curobo_ref_cfg_name: 'str | None' = <factory>, gripper_joint_name: 'str | None' = <factory>, gripper_open_q: 'list[float] | None' = <factory>, gripper_close_q: 'list[float] | None' = <factory>, curobo_tcp_rel_pos: 'tuple[float, float, float] | None' = <factory>, curobo_tcp_rel_rot: 'tuple[float, float, float] | None' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_position"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_orientation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fix_base_link"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scale"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mesh_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "usd_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "urdf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mjx_mjcf_path"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "file_type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "extra_resources"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "num_joints"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_limits"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_joint_positions"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "actuators"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "control_type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "isaacgym_flip_visual_attachments"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "collapse_fixed_joints"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "enabled_self_collisions"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "curobo_ref_cfg_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "gripper_joint_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "gripper_open_q"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "gripper_close_q"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "curobo_tcp_rel_pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "curobo_tcp_rel_rot"
+      }
+     ],
+     "signature": "(self, name: 'str | None' = <factory>, default_position: 'tuple[float, float, float]' = <factory>, default_orientation: 'tuple[float, float, float, float]' = <factory>, fix_base_link: 'bool | None' = <factory>, enabled_gravity: 'bool' = <factory>, scale: 'float | tuple[float, float, float]' = <factory>, mesh_path: 'str | None' = <factory>, usd_path: 'str | None' = <factory>, urdf_path: 'str | None' = <factory>, mjcf_path: 'str | None' = <factory>, mjx_mjcf_path: 'str | None' = <factory>, file_type: 'dict[str, str]' = <factory>, extra_resources: 'list[str]' = <factory>, num_joints: 'int | None' = <factory>, joint_limits: 'dict[str, tuple[float, float]] | None' = <factory>, default_joint_positions: 'dict[str, float] | None' = <factory>, actuators: 'dict[str, BaseActuatorCfg] | None' = <factory>, control_type: \"dict[str, Literal['position', 'effort']] | None\" = <factory>, isaacgym_flip_visual_attachments: 'bool' = <factory>, collapse_fixed_joints: 'bool' = <factory>, enabled_self_collisions: 'bool' = <factory>, curobo_ref_cfg_name: 'str | None' = <factory>, gripper_joint_name: 'str | None' = <factory>, gripper_open_q: 'list[float] | None' = <factory>, gripper_close_q: 'list[float] | None' = <factory>, curobo_tcp_rel_pos: 'tuple[float, float, float] | None' = <factory>, curobo_tcp_rel_rot: 'tuple[float, float, float] | None' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   }
  },
@@ -885,14 +4712,186 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, scene: 'SceneCfg | None' = <factory>, robots: 'list[RobotCfg]' = <factory>, lights: 'list[BaseLightCfg]' = <factory>, objects: 'list[BaseObjCfg]' = <factory>, cameras: 'list[BaseCameraCfg]' = <factory>, gs_scene: 'GSSceneCfg | None' = <factory>, ground: 'GroundCfg | None' = <factory>, add_default_ground: 'bool' = <factory>, render: 'RenderCfg' = <factory>, sim_params: 'SimParamCfg' = <factory>, simulator: \"Literal['blender', 'genesis', 'isaacgym', 'isaacsim', 'mjx', 'mujoco', 'newton', 'superdex', 'pybullet', 'pyrep', 'sapien2', 'sapien3'] | None\" = <factory>, num_envs: 'int' = <factory>, headless: 'bool' = <factory>, env_spacing: 'float' = <factory>, decimation: 'int' = <factory>, gravity: 'tuple[float, float, float]' = <factory>) -> None",
-    "check_assets": "(self)",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "update": "(self, **kwargs)",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scene"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "robots"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "lights"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "objects"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "cameras"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "gs_scene"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "ground"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "add_default_ground"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "render"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sim_params"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "simulator"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "num_envs"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "headless"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_spacing"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "decimation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "gravity"
+      }
+     ],
+     "signature": "(self, scene: 'SceneCfg | None' = <factory>, robots: 'list[RobotCfg]' = <factory>, lights: 'list[BaseLightCfg]' = <factory>, objects: 'list[BaseObjCfg]' = <factory>, cameras: 'list[BaseCameraCfg]' = <factory>, gs_scene: 'GSSceneCfg | None' = <factory>, ground: 'GroundCfg | None' = <factory>, add_default_ground: 'bool' = <factory>, render: 'RenderCfg' = <factory>, sim_params: 'SimParamCfg' = <factory>, simulator: \"Literal['blender', 'genesis', 'isaacgym', 'isaacsim', 'mjx', 'mujoco', 'newton', 'superdex', 'pybullet', 'pyrep', 'sapien2', 'sapien3'] | None\" = <factory>, num_envs: 'int' = <factory>, headless: 'bool' = <factory>, env_spacing: 'float' = <factory>, decimation: 'int' = <factory>, gravity: 'tuple[float, float, float]' = <factory>) -> None"
+    },
+    "check_assets": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self)"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "update": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(self, **kwargs)"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   }
  },
@@ -943,12 +4942,281 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, dt: 'float | None' = <factory>, bounce_threshold_velocity: 'float' = <factory>, contact_offset: 'float' = <factory>, num_position_iterations: 'int' = <factory>, num_velocity_iterations: 'int' = <factory>, friction_correlation_distance: 'float' = <factory>, friction_offset_threshold: 'float' = <factory>, replace_cylinder_with_capsule: 'bool' = <factory>, rest_offset: 'float' = <factory>, solver_type: 'int' = <factory>, substeps: 'int' = <factory>, max_depenetration_velocity: 'float' = <factory>, default_buffer_size_multiplier: 'int' = <factory>, sapien_enable_tgs: 'bool | None' = <factory>, sapien_enable_pcm: 'bool | None' = <factory>, sapien_default_static_friction: 'float | None' = <factory>, sapien_default_dynamic_friction: 'float | None' = <factory>, sapien_default_restitution: 'float | None' = <factory>, sapien_apply_scene_solver: 'bool | None' = <factory>, sapien_disable_default_lights: 'bool | None' = <factory>, sapien_load_multiple_collisions: 'bool | None' = <factory>, sapien_apply_global_physx: 'bool | None' = <factory>, sapien_sleep_threshold: 'float | None' = <factory>, sapien_bounce_threshold: 'float | None' = <factory>, sapien_enable_ccd: 'bool | None' = <factory>, sapien_enable_enhanced_determinism: 'bool | None' = <factory>, sapien_enable_friction_every_iteration: 'bool | None' = <factory>, sapien_disable_robot_gravity: 'bool | None' = <factory>, sapien_ground_altitude: 'float | None' = <factory>, sapien_drive_force_mode: 'str | None' = <factory>, superdex_control_mode: \"Literal['pd', 'implicit']\" = <factory>, nconmax: 'int | None' = <factory>, njmax: 'int | None' = <factory>, newton_use_mujoco_contacts: 'bool | None' = <factory>, newton_mujoco_iterations: 'int | None' = <factory>, newton_mujoco_ls_iterations: 'int | None' = <factory>, newton_mujoco_disable_contacts: 'bool' = <factory>, num_threads: 'int' = <factory>, use_gpu_pipeline: 'bool' = <factory>, use_gpu: 'bool' = <factory>) -> None",
-    "copy": "(obj: 'object') -> 'object'",
-    "from_dict": "(obj, data: 'dict[str, Any]') -> 'None'",
-    "replace": "(obj: 'object', **kwargs) -> 'object'",
-    "to_dict": "(obj: 'object') -> 'dict[str, Any]'",
-    "validate": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dt"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "bounce_threshold_velocity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "contact_offset"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "num_position_iterations"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "num_velocity_iterations"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "friction_correlation_distance"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "friction_offset_threshold"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "replace_cylinder_with_capsule"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "rest_offset"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "solver_type"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "substeps"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "max_depenetration_velocity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_buffer_size_multiplier"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_enable_tgs"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_enable_pcm"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_default_static_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_default_dynamic_friction"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_default_restitution"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_apply_scene_solver"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_disable_default_lights"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_load_multiple_collisions"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_apply_global_physx"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_sleep_threshold"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_bounce_threshold"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_enable_ccd"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_enable_enhanced_determinism"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_enable_friction_every_iteration"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_disable_robot_gravity"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_ground_altitude"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sapien_drive_force_mode"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "superdex_control_mode"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "nconmax"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "njmax"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "newton_use_mujoco_contacts"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "newton_mujoco_iterations"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "newton_mujoco_ls_iterations"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "newton_mujoco_disable_contacts"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "num_threads"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "use_gpu_pipeline"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "use_gpu"
+      }
+     ],
+     "signature": "(self, dt: 'float | None' = <factory>, bounce_threshold_velocity: 'float' = <factory>, contact_offset: 'float' = <factory>, num_position_iterations: 'int' = <factory>, num_velocity_iterations: 'int' = <factory>, friction_correlation_distance: 'float' = <factory>, friction_offset_threshold: 'float' = <factory>, replace_cylinder_with_capsule: 'bool' = <factory>, rest_offset: 'float' = <factory>, solver_type: 'int' = <factory>, substeps: 'int' = <factory>, max_depenetration_velocity: 'float' = <factory>, default_buffer_size_multiplier: 'int' = <factory>, sapien_enable_tgs: 'bool | None' = <factory>, sapien_enable_pcm: 'bool | None' = <factory>, sapien_default_static_friction: 'float | None' = <factory>, sapien_default_dynamic_friction: 'float | None' = <factory>, sapien_default_restitution: 'float | None' = <factory>, sapien_apply_scene_solver: 'bool | None' = <factory>, sapien_disable_default_lights: 'bool | None' = <factory>, sapien_load_multiple_collisions: 'bool | None' = <factory>, sapien_apply_global_physx: 'bool | None' = <factory>, sapien_sleep_threshold: 'float | None' = <factory>, sapien_bounce_threshold: 'float | None' = <factory>, sapien_enable_ccd: 'bool | None' = <factory>, sapien_enable_enhanced_determinism: 'bool | None' = <factory>, sapien_enable_friction_every_iteration: 'bool | None' = <factory>, sapien_disable_robot_gravity: 'bool | None' = <factory>, sapien_ground_altitude: 'float | None' = <factory>, sapien_drive_force_mode: 'str | None' = <factory>, superdex_control_mode: \"Literal['pd', 'implicit']\" = <factory>, nconmax: 'int | None' = <factory>, njmax: 'int | None' = <factory>, newton_use_mujoco_contacts: 'bool | None' = <factory>, newton_mujoco_iterations: 'int | None' = <factory>, newton_mujoco_ls_iterations: 'int | None' = <factory>, newton_mujoco_disable_contacts: 'bool' = <factory>, num_threads: 'int' = <factory>, use_gpu_pipeline: 'bool' = <factory>, use_gpu: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
    }
   }
  },
@@ -968,10 +5236,38 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, sim: 'SimType', statuses: 'list[RequirementStatus]' = <factory>) -> None",
-    "installed": "<property>",
-    "unsupported": "<property>",
-    "untested": "<property>"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sim"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "statuses"
+      }
+     ],
+     "signature": "(self, sim: 'SimType', statuses: 'list[RequirementStatus]' = <factory>) -> None"
+    },
+    "installed": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "unsupported": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "untested": {
+     "params": null,
+     "signature": "<property>"
+    }
    }
   },
   "Requirement": {
@@ -984,7 +5280,36 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, dist: 'str', spec: 'str', tested: 'str' = '', optional: 'bool' = False) -> None"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dist"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "spec"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "tested"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "optional"
+      }
+     ],
+     "signature": "(self, dist: 'str', spec: 'str', tested: 'str' = '', optional: 'bool' = False) -> None"
+    }
    }
   },
   "RequirementStatus": {
@@ -997,24 +5322,84 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, requirement: 'Requirement', installed: 'str | None', in_spec: 'bool | None', is_tested: 'bool | None') -> None",
-    "label": "<property>"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "requirement"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "installed"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "in_spec"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "is_tested"
+      }
+     ],
+     "signature": "(self, requirement: 'Requirement', installed: 'str | None', in_spec: 'bool | None', is_tested: 'bool | None') -> None"
+    },
+    "label": {
+     "params": null,
+     "signature": "<property>"
+    }
    }
   },
   "check_backend": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "sim"
+    }
+   ],
    "signature": "(sim: 'SimType') -> 'BackendVersionReport'"
   },
   "doctor": {
    "kind": "function",
+   "params": [
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "sims"
+    }
+   ],
    "signature": "(sims: 'list[SimType] | None' = None) -> 'list[BackendVersionReport]'"
   },
   "enforce_backend_versions": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "sim"
+    }
+   ],
    "signature": "(sim: 'SimType') -> 'BackendVersionReport'"
   },
   "format_reports": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "reports"
+    }
+   ],
    "signature": "(reports: 'list[BackendVersionReport]') -> 'str'"
   }
  },
@@ -1025,28 +5410,293 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, scenario: 'ScenarioCfg', optional_queries: 'dict[str, BaseQueryType] | None' = None)",
-    "actions_cache": "<property>",
-    "close": "(self) -> 'None'",
-    "device": "<property>",
-    "flush_visual_updates": "(self, *, wait_for_materials: 'bool' = False, settle_passes: 'int' = 2) -> 'None'",
-    "get_action_dim": "(self) -> 'int'",
-    "get_action_joint_names": "(self) -> 'dict[str, list[str]]'",
-    "get_body_names": "(self, obj_name: 'str', sort: 'bool' = True) -> 'list[str]'",
-    "get_body_reindex": "(self, obj_name: 'str') -> 'list[int]'",
-    "get_extra": "(self)",
-    "get_joint_names": "(self, obj_name: 'str', sort: 'bool' = True) -> 'list[str]'",
-    "get_joint_reindex": "(self, obj_name: 'str', inverse: 'bool' = False) -> 'list[int]'",
-    "get_states": "(self, env_ids: 'list[int] | None' = None, mode: 'StateMode' = 'dict') -> 'StateOutput'",
-    "invalidate_state_caches": "(self) -> 'None'",
-    "launch": "(self) -> 'None'",
-    "num_envs": "<property>",
-    "refresh_render": "(self) -> 'None'",
-    "render": "(self) -> 'None'",
-    "set_dof_targets": "(self, actions: 'CompatActionInput') -> 'None'",
-    "set_seed": "(self, seed: 'int') -> 'None'",
-    "set_states": "(self, states: 'TensorState | DictStateBatch', env_ids: 'list[int] | None' = None) -> 'None'",
-    "simulate": "(self)"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scenario"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "optional_queries"
+      }
+     ],
+     "signature": "(self, scenario: 'ScenarioCfg', optional_queries: 'dict[str, BaseQueryType] | None' = None)"
+    },
+    "actions_cache": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "close": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "device": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "flush_visual_updates": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "wait_for_materials"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "settle_passes"
+      }
+     ],
+     "signature": "(self, *, wait_for_materials: 'bool' = False, settle_passes: 'int' = 2) -> 'None'"
+    },
+    "get_action_dim": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'int'"
+    },
+    "get_action_joint_names": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'dict[str, list[str]]'"
+    },
+    "get_body_names": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sort"
+      }
+     ],
+     "signature": "(self, obj_name: 'str', sort: 'bool' = True) -> 'list[str]'"
+    },
+    "get_body_reindex": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      }
+     ],
+     "signature": "(self, obj_name: 'str') -> 'list[int]'"
+    },
+    "get_extra": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self)"
+    },
+    "get_joint_names": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sort"
+      }
+     ],
+     "signature": "(self, obj_name: 'str', sort: 'bool' = True) -> 'list[str]'"
+    },
+    "get_joint_reindex": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "inverse"
+      }
+     ],
+     "signature": "(self, obj_name: 'str', inverse: 'bool' = False) -> 'list[int]'"
+    },
+    "get_states": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mode"
+      }
+     ],
+     "signature": "(self, env_ids: 'list[int] | None' = None, mode: 'StateMode' = 'dict') -> 'StateOutput'"
+    },
+    "invalidate_state_caches": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "launch": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "num_envs": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "refresh_render": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "render": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "set_dof_targets": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "actions"
+      }
+     ],
+     "signature": "(self, actions: 'CompatActionInput') -> 'None'"
+    },
+    "set_seed": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "seed"
+      }
+     ],
+     "signature": "(self, seed: 'int') -> 'None'"
+    },
+    "set_states": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, states: 'TensorState | DictStateBatch', env_ids: 'list[int] | None' = None) -> 'None'"
+    },
+    "simulate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self)"
+    }
    }
   }
  },
@@ -1057,20 +5707,128 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, scenario: 'ScenarioCfg', physics_handler: 'BaseSimHandler', render_handler: 'BaseSimHandler', optional_queries: 'dict[str, BaseQueryType] | None' = None)",
-    "close": "(self) -> 'None'",
-    "device": "<property>",
-    "launch": "(self) -> 'None'",
-    "render": "(self) -> 'None'",
-    "render_frame": "(self, view: 'str')",
-    "render_frames": "(self, views)",
-    "set_seed": "(self, seed: 'int') -> 'None'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scenario"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "physics_handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "render_handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "optional_queries"
+      }
+     ],
+     "signature": "(self, scenario: 'ScenarioCfg', physics_handler: 'BaseSimHandler', render_handler: 'BaseSimHandler', optional_queries: 'dict[str, BaseQueryType] | None' = None)"
+    },
+    "close": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "device": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "launch": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "render": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "render_frame": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "view"
+      }
+     ],
+     "signature": "(self, view: 'str')"
+    },
+    "render_frames": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "views"
+      }
+     ],
+     "signature": "(self, views)"
+    },
+    "set_seed": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "seed"
+      }
+     ],
+     "signature": "(self, seed: 'int') -> 'None'"
+    }
    }
   }
  },
  "metasim.sim.parallel": {
   "ParallelSimWrapper": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "base_cls"
+    }
+   ],
    "signature": "(base_cls: 'type[BaseSimHandler]') -> 'type[BaseSimHandler]'"
   }
  },
@@ -1079,7 +5837,26 @@
    "bases": [],
    "kind": "class",
    "methods": {
-    "__init__": "(self, scenario: 'ScenarioCfg', simulation_app: 'Any | None' = None)"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scenario"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "simulation_app"
+      }
+     ],
+     "signature": "(self, scenario: 'ScenarioCfg', simulation_app: 'Any | None' = None)"
+    }
    }
   }
  },
@@ -1088,27 +5865,117 @@
    "bases": [],
    "kind": "class",
    "methods": {
-    "__init__": "(self, scenario: 'BaseSimHandler | ScenarioCfg | None' = None, device: 'str | torch.device | None' = None) -> 'None'",
-    "action_space": "<property>",
-    "close": "(self) -> 'None'",
-    "extra_spec": "<property>",
-    "observation_space": "<property>",
-    "reset": "(self, states=None, env_ids: 'list[int] | None' = None, seed: 'int | None' = None) -> 'tuple[Obs, Info | None]'",
-    "step": "(self, actions: 'CompatActionInput') -> 'tuple[Obs, Reward, Success, TimeOut, Info | None]'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scenario"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "device"
+      }
+     ],
+     "signature": "(self, scenario: 'BaseSimHandler | ScenarioCfg | None' = None, device: 'str | torch.device | None' = None) -> 'None'"
+    },
+    "action_space": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "close": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "extra_spec": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "observation_space": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "seed"
+      }
+     ],
+     "signature": "(self, states=None, env_ids: 'list[int] | None' = None, seed: 'int | None' = None) -> 'tuple[Obs, Info | None]'"
+    },
+    "step": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "actions"
+      }
+     ],
+     "signature": "(self, actions: 'CompatActionInput') -> 'tuple[Obs, Reward, Success, TimeOut, Info | None]'"
+    }
    }
   }
  },
  "metasim.task.registry": {
   "get_task_class": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "name"
+    }
+   ],
    "signature": "(name: 'str') -> 'type[BaseTaskEnv]'"
   },
   "list_tasks": {
    "kind": "function",
+   "params": [],
    "signature": "()"
   },
   "register_task": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "VAR_POSITIONAL",
+     "name": "names"
+    }
+   ],
    "signature": "(*names)"
   }
  },
@@ -1119,15 +5986,107 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, scenario: 'ScenarioCfg', device: 'str | torch.device | None' = None) -> 'None'",
-    "action_space": "<property>",
-    "obs_buf": "<property>",
-    "observation_space": "<property>",
-    "priv_obs_buf": "<property>",
-    "render": "(self) -> 'np.ndarray'",
-    "reset": "(self, states=None, env_ids=None, seed: 'int | None' = None) -> 'tuple[torch.Tensor, Info]'",
-    "step": "(self, actions: 'CompatActionInput') -> 'tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]'",
-    "unnormalise_action": "(self, action: 'torch.Tensor') -> 'torch.Tensor'"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "scenario"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "device"
+      }
+     ],
+     "signature": "(self, scenario: 'ScenarioCfg', device: 'str | torch.device | None' = None) -> 'None'"
+    },
+    "action_space": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "obs_buf": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "observation_space": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "priv_obs_buf": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "render": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'np.ndarray'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "seed"
+      }
+     ],
+     "signature": "(self, states=None, env_ids=None, seed: 'int | None' = None) -> 'tuple[torch.Tensor, Info]'"
+    },
+    "step": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "actions"
+      }
+     ],
+     "signature": "(self, actions: 'CompatActionInput') -> 'tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]'"
+    },
+    "unnormalise_action": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "action"
+      }
+     ],
+     "signature": "(self, action: 'torch.Tensor') -> 'torch.Tensor'"
+    }
    }
   }
  },
@@ -1147,9 +6106,69 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, rgb: 'CameraRgbTensor | None', depth: 'CameraDepthTensor | None', instance_id_seg: 'CameraSegmentationTensor | None' = None, instance_id_seg_id2label: 'dict[int, str] | None' = None, instance_seg: 'CameraSegmentationTensor | None' = None, instance_seg_id2label: 'dict[int, str] | None' = None, pos: 'CameraPosTensor | None' = None, quat_world: 'CameraQuatTensor | None' = None, intrinsics: 'CameraIntrinsicsTensor | None' = None) -> None",
-    "quat_opengl": "<property>",
-    "quat_ros": "<property>"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "rgb"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "depth"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "instance_id_seg"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "instance_id_seg_id2label"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "instance_seg"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "instance_seg_id2label"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "quat_world"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "intrinsics"
+      }
+     ],
+     "signature": "(self, rgb: 'CameraRgbTensor | None', depth: 'CameraDepthTensor | None', instance_id_seg: 'CameraSegmentationTensor | None' = None, instance_id_seg_id2label: 'dict[int, str] | None' = None, instance_seg: 'CameraSegmentationTensor | None' = None, instance_seg_id2label: 'dict[int, str] | None' = None, pos: 'CameraPosTensor | None' = None, quat_world: 'CameraQuatTensor | None' = None, intrinsics: 'CameraIntrinsicsTensor | None' = None) -> None"
+    },
+    "quat_opengl": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "quat_ros": {
+     "params": null,
+     "signature": "<property>"
+    }
    }
   },
   "DictEnvState": {
@@ -1184,7 +6203,41 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, root_state: 'RootStateTensor', body_names: 'list[str] | None' = None, body_state: 'BodyStateTensor | None' = None, joint_pos: 'JointStateTensor | None' = None, joint_vel: 'JointStateTensor | None' = None) -> None"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "root_state"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "body_names"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "body_state"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_vel"
+      }
+     ],
+     "signature": "(self, root_state: 'RootStateTensor', body_names: 'list[str] | None' = None, body_state: 'BodyStateTensor | None' = None, joint_pos: 'JointStateTensor | None' = None, joint_vel: 'JointStateTensor | None' = None) -> None"
+    }
    }
   },
   "ObservationInfo": {
@@ -1222,7 +6275,56 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, root_state: 'RootStateTensor', body_names: 'list[str] | None' = None, body_state: 'BodyStateTensor | None' = None, joint_pos: 'JointStateTensor | None' = None, joint_vel: 'JointStateTensor | None' = None, joint_pos_target: 'JointStateTensor | None' = None, joint_vel_target: 'JointStateTensor | None' = None, joint_effort_target: 'JointStateTensor | None' = None) -> None"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "root_state"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "body_names"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "body_state"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_vel"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_pos_target"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_vel_target"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_effort_target"
+      }
+     ],
+     "signature": "(self, root_state: 'RootStateTensor', body_names: 'list[str] | None' = None, body_state: 'BodyStateTensor | None' = None, joint_pos: 'JointStateTensor | None' = None, joint_vel: 'JointStateTensor | None' = None, joint_pos_target: 'JointStateTensor | None' = None, joint_vel_target: 'JointStateTensor | None' = None, joint_effort_target: 'JointStateTensor | None' = None) -> None"
+    }
    }
   },
   "ShapeSpec": {
@@ -1232,7 +6334,21 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, dims: 'Tuple[Union[str, int], ...]') -> None"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "dims"
+      }
+     ],
+     "signature": "(self, dims: 'Tuple[Union[str, int], ...]') -> None"
+    }
    }
   },
   "TaskInfo": {
@@ -1252,27 +6368,93 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, objects: 'dict[str, ObjectState]', robots: 'dict[str, RobotState]', cameras: 'dict[str, CameraState]', extras: 'dict' = <factory>) -> None"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "objects"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "robots"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "cameras"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "extras"
+      }
+     ],
+     "signature": "(self, objects: 'dict[str, ObjectState]', robots: 'dict[str, RobotState]', cameras: 'dict[str, CameraState]', extras: 'dict' = <factory>) -> None"
+    }
    }
   }
  },
  "metasim.utils.configclass": {
   "configclass": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "cls"
+    },
+    {
+     "default": false,
+     "kind": "VAR_KEYWORD",
+     "name": "kwargs"
+    }
+   ],
    "signature": "(cls, **kwargs)"
   }
  },
  "metasim.utils.log": {
   "configure_logging": {
    "kind": "function",
+   "params": [
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "level"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "force"
+    }
+   ],
    "signature": "(level: 'str | None' = None, *, force: 'bool' = False) -> 'str | None'"
   },
   "reset_warn_once": {
    "kind": "function",
+   "params": [],
    "signature": "() -> 'None'"
   },
   "warn_once": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "key"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "message"
+    }
+   ],
    "signature": "(key: 'Hashable', message: 'str') -> 'bool'"
   }
  },
@@ -1290,7 +6472,51 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, level: 'str', passed: 'bool', tolerance: 'float', worst: 'float' = 0.0, worst_step: 'int' = -1, worst_key: 'str' = '', per_step: 'list[float]' = <factory>) -> None"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "level"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "passed"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "tolerance"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "worst"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "worst_step"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "worst_key"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "per_step"
+      }
+     ],
+     "signature": "(self, level: 'str', passed: 'bool', tolerance: 'float', worst: 'float' = 0.0, worst_step: 'int' = -1, worst_key: 'str' = '', per_step: 'list[float]' = <factory>) -> None"
+    }
    }
   },
   "Trajectory": {
@@ -1301,23 +6527,115 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, states: 'list[TensorState]', actions: 'list[torch.Tensor]') -> None"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "actions"
+      }
+     ],
+     "signature": "(self, states: 'list[TensorState]', actions: 'list[torch.Tensor]') -> None"
+    }
    }
   },
   "record": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "handler"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "initial_state"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "actions"
+    }
+   ],
    "signature": "(handler, initial_state: 'TensorState', actions: 'list[torch.Tensor]') -> 'Trajectory'"
   },
   "state_distance": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "a"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "b"
+    }
+   ],
    "signature": "(a: 'TensorState', b: 'TensorState') -> 'tuple[float, str]'"
   },
   "verify_action_replay": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "handler"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "traj"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "tol"
+    }
+   ],
    "signature": "(handler, traj: 'Trajectory', *, tol: 'float' = 0.0001) -> 'ReplayReport'"
   },
   "verify_state_replay": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "handler"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "traj"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "every"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "tol_roundtrip"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "tol_step"
+    }
+   ],
    "signature": "(handler, traj: 'Trajectory', *, every: 'int' = 10, tol_roundtrip: 'float' = 1e-06, tol_step: 'float' = 0.0001) -> 'tuple[ReplayReport, ReplayReport]'"
   }
  },
@@ -1332,57 +6650,215 @@
    ],
    "kind": "class",
    "methods": {
-    "__init__": "(self, module: 'str', cls: 'str', parallel: 'bool' = False, install_hint: 'str' = '') -> None"
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "module"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "cls"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "parallel"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "install_hint"
+      }
+     ],
+     "signature": "(self, module: 'str', cls: 'str', parallel: 'bool' = False, install_hint: 'str' = '') -> None"
+    }
    }
   },
   "get_ground": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "ground_name"
+    }
+   ],
    "signature": "(ground_name: 'str') -> 'GroundCfg'"
   },
   "get_handler": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "scenario"
+    },
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "optional_queries"
+    }
+   ],
    "signature": "(scenario, optional_queries=None)"
   },
   "get_robot": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "robot_name"
+    }
+   ],
    "signature": "(robot_name: 'str') -> 'RobotCfg'"
   },
   "get_scene": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "scene_name"
+    }
+   ],
    "signature": "(scene_name: 'str') -> 'SceneCfg'"
   },
   "get_sim_handler_class": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "sim"
+    }
+   ],
    "signature": "(sim: 'SimType')"
   }
  },
  "metasim.utils.state": {
   "action_input_to_dict_batch": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "handler"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "actions"
+    }
+   ],
    "signature": "(handler: 'BaseSimHandler', actions: 'CompatActionInput') -> 'ActionBatch'"
   },
   "action_input_to_tensor": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "handler"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "actions"
+    },
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "device"
+    }
+   ],
    "signature": "(handler: 'BaseSimHandler', actions: 'CompatActionInput', device: 'str | torch.device' = 'cpu') -> 'torch.Tensor'"
   },
   "adapt_actions_to_dict": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "handler"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "actions"
+    }
+   ],
    "signature": "(handler: 'BaseSimHandler', actions: 'CompatActionInput') -> 'dict[str, dict[str, dict[str, float]]]'"
   },
   "join_tensor_states": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "tensor_states"
+    }
+   ],
    "signature": "(tensor_states: 'list[TensorState]') -> 'TensorState'"
   },
   "list_state_to_tensor": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "handler"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "env_states"
+    },
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "device"
+    }
+   ],
    "signature": "(handler: 'BaseSimHandler', env_states: 'list[DictEnvState]', device: 'torch.device | str' = 'cpu') -> 'TensorState'"
   },
   "select_envs": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "state"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "env_ids"
+    }
+   ],
    "signature": "(state: 'TensorState', env_ids: 'list[int]') -> 'TensorState'"
   },
   "state_tensor_to_nested": {
    "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "handler"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "tensor_state"
+    }
+   ],
    "signature": "(handler: 'BaseSimHandler', tensor_state: 'TensorState') -> 'list[DictEnvState]'"
   }
  }

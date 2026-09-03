@@ -28,25 +28,81 @@ def test_public_api_matches_snapshot():
 
 
 def test_diff_api_detects_each_kind_of_break():
-    """Removed symbol/method/field and changed signatures are breaking; new ones are additions."""
+    """Removed symbol/method/field, lost defaults and new required parameters are breaking; new
+    optional parameters and new symbols are additions."""
+    from metasim.utils.api_surface import _params
+
+    def f_old(a, b=1): ...
+
+    def f_new_required(a, b): ...
+
+    def f_new_optional(a, b=1, *, c=None): ...
+
+    def m_old(self): ...
+
+    def m_new(self, n=1): ...
+
     old = {
         "m": {
-            "f": {"kind": "function", "signature": "(a, b=1)"},
-            "C": {"kind": "class", "bases": [], "methods": {"step": "(self)", "close": "(self)"}, "fields": ["x"]},
+            "f": {"kind": "function", "signature": "(a, b=1)", "params": _params(f_old)},
+            "g": {"kind": "function", "signature": "(a, b=1)", "params": _params(f_old)},
+            "C": {
+                "kind": "class",
+                "bases": [],
+                "methods": {
+                    "step": {"signature": "(self)", "params": _params(m_old)},
+                    "close": {"signature": "(self)", "params": _params(m_old)},
+                },
+                "fields": ["x"],
+            },
         }
     }
     new = {
         "m": {
-            "f": {"kind": "function", "signature": "(a)"},
-            "C": {"kind": "class", "bases": [], "methods": {"step": "(self, n=1)", "reset": "(self)"}, "fields": []},
-            "g": {"kind": "function", "signature": "()"},
+            "f": {"kind": "function", "signature": "(a, b)", "params": _params(f_new_required)},
+            "g": {"kind": "function", "signature": "(a, b=1, *, c=None)", "params": _params(f_new_optional)},
+            "C": {
+                "kind": "class",
+                "bases": [],
+                "methods": {
+                    "step": {"signature": "(self, n=1)", "params": _params(m_new)},
+                    "reset": {"signature": "(self)", "params": _params(m_old)},
+                },
+                "fields": [],
+            },
+            "h": {"kind": "function", "signature": "()", "params": []},
         }
     }
     breaking, additions = diff_api(old, new)
     assert [b.split(":")[0] for b in breaking] == [
-        "signature changed",
-        "signature changed",
+        "signature changed (parameter lost its default",
         "method removed",
         "field removed",
     ]
-    assert sorted(additions) == ["added: m.g", "method added: m.C.reset"]
+    assert sorted(additions) == [
+        "added: m.h",
+        "method added: m.C.reset",
+        "signature extended: m.C.step(self) -> (self, n=1)",
+        "signature extended: m.g(a, b=1) -> (a, b=1, *, c=None)",
+    ]
+
+
+def test_compare_params_rules():
+    """The exact rules callers rely on."""
+    from metasim.utils.api_surface import _params, compare_params
+
+    def base(a, b=1): ...
+
+    def renamed(a, c=1): ...
+
+    def reordered(b, a=1): ...
+
+    def kw_only(a, *, b=1): ...
+
+    def sink(a, b=1, **kw): ...
+
+    assert compare_params(_params(base), _params(base)) is None
+    assert compare_params(_params(base), _params(sink)) is None
+    assert "removed" in compare_params(_params(base), _params(renamed))
+    assert "kind changed" in compare_params(_params(base), _params(kw_only))
+    assert compare_params(_params(base), _params(reordered)) is not None
