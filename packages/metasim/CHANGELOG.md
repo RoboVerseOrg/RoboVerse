@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- References to the RoboVerse tutorials follow their move from `get_started/` to `examples/` (docs and test docstrings only; no behaviour change).
 - Extras are PyPI-installable: `newton>=1.5,<2` (PyPI wheel; the 1.5/1.6 shims are in `_newton_compat`) and `sapien2` → `mani-skill2==0.5.3` replace git URLs; `robo-splatter` (git-only) moves to `requirements/robosplatter.txt`; `[tool.uv] conflicts` marks the isaacsim / isaacsim211 / mjx / isaacgym extras mutually exclusive; `requires-python = ">=3.10,<3.13"`.
 - Moved into the RoboVerse monorepo as `packages/metasim`; version aligned to `1.0.0b0` (lockstep with `roboverse-py`). The standalone `RoboVerseOrg/MetaSim` repository becomes a read-only mirror for one release cycle.
 
@@ -31,10 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `hf_util.check_and_download_single`: a `roboverse_data/...` path evaluated from a working directory that is not the parent of `ROBOVERSE_DATA_DIR` was reported as a path-traversal attempt; the error now names the CWD / `ROBOVERSE_DATA_DIR` mismatch and where the asset already is. `test_check_and_download_single_falls_back_to_private_roboverse_data` no longer depends on the caller's `ROBOVERSE_DATA_DIR`.
 - Newton backend works again on the pinned newton (1.5/1.6): `joint_target_pos`/`joint_target_vel` and `num_worlds` are forwarded to their new names, position targets use `joint_target_q_start` (on newton >= 1.5 they follow the `joint_q` layout, so envs after a free-floating object were driven to the wrong joints), the tiled camera uses the 1.4+ `RenderConfig`/`utils`/`update` API with an untextured fallback, and `CameraState.depth` is `(N, H, W)`.
 - MuJoCo: `<size memory="512M">` is reserved by default; humanoid + mesh scenes no longer die with
-  `mj_stackAlloc: out of memory` (get_started/10_mount_camera.py).
+  `mj_stackAlloc: out of memory` (examples/10_mount_camera.py).
 - `hf_util`: a symlinked `roboverse_data` is no longer refused as path traversal; concurrent
   processes wait for an in-flight download instead of failing after 5 s (`ParallelSimWrapper`
-  workers, get_started/3_parallel_envs.py).
+  workers, examples/3_parallel_envs.py).
 - Tree is `ruff check` / `ruff format` clean at the pre-commit pin (0.14.5).
 
 ### Added
@@ -70,10 +71,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `hf_util.check_and_download_single`: a `roboverse_data/...` path evaluated from a working directory that is not the parent of `ROBOVERSE_DATA_DIR` was reported as a path-traversal attempt; the error now names the CWD / `ROBOVERSE_DATA_DIR` mismatch and where the asset already is. `test_check_and_download_single_falls_back_to_private_roboverse_data` no longer depends on the caller's `ROBOVERSE_DATA_DIR`.
 - Newton backend works again on the pinned newton (1.5/1.6): `joint_target_pos`/`joint_target_vel` and `num_worlds` are forwarded to their new names, position targets use `joint_target_q_start` (on newton >= 1.5 they follow the `joint_q` layout, so envs after a free-floating object were driven to the wrong joints), the tiled camera uses the 1.4+ `RenderConfig`/`utils`/`update` API with an untextured fallback, and `CameraState.depth` is `(N, H, W)`.
 - MuJoCo: `<size memory="512M">` is reserved by default; humanoid + mesh scenes no longer die with
-  `mj_stackAlloc: out of memory` (get_started/10_mount_camera.py).
+  `mj_stackAlloc: out of memory` (examples/10_mount_camera.py).
 - `hf_util`: a symlinked `roboverse_data` is no longer refused as path traversal; concurrent
   processes wait for an in-flight download instead of failing after 5 s (`ParallelSimWrapper`
-  workers, get_started/3_parallel_envs.py).
+  workers, examples/3_parallel_envs.py).
 - Tree is `ruff check` / `ruff format` clean at the pre-commit pin (0.14.5).
 
 

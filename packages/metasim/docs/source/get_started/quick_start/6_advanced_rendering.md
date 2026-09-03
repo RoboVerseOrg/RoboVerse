@@ -27,7 +27,7 @@ MetaSim supports multiple rendering techniques through Isaac Sim's rendering bac
 ## Running the Tutorial
 
 ```bash
-python get_started/6_advanced_rendering.py  --render.mode=[rasterization|raytracing|pathtracing|realtime_pathtracing]
+python examples/6_advanced_rendering.py  --render.mode=[rasterization|raytracing|pathtracing|realtime_pathtracing]
 ```
 you can also render in the headless mode by adding `--headless` flag. By using this, there will be no window popping up and the rendering will also be faster.
 
@@ -38,12 +38,12 @@ By running the above command, you will simulate a hybrid system and it will auto
 
 #### Ray Tracing
 ```bash
-python get_started/6_advanced_rendering.py  --render.mode=raytracing
+python examples/6_advanced_rendering.py  --render.mode=raytracing
 ```
 
 #### Path Tracing
 ```bash
-python get_started/6_advanced_rendering.py  --render.mode=pathtracing
+python examples/6_advanced_rendering.py  --render.mode=pathtracing
 ```
 
 

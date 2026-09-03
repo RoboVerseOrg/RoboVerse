@@ -36,7 +36,7 @@ RoboVerse/
 │   ├── scenes/                 # Scene configurations
 │   └── tasks/                  # Task configurations
 │
-├── get_started/                # Quick start examples
+├── examples/                # Quick start examples
 │   ├── motion_planning/        # Motion planning examples
 │   ├── rl/                     # RL examples
 │   └── dexhands/               # Dexterous hands examples

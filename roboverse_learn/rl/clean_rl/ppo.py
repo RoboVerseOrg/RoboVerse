@@ -283,7 +283,7 @@ if __name__ == "__main__":
         print(f"model saved to {model_path}")
 
         # Save model for RoboVerse inference
-        roboverse_model_path = f"get_started/output/rl/clean_rl_{args.task}_{args.sim}"
+        roboverse_model_path = f"examples/output/rl/clean_rl_{args.task}_{args.sim}"
         torch.save(agent.state_dict(), roboverse_model_path)
         print(f"RoboVerse model saved to {roboverse_model_path}")
 

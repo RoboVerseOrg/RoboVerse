@@ -5,7 +5,7 @@ This script provides an interactive keyboard control interface for real-time man
 ## Quick Start
 
 ```bash
-python get_started/obj_layout/object_layout_task.py
+python examples/obj_layout/object_layout_task.py
 ```
 
 ## Command Line Arguments
@@ -28,17 +28,17 @@ python get_started/obj_layout/object_layout_task.py
 
 ```bash
 # Basic usage (Viser + camera display enabled, gravity disabled)
-python get_started/obj_layout/object_layout_task.py
+python examples/obj_layout/object_layout_task.py
 
 # Minimal (no visualization)
-python get_started/obj_layout/object_layout_task.py --no-enable-viser --no-display-camera
+python examples/obj_layout/object_layout_task.py --no-enable-viser --no-display-camera
 
 # With gravity
-python get_started/obj_layout/object_layout_task.py --enable-gravity
+python examples/obj_layout/object_layout_task.py --enable-gravity
 
 # Different simulators
-python get_started/obj_layout/object_layout_task.py --sim mujoco
-python get_started/obj_layout/object_layout_task.py --sim genesis
+python examples/obj_layout/object_layout_task.py --sim mujoco
+python examples/obj_layout/object_layout_task.py --sim genesis
 ```
 
 ## Keyboard Controls
@@ -65,7 +65,7 @@ python get_started/obj_layout/object_layout_task.py --sim genesis
 
 ## Output Files
 
-**Press C** to save poses to `get_started/output/saved_poses_YYYYMMDD_HHMMSS.py`:
+**Press C** to save poses to `examples/output/saved_poses_YYYYMMDD_HHMMSS.py`:
 
 ```python
 poses = {

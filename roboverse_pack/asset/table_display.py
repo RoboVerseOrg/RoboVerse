@@ -500,7 +500,7 @@ if __name__ == "__main__":
     log.info("Press J to enter joint control mode")
     log.info("TAB to switch entity, C to save poses, ESC to quit\n")
 
-    os.makedirs("get_started/output", exist_ok=True)
+    os.makedirs("examples/output", exist_ok=True)
 
     step = 0
     running = True
@@ -523,7 +523,7 @@ if __name__ == "__main__":
         if save_poses:
             current_states = handler.get_states(mode="dict")
             saved_file = save_poses_to_file(
-                current_states, scenario.objects, scenario.robots, filename="get_started/output/saved_poses.py"
+                current_states, scenario.objects, scenario.robots, filename="examples/output/saved_poses.py"
             )
             log.info(f"Poses saved to: {saved_file}")
 

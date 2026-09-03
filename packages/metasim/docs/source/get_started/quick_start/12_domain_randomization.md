@@ -19,14 +19,14 @@ This tutorial shows how to use domain randomization during trajectory replay. We
 ## Quick Start
 
 ```bash
-python get_started/12_domain_randomization.py \
+python examples/12_domain_randomization.py \
     --scene_mode 1 \
     --level 2 \
     --seed 42 \
     --randomize_interval 60
 ```
 
-The script replays a close_box demonstration while applying randomization every 60 steps. Output video is saved to `get_started/output/12_dr_*.mp4`.
+The script replays a close_box demonstration while applying randomization every 60 steps. Output video is saved to `examples/output/12_dr_*.mp4`.
 
 ## Visual Examples
 

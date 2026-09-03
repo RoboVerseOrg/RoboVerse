@@ -1,7 +1,7 @@
 """The MuJoCo handler must reserve a large enough arena for humanoid + mesh scenes.
 
 MuJoCo >= 3 sizes its arena from ``<size memory>``; the compiler default made
-``get_started/10_mount_camera.py`` (H1 + objects) die with ``mj_stackAlloc: out of memory``.
+``examples/10_mount_camera.py`` (H1 + objects) die with ``mj_stackAlloc: out of memory``.
 """
 
 from __future__ import annotations

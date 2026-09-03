@@ -36,7 +36,19 @@ For development:
 python -m pip install -e "packages/metasim[dev,examples,mujoco]" -e ".[dev,mujoco]"
 ```
 
-Repository layout: `packages/metasim/` — simulator handlers, scenario config, task registry (its own `AGENTS.md`, `CHANGELOG.md`, tests); `roboverse_pack/` — tasks, robots, scenes; `roboverse_learn/` — RL/IL/VLA; `get_started/` — tutorials; `docs/` — the wiki.
+Repository layout (one directory per concern, no top-level scratch):
+
+| Directory | What lives there |
+|---|---|
+| `packages/metasim/` | the simulation core (`roboverse-metasim`): simulator handlers, scenario config, task registry, its own tests and docs |
+| `roboverse_pack/` | content: tasks, robots, scenes, grounds, queries, randomization (`roboverse-py`) |
+| `roboverse_learn/` | RL / IL / VLA training and evaluation code |
+| `examples/` | the numbered tutorial chain (`0_static_scene.py` → `16_…`) plus dexhands, RL, motion-planning and viewer demos |
+| `tests/` | RoboVerse content and integration tests (`pytest tests/`) |
+| `tools/` | maintained integrations and utilities: `*_integration/` (LIBERO, ManiSkill, mjlab, robosuite, RoboTwin, EmbodiedGen), `dashboard/`, asset upload |
+| `scripts/` | developer scripts (data collection, conversion, parity probes); being consolidated into `tools/` |
+| `docs/` | the Sphinx wiki (roboverse.wiki) |
+| `third_party/` | vendored / submodule dependencies (`curobo`, `gsnet`) |
 
 Please refer to the [documentation](https://roboverse.wiki/metasim/) for simulator-specific installation details.
 

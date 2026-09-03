@@ -55,12 +55,12 @@ namespacing is what keeps each agent's actions indexed by name.
 
 ## Runnable examples
 
-`get_started/8_multiagent_dataset.py` builds a coordinated two-Franka handover
+`examples/8_multiagent_dataset.py` builds a coordinated two-Franka handover
 trajectory, saves it as a real `*_v2.pkl`, loads it back through `get_traj`, and
 replays both arms simultaneously to video:
 
 ```bash
-MUJOCO_GL=egl python get_started/8_multiagent_dataset.py --sim mujoco
+MUJOCO_GL=egl python examples/8_multiagent_dataset.py --sim mujoco
 ```
 
 The same trajectory is also exposed as a registered task, so it replays through
@@ -72,13 +72,13 @@ MUJOCO_GL=egl python scripts/advanced/replay_demo.py \
     --task bimanual.franka_handover --sim mujoco --headless
 ```
 
-`get_started/9_maniskill_two_robot_stack_cube.py` does the same round trip with
+`examples/9_maniskill_two_robot_stack_cube.py` does the same round trip with
 **real ManiSkill data**: it fetches the official `TwoRobotStackCube-v1`
 demonstrations, converts one episode into the name-keyed `*_v2` format, loads
 both Panda arms through `get_traj`, and replays the recorded states on MuJoCo:
 
 ```bash
-MUJOCO_GL=egl python get_started/9_maniskill_two_robot_stack_cube.py --sim mujoco
+MUJOCO_GL=egl python examples/9_maniskill_two_robot_stack_cube.py --sim mujoco
 ```
 
 The ManiSkill `.h5` stores one articulation per agent
@@ -100,10 +100,10 @@ Two distinct cases share this format:
   one keyed entry per agent.
 
 The single-embodiment bimanual case is demonstrated by
-`get_started/10_robotwin_aloha_replay.py`, but note:
+`examples/10_robotwin_aloha_replay.py`, but note:
 
 ```{warning}
-`get_started/10_robotwin_aloha_replay.py` is **experimental** and **not
+`examples/10_robotwin_aloha_replay.py` is **experimental** and **not
 out-of-the-box** (unlike examples 8 and 9, which run from a clean MuJoCo
 install). It needs a local RoboTwin clone, its ~3.74 GB asset pack, a separate
 `robotwin` conda env, and a curobo build for the local GPU arch to collect a
