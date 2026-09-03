@@ -25,3 +25,5 @@ And install the [ruff vscode extension](https://marketplace.visualstudio.com/ite
 The `.vscode/settings.json` is configured aligning with the pre-commit hooks. Whenever you save the file, it will be formatted automatically.
 
 To migrate new tasks, please refer to the [developer guide](https://roboverse.wiki/metasim/developer_guide/new_task).
+
+Branches, pull-request gates, versioning and the release checklist are defined in [`RELEASING.md`](./RELEASING.md); engineering rules in [`AGENTS.md`](./AGENTS.md).

@@ -9,7 +9,7 @@ description = "RoboVerse content, learning, and examples built on MetaSim"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
-    "metasim @ git+https://github.com/RoboVerseOrg/MetaSim.git@main",
+    "roboverse-metasim @ git+https://github.com/RoboVerseOrg/MetaSim.git@main",
     "gymnasium",
     "loguru",
     "numpy",
@@ -23,7 +23,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "ruff",
-    "metasim[dev] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main",
+    "roboverse-metasim[dev] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main",
 ]
 assets = ["huggingface-hub", "rootutils", "tyro"]
 examples = [
@@ -70,18 +70,18 @@ vla = [
     "tensorflow-hub",
     "transformers",
 ]
-genesis = ["metasim[genesis] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-isaacgym = ["metasim[isaacgym] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-isaacsim = ["metasim[isaacsim] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-isaacsim211 = ["metasim[isaacsim211] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-mjx = ["metasim[mjx] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-mujoco = ["metasim[mujoco] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-newton = ["metasim[newton] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-superdex = ["metasim[superdex] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]  # Python 3.12 only
-pybullet = ["metasim[pybullet] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-robosplatter = ["metasim[robosplatter] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-sapien2 = ["metasim[sapien2] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
-sapien3 = ["metasim[sapien3] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+genesis = ["roboverse-metasim[genesis] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+isaacgym = ["roboverse-metasim[isaacgym] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+isaacsim = ["roboverse-metasim[isaacsim] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+isaacsim211 = ["roboverse-metasim[isaacsim211] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+mjx = ["roboverse-metasim[mjx] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+mujoco = ["roboverse-metasim[mujoco] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+newton = ["roboverse-metasim[newton] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+superdex = ["roboverse-metasim[superdex] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]  # Python 3.12 only
+pybullet = ["roboverse-metasim[pybullet] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+robosplatter = ["roboverse-metasim[robosplatter] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+sapien2 = ["roboverse-metasim[sapien2] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
+sapien3 = ["roboverse-metasim[sapien3] @ git+https://github.com/RoboVerseOrg/MetaSim.git@main"]
 
 [project.entry-points."metasim.packages"]
 roboverse_pack = "roboverse_pack"
