@@ -3,8 +3,7 @@
 ## 1. Install
 
 ```bash
-cd roboverse_learn/il/policies/dp
-pip install -r requirements.txt
+python -m pip install -e ".[learn]"   # from the repository root
 ```
 
 Register for a Weights & Biases (wandb) account to obtain an API key.
