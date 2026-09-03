@@ -247,3 +247,10 @@ markers = [
     "requires_optional(*modules, extra=None): skip unless the optional dependencies are installed",
     "requires_asset(*relpaths): skip unless the roboverse_data assets are present",
 ]
+
+[tool.coverage.run]
+omit = ["*/test/*", "*/tests/*", "*/__main__.py"]
+
+[tool.coverage.report]
+skip_empty = true
+precision = 1

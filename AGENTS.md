@@ -174,6 +174,9 @@ RoboVerse uses **ruff** (lint + format) and **pre-commit**. The authoritative co
 
 ## Testing
 
+- Coverage floors live in `.github/workflows/tests.yml` (`--cov-fail-under`): MetaSim's
+  simulator-free suite and the RoboVerse `tests/` suite each have one. They only move up. When a PR
+  lifts coverage, raise the floor in the same PR; a PR must not lower it to get green.
 - RoboVerse content/integration tests live in `tests/` (`test_*.py`, functions `test_*`); run with
   `python -m pytest tests/`. Core simulator tests live in `packages/metasim/metasim/test` — run them
   from `packages/metasim` (`python -m pytest -k general`), following that package's `AGENTS.md`.
