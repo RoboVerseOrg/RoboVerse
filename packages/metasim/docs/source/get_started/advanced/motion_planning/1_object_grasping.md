@@ -7,7 +7,7 @@ First, you need to install [cuRobo](../../advanced_installation/curobo.md) and [
 
 Then run:
 ```bash
-python get_started/motion_planning/1_object_grasping.py --sim <simulator>
+python examples/motion_planning/1_object_grasping.py --sim <simulator>
 ```
 
 ## Inference GSNet

@@ -153,7 +153,7 @@ def train_ppo():
 
     # Save the model
 
-    model.save(f"get_started/output/rl/0_ppo_reaching_{args.sim}")
+    model.save(f"examples/output/rl/0_ppo_reaching_{args.sim}")
 
     env.close()
 
@@ -170,10 +170,10 @@ def train_ppo():
     env_inference = task_cls(scenario_inference, device=device)
     env_inference = VecEnvWrapper(env_inference)
 
-    obs_saver = ObsSaver(video_path=f"get_started/output/rl/0_ppo_reaching_{args.sim}.mp4")
+    obs_saver = ObsSaver(video_path=f"examples/output/rl/0_ppo_reaching_{args.sim}.mp4")
 
     # load the model
-    model = PPO.load(f"get_started/output/rl/0_ppo_reaching_{args.sim}")
+    model = PPO.load(f"examples/output/rl/0_ppo_reaching_{args.sim}")
 
     # inference
     obs = env_inference.reset()

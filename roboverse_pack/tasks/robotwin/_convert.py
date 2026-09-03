@@ -1,6 +1,6 @@
 """Shared RoboTwin -> RoboVerse trajectory converter (single source of truth).
 
-Both the replay example (``get_started/10_robotwin_aloha_replay.py``) and the
+Both the replay example (``examples/10_robotwin_aloha_replay.py``) and the
 parity harness (``tools/robotwin_integration/parity_robotwin.py``) convert a
 RoboTwin bridge pickle into RoboVerse's name-keyed ``*_v2`` format through this
 module, so the joint mapping is defined in exactly one place.

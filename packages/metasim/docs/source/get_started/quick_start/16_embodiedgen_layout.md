@@ -32,17 +32,17 @@ For more information on generating layout scenes, please refer to the [EmbodiedG
 
 ## Common Usage
 ```bash
-python get_started/16_embodiedgen_layout.py  --sim <simulator>
+python examples/16_embodiedgen_layout.py  --sim <simulator>
 ```
 
 In headless mode:
 ```bash
-python get_started/16_embodiedgen_layout.py  --sim isaacsim --headless
-python get_started/16_embodiedgen_layout.py  --sim isaacgym --headless
-MUJOCO_GL=egl python get_started/16_embodiedgen_layout.py  --sim mujoco --headless
-python get_started/16_embodiedgen_layout.py  --sim genesis --headless
-python get_started/16_embodiedgen_layout.py  --sim sapien3 --headless
-python get_started/16_embodiedgen_layout.py  --sim pybullet --headless
+python examples/16_embodiedgen_layout.py  --sim isaacsim --headless
+python examples/16_embodiedgen_layout.py  --sim isaacgym --headless
+MUJOCO_GL=egl python examples/16_embodiedgen_layout.py  --sim mujoco --headless
+python examples/16_embodiedgen_layout.py  --sim genesis --headless
+python examples/16_embodiedgen_layout.py  --sim sapien3 --headless
+python examples/16_embodiedgen_layout.py  --sim pybullet --headless
 ```
 
 You will get the following result:

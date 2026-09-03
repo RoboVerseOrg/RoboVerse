@@ -11,7 +11,7 @@ This repository is a monorepo with two layers that ship as separate packages:
   simulator backends. Its rules live in [`packages/metasim/AGENTS.md`](packages/metasim/AGENTS.md) —
   follow that file for anything touching core, backends, or the `metasim/test` suite.
 - **RoboVerse** (repo root, distribution `roboverse-py`) owns tasks, robots, scenes, grounds, assets,
-  learning code (`roboverse_learn`), examples (`get_started`), tooling, and reports. It depends on
+  learning code (`roboverse_learn`), examples (`examples/`), tooling, and reports. It depends on
   `roboverse-metasim` at the same version; both are released from one tag.
 
 The goals here are:
@@ -81,7 +81,7 @@ PyBullet, IsaacSim, etc. Treat parity as a correctness contract:
 - Prefer extending an existing task family over a new top-level scaffold when the new task is a
   variant. Keep additions additive — do not modify unrelated legacy task files to make a new one work.
 - Register learning entry points and example usage where the existing ones live
-  (`roboverse_learn/{rl,il,vla}`, `get_started/`); don't scatter new top-level scripts.
+  (`roboverse_learn/{rl,il,vla}`, `examples/`); don't scatter new top-level scripts.
 
 ## Third-Party Code: Attribution Is Mandatory
 

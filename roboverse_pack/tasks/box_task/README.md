@@ -42,7 +42,7 @@ hook is needed.
 
 ## Replay rendering
 
-`get_started/replay_multi_scene_render.py` is the task-agnostic
+`examples/replay_multi_scene_render.py` is the task-agnostic
 replay-render CLI.
 
 ### Mujoco (no extra setup)
@@ -51,7 +51,7 @@ Mujoco needs neither USD scenes nor a GPU rendering pipeline; pass
 `--simulator mujoco --scenes none` to render the bare scenario:
 
 ```bash
-MUJOCO_GL=egl python get_started/replay_multi_scene_render.py \
+MUJOCO_GL=egl python examples/replay_multi_scene_render.py \
     --task box_task.replay \
     --simulator mujoco --scenes none \
     --duration-sec 10 --fps 30 --width 512 --height 512 \
@@ -61,7 +61,7 @@ MUJOCO_GL=egl python get_started/replay_multi_scene_render.py \
 ### IsaacSim (photoreal, switchable Kujiale backgrounds)
 
 ```bash
-python get_started/replay_multi_scene_render.py \
+python examples/replay_multi_scene_render.py \
     --task box_task.replay \
     --scenes 0021,0022,0024,0025,0031 \
     --render-mode raytracing \
@@ -71,7 +71,7 @@ python get_started/replay_multi_scene_render.py \
 Higher-quality 22.5 s pathtraced version:
 
 ```bash
-python get_started/replay_multi_scene_render.py \
+python examples/replay_multi_scene_render.py \
     --task box_task.replay \
     --scenes 0021,0022,0024,0025,0031 \
     --render-mode pathtracing \

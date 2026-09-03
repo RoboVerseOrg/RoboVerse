@@ -53,7 +53,7 @@ roots = ["my_project"]
 Run the following command to test the reliability of the robot:
 
 ```bash
-python scripts/advanced/random_action.py --sim=${your_simulator} --robot=${robot_name}
+python examples/1_control_robot.py --sim ${your_simulator} --robot ${robot_name}
 ```
 
 Please make sure the robot_name is same as above. Either in camel case (e.g. `--robot=FrankaPanda`) or snake case (e.g. `--robot=franka_panda`).

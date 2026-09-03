@@ -29,17 +29,17 @@ pip install -e .[robosplatter]
 ## Running the Tutorial
 
 ```bash
-python get_started/15_gs_background.py  --sim <simulator>
+python examples/15_gs_background.py  --sim <simulator>
 ```
 
 In headless mode:
 ```bash
-python3 get_started/15_gs_background.py --sim pybullet --headless
-python3 get_started/15_gs_background.py --sim sapien3 --headless
-python3 get_started/15_gs_background.py --sim genesis --headless
-MUJOCO_GL=egl python3 get_started/15_gs_background.py --sim mujoco --headless
-python3 get_started/15_gs_background.py --sim isaacgym --headless
-python3 get_started/15_gs_background.py --sim isaacsim --headless
+python3 examples/15_gs_background.py --sim pybullet --headless
+python3 examples/15_gs_background.py --sim sapien3 --headless
+python3 examples/15_gs_background.py --sim genesis --headless
+MUJOCO_GL=egl python3 examples/15_gs_background.py --sim mujoco --headless
+python3 examples/15_gs_background.py --sim isaacgym --headless
+python3 examples/15_gs_background.py --sim isaacsim --headless
 ```
 
 ## Expected Output

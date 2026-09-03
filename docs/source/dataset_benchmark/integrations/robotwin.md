@@ -885,7 +885,7 @@ The bridge is two halves, one per conda env, hand-off via a plain pickle:
    drives the robot by command targets and lets objects move by contact
    (for object-pose parity). `--rt` ray-traces to match RoboTwin;
    `--observer-cam --cam-pos/--cam-lookat/--fovy` set a matched camera.
-   (`get_started/10_robotwin_aloha_replay.py` is the minimal get-started
+   (`examples/10_robotwin_aloha_replay.py` is the minimal get-started
    version with a primitive object proxy.)
 3. **Measure parity** (`roboverse` env) —
    `tools/robotwin_integration/parity_robotwin.py` reports the per-joint

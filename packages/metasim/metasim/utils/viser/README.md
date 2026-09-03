@@ -50,10 +50,10 @@ viser_env.close()
 
 ```bash
 # 启用 Viser 可视化
-python get_started/rl/fast_td3/1_fttd3.py --viser-port 8080
+python examples/rl/fast_td3/1_fttd3.py --viser-port 8080
 
 # 不使用可视化（默认）
-python get_started/rl/fast_td3/1_fttd3.py
+python examples/rl/fast_td3/1_fttd3.py
 ```
 
 配置示例：

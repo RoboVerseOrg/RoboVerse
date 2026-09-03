@@ -20,9 +20,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-_GET_STARTED = Path(__file__).resolve().parents[1] / "get_started"
+_GET_STARTED = Path(__file__).resolve().parents[1] / "examples"
 
-# The get_started examples are runnable scripts: they import the example-runner deps
+# The examples are runnable scripts: they import the example-runner deps
 # (rootutils/tyro/rich) at module scope, and example 9 also needs h5py to read the demo.
 # Loading one therefore needs those extras, even though the converter logic under test is pure.
 requires_example_deps = pytest.mark.requires_optional("rootutils", "tyro", "rich", extra="examples")
@@ -30,7 +30,7 @@ requires_h5py = pytest.mark.requires_optional("h5py", extra="learn")
 
 
 def _load_example(filename: str):
-    """Import a ``get_started/NN_*.py`` example module by file path.
+    """Import a ``examples/NN_*.py`` example module by file path.
 
     The module is registered in ``sys.modules`` before execution so that the
     ``@dataclass`` / ``@configclass`` definitions in the example can resolve

@@ -16,7 +16,7 @@
 ## Running the Tutorial
 
 ```bash
-python get_started/0_static_scene.py  --sim <simulator>
+python examples/0_static_scene.py  --sim <simulator>
 ```
 you can also render in the headless mode by adding `--headless` flag. By using this, there will be no window popping up and the rendering will also be faster.
 
@@ -24,40 +24,40 @@ you can also render in the headless mode by adding `--headless` flag. By using t
 
 #### Isaac Sim
 ```bash
-python get_started/0_static_scene.py  --sim isaacsim
+python examples/0_static_scene.py  --sim isaacsim
 ```
 
 #### Isaac Gym
 ```bash
-python get_started/0_static_scene.py  --sim isaacgym
+python examples/0_static_scene.py  --sim isaacgym
 ```
 
 #### Mujoco
 ```bash
 # For mac users, replace python with mjpython.
-python get_started/0_static_scene.py  --sim mujoco --headless
+python examples/0_static_scene.py  --sim mujoco --headless
 ```
 Note that we find the `non-headless` mode of Mujoco is not stable. So we recommend using the `headless` mode.
 
 #### Genesis
 ```bash
-python get_started/0_static_scene.py  --sim genesis
+python examples/0_static_scene.py  --sim genesis
 ```
 Note that we find the `headless` mode of Genesis is not stable. So we recommend using the `non-headless` mode.
 
 #### Sapien
 ```bash
-python get_started/0_static_scene.py  --sim sapien3
+python examples/0_static_scene.py  --sim sapien3
 ```
 
 #### Pybullet
 ```bash
-python get_started/0_static_scene.py  --sim pybullet
+python examples/0_static_scene.py  --sim pybullet
 ```
 
 #### Newton
 ```bash
-python get_started/0_static_scene.py  --sim newton
+python examples/0_static_scene.py  --sim newton
 ```
 
 

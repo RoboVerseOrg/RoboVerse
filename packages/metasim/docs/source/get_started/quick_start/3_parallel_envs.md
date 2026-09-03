@@ -16,7 +16,7 @@
 ## Running the Tutorial
 
 ```bash
-python get_started/3_parallel_envs.py  --sim <simulator> --num_envs <num_envs>
+python examples/3_parallel_envs.py  --sim <simulator> --num_envs <num_envs>
 ```
 you can also render in the headless mode by adding `--headless` flag. By using this, there will be no window popping up and the rendering will also be faster.
 
@@ -27,30 +27,30 @@ By running the above command, you will run multiple environments in parallel and
 
 #### IsaacSim
 ```bash
-python get_started/3_parallel_envs.py  --sim isaacsim --num_envs 4
+python examples/3_parallel_envs.py  --sim isaacsim --num_envs 4
 ```
 
 #### Isaac Gym
 ```bash
-python get_started/3_parallel_envs.py  --sim isaacgym --num_envs 4
+python examples/3_parallel_envs.py  --sim isaacgym --num_envs 4
 ```
 
 #### Genesis
 ```bash
-python get_started/3_parallel_envs.py  --sim genesis --num_envs 4
+python examples/3_parallel_envs.py  --sim genesis --num_envs 4
 ```
 Note that we find the `headless` mode of Genesis is not stable. So we recommend using the `non-headless` mode.
 
 #### Mujoco
 ```bash
 # For mac users, replace python with mjpython
-python get_started/3_parallel_envs.py  --sim mujoco --num_envs 4 --headless
+python examples/3_parallel_envs.py  --sim mujoco --num_envs 4 --headless
 ```
 **If you are on mac**, please avoid running this task without the `headless` tag.
 
 #### Newton
 ```bash
-python get_started/3_parallel_envs.py  --sim newton --num_envs 4
+python examples/3_parallel_envs.py  --sim newton --num_envs 4
 ```
 
 We can open multiple environments at the same time.

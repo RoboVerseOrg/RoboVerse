@@ -455,7 +455,7 @@ class MujocoHandler(BaseSimHandler):
         self._configure_self_collision_policy(mjcf_model)
         # MuJoCo >= 3.x sizes its arena from `<size memory>` (the legacy njmax/nconmax hints no longer
         # grow it). The compiler default is far too small for humanoids + mesh objects: e.g. the H1 scene
-        # in get_started/10_mount_camera.py dies with "mj_stackAlloc: out of memory ... ncon = 286".
+        # in examples/10_mount_camera.py dies with "mj_stackAlloc: out of memory ... ncon = 286".
         # Reserve a generous arena unless the scene MJCF already sets one.
         if getattr(mjcf_model.size, "memory", None) is None:
             mjcf_model.size.memory = MUJOCO_ARENA_MEMORY

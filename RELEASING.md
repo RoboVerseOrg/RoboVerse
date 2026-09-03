@@ -23,7 +23,7 @@ keep both in sync.
 - Required checks: `lint` (ruff check + format at the pre-commit pin), `tests` (the whole
   `tests/` suite on CPU; tests that need a GPU simulator or `roboverse_data` skip with a reason),
   `task-contract`, `pr-title`, and `changelog` (every PR that touches `roboverse_pack/`,
-  `roboverse_learn/`, `scripts/` or `get_started/` adds a line under `## [Unreleased]` in
+  `roboverse_learn/`, `scripts/` or `examples/` adds a line under `## [Unreleased]` in
   `CHANGELOG.md`, or carries the `no-changelog` label).
 - Simulator-backed parity runs (`scripts/parity_*.py`, `scripts/eval_*_cross_sim.py`) are executed
   locally before a release (§4) and their numbers go into the release notes.
@@ -59,7 +59,6 @@ keep both in sync.
    - bumps `[project] version` in `pyproject.toml`,
    - renames `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD` and adds a fresh
      empty `## [Unreleased]`,
-   - updates `RELEASE_NOTES_NEXT.md` if it is used for the GitHub release text.
 4. Merge it, then tag the squash commit: `git tag -a vX.Y.Z -m "RoboVerse vX.Y.Z" && git push origin vX.Y.Z`.
 5. `release.yml` runs on the tag: it verifies the tag equals the `pyproject.toml` version, builds
    the sdist and wheel, checks them with `twine`, creates the GitHub Release with the matching

@@ -203,15 +203,15 @@ roboverse_pack = [
 "tools/**.py" = ["T20", "D"]  # research / diagnostic harnesses
 "roboverse_pack/tasks/maniskill/utils/**.py" = ["T20", "D"]
 ## For get_started scripts, allow no docstrings
-"get_started/**.py" = ["D"]
-"generation/enums.py" = ["UP035"]
+"examples/**.py" = ["D"]
+"tools/embodiedgen_integration/enums.py" = ["UP035"]
 "roboverse_pack/tasks/humanoid/base/types.py" = ["UP007"]
 ## For special tasks, allow no docstrings
 "roboverse_pack/tasks/maniskill/{pick_single_egad,pick_single_ycb,peg_insertion_side}.py" = ["D"]
 "roboverse_pack/tasks/open6dor/task/**.py" = ["D"]
 ## For python files in docs and dashboard folder, allow no docstrings
 "docs/**.py" = ["D"]
-"dashboard/**.py" = ["D"]
+"tools/dashboard/**.py" = ["D"]
 ## Test names should carry behavior; requiring docstrings makes tests noisy
 "tests/**.py" = ["D"]
 ## For tasks, allow no docstrings in public modules

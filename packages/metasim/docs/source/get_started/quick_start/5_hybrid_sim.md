@@ -18,7 +18,7 @@ Hybrid simulation allows you to combine a fast physics engine with a high-qualit
 ## Running the Tutorial
 
 ```bash
-python get_started/5_hybrid_sim.py  --sim <simulator> --renderer <renderer>
+python examples/5_hybrid_sim.py  --sim <simulator> --renderer <renderer>
 ```
 you can also render in the headless mode by adding `--headless` flag. By using this, there will be no window popping up and the rendering will also be faster.
 
@@ -29,7 +29,7 @@ By running the above command, you will simulate a hybrid system and it will auto
 
 #### IsaacSim + Mujoco
 ```bash
-python get_started/5_hybrid_sim.py  --sim mujoco --renderer isaacsim
+python examples/5_hybrid_sim.py  --sim mujoco --renderer isaacsim
 ```
 
 You will get the following videos:

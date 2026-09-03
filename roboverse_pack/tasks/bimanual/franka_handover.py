@@ -1,7 +1,7 @@
 """A runnable multi-agent (bimanual) demo task: two Franka arms, one trajectory.
 
 This is the registered, pipeline-driven counterpart to the standalone example
-``get_started/8_multiagent_dataset.py``. Because the task scenario declares **two
+``examples/8_multiagent_dataset.py``. Because the task scenario declares **two
 robots** (``franka_left`` / ``franka_right``), the canonical replay pipeline
 ``scripts/advanced/replay_demo.py`` passes the full robot list to ``get_traj``
 and drives both arms from one trajectory file::

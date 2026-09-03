@@ -35,7 +35,7 @@ below. If you cannot name the upstream and its license, do not merge it.
 | Path in this repo | Upstream | License | Relationship | License text |
 |---|---|---|---|---|
 | `roboverse_learn/rl/fast_td3/` | [FastTD3](https://github.com/younggyoseo/FastTD3) © 2025 Younggyo Seo | MIT | Vendored | `roboverse_learn/rl/fast_td3/LICENSE` |
-| `get_started/rl/fast_td3/` | [FastTD3](https://github.com/younggyoseo/FastTD3) © 2025 Younggyo Seo | MIT | Vendored | `get_started/rl/fast_td3/LICENSE` |
+| `examples/rl/fast_td3/` | [FastTD3](https://github.com/younggyoseo/FastTD3) © 2025 Younggyo Seo | MIT | Vendored | `examples/rl/fast_td3/LICENSE` |
 | `roboverse_learn/rl/clean_rl/` | [CleanRL](https://github.com/vwxyzjn/cleanrl) © 2019 CleanRL developers | MIT | Adapted | `roboverse_learn/rl/clean_rl/LICENSE` |
 | `roboverse_learn/rl/clean_rl/buffer.py` | [stable-baselines3](https://github.com/DLR-RM/stable-baselines3) © 2019 Antonin Raffin | MIT | Adapted | `roboverse_learn/rl/clean_rl/LICENSE.stable-baselines3` |
 | `roboverse_learn/il/policies/dp/` | [diffusion_policy](https://github.com/real-stanford/diffusion_policy) © 2023 Columbia AI & Robotics Lab | MIT | Vendored | `roboverse_learn/il/policies/dp/LICENSE` |
@@ -171,7 +171,7 @@ that requirement. For reference, the MIT texts live at:
 
 | Upstream | In-tree license text |
 |---|---|
-| FastTD3 | `roboverse_learn/rl/fast_td3/LICENSE`, `get_started/rl/fast_td3/LICENSE` |
+| FastTD3 | `roboverse_learn/rl/fast_td3/LICENSE`, `examples/rl/fast_td3/LICENSE` |
 | CleanRL | `roboverse_learn/rl/clean_rl/LICENSE` |
 | stable-baselines3 | `roboverse_learn/rl/clean_rl/LICENSE.stable-baselines3` |
 | diffusion_policy | `roboverse_learn/il/policies/dp/LICENSE` |

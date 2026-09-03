@@ -13,6 +13,8 @@ release.
 ## [Unreleased]
 
 ### Changed
+- `scripts/` triage: 16 scripts that imported symbols removed before 1.0 (`get_sim_env_class`, `metasim.cfg`, `metasim.sim.EnvWrapper`, `metasim.sim.isaaclab`, …) are deleted (`random_action*`, `motion_planning*`, `train_ppo*`, `replay_state`, `replay_real_asset`, `retarget_demo`, `run_bidexbench_cube_reach`, `clean_usd`, `convert_traj_v1_to_v2`, `test_usd`); their documented uses now point at the `examples/` equivalents. The personal experiment runner (`run_multi.*`), hard-coded conda paths in `run_openvla_eval.sh` (now `OPENVLA_PYTHON` / `LIBEROPLUS_PYTHON`) and committed evaluation results under `scripts/policy/ckpt/` are gone.
+- Repository layout: the tutorials moved from `get_started/` to `examples/` (same files, same numbering; `python examples/0_static_scene.py …`), the EmbodiedGen asset tooling from `generation/` to `tools/embodiedgen_integration/` (import path `tools.embodiedgen_integration`), and the test dashboard from `dashboard/` to `tools/dashboard/`; the legacy `release/` scaffold and `RELEASE_NOTES_NEXT.md` are removed (the CHANGELOG is the release text). Every in-repo reference was rewritten; the docs site paths (`roboverse.wiki/metasim/get_started/...`) are unchanged.
 - The mjlab v2 tasks (go1 / g1 velocity, yam lift-cube) declare `supported_simulators = ("mujoco", "newton")`; requesting another backend now fails at construction with a clear message instead of inside the backend.
 - Packaging hygiene: `requires-python = ">=3.10,<3.13"` and ruff `target-version = "py310"` in both packages (old-style typing rewritten by ruff where safe); the CHANGELOG release header is `[1.0.0b0]`, matching the `pyproject` version `release.yml` checks; a `release-dry-run` CI job builds both distributions on every PR, runs `twine check --strict`, and fails on direct-URL dependencies (PyPI rejects them) or mismatched package versions.
 - `roboverse_learn` is linted and formatted by ruff like the rest of the tree (it was in `extend-exclude`, so CI never parsed its 26k lines): 97 auto-fixes applied (unused imports, import order, f-strings), `super(__class__, self)` / nested `max` / `stacklevel` / mutable-default findings fixed, an undefined `lighten` removed from `pymunk_override.__all__`; the remaining style families (`FA100`, `UP006`, `UP045`, `E731`, `B006`, `RUF013`, `F811`) are per-file-ignored for that directory as tracked debt.
@@ -58,7 +60,7 @@ release.
 - mjlab DR events (`geom_friction`, `body_mass`, `body_com_offset`, `push_by_setting_velocity`) silently no-oped on every backend but single-env MuJoCo, so multi-env Go1 training ran with zero domain randomization; they now write the Newton model (verified on a real 2-env Newton Go1) and raise `NotImplementedError` on backends without support (MJX/IsaacSim runs must drop the EventTerms) instead of skipping.
 - Native LIBERO `Open`/`Close`/`TurnOn`/`TurnOff` predicates always evaluated False on
   mujoco >= 3.x (`numpy.int32 in (mjtJoint...)` membership).
-- `get_started/multiple_cameras.py` passed a removed `ScenarioCfg` kwarg.
+- `examples/multiple_cameras.py` passed a removed `ScenarioCfg` kwarg.
 - Stale test expectations (docs build layout, `LiberoBaseTask.reset` stubs after the `seed` change).
 - Red flags: SSH submodule URL, dangling `release/metasim` symlink, silent `except: pass` around
   passthrough registration, hard-coded personal paths in scripts/tests, untruthful
@@ -117,7 +119,7 @@ The release is forward- and backward-compatible.
 
 ### Fixed
 
-- **`get_started/0_static_scene.py`** — gracefully skips the cameras-empty
+- **`examples/0_static_scene.py`** — gracefully skips the cameras-empty
   case instead of crashing on first-time setup.
 - **mjlab tooling paths** — lint-clean across mjlab/maniskill tasks;
   tooling paths made portable (no hardcoded `/home/ghr/...`).

@@ -16,7 +16,7 @@
 ## Running the Tutorial
 
 ```bash
-python get_started/10_mount_camera.py  --sim <simulator>
+python examples/10_mount_camera.py  --sim <simulator>
 ```
 you can also render in the headless mode by adding `--headless` flag, only supported in `IsaacGym` and `IsaacSim`.
 

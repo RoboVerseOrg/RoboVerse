@@ -10,15 +10,15 @@ Based on [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3), this 
 
 ```bash
 # Basic PPO training with Franka robot
-python get_started/rl/0_ppo.py --task reach_origin --robot franka --sim isaacgym
+python examples/rl/0_ppo.py --task reach_origin --robot franka --sim isaacgym
 
 # PPO with Gym interface
-python get_started/rl/0_ppo_gym_style.py --sim mjx --num-envs 256
+python examples/rl/0_ppo_gym_style.py --sim mjx --num-envs 256
 ```
 
 ### Configuration
 
-Check the file header in `get_started/rl/0_ppo.py` for available configuration options including:
+Check the file header in `examples/rl/0_ppo.py` for available configuration options including:
 - Task selection (`--task`)
 - Robot type (`--robot`) 
 - Simulator backend (`--sim`)

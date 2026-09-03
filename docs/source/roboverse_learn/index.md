@@ -50,7 +50,7 @@ python roboverse_learn/il/train_dp.py \
 
 ```bash
 # Train PPO on a manipulation task
-python roboverse_learn/rl/train_ppo.py \
+python examples/rl/0_ppo.py \
     --task pick_cube \
     --robot franka \
     --num_envs 1024 \

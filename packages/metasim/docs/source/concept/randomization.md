@@ -952,4 +952,4 @@ The domain randomization system provides:
 
 The system supports both evaluation workflows (short runs with maximum diversity) and training workflows (long runs with reproducible randomization). Customize by composing randomizers, defining custom presets, or extending the base classes.
 
-For practical examples, see `get_started/12_domain_randomization.py` and the detailed tutorial in the quick-start guide.
+For practical examples, see `examples/12_domain_randomization.py` and the detailed tutorial in the quick-start guide.

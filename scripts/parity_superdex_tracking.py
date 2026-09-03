@@ -1,6 +1,6 @@
 """Cross-sim joint-target tracking parity: SuperDex vs MuJoCo (or any two backends).
 
-Runs the ``get_started/1_control_robot.py`` scene with a *seeded* random joint-target sequence on one
+Runs the ``examples/1_control_robot.py`` scene with a *seeded* random joint-target sequence on one
 backend and records, per env step, the commanded targets and the measured joint positions. Because
 SuperDex ships Python 3.12-only wheels while the MuJoCo env here is 3.11, each backend is recorded in
 its own environment and the two recordings are compared afterwards::
