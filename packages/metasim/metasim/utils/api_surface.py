@@ -62,6 +62,49 @@ def _signature(obj: Any) -> str:
         return "(...)"
 
 
+def _params(obj: Any) -> list[dict[str, Any]] | None:
+    """Structured parameters: ``[{name, kind, default}]`` (``None`` when not introspectable)."""
+    try:
+        sig = inspect.signature(obj)
+    except (TypeError, ValueError):
+        return None
+    return [
+        {"name": p.name, "kind": p.kind.name, "default": p.default is not inspect.Parameter.empty}
+        for p in sig.parameters.values()
+    ]
+
+
+def compare_params(old: list[dict[str, Any]] | None, new: list[dict[str, Any]] | None) -> str | None:
+    """Why ``new`` breaks callers of ``old`` (``None`` when it does not).
+
+    Breaking: a parameter removed or renamed, a parameter that lost its default, a new parameter
+    without a default, positional parameters reordered, or a ``*args``/``**kwargs`` sink removed.
+    Not breaking: a new parameter with a default, a new ``*args``/``**kwargs``, a parameter that
+    gained a default, or a positional-or-keyword parameter that became keyword-only... is breaking
+    too (positional callers), so kind changes count except VAR_* additions.
+    """
+    if old is None or new is None:
+        return None
+    old_by, new_by = {p["name"]: p for p in old}, {p["name"]: p for p in new}
+    for name, po in old_by.items():
+        pn = new_by.get(name)
+        if pn is None:
+            return f"parameter removed: {name}"
+        if po["default"] and not pn["default"]:
+            return f"parameter lost its default: {name}"
+        if po["kind"] != pn["kind"]:
+            return f"parameter kind changed: {name} {po['kind']} -> {pn['kind']}"
+    for name, pn in new_by.items():
+        if name not in old_by and not pn["default"] and not pn["kind"].startswith("VAR_"):
+            return f"new required parameter: {name}"
+    positional = ("POSITIONAL_ONLY", "POSITIONAL_OR_KEYWORD")
+    old_pos = [p["name"] for p in old if p["kind"] in positional]
+    new_pos = [p["name"] for p in new if p["kind"] in positional and p["name"] in old_by]
+    if old_pos != new_pos:
+        return f"positional parameters reordered: {old_pos} -> {new_pos}"
+    return None
+
+
 def _class_entry(cls: type) -> dict[str, Any]:
     methods: dict[str, str] = {}
     for name, member in cls.__dict__.items():
@@ -70,9 +113,9 @@ def _class_entry(cls: type) -> dict[str, Any]:
         if isinstance(member, (staticmethod, classmethod)):
             member = member.__func__
         if isinstance(member, property):
-            methods[name] = "<property>"
+            methods[name] = {"signature": "<property>", "params": None}
         elif inspect.isfunction(member):
-            methods[name] = _signature(member)
+            methods[name] = {"signature": _signature(member), "params": _params(member)}
     entry: dict[str, Any] = {
         "kind": "class",
         "bases": [b.__name__ for b in cls.__bases__ if b is not object],
@@ -97,7 +140,7 @@ def collect_api(modules: tuple[str, ...] = PUBLIC_MODULES) -> dict[str, dict[str
             if inspect.isclass(obj):
                 entries[name] = _class_entry(obj)
             elif inspect.isfunction(obj):
-                entries[name] = {"kind": "function", "signature": _signature(obj)}
+                entries[name] = {"kind": "function", "signature": _signature(obj), "params": _params(obj)}
         surface[modname] = entries
     return surface
 
@@ -105,10 +148,32 @@ def collect_api(modules: tuple[str, ...] = PUBLIC_MODULES) -> dict[str, dict[str
 def diff_api(old: dict[str, dict[str, Any]], new: dict[str, dict[str, Any]]) -> tuple[list[str], list[str]]:
     """``(breaking, additions)`` as human-readable lines.
 
-    Breaking = a module, symbol, method or dataclass field that disappeared, or whose signature changed.
+    Breaking = a module, symbol, method or dataclass field that disappeared, or a signature change
+    that existing callers cannot survive (see ``compare_params``). A signature that changed in a
+    compatible way (new optional parameter) is listed under additions.
     """
     breaking: list[str] = []
     additions: list[str] = []
+
+    def _sig(entry: Any) -> tuple[str, Any]:
+        if isinstance(entry, dict):
+            return entry.get("signature", ""), entry.get("params")
+        return str(entry), None  # snapshots written before params were recorded
+
+    def _callable_change(label: str, old_e: Any, new_e: Any) -> None:
+        old_sig, old_p = _sig(old_e)
+        new_sig, new_p = _sig(new_e)
+        if old_sig == new_sig:
+            return
+        if old_p is None or new_p is None:
+            breaking.append(f"signature changed: {label}{old_sig} -> {new_sig}")
+            return
+        reason = compare_params(old_p, new_p)
+        if reason:
+            breaking.append(f"signature changed ({reason}): {label}{old_sig} -> {new_sig}")
+        else:
+            additions.append(f"signature extended: {label}{old_sig} -> {new_sig}")
+
     for modname, old_entries in old.items():
         if modname not in new:
             breaking.append(f"module removed: {modname}")
@@ -123,15 +188,14 @@ def diff_api(old: dict[str, dict[str, Any]], new: dict[str, dict[str, Any]]) -> 
                 breaking.append(f"kind changed: {modname}.{name} {old_e['kind']} -> {new_e['kind']}")
                 continue
             if old_e["kind"] == "function":
-                if old_e["signature"] != new_e["signature"]:
-                    breaking.append(f"signature changed: {modname}.{name}{old_e['signature']} -> {new_e['signature']}")
+                _callable_change(f"{modname}.{name}", old_e, new_e)
                 continue
-            for meth, sig in old_e["methods"].items():
-                new_sig = new_e["methods"].get(meth)
-                if new_sig is None:
+            for meth, old_m in old_e["methods"].items():
+                new_m = new_e["methods"].get(meth)
+                if new_m is None:
                     breaking.append(f"method removed: {modname}.{name}.{meth}")
-                elif new_sig != sig:
-                    breaking.append(f"signature changed: {modname}.{name}.{meth}{sig} -> {new_sig}")
+                else:
+                    _callable_change(f"{modname}.{name}.{meth}", old_m, new_m)
             for meth in new_e["methods"]:
                 if meth not in old_e["methods"]:
                     additions.append(f"method added: {modname}.{name}.{meth}")
