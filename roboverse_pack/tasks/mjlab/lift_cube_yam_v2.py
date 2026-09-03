@@ -316,6 +316,7 @@ class LiftCubeYamEnvCfg(ManagerBasedRVEnvCfg):
 
 
 class _YamTaskBase(ManagerBasedRVEnv):
+    supported_simulators = ("mujoco", "newton")
     scenario = lazy_scenario(_yam_scenario)
     _env_cfg_cls: type = LiftCubeYamEnvCfg  # subclasses override to swap cfg
 
