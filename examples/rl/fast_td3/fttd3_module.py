@@ -3,7 +3,7 @@
 #
 # Adapted from FastTD3 (https://github.com/younggyoseo/FastTD3).
 # Changes: none (vendored verbatim).
-# Full license: get_started/rl/fast_td3/LICENSE
+# Full license: examples/rl/fast_td3/LICENSE
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -6,7 +6,7 @@
 #   CONFIG dict, and the environment is created through the MetaSim task registry (get_task_class,
 #   scenario.update) with viser/ObsSaver rendering. The algorithm and its networks (imported from
 #   fttd3_module) are unchanged.
-# Full license: get_started/rl/fast_td3/LICENSE
+# Full license: examples/rl/fast_td3/LICENSE
 from __future__ import annotations
 
 import os
