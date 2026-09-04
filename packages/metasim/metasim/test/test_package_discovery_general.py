@@ -48,6 +48,7 @@ def _isolated_task_registry_discovery(
 ):
     original_registry = dict(registry.TASK_REGISTRY)
     original_failures = dict(registry._DISCOVERY_FAILURES)
+    original_conflicts = dict(registry._NAME_CONFLICTS)
     original_modules = {
         module_name: module
         for module_name, module in sys.modules.items()
@@ -62,6 +63,7 @@ def _isolated_task_registry_discovery(
     try:
         registry.TASK_REGISTRY.clear()
         registry._DISCOVERY_FAILURES.clear()
+        registry._NAME_CONFLICTS.clear()
         _remove_task_modules()
         yield
     finally:
@@ -71,6 +73,8 @@ def _isolated_task_registry_discovery(
         registry.TASK_REGISTRY.update(original_registry)
         registry._DISCOVERY_FAILURES.clear()
         registry._DISCOVERY_FAILURES.update(original_failures)
+        registry._NAME_CONFLICTS.clear()
+        registry._NAME_CONFLICTS.update(original_conflicts)
 
 
 @pytest.fixture(autouse=True)
@@ -380,3 +384,108 @@ def test_task_registry_builtin_discovery_can_repeat_after_cleanup(tmp_path, monk
 
     assert sys.modules[module_name] is original_module
     assert import_module(module_name) is original_module
+
+
+@pytest.mark.general
+def test_config_lookup_imports_only_the_local_module_that_defines_the_name(tmp_path, monkeypatch):
+    """``get_robot`` used to import every top-level ``.py`` in the working directory to look for the
+    config class, so a ``train.py`` sitting there ran on lookup. Only the module whose source binds the
+    requested name is imported; a local ``FrankaCfg`` still shadows the bundled example one."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(package_discovery, "entry_points", lambda: _FakeEntryPoints({}))
+    monkeypatch.delenv("METASIM_CONFIG", raising=False)
+    marker = tmp_path / "ran.txt"
+    _write(tmp_path / "train.py", f"open({str(marker)!r}, 'w').write('train ran')\nraise SystemExit(3)\n")
+    _write(tmp_path / "broken_syntax.py", "def (:\n")
+    _write(
+        tmp_path / "my_robots.py",
+        "from metasim.example.example_pack.robots.franka_cfg import FrankaCfg as _Base\n"
+        "class FrankaCfg(_Base):\n    pass\n",
+    )
+    for name in ("train", "broken_syntax", "my_robots"):
+        sys.modules.pop(name, None)
+
+    from metasim.utils.setup_util import get_robot
+
+    robot = get_robot("franka")
+
+    assert type(robot).__module__ == "my_robots", "the local definition wins over the bundled example"
+    assert not marker.exists() and "train" not in sys.modules, "an unrelated script must not run"
+
+
+@pytest.mark.general
+def test_local_module_candidates_come_from_parsing_at_any_depth(tmp_path, monkeypatch):
+    """A module counts as a candidate when its source binds the name anywhere (a class, an import,
+    a star import, tuple unpacking), an encoding cookie is honoured, and a file that cannot be
+    parsed is reported to the caller rather than dropped."""
+    from metasim.utils import setup_util
+
+    _write(
+        tmp_path / "guarded.py",
+        "try:\n    from somewhere import FrankaCfg\nexcept ImportError:\n    FrankaCfg = None\n",
+    )
+    _write(tmp_path / "reexport.py", "from somewhere import FrankaCfg\n")
+    _write(tmp_path / "star.py", "from somewhere import *\n")
+    _write(tmp_path / "unpacked.py", "FrankaCfg, Other = 1, 2\n")
+    _write(tmp_path / "unrelated.py", "x = 1\n")
+    (tmp_path / "latin.py").write_bytes(b"# -*- coding: latin-1 -*-\n# caf\xe9\nclass FrankaCfg:\n    pass\n")
+    _write(tmp_path / "broken.py", "def (:\n")
+
+    _write(
+        tmp_path / "typed.py",
+        "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from somewhere import FrankaCfg\nrun = 1\n",
+    )
+    found, failures = setup_util._local_modules_defining(str(tmp_path), "FrankaCfg")
+    # an import counts as a binding (a re-export module is a candidate, as before); one under TYPE_CHECKING does not
+    assert found == ["guarded", "latin", "reexport", "star", "unpacked"]
+    assert failures == [f"broken: not parsed ({failures[0].split('(', 1)[1]}"] and "SyntaxError" in failures[0]
+    found, _ = setup_util._local_modules_defining(str(tmp_path), "Other")
+    assert found == ["star", "unpacked"]
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(package_discovery, "entry_points", lambda: _FakeEntryPoints({}))
+    monkeypatch.delenv("METASIM_CONFIG", raising=False)
+    with pytest.raises(ValueError, match=r"'NoSuchBotCfg' not found.*broken: not parsed"):
+        setup_util.get_robot("no_such_bot")
+
+    # binders the scan must also see; some of these can bind any name, so they run after the not-found check
+    _write(tmp_path / "factory.py", "def LocalBotCfg():\n    return 1\n")
+    _write(tmp_path / "looped.py", "for LocalBotCfg in ():\n    pass\n")
+    _write(tmp_path / "walrus.py", "if (LocalBotCfg := 1):\n    pass\n")
+    _write(tmp_path / "ctx.py", "with open('x') as LocalBotCfg:\n    pass\n")
+    _write(tmp_path / "dyn.py", "globals()['Local' + 'BotCfg'] = 1\n")
+    _write(tmp_path / "lazy_attr.py", "def __getattr__(name):\n    return 1\n")
+    _write(tmp_path / "wrapper.py", "class W:\n    def __getattr__(self, n):\n        return 1\n")
+    _write(tmp_path / "reader.py", "x = globals()['LocalBotCfg']\n")
+    _write(tmp_path / "trainer.py", "from somewhere import LocalBotCfg\nrun = 1\n")
+    _write(tmp_path / "caught.py", "try:\n    pass\nexcept Exception as LocalBotCfg:\n    pass\n")
+    _write(tmp_path / "setmod.py", "import sys\nsetattr(sys.modules[__name__], 'LocalBotCfg', 1)\n")
+    _write(tmp_path / "varsmod.py", "vars()['LocalBotCfg'] = 1\n")
+    _write(tmp_path / "execmod.py", "exec('LocalBotCfg = 1')\n")
+    _write(
+        tmp_path / "guarded_attr.py",
+        "try:\n    def __getattr__(name):\n        return 1\nexcept Exception:\n    pass\n",
+    )
+    _write(
+        tmp_path / "typed_else.py",
+        "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from a import LocalBotCfg\nelse:\n    from b import LocalBotCfg\n",
+    )
+    found, _ = setup_util._local_modules_defining(str(tmp_path), "LocalBotCfg")
+    # a class-level __getattr__ and a globals() read are not definitions; imports, except-as, exec,
+    # setattr on the module, vars() writes, a guarded module __getattr__ and the else branch are
+    assert found == [
+        "caught",
+        "ctx",
+        "dyn",
+        "execmod",
+        "factory",
+        "guarded_attr",
+        "lazy_attr",
+        "looped",
+        "setmod",
+        "star",
+        "trainer",
+        "typed_else",
+        "varsmod",
+        "walrus",
+    ]
