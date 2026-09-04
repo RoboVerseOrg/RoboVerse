@@ -263,3 +263,16 @@ def handler(request, isaacsim_app):
             f"Registered prefixes: {list(_SUITE_REGISTRY.keys())}"
         )
     return _get_or_create_handler(request.param, request, isaacsim_app)
+
+
+@pytest.fixture
+def loguru_warnings():
+    """Collect loguru WARNING+ messages emitted during a test (the library logs through loguru, not logging)."""
+    from loguru import logger as _log
+
+    messages: list[str] = []
+    sink_id = _log.add(lambda m: messages.append(m.record["message"]), level="WARNING")
+    try:
+        yield messages
+    finally:
+        _log.remove(sink_id)

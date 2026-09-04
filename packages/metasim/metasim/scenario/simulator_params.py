@@ -112,6 +112,13 @@ class SimParamCfg:
     use_gpu_pipeline: bool = True
     use_gpu: bool = True
 
+    # ---- MuJoCo / MJX ----
+    # MuJoCo / MJX: render ``scenario.lights`` (translated to MJCF lights, replacing the headlight and any
+    # lights embedded in robot / object models). Off by default: ``ScenarioCfg.lights`` defaults to one
+    # distant light and most scenarios never set it, so enabling this for everyone would re-light every
+    # MuJoCo scene. See ``metasim/sim/mujoco/lights.py`` and docs ``features/lighting``.
+    mujoco_use_scenario_lights: bool = False
+
     def __post_init__(self) -> None:
         """``dt`` is None (the backend's default step) or a finite step > 0.
 

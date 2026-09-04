@@ -4961,7 +4961,8 @@
     "newton_mujoco_disable_contacts",
     "num_threads",
     "use_gpu_pipeline",
-    "use_gpu"
+    "use_gpu",
+    "mujoco_use_scenario_lights"
    ],
    "kind": "class",
    "methods": {
@@ -5171,9 +5172,14 @@
        "default": true,
        "kind": "POSITIONAL_OR_KEYWORD",
        "name": "use_gpu"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mujoco_use_scenario_lights"
       }
      ],
-     "signature": "(self, dt: 'float | None' = <factory>, bounce_threshold_velocity: 'float' = <factory>, contact_offset: 'float' = <factory>, num_position_iterations: 'int' = <factory>, num_velocity_iterations: 'int' = <factory>, friction_correlation_distance: 'float' = <factory>, friction_offset_threshold: 'float' = <factory>, replace_cylinder_with_capsule: 'bool' = <factory>, rest_offset: 'float' = <factory>, solver_type: 'int' = <factory>, substeps: 'int' = <factory>, max_depenetration_velocity: 'float' = <factory>, default_buffer_size_multiplier: 'int' = <factory>, sapien_enable_tgs: 'bool | None' = <factory>, sapien_enable_pcm: 'bool | None' = <factory>, sapien_default_static_friction: 'float | None' = <factory>, sapien_default_dynamic_friction: 'float | None' = <factory>, sapien_default_restitution: 'float | None' = <factory>, sapien_apply_scene_solver: 'bool | None' = <factory>, sapien_disable_default_lights: 'bool | None' = <factory>, sapien_load_multiple_collisions: 'bool | None' = <factory>, sapien_apply_global_physx: 'bool | None' = <factory>, sapien_sleep_threshold: 'float | None' = <factory>, sapien_bounce_threshold: 'float | None' = <factory>, sapien_enable_ccd: 'bool | None' = <factory>, sapien_enable_enhanced_determinism: 'bool | None' = <factory>, sapien_enable_friction_every_iteration: 'bool | None' = <factory>, sapien_disable_robot_gravity: 'bool | None' = <factory>, sapien_ground_altitude: 'float | None' = <factory>, sapien_drive_force_mode: 'str | None' = <factory>, superdex_control_mode: \"Literal['pd', 'implicit']\" = <factory>, nconmax: 'int | None' = <factory>, njmax: 'int | None' = <factory>, newton_use_mujoco_contacts: 'bool | None' = <factory>, newton_mujoco_iterations: 'int | None' = <factory>, newton_mujoco_ls_iterations: 'int | None' = <factory>, newton_mujoco_disable_contacts: 'bool' = <factory>, num_threads: 'int' = <factory>, use_gpu_pipeline: 'bool' = <factory>, use_gpu: 'bool' = <factory>) -> None"
+     "signature": "(self, dt: 'float | None' = <factory>, bounce_threshold_velocity: 'float' = <factory>, contact_offset: 'float' = <factory>, num_position_iterations: 'int' = <factory>, num_velocity_iterations: 'int' = <factory>, friction_correlation_distance: 'float' = <factory>, friction_offset_threshold: 'float' = <factory>, replace_cylinder_with_capsule: 'bool' = <factory>, rest_offset: 'float' = <factory>, solver_type: 'int' = <factory>, substeps: 'int' = <factory>, max_depenetration_velocity: 'float' = <factory>, default_buffer_size_multiplier: 'int' = <factory>, sapien_enable_tgs: 'bool | None' = <factory>, sapien_enable_pcm: 'bool | None' = <factory>, sapien_default_static_friction: 'float | None' = <factory>, sapien_default_dynamic_friction: 'float | None' = <factory>, sapien_default_restitution: 'float | None' = <factory>, sapien_apply_scene_solver: 'bool | None' = <factory>, sapien_disable_default_lights: 'bool | None' = <factory>, sapien_load_multiple_collisions: 'bool | None' = <factory>, sapien_apply_global_physx: 'bool | None' = <factory>, sapien_sleep_threshold: 'float | None' = <factory>, sapien_bounce_threshold: 'float | None' = <factory>, sapien_enable_ccd: 'bool | None' = <factory>, sapien_enable_enhanced_determinism: 'bool | None' = <factory>, sapien_enable_friction_every_iteration: 'bool | None' = <factory>, sapien_disable_robot_gravity: 'bool | None' = <factory>, sapien_ground_altitude: 'float | None' = <factory>, sapien_drive_force_mode: 'str | None' = <factory>, superdex_control_mode: \"Literal['pd', 'implicit']\" = <factory>, nconmax: 'int | None' = <factory>, njmax: 'int | None' = <factory>, newton_use_mujoco_contacts: 'bool | None' = <factory>, newton_mujoco_iterations: 'int | None' = <factory>, newton_mujoco_ls_iterations: 'int | None' = <factory>, newton_mujoco_disable_contacts: 'bool' = <factory>, num_threads: 'int' = <factory>, use_gpu_pipeline: 'bool' = <factory>, use_gpu: 'bool' = <factory>, mujoco_use_scenario_lights: 'bool' = <factory>) -> None"
     },
     "copy": {
      "params": [
