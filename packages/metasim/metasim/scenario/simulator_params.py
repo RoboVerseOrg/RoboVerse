@@ -111,3 +111,14 @@ class SimParamCfg:
     # XXX: these parameters should be replaced by "device" in the future
     use_gpu_pipeline: bool = True
     use_gpu: bool = True
+
+    def __post_init__(self) -> None:
+        """``dt`` is None (the backend's default step) or a finite step > 0.
+
+        ``""``, ``nan``, ``inf`` and non-positive values are rejected here instead of reaching the
+        physics engine, where they surface as a hang, a NaN state or a backend-specific error.
+        """
+        from ._validate import positive_finite_or_none, positive_int
+
+        positive_finite_or_none("SimParamCfg", "dt", self.dt)
+        positive_int("SimParamCfg", "substeps", self.substeps)

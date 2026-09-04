@@ -65,6 +65,25 @@ class ScenarioCfg:
 | **env_spacing**  | Distance between environments when instantiated in parallel.                     |
 | **decimation**   | Simulation decimation factor (steps per control action).                         |
 
+### Validation at construction
+
+Values that every backend would choke on later are rejected when the config is built (and inside
+`ScenarioCfg.update`, which restores the previous value when the new one is rejected). The error names
+the field, the value and what is accepted, e.g. `ScenarioCfg.num_envs=0 is invalid: expected an integer >= 1.`
+
+| Field | Accepted |
+| --- | --- |
+| `ScenarioCfg.num_envs`, `decimation` | integers >= 1 (numpy / torch integer scalars are fine; floats and bools are not) |
+| `ScenarioCfg.robots`, `objects`, `cameras`, `lights` | a list of configs (a tuple is converted; a bare config is rejected) |
+| `SimParamCfg.dt` | `None` (the backend's default step) or a finite number > 0 |
+| `SimParamCfg.substeps` | integer >= 1 |
+| camera `width`, `height` | integers >= 1 |
+| camera `pos`, `look_at` | three finite numbers |
+| `PinholeCameraCfg.focal_length`, `horizontal_aperture` | finite numbers > 0 |
+
+`from_dict` and direct attribute assignment bypass these checks; call `update(...)` to patch a config
+with validation.
+
 ---
 
 ## Utility Methods
