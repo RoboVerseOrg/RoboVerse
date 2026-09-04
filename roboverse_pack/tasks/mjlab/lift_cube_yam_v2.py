@@ -163,7 +163,7 @@ def reset_yam_with_cube(env, env_ids: torch.Tensor, *, joint_noise: float = 0.05
     if not hasattr(env.handler, "physics"):
         return  # Newton path: handler default init
     physics = env.handler.physics
-    rng = np.random.default_rng()
+    rng = np.random  # seeded by handler.set_seed; see cartpole_v2.reset_cartpole
     with physics.reset_context():
         physics.data.qpos[:6] = rng.uniform(-joint_noise, joint_noise, size=6)
         physics.data.qpos[6] = 0.0  # left_finger neutral
