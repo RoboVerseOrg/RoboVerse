@@ -42,6 +42,7 @@ from metasim.utils.terrain_utils import TerrainGenerator
 
 class IsaacgymHandler(BaseSimHandler):
     set_states_restores_velocities = True  # TensorState path writes root_states[:, 7:13] and dof_states[:, 1]
+    _default_physics_dt = 1 / 60  # gymapi.SimParams() default when sim_params.dt is None
 
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)

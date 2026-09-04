@@ -62,6 +62,8 @@ except ImportError:
 
 class GenesisHandler(BaseSimHandler):
     get_states_honours_env_ids = True  # ``_get_states`` indexes by ``env_ids``
+    _default_physics_dt = 1 / 100  # the engine default this backend passes at construction
+
     # ``_set_states`` indexes ``state["objects"]`` directly, so it only
     # accepts the list-of-dict form; the base converts TensorState input.
     _set_states_input_type = "dict"
@@ -121,7 +123,7 @@ class GenesisHandler(BaseSimHandler):
             gs.init(backend=gs.gpu)
         self.scene_inst = gs.Scene(
             sim_options=gs.options.SimOptions(
-                dt=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1 / 100,
+                dt=self.physics_dt,
                 substeps=1,  # substeps > 1 unstable upstream — track upstream genesis bug before raising
             ),
             vis_options=gs.options.VisOptions(n_rendered_envs=self.scenario.num_envs),

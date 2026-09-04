@@ -366,3 +366,34 @@ def test_get_states_honours_env_ids_declarations_are_pinned():
     assert (
         honours == {"MJXHandler", "NewtonHandler", "GenesisHandler", "HybridSimHandler", "ParallelHandler"} & installed
     )
+
+
+@pytest.mark.general
+def test_physics_dt_contract_reports_the_configured_or_resolved_step():
+    """``physics_dt`` is the step the backend integrates with: the configured ``dt``, a backend override
+    (Isaac Sim assigns it, MuJoCo / SuperDex read their engine), or None when unresolved.
+    """
+    from types import SimpleNamespace
+
+    from metasim.sim.base import BaseSimHandler
+
+    class _Concrete(BaseSimHandler):
+        def _set_states(self, states, env_ids=None):
+            pass
+
+        def _set_dof_targets(self, actions):
+            pass
+
+        def _get_states(self, env_ids=None):
+            return None
+
+        def _simulate(self):
+            pass
+
+    h = _Concrete.__new__(_Concrete)
+    h.scenario = SimpleNamespace(sim_params=SimpleNamespace(dt=None))
+    assert h.physics_dt is None
+    h.scenario = SimpleNamespace(sim_params=SimpleNamespace(dt=0.002))
+    assert h.physics_dt == 0.002
+    h.physics_dt = 0.015 / 15  # the Isaac Sim assignment path
+    assert h.physics_dt == pytest.approx(0.001)

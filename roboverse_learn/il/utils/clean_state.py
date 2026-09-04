@@ -28,6 +28,24 @@ POSITION_ATOL = 1e-4
 EXPECTED_ATOL = 5e-3
 
 
+def settle_recipients(num_envs: int, *, env_id: int | None, finished=None, terminal=None, recording=()) -> list[int]:
+    """The envs whose in-flight demo must receive the settle steps of a reset of ``env_id``.
+
+    Settling one env steps every env of the batch, so every *other* env that keeps stepping after
+    this iteration absorbs that physics and its demo must record it. Excluded: the env being reset,
+    envs already ``finished`` (indexable by env), envs in ``terminal`` (their demo closes in this
+    iteration; trailing frames would corrupt a closed demo), and envs not in ``recording``.
+    """
+    return [
+        other
+        for other in range(num_envs)
+        if other != env_id
+        and not (finished is not None and finished[other])
+        and not (terminal is not None and other in terminal)
+        and other in recording
+    ]
+
+
 def _entities(state) -> dict:
     """``name -> entity state`` for the objects of a ``TensorState`` (robots are not settled or validated)."""
     return dict(getattr(state, "objects", {}) or {})
@@ -49,15 +67,28 @@ def _is_settled(current, previous) -> bool:
 
 
 def ensure_clean_state(
-    handler, expected_state=None, *, env_id: int = 0, max_steps: int = 10, min_steps: int = 2
+    handler,
+    expected_state=None,
+    *,
+    env_id: int = 0,
+    max_steps: int = 10,
+    min_steps: int = 2,
+    on_step=None,
 ) -> bool:
-    """Step until the objects settle; True when they did and (if given) env ``env_id`` matches ``expected_state``."""
+    """Step until the objects settle; True when they did and (if given) env ``env_id`` matches ``expected_state``.
+
+    ``simulate()`` steps every env of a batched handler, so settling one env also advances the others.
+    ``on_step(state)`` is called with the full ``TensorState`` after each step so a recorder can keep
+    those steps in the other envs' episodes instead of silently losing them.
+    """
     prev_state = None
     stable_count = 0
     current_state = None
     for step in range(max_steps):
         handler.simulate()
         current_state = handler.get_states(mode="tensor")
+        if on_step is not None:
+            on_step(current_state)
         if step >= min_steps and prev_state is not None:
             if _is_settled(current_state, prev_state):
                 stable_count += 1

@@ -134,6 +134,7 @@ features/cross_embodiment
 features/cross_sim
 features/hybrid_rendering
 features/lighting
+features/replayable_episodes
 features/teleoperate
 ```
 

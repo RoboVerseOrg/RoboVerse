@@ -48,6 +48,8 @@ def _load_init_pose(obj: BaseObjCfg):
 class Sapien2Handler(BaseSimHandler):
     """Sapien2 Handler class."""
 
+    _default_physics_dt = 1 / 100.0  # the engine default this backend passes at construction
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         assert parse_version(sapien.__version__) >= parse_version("2.0.0"), "Sapien version should be 2.0.0 or higher"
         assert parse_version(sapien.__version__) < parse_version("3.0.0a0"), "Sapien version should be lower than 3.0.0"
@@ -58,7 +60,7 @@ class Sapien2Handler(BaseSimHandler):
         self.engine = sapien_core.Engine()  # Create a physical simulation engine
         self.renderer = sapien_core.SapienRenderer()  # Create a renderer
 
-        self.time_step = self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1 / 100.0
+        self.time_step = self.physics_dt
 
         scene_config = sapien_core.SceneConfig()
         scene_config.gravity = np.array(self.scenario.gravity)

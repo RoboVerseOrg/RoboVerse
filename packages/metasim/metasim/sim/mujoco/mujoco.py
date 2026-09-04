@@ -482,6 +482,14 @@ class MujocoHandler(BaseSimHandler):
             mjcf_model.option.timestep = self.scenario.sim_params.dt
         return mjcf_model
 
+    @property
+    def physics_dt(self) -> float | None:  # type: ignore[override]
+        """The compiled model's ``opt.timestep`` once launched (1 ms unless the scenario sets ``dt``)."""
+        physics = getattr(self, "physics", None)
+        if physics is not None:
+            return float(physics.model.opt.timestep)
+        return BaseSimHandler.physics_dt.fget(self)
+
     def _add_lights_to_model(self, mjcf_model: mjcf.RootElement) -> None:
         """Render ``scenario.lights`` when ``sim_params.mujoco_use_scenario_lights`` asks for it; see ``lights.py``."""
         from .lights import add_scenario_lights, scenario_lights_enabled

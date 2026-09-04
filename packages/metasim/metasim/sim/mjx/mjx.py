@@ -89,6 +89,19 @@ class MJXHandler(BaseSimHandler):
             log.warning("Warning: hard coding decimation to 25 for replaying trajectories")
             self.decimation = 25
 
+    @property
+    def physics_dt(self) -> float | None:  # type: ignore[override]
+        """The compiled model's ``opt.timestep`` once launched.
+
+        The scenario's ``dt`` is written into the root when set; otherwise the compiled value is what
+        an attached robot / object MJCF declared (or the MJCF compiler default), so it is read back
+        rather than assumed.
+        """
+        model = getattr(self, "_mj_model", None)
+        if model is not None:
+            return float(model.opt.timestep)
+        return BaseSimHandler.physics_dt.fget(self)
+
     def launch(self) -> None:
         mjcf_root = self._init_mujoco()
 

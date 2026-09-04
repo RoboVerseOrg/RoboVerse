@@ -60,6 +60,10 @@ class Args:
     """Custom name for the dataset"""
     custom_save_dir: str | None = None
     """Custom base path for saving demos. If None, use default structure."""
+    traj_filepath: str | None = None
+    """Demo file to replay; defaults to the task's ``traj_filepath``."""
+    episode_sidecar: bool = True
+    """Also write each demo as a self-describing ``episode.npz`` (full state, provenance) next to its metadata."""
     scene: str | None = None
     """Scene name"""
     run_all: bool = True
@@ -123,13 +127,15 @@ from metasim.scenario.lights import DiskLightCfg, SphereLightCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.sim import BaseSimHandler
 from metasim.task.registry import get_task_class
+from metasim.types import TensorState
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot
-from metasim.utils.state import state_tensor_to_nested
+from metasim.utils.state import select_envs, state_tensor_to_nested, state_to_device
 from metasim.utils.tensor_util import tensor_to_cpu
+from metasim.utils.trajectory import episode_from_states, provenance_from_handler, save_episode
 
 rootutils.setup_root(__file__, pythonpath=True)
-from roboverse_learn.il.utils.clean_state import ensure_clean_state
+from roboverse_learn.il.utils.clean_state import ensure_clean_state, settle_recipients
 
 # Import randomization components
 try:
@@ -174,10 +180,30 @@ def save_demo_mp(save_req_queue: mp.Queue, robot_cfg: RobotCfg, task_desc: str):
         save_demo(save_dir, demo, robot_cfg=robot_cfg, task_desc=task_desc)
 
 
-def force_reset_to_state(env, state, env_id):
-    """Force reset environment to specific state with validation."""
+def force_reset_to_state(env, state, env_id, collector=None, demo_idxs=None, finished=None, terminal=None):
+    """Force reset one env to ``state`` and settle it.
+
+    Settling steps the whole batch, so every other in-flight env physically advances too; those steps
+    are appended to their demos (state + the joint target they were holding), otherwise the recorded
+    episodes would skip physics that happened and no longer replay.
+    """
     env.reset(states=[state], env_ids=[env_id])
-    ensure_clean_state(env.handler, expected_state=state, env_id=env_id)
+
+    def _keep_other_envs(tensor_state):
+        if collector is None:
+            return
+        recording = [i for i in range(env.handler.num_envs) if demo_idxs[i] in collector.cache]
+        others = settle_recipients(
+            env.handler.num_envs, env_id=env_id, finished=finished, terminal=terminal, recording=recording
+        )
+        if not others:
+            return
+        rows = select_envs(tensor_state, others)  # sliced once; the collector indexes these rows
+        nested = state_tensor_to_nested(env.handler, rows)
+        for local, other in enumerate(others):
+            collector.add(demo_idxs[other], nested[local], tensor_state=rows, env_id=local)
+
+    ensure_clean_state(env.handler, expected_state=state, env_id=env_id, on_step=_keep_other_envs)
     if hasattr(env, "_episode_steps"):
         env._episode_steps[env_id] = 0
 
@@ -188,6 +214,9 @@ tot_give_up = 0
 global_step = 0
 
 
+_UNSET = object()
+
+
 class DemoCollector:
     def __init__(self, handler, robot_cfg, task_desc="", demo_start_idx=0):
         assert isinstance(handler, BaseSimHandler)
@@ -195,6 +224,14 @@ class DemoCollector:
         self.robot_cfg = robot_cfg
         self.task_desc = task_desc
         self.cache: dict[int, list[dict]] = {}
+        self.episode_states: dict[int, list] = {}
+        self.episode_actions: dict[int, list] = {}
+        # run-invariant (backend, versions, asset hashes, git): computed once, stamped per episode
+        self._provenance = (
+            provenance_from_handler(handler, seed=args.randomization_seed, num_envs=1) if args.episode_sidecar else None
+        )
+        self._warned_no_targets = False
+        self._slice_cache: tuple | None = None  # (batched state, its physics-only CPU copy): moved once per step
         self.save_request_queue = mp.Queue()
         self.save_proc = mp.Process(target=save_demo_mp, args=(self.save_request_queue, robot_cfg, task_desc))
         self.save_proc.start()
@@ -222,16 +259,46 @@ class DemoCollector:
 
         return max_idx + 1
 
-    def create(self, demo_idx: int, data_dict: dict):
+    def _env_slice(self, tensor_state, env_id: int):
+        """Env ``env_id``'s physics state without camera images (they live in the legacy demo), on the CPU.
+
+        The batched state is stripped and moved once per step, then indexed per env: the recorded
+        slices do not stay resident on the GPU for the length of the run.
+        """
+        if self._slice_cache is None or self._slice_cache[0] is not tensor_state:
+            physics_only = TensorState(objects=tensor_state.objects, robots=tensor_state.robots, cameras={}, extras={})
+            self._slice_cache = (tensor_state, state_to_device(physics_only, "cpu"))
+        return select_envs(self._slice_cache[1], [env_id])
+
+    def create(self, demo_idx: int, data_dict: dict, tensor_state=None, env_id: int | None = None):
         assert demo_idx not in self.cache
         assert isinstance(demo_idx, int)
         self.cache[demo_idx] = [data_dict]
+        # the replayable episode: this env's full state before every action, and the joint targets applied
+        self.episode_states[demo_idx] = (
+            [self._env_slice(tensor_state, env_id)] if tensor_state is not None and args.episode_sidecar else []
+        )
+        self.episode_actions[demo_idx] = []
 
-    def add(self, demo_idx: int, data_dict: dict):
+    def add(self, demo_idx: int, data_dict: dict, tensor_state=None, env_id: int | None = None):
         if data_dict is None:
             log.warning("Skipping adding obs to DemoCollector because obs is None")
         assert demo_idx in self.cache
         self.cache[demo_idx].append(deepcopy(tensor_to_cpu(data_dict)))
+        if tensor_state is not None and self.episode_states.get(demo_idx):
+            env_state = self._env_slice(tensor_state, env_id)
+            target = env_state.robots[self.robot_cfg.name].joint_pos_target
+            if target is None:
+                self.episode_states[demo_idx] = []  # this backend does not report targets: no episode file
+                if not self._warned_no_targets:
+                    self._warned_no_targets = True
+                    log.warning(
+                        f"{type(self.handler).__name__} reports no joint_pos_target in get_states; no episode.npz "
+                        "sidecar can be written for this run (the legacy demo files are unaffected)."
+                    )
+                return
+            self.episode_actions[demo_idx].append(target.detach().cpu().clone())
+            self.episode_states[demo_idx].append(env_state)
 
     def save(self, demo_idx: int, status: str):
         assert demo_idx in self.cache
@@ -254,9 +321,30 @@ class DemoCollector:
             with open(os.path.join(save_dir, "status.txt"), "w") as f:
                 f.write(status)
 
+        states = self.episode_states.get(demo_idx) or []
+        if args.episode_sidecar and states and len(states) == len(self.episode_actions[demo_idx]) + 1:
+            episode = episode_from_states(
+                self.handler,
+                states,
+                self.episode_actions[demo_idx],
+                seed=args.randomization_seed,
+                num_envs=1,
+                provenance=self._provenance,
+                info={
+                    "task": args.task,
+                    "robot": args.robot,
+                    "status": status,
+                    "task_desc": self.task_desc,
+                    "demo_idx": demo_idx,
+                },
+            )
+            save_episode(episode, os.path.join(save_dir, "episode.npz"))
+
     def delete(self, demo_idx: int):
         assert demo_idx in self.cache
         del self.cache[demo_idx]
+        self.episode_states.pop(demo_idx, None)
+        self.episode_actions.pop(demo_idx, None)
 
     def final(self):
         self.save_request_queue.put(None)  # signal to save_demo_mp to exit
@@ -401,11 +489,35 @@ def main():
     )
     robot = get_robot(args.robot)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = task_cls(scenario, device=device)
+    if args.traj_filepath:
+        # The task base downloads and loads ``traj_filepath`` in __init__. A task that declares it as a
+        # class attribute is pointed at the override for the construction only (the registry class is
+        # restored); a task that assigns it on the instance in __init__ ignores that, so the instance
+        # is corrected afterwards and its initial states re-derived from the override.
+        declared = task_cls.__dict__.get("traj_filepath", _UNSET)
+        task_cls.traj_filepath = args.traj_filepath
+        try:
+            env = task_cls(scenario, device=device)
+        finally:
+            if declared is _UNSET:
+                del task_cls.traj_filepath
+            else:
+                task_cls.traj_filepath = declared
+        if getattr(env, "traj_filepath", None) != args.traj_filepath:
+            env.traj_filepath = args.traj_filepath
+            env._initial_states = env._get_initial_states()
+    else:
+        env = task_cls(scenario, device=device)
 
     ## Data
-    assert os.path.exists(env.traj_filepath), f"Trajectory file does not exist: {env.traj_filepath}"
-    init_states, all_actions, all_states = get_traj(env.traj_filepath, robot, env.handler)
+    traj_filepath = args.traj_filepath or getattr(env, "traj_filepath", None)
+    if not traj_filepath:
+        raise ValueError(
+            f"task {args.task!r} declares no traj_filepath (demo-free task); pass --traj_filepath <file> to collect from a demo file"
+        )
+    if not os.path.exists(traj_filepath):
+        raise FileNotFoundError(f"Trajectory file does not exist: {traj_filepath}")
+    init_states, all_actions, all_states = get_traj(traj_filepath, robot, env.handler)
 
     # Initialize domain randomization manager
     randomization_manager = DomainRandomizationManager(
@@ -497,12 +609,12 @@ def main():
             env._episode_steps[env_id] = 0
 
     ## Record the clean, stabilized initial state
-    obs = env.handler.get_states(mode="tensor")
-    obs = state_tensor_to_nested(env.handler, obs)
+    tensor_obs = env.handler.get_states(mode="tensor")
+    obs = state_tensor_to_nested(env.handler, tensor_obs)
 
     for env_id, demo_idx in enumerate(demo_idxs):
         log.info(f"Starting Demo {demo_idx} in Env {env_id}")
-        collector.create(demo_idx, obs[env_id])
+        collector.create(demo_idx, obs[env_id], tensor_state=tensor_obs, env_id=env_id)
 
     ## Main Loop
     stop_flag = False
@@ -522,8 +634,8 @@ def main():
 
         pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
         actions = get_actions(all_actions, env, demo_idxs, robot)
-        obs, reward, success, time_out, extras = env.step(actions)
-        obs = state_tensor_to_nested(env.handler, obs)
+        tensor_obs, reward, success, time_out, extras = env.step(actions)
+        obs = state_tensor_to_nested(env.handler, tensor_obs)
         run_out = get_run_out(all_actions, env, demo_idxs)
 
         for env_id in range(env.handler.num_envs):
@@ -531,8 +643,17 @@ def main():
                 continue
 
             demo_idx = demo_idxs[env_id]
-            collector.add(demo_idx, obs[env_id])
+            collector.add(demo_idx, obs[env_id], tensor_state=tensor_obs, env_id=env_id)
 
+        # envs whose demo ends this iteration (saved as success, timed out, or ran out of actions): their
+        # legacy demos and episodes are closed below, so they must not absorb another env's settle frames
+        done_mask = time_out | torch.tensor(run_out, device=time_out.device)
+        terminal = set(done_mask.nonzero().squeeze(-1).tolist())
+        for env_id in success.nonzero().squeeze(-1).tolist():
+            if not finished[env_id] and (
+                run_out[env_id] or steps_after_success[env_id] >= args.tot_steps_after_success
+            ):
+                terminal.add(env_id)
         for env_id in success.nonzero().squeeze(-1).tolist():
             if finished[env_id]:
                 continue
@@ -560,11 +681,20 @@ def main():
                     randomization_manager.update_positions_to_table(new_demo_idx, env_id)
                     randomization_manager.update_camera_look_at(env_id)
                     randomization_manager.apply_camera_randomization()  # Apply camera randomization
-                    force_reset_to_state(env, init_states[new_demo_idx], env_id)
+                    force_reset_to_state(
+                        env,
+                        init_states[new_demo_idx],
+                        env_id,
+                        collector=collector,
+                        demo_idxs=demo_idxs,
+                        finished=finished,
+                        terminal=terminal,
+                    )
 
-                    obs = env.handler.get_states(mode="tensor")
-                    obs = state_tensor_to_nested(env.handler, obs)
-                    collector.create(new_demo_idx, obs[env_id])
+                    tensor_obs = env.handler.get_states(mode="tensor")
+                    obs = state_tensor_to_nested(env.handler, tensor_obs)
+                    collector.create(new_demo_idx, obs[env_id], tensor_state=tensor_obs, env_id=env_id)
+                    terminal.discard(env_id)  # reset and recording again: it keeps stepping
                     demo_indexer.move_on()
                     run_out[env_id] = False
                 else:
@@ -586,11 +716,20 @@ def main():
                 randomization_manager.update_positions_to_table(demo_idx, env_id)
                 randomization_manager.update_camera_look_at(env_id)
                 randomization_manager.apply_camera_randomization()  # Apply camera randomization
-                force_reset_to_state(env, init_states[demo_idx], env_id)
+                force_reset_to_state(
+                    env,
+                    init_states[demo_idx],
+                    env_id,
+                    collector=collector,
+                    demo_idxs=demo_idxs,
+                    finished=finished,
+                    terminal=terminal,
+                )
 
-                obs = env.handler.get_states(mode="tensor")
-                obs = state_tensor_to_nested(env.handler, obs)
-                collector.create(demo_idx, obs[env_id])
+                tensor_obs = env.handler.get_states(mode="tensor")
+                obs = state_tensor_to_nested(env.handler, tensor_obs)
+                collector.create(demo_idx, obs[env_id], tensor_state=tensor_obs, env_id=env_id)
+                terminal.discard(env_id)  # reset and recording again: it keeps stepping
             else:
                 log.error(f"Demo {demo_idx} failed too many times, giving up")
                 failure_count[env_id] = 0
@@ -605,11 +744,20 @@ def main():
                     randomization_manager.update_positions_to_table(new_demo_idx, env_id)
                     randomization_manager.update_camera_look_at(env_id)
                     randomization_manager.apply_camera_randomization()  # Apply camera randomization
-                    force_reset_to_state(env, init_states[new_demo_idx], env_id)
+                    force_reset_to_state(
+                        env,
+                        init_states[new_demo_idx],
+                        env_id,
+                        collector=collector,
+                        demo_idxs=demo_idxs,
+                        finished=finished,
+                        terminal=terminal,
+                    )
 
-                    obs = env.handler.get_states(mode="tensor")
-                    obs = state_tensor_to_nested(env.handler, obs)
-                    collector.create(new_demo_idx, obs[env_id])
+                    tensor_obs = env.handler.get_states(mode="tensor")
+                    obs = state_tensor_to_nested(env.handler, tensor_obs)
+                    collector.create(new_demo_idx, obs[env_id], tensor_state=tensor_obs, env_id=env_id)
+                    terminal.discard(env_id)  # reset and recording again: it keeps stepping
                     demo_indexer.move_on()
                 else:
                     finished[env_id] = True

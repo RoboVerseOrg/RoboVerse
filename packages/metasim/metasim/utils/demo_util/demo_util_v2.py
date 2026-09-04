@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from glob import glob
 
 import torch
 from loguru import logger as log
@@ -13,33 +12,35 @@ from metasim.scenario.robot import RobotCfg
 from .loader import load_traj_file
 
 
-def get_traj_v2(traj_filepath, robot: RobotCfg):
+def get_traj_v2(traj_filepath, robot: RobotCfg, data=None):
     """Get the trajectory data.
 
     Args:
         traj_filepath: The task cfg instance.
         robot: The robot cfg instance.
 
+        data: The already-loaded file content (``get_traj`` passes it so the file is read once).
+
     Returns:
         The trajectory data.
     """
-    ## Load trajectory data
-    assert os.path.exists(traj_filepath)
-    if os.path.isfile(traj_filepath):
-        assert (
-            traj_filepath.endswith("_v2.pkl")
-            or traj_filepath.endswith("_v2.pkl.gz")
-            or traj_filepath.endswith("_v2.json")
-            or traj_filepath.endswith("_v2.yaml")
-        )
-        data = load_traj_file(traj_filepath)[robot.name]
-    else:
-        assert traj_filepath.find("v2") != -1
-        paths = glob(os.path.join(traj_filepath, f"{robot.name}_v2.*"))
-        assert len(paths) >= 1
-        path = paths[0]
+    ## Load the file (``data`` is the content when ``get_traj`` already loaded it to recognise the format)
+    from metasim.utils.demo_util.demo_util import _resolve_traj_file
+
+    path = _resolve_traj_file(traj_filepath, robot.name)
+    if path != traj_filepath:
         log.info(f"Loading trajectory from {path}")
-        data = load_traj_file(path)[robot.name]
+    if data is None:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"The trajectory file does not exist: {path}")
+        data = load_traj_file(path)
+    loaded = data
+    if not isinstance(loaded, dict) or robot.name not in loaded:
+        raise KeyError(
+            f"{path} has no entry for robot {robot.name!r}; robots in the file: "
+            f"{[k for k in loaded] if isinstance(loaded, dict) else type(loaded).__name__}"
+        )
+    data = loaded[robot.name]
 
     ## Parse initial states
     # Guard before indexing data[0]: an empty trajectory (filtered/failed

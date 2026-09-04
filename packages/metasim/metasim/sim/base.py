@@ -99,6 +99,41 @@ class BaseSimHandler(ABC):
     #: requested order, permutations and duplicates included.
     get_states_honours_env_ids: bool = False
 
+    #: The step this backend integrates with when ``sim_params.dt`` is None: the same literal the
+    #: handler passes to its engine (single source for the construction site and ``physics_dt``).
+    _default_physics_dt: float | None = None
+
+    @property
+    def physics_dt(self) -> float | None:
+        """The physics step the backend actually integrates with, in seconds.
+
+        ``ScenarioCfg.sim_params.dt`` when set; backends that fall back to an engine default override
+        this to report it (MuJoCo reads the compiled model, SuperDex its solver step), so a recording
+        can state its time base. ``None`` means the backend has not resolved it.
+        """
+        override = getattr(self, "_physics_dt", None)
+        if override is not None:
+            return float(override)
+        dt = getattr(getattr(self.scenario, "sim_params", None), "dt", None)
+        if dt is not None:
+            return float(dt)
+        default = type(self)._default_physics_dt
+        return float(default) if default is not None else None
+
+    @physics_dt.setter
+    def physics_dt(self, value: float | None) -> None:
+        self._physics_dt = value
+
+    @property
+    def env_step_s(self) -> float | None:
+        """Simulated seconds per ``simulate()``: ``physics_dt`` times the steps taken per call.
+
+        Backends step ``decimation`` times; a backend that covers the env step differently (SuperDex
+        runs it as ``_substeps`` solver steps) overrides this. ``None`` when ``physics_dt`` is unknown.
+        """
+        dt = self.physics_dt
+        return None if dt is None else dt * int(getattr(self.scenario, "decimation", 1))
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         self.scenario = scenario
         self.optional_queries = optional_queries

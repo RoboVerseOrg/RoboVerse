@@ -5493,6 +5493,10 @@
      "params": null,
      "signature": "<property>"
     },
+    "env_step_s": {
+     "params": null,
+     "signature": "<property>"
+    },
     "flush_visual_updates": {
      "params": [
       {
@@ -5662,6 +5666,10 @@
      "params": null,
      "signature": "<property>"
     },
+    "physics_dt": {
+     "params": null,
+     "signature": "<property>"
+    },
     "refresh_render": {
      "params": [
       {
@@ -5799,6 +5807,10 @@
      "params": null,
      "signature": "<property>"
     },
+    "env_step_s": {
+     "params": null,
+     "signature": "<property>"
+    },
     "launch": {
      "params": [
       {
@@ -5813,6 +5825,10 @@
       }
      ],
      "signature": "(self, **render_launch_kwargs) -> 'None'"
+    },
+    "physics_dt": {
+     "params": null,
+     "signature": "<property>"
     },
     "refresh_render": {
      "params": [
@@ -6568,6 +6584,7 @@
  "metasim.utils.replay": {
   "ReplayReport": {
    "attributes": {
+    "compared_keys": "int",
     "worst": "float",
     "worst_key": "str",
     "worst_step": "int"
@@ -6580,7 +6597,8 @@
     "worst",
     "worst_step",
     "worst_key",
-    "per_step"
+    "per_step",
+    "compared_keys"
    ],
    "kind": "class",
    "methods": {
@@ -6625,9 +6643,14 @@
        "default": true,
        "kind": "POSITIONAL_OR_KEYWORD",
        "name": "per_step"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "compared_keys"
       }
      ],
-     "signature": "(self, level: 'str', passed: 'bool', tolerance: 'float', worst: 'float' = 0.0, worst_step: 'int' = -1, worst_key: 'str' = '', per_step: 'list[float]' = <factory>) -> None"
+     "signature": "(self, level: 'str', passed: 'bool', tolerance: 'float', worst: 'float' = 0.0, worst_step: 'int' = -1, worst_key: 'str' = '', per_step: 'list[float]' = <factory>, compared_keys: 'int' = 0) -> None"
     }
    }
   },
@@ -6718,6 +6741,32 @@
     }
    ],
    "signature": "(handler, traj: 'Trajectory', *, tol: 'float' = 0.0001) -> 'ReplayReport'"
+  },
+  "verify_episode_replay": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "handler"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "episode"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "tol"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "env_step_tol"
+    }
+   ],
+   "signature": "(handler, episode, *, tol: 'float' = 0.0001, env_step_tol: 'float' = 1e-09) -> 'ReplayReport'"
   },
   "verify_state_replay": {
    "kind": "function",

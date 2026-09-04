@@ -11,6 +11,64 @@ from metasim.sim import BaseSimHandler
 
 from .demo_util_v2 import get_traj_v2
 from .demo_util_v3 import convert_traj_v2_to_v3
+from .loader import TRAJ_SUFFIXES
+
+
+def _resolve_traj_file(traj_filepath: str, robot_name: str | None) -> str:
+    """The file to load: ``traj_filepath`` itself, or the robot's trajectory inside that directory.
+
+    A directory is searched for ``<robot>_v2.<ext>`` then ``<robot>.<ext>`` over the trajectory
+    extensions only, so a sidecar named after the robot (``franka.json`` config, ``franka.npz``
+    episode) cannot shadow the trajectory.
+    """
+    if not os.path.isdir(traj_filepath):
+        return traj_filepath
+    if robot_name is None:
+        raise ValueError(f"{traj_filepath} is a directory; a robot name is needed to pick the trajectory file")
+    for stem in (f"{robot_name}_v2", robot_name):
+        for suffix in TRAJ_SUFFIXES:
+            candidate = os.path.join(traj_filepath, stem + suffix)
+            if os.path.isfile(candidate):
+                return candidate
+    for episode in (os.path.join(traj_filepath, f"{robot_name}.npz"), os.path.join(traj_filepath, "episode.npz")):
+        if os.path.isfile(episode):
+            return episode
+    raise FileNotFoundError(f"No trajectory file for robot {robot_name!r} under {traj_filepath}")
+
+
+def detect_traj_format(traj_filepath: str, robot_name: str | None = None) -> tuple[str, str, object]:
+    """Recognise a trajectory file's format from its content.
+
+    Returns ``(format, path, data)``: ``format`` is ``"episode"`` (a roboverse.episode file),
+    ``"v2"`` (the legacy ``{robot: [demos]}`` layout, however complete) or ``"unknown"``; ``path`` is
+    the file actually inspected (a directory is resolved to the robot's file); ``data`` is the loaded
+    legacy content, so the caller does not load the file twice. A missing path raises
+    ``FileNotFoundError``. The v2 format used to be inferred from the substring ``v2`` in the path,
+    so relocating a dataset changed how it was parsed.
+    """
+    from metasim.utils.trajectory import is_episode_file
+
+    path = _resolve_traj_file(traj_filepath, robot_name)
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"The trajectory file does not exist: {path}")
+    if is_episode_file(path):
+        return "episode", path, None
+    from metasim.utils.demo_util.loader import TRAJ_SUFFIXES, TrajectoryFileError, load_traj_file
+
+    if not path.endswith(TRAJ_SUFFIXES):
+        return "unknown", path, None
+    try:
+        data = load_traj_file(path)
+    except Exception as err:  # truncated gzip, garbage pickle, corrupt json / yaml, unpicklable module ...
+        # not a ValueError: the task bases swallow ValueError from get_traj as "no demo, use defaults"
+        raise TrajectoryFileError(
+            f"{path} could not be read as a trajectory file ({type(err).__name__}: {err})"
+        ) from err
+    # the legacy layout is a dict of per-robot demo lists (an optional "metadata" dict aside); an
+    # empty or incomplete list is still that layout, and get_traj_v2 reports what is wrong with it
+    if isinstance(data, dict) and any(isinstance(v, (list, tuple)) for k, v in data.items() if k != "metadata"):
+        return "v2", path, data
+    return "unknown", path, None
 
 
 def get_traj(
@@ -41,27 +99,23 @@ def get_traj(
     if isinstance(robot, (list, tuple)):
         return _get_traj_multiagent(traj_filepath, list(robot), handler=handler, v2_as_v3=v2_as_v3)
 
-    if traj_filepath.find("v2") != -1:
+    fmt, path, data = detect_traj_format(traj_filepath, getattr(robot, "name", None))
+    if fmt == "episode":
+        from metasim.utils.trajectory import EpisodeFileError
+
+        raise EpisodeFileError(
+            f"{path} is a roboverse.episode file (self-describing, with provenance); load it with "
+            "metasim.utils.trajectory.load_episode and replay it with metasim.utils.replay.verify_episode_replay."
+        )
+    if fmt == "v2":
         log.info("Reading trajectory using v2 data format")
-        if os.path.exists(traj_filepath):
-            if v2_as_v3:
-                return convert_traj_v2_to_v3(*get_traj_v2(traj_filepath, robot), robot)
-            else:
-                return get_traj_v2(traj_filepath, robot)
-        else:
-            raise FileNotFoundError(
-                "The trajectory file does not exist, please check the path or convert the trajectory file to v2 format"
-            )
+        if v2_as_v3:
+            return convert_traj_v2_to_v3(*get_traj_v2(path, robot, data=data), robot)
+        return get_traj_v2(path, robot, data=data)
     else:
-        # The v1 format is no longer supported. Previously this branch only
-        # logged a warning and fell off the end, returning None — every caller
-        # unpacks a 3-tuple (`init_states, _, _ = get_traj(...)`), so they hit
-        # an opaque `TypeError: cannot unpack non-iterable NoneType` that is NOT
-        # in the (FileNotFoundError, KeyError, ValueError) set task base classes
-        # catch, masking the real cause (an unsupported/misnamed traj file).
         raise ValueError(
-            f"Unsupported v1 trajectory format for '{traj_filepath}'. "
-            "Convert it to v2 (the filename must contain 'v2', e.g. '<robot>_v2.pkl.gz')."
+            f"Unsupported trajectory format for '{path}': expected a roboverse.episode file or the legacy "
+            "'{robot_name: [demos]}' layout (pickle / gzip / json / yaml). v1 files are not supported."
         )
 
 
