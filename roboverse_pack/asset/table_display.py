@@ -27,7 +27,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils import configclass
 from metasim.utils.math import matrix_from_euler, quat_from_matrix, quat_mul
 from metasim.utils.setup_util import get_handler
-from roboverse_pack.tasks.embodiedgen.tables.table785_config import ALL_TABLE750_CONFIGS
+from roboverse_pack.asset.table785_config import ALL_TABLE750_CONFIGS
 
 
 def save_poses_to_file(states, objects, robots, filename="saved_poses.py"):

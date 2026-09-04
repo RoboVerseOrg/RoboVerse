@@ -50,7 +50,7 @@ def main():
     from metasim.scenario.cameras import PinholeCameraCfg
     from metasim.scenario.scenario import ScenarioCfg
     from metasim.utils.demo_util import get_traj
-    from metasim.utils.setup_util import get_sim_env_class
+    from metasim.utils.setup_util import get_sim_handler_class
 
     camera = PinholeCameraCfg(
         name="camera",
@@ -68,7 +68,7 @@ def main():
         sim=args.sim,
         headless=True,
     )
-    env_class = get_sim_env_class(SimType(args.sim))
+    env_class = get_sim_handler_class(SimType(args.sim))
     env = env_class(scenario)
     init_states, all_actions, all_states = get_traj(scenario.task, scenario.robots[0], env.handler)
     obs, _ = env.reset(states=init_states[: scenario.num_envs])
