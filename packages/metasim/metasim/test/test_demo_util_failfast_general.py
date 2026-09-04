@@ -18,10 +18,11 @@ from types import SimpleNamespace
 import pytest
 
 from metasim.utils.demo_util import get_traj
+
+pytestmark = pytest.mark.general
 from metasim.utils.demo_util.demo_util import detect_traj_format
 
 
-@pytest.mark.general
 def test_get_traj_missing_file_raises_filenotfound(tmp_path):
     """An absent path is reported as missing (FileNotFoundError), not as an unsupported format."""
     from types import SimpleNamespace

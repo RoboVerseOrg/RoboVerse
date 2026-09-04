@@ -193,8 +193,8 @@ def _resolve_asset(value: str) -> Path | None:
     return None
 
 
-def _asset_files(cfg, simulator: str) -> tuple[dict[str, Path], list[str]]:
-    """``(label -> file, unresolved)`` for the assets the backend loads for ``cfg``.
+def _asset_files(cfg, simulator: str) -> tuple[dict[str, tuple[str, Path]], list[str]]:
+    """``(label -> (configured path, file), unresolved)`` for the assets the backend loads for ``cfg``.
 
     The primary asset is what ``cfg.file_name(simulator)`` names (the per-backend MJCF / URDF / USD
     choice every handler makes); ``extra_resources`` entries are included too. Other ``*_path``
@@ -203,7 +203,7 @@ def _asset_files(cfg, simulator: str) -> tuple[dict[str, Path], list[str]]:
     ``unresolved`` lists the configured paths that name no file on this machine; a primitive shape
     configures none and is not unresolved.
     """
-    found: dict[str, Path] = {}
+    found: dict[str, tuple[str, Path]] = {}
     unresolved: list[str] = []
 
     def take(label: str, value) -> None:
@@ -213,7 +213,7 @@ def _asset_files(cfg, simulator: str) -> tuple[dict[str, Path], list[str]]:
         if resolved is None:
             unresolved.append(value)
         else:
-            found[label] = resolved
+            found[label] = (value, resolved)
 
     primary = None
     file_name = getattr(cfg, "file_name", None)
@@ -267,22 +267,27 @@ def _backend_versions(simulator: str) -> dict[str, str]:
         return {}
 
 
+def _reported(handler, attr: str) -> float | None:
+    """The positive float the handler reports for ``attr``; None when the backend has not resolved it.
+
+    Only the not-yet-resolved cases are None: a backend failure while answering (a dead parallel
+    worker, a broken pipe) propagates, so it is never written into provenance as "unknown".
+    """
+    try:
+        value = getattr(handler, attr)
+    except (AttributeError, NotImplementedError):
+        return None
+    return float(value) if isinstance(value, (int, float)) and value > 0 else None
+
+
 def _resolved_physics_dt(handler) -> float | None:
     """``handler.physics_dt`` (the backend contract); None when the backend has not resolved it."""
-    try:
-        value = handler.physics_dt
-    except Exception:
-        return None
-    return float(value) if isinstance(value, (int, float)) and value > 0 else None
+    return _reported(handler, "physics_dt")
 
 
-def env_step_seconds(handler, physics_dt: float | None) -> float | None:
+def env_step_seconds(handler) -> float | None:
     """``handler.env_step_s`` (the backend contract, forwarded by the wrappers); None when unknown."""
-    try:
-        value = handler.env_step_s
-    except Exception:
-        return None
-    return float(value) if isinstance(value, (int, float)) and value > 0 else None
+    return _reported(handler, "env_step_s")
 
 
 def provenance_from_handler(
@@ -296,7 +301,7 @@ def provenance_from_handler(
     dt = getattr(sim_params, "dt", None)
     physics_dt = _resolved_physics_dt(handler)
     decimation = int(getattr(scenario, "decimation", 1))
-    env_step = env_step_seconds(handler, physics_dt)
+    env_step = env_step_seconds(handler)
     assets: dict[str, dict[str, Any]] = {}
     entities = list(getattr(scenario, "robots", []) or []) + list(getattr(scenario, "objects", []) or [])
     scene = getattr(scenario, "scene", None)
@@ -308,8 +313,11 @@ def provenance_from_handler(
         if unresolved:
             log.warning(f"provenance: asset(s) of {label!r} not found on this machine, not hashed: {unresolved}")
         if files:
+            # ``path`` is the configured string (re-resolved on the replaying machine by the same rule);
+            # ``resolved`` is where it was found here, for the record
             assets[label] = {
-                f: {"path": str(p), "sha256": _sha256(p), "bytes": p.stat().st_size} for f, p in files.items()
+                f: {"path": configured, "resolved": str(p), "sha256": _sha256(p), "bytes": p.stat().st_size}
+                for f, (configured, p) in files.items()
             }
     commit, dirty = _git_state(Path(metasim.__file__).resolve().parent)
     device = getattr(handler, "device", None)

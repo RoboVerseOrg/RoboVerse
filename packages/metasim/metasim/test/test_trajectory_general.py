@@ -159,7 +159,7 @@ def test_assets_are_hashed_and_checked(tmp_path, monkeypatch):
     asset.write_text("<mujoco/>")
     rec = _record(_Handler(asset_path=str(asset)))
     entry = rec.provenance.assets["arm"]["mjcf_path"]
-    assert entry["path"] == str(asset) and len(entry["sha256"]) == 64 and entry["bytes"] == 9
+    assert entry["path"] == entry["resolved"] == str(asset) and len(entry["sha256"]) == 64 and entry["bytes"] == 9
     assert check_assets(rec) == {"arm.mjcf_path": "ok"}
     asset.write_text("<mujoco><option timestep='0.002'/></mujoco>")
     assert check_assets(rec) == {"arm.mjcf_path": "changed"}
@@ -259,8 +259,43 @@ def test_asset_files_distinguish_primitives_from_missing_files(tmp_path):
     real.write_text("<mujoco/>")
     present = RigidObjCfg(name="box", mjcf_path=str(real))
     files, unresolved = _asset_files(present, "mujoco")
-    assert unresolved == [] and files["asset"] == real
+    assert unresolved == [] and files["asset"] == (str(real), real)
 
     absent = RigidObjCfg(name="ghost", mjcf_path=str(tmp_path / "missing.xml"))
     files, unresolved = _asset_files(absent, "mujoco")
     assert files == {} and unresolved == [str(tmp_path / "missing.xml")]
+
+
+def test_assets_configured_relative_to_home_are_checked_on_another_home(tmp_path, monkeypatch):
+    """The record keeps the *configured* path and re-resolves it where it is replayed: a ``~``-relative
+    asset recorded under one home is found under another home that holds the same file."""
+    import shutil
+
+    home_a, home_b = tmp_path / "a", tmp_path / "b"
+    home_a.mkdir()
+    home_b.mkdir()
+    (home_a / "arm.xml").write_text("<mujoco/>")
+    monkeypatch.setenv("HOME", str(home_a))
+    rec = _record(_Handler(asset_path="~/arm.xml"))
+    entry = rec.provenance.assets["arm"]["mjcf_path"]
+    assert entry["path"] == "~/arm.xml" and entry["resolved"] == str(home_a / "arm.xml")
+    shutil.copy(home_a / "arm.xml", home_b / "arm.xml")
+    monkeypatch.setenv("HOME", str(home_b))
+    assert check_assets(rec) == {"arm.mjcf_path": "ok"}
+
+
+def test_backend_failures_while_reporting_the_time_base_are_not_recorded_as_unknown():
+    """Only a backend that has not resolved its step answers None; a failure propagates."""
+    from metasim.utils.trajectory import env_step_seconds
+
+    class _Broken:
+        @property
+        def env_step_s(self):
+            raise RuntimeError("worker 0 died")
+
+    class _Unresolved:
+        pass
+
+    with pytest.raises(RuntimeError, match="worker 0 died"):
+        env_step_seconds(_Broken())
+    assert env_step_seconds(_Unresolved()) is None

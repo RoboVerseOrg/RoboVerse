@@ -367,6 +367,7 @@ def test_get_states_honours_env_ids_declarations_are_pinned():
         honours == {"MJXHandler", "NewtonHandler", "GenesisHandler", "HybridSimHandler", "ParallelHandler"} & installed
     )
 
+
 @pytest.mark.general
 def test_physics_dt_contract_reports_the_configured_or_resolved_step():
     """``physics_dt`` is the step the backend integrates with: the configured ``dt``, a backend override

@@ -130,12 +130,12 @@ from metasim.task.registry import get_task_class
 from metasim.types import TensorState
 from metasim.utils.demo_util import get_traj
 from metasim.utils.setup_util import get_robot
-from metasim.utils.state import select_envs, state_tensor_to_nested
+from metasim.utils.state import select_envs, state_tensor_to_nested, state_to_device
 from metasim.utils.tensor_util import tensor_to_cpu
 from metasim.utils.trajectory import episode_from_states, provenance_from_handler, save_episode
 
 rootutils.setup_root(__file__, pythonpath=True)
-from roboverse_learn.il.utils.clean_state import ensure_clean_state
+from roboverse_learn.il.utils.clean_state import ensure_clean_state, settle_recipients
 
 # Import randomization components
 try:
@@ -192,20 +192,16 @@ def force_reset_to_state(env, state, env_id, collector=None, demo_idxs=None, fin
     def _keep_other_envs(tensor_state):
         if collector is None:
             return
-        # only envs that keep stepping after this iteration receive the settle physics
-        others = [
-            other
-            for other in range(env.handler.num_envs)
-            if other != env_id
-            and not (finished is not None and finished[other])
-            and not (terminal is not None and other in terminal)
-            and demo_idxs[other] in collector.cache
-        ]
+        recording = [i for i in range(env.handler.num_envs) if demo_idxs[i] in collector.cache]
+        others = settle_recipients(
+            env.handler.num_envs, env_id=env_id, finished=finished, terminal=terminal, recording=recording
+        )
         if not others:
             return
-        nested = state_tensor_to_nested(env.handler, select_envs(tensor_state, others))
+        rows = select_envs(tensor_state, others)  # sliced once; the collector indexes these rows
+        nested = state_tensor_to_nested(env.handler, rows)
         for local, other in enumerate(others):
-            collector.add(demo_idxs[other], nested[local], tensor_state=tensor_state, env_id=other)
+            collector.add(demo_idxs[other], nested[local], tensor_state=rows, env_id=local)
 
     ensure_clean_state(env.handler, expected_state=state, env_id=env_id, on_step=_keep_other_envs)
     if hasattr(env, "_episode_steps"):
@@ -218,10 +214,7 @@ tot_give_up = 0
 global_step = 0
 
 
-def _physics_slice(tensor_state, env_id: int):
-    """Env ``env_id``'s physics state without camera images (they live in the legacy demo, not the record)."""
-    physics_only = TensorState(objects=tensor_state.objects, robots=tensor_state.robots, cameras={}, extras={})
-    return select_envs(physics_only, [env_id])
+_UNSET = object()
 
 
 class DemoCollector:
@@ -238,6 +231,7 @@ class DemoCollector:
             provenance_from_handler(handler, seed=args.randomization_seed, num_envs=1) if args.episode_sidecar else None
         )
         self._warned_no_targets = False
+        self._slice_cache: tuple | None = None  # (batched state, its physics-only CPU copy): moved once per step
         self.save_request_queue = mp.Queue()
         self.save_proc = mp.Process(target=save_demo_mp, args=(self.save_request_queue, robot_cfg, task_desc))
         self.save_proc.start()
@@ -265,13 +259,24 @@ class DemoCollector:
 
         return max_idx + 1
 
+    def _env_slice(self, tensor_state, env_id: int):
+        """Env ``env_id``'s physics state without camera images (they live in the legacy demo), on the CPU.
+
+        The batched state is stripped and moved once per step, then indexed per env: the recorded
+        slices do not stay resident on the GPU for the length of the run.
+        """
+        if self._slice_cache is None or self._slice_cache[0] is not tensor_state:
+            physics_only = TensorState(objects=tensor_state.objects, robots=tensor_state.robots, cameras={}, extras={})
+            self._slice_cache = (tensor_state, state_to_device(physics_only, "cpu"))
+        return select_envs(self._slice_cache[1], [env_id])
+
     def create(self, demo_idx: int, data_dict: dict, tensor_state=None, env_id: int | None = None):
         assert demo_idx not in self.cache
         assert isinstance(demo_idx, int)
         self.cache[demo_idx] = [data_dict]
         # the replayable episode: this env's full state before every action, and the joint targets applied
         self.episode_states[demo_idx] = (
-            [_physics_slice(tensor_state, env_id)] if tensor_state is not None and args.episode_sidecar else []
+            [self._env_slice(tensor_state, env_id)] if tensor_state is not None and args.episode_sidecar else []
         )
         self.episode_actions[demo_idx] = []
 
@@ -281,7 +286,7 @@ class DemoCollector:
         assert demo_idx in self.cache
         self.cache[demo_idx].append(deepcopy(tensor_to_cpu(data_dict)))
         if tensor_state is not None and self.episode_states.get(demo_idx):
-            env_state = _physics_slice(tensor_state, env_id)
+            env_state = self._env_slice(tensor_state, env_id)
             target = env_state.robots[self.robot_cfg.name].joint_pos_target
             if target is None:
                 self.episode_states[demo_idx] = []  # this backend does not report targets: no episode file
@@ -485,9 +490,24 @@ def main():
     robot = get_robot(args.robot)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if args.traj_filepath:
-        # the task base downloads and loads its own ``traj_filepath`` in __init__; point it at the override first
+        # The task base downloads and loads ``traj_filepath`` in __init__. A task that declares it as a
+        # class attribute is pointed at the override for the construction only (the registry class is
+        # restored); a task that assigns it on the instance in __init__ ignores that, so the instance
+        # is corrected afterwards and its initial states re-derived from the override.
+        declared = task_cls.__dict__.get("traj_filepath", _UNSET)
         task_cls.traj_filepath = args.traj_filepath
-    env = task_cls(scenario, device=device)
+        try:
+            env = task_cls(scenario, device=device)
+        finally:
+            if declared is _UNSET:
+                del task_cls.traj_filepath
+            else:
+                task_cls.traj_filepath = declared
+        if getattr(env, "traj_filepath", None) != args.traj_filepath:
+            env.traj_filepath = args.traj_filepath
+            env._initial_states = env._get_initial_states()
+    else:
+        env = task_cls(scenario, device=device)
 
     ## Data
     traj_filepath = args.traj_filepath or getattr(env, "traj_filepath", None)

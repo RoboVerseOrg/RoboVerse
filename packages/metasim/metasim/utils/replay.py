@@ -174,7 +174,7 @@ def verify_episode_replay(handler, episode, *, tol: float = 1e-4, env_step_tol: 
     is compared with this machine's in the report's ``worst_key`` when the replay fails: a changed
     asset hash or backend version is the usual reason.
     """
-    from metasim.utils.trajectory import _resolved_physics_dt, check_assets, env_step_seconds
+    from metasim.utils.trajectory import check_assets, env_step_seconds
 
     there = episode.provenance
     simulator = str(handler.scenario.simulator)
@@ -200,7 +200,7 @@ def verify_episode_replay(handler, episode, *, tol: float = 1e-4, env_step_tol: 
         here = list(handler.get_joint_names(name, sort=True))
         if here != list(names):
             raise ValueError(f"joint names of {name!r} differ: recorded {names}, handler {here}")
-    here_step = env_step_seconds(handler, _resolved_physics_dt(handler))
+    here_step = env_step_seconds(handler)
     if there.env_step_s is None or here_step is None:
         raise ValueError(
             f"time base unknown (recorded env step {there.env_step_s}, handler {here_step}): the backend does not "

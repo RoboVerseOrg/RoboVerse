@@ -28,6 +28,24 @@ POSITION_ATOL = 1e-4
 EXPECTED_ATOL = 5e-3
 
 
+def settle_recipients(num_envs: int, *, env_id: int | None, finished=None, terminal=None, recording=()) -> list[int]:
+    """The envs whose in-flight demo must receive the settle steps of a reset of ``env_id``.
+
+    Settling one env steps every env of the batch, so every *other* env that keeps stepping after
+    this iteration absorbs that physics and its demo must record it. Excluded: the env being reset,
+    envs already ``finished`` (indexable by env), envs in ``terminal`` (their demo closes in this
+    iteration; trailing frames would corrupt a closed demo), and envs not in ``recording``.
+    """
+    return [
+        other
+        for other in range(num_envs)
+        if other != env_id
+        and not (finished is not None and finished[other])
+        and not (terminal is not None and other in terminal)
+        and other in recording
+    ]
+
+
 def _entities(state) -> dict:
     """``name -> entity state`` for the objects of a ``TensorState`` (robots are not settled or validated)."""
     return dict(getattr(state, "objects", {}) or {})

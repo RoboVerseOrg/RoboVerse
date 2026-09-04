@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import torch
 from loguru import logger as log
 
-from roboverse_learn.il.utils.clean_state import ensure_clean_state
+from roboverse_learn.il.utils.clean_state import ensure_clean_state, settle_recipients
 
 
 class _Stub:
@@ -96,3 +96,60 @@ def test_on_step_receives_the_full_state_after_every_simulate():
     seen = []
     ensure_clean_state(h, on_step=lambda state: seen.append(float(state.objects["drawer"].joint_pos[0, 0])))
     assert len(seen) == h.steps == 4
+
+
+# --- settling one reset env steps the whole batch; those steps must land in the other in-flight demos
+
+
+class _Batch:
+    """Two-env handler whose objects come to rest after two steps; each step is recorded by the callback."""
+
+    num_envs = 2
+
+    def __init__(self):
+        self.steps = 0
+
+    def simulate(self):
+        self.steps += 1
+
+    def get_joint_names(self, name, sort=True):
+        return ["j"]
+
+    def get_states(self, mode="tensor"):
+        moving = self.steps < 2
+        t = self.steps if moving else 2  # everything comes to rest after two steps
+        pos = torch.tensor([[0.0, 0.0, 1.0 - 0.1 * t] + [0.0] * 10] * 2)
+        q = torch.tensor([[0.1 * t], [0.2 * t]])
+        return SimpleNamespace(
+            objects={"cube": SimpleNamespace(joint_pos=None, root_state=pos)},
+            robots={"arm": SimpleNamespace(joint_pos=q, joint_pos_target=q.clone(), root_state=torch.zeros(2, 13))},
+        )
+
+
+def test_settle_steps_are_delivered_to_the_recorder_for_every_env():
+    h = _Batch()
+    recorded = {0: [], 1: []}
+
+    def keep_other_envs(state):
+        for env in (0, 1):
+            recorded[env].append(float(state.robots["arm"].joint_pos[env, 0]))
+
+    ensure_clean_state(h, on_step=keep_other_envs)
+    assert h.steps == 4 and len(recorded[0]) == 4 and len(recorded[1]) == 4
+    assert [round(v, 4) for v in recorded[1]] == [
+        0.2,
+        0.4,
+        0.4,
+        0.4,
+    ]  # env 1 advanced during env 0's settle, and it was seen
+
+
+def test_settle_recipients_are_the_other_envs_that_keep_recording():
+    """The reset env, finished envs, envs whose demo closes this iteration and envs without an open
+    demo receive nothing; a reset env that is recording again (not terminal any more) does."""
+    kw = dict(env_id=1, finished=[False, False, True, False, False], terminal={3}, recording=[0, 1, 2, 3])
+    assert settle_recipients(5, **kw) == [0]
+    kw["terminal"] = set()  # env 3 was reset and records again
+    assert settle_recipients(5, **kw) == [0, 3]
+    assert settle_recipients(5, env_id=None, finished=None, terminal=None, recording=[4]) == [4]
+    assert settle_recipients(2, env_id=0, recording=[]) == []
