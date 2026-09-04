@@ -8,7 +8,9 @@
 # file (observation preprocessing, action postprocessing, IK, the runner protocol) is RoboVerse's
 # own.
 # Changes: the ensembling was vectorised over parallel environments (an extra leading env
-#   dimension) and reads its chunk length / action dimension from the policy config.
+#   dimension) and reads its chunk length / action dimension from the policy config; the
+#   overlapping chunks are selected by position (the queries that cover the current step) rather
+#   than by a non-zero test on the action values.
 # Full license: roboverse_learn/il/policies/act/LICENSE
 
 from roboverse_learn.il.configs.base_config import BasePolicyCfg
@@ -158,17 +160,21 @@ class BaseEvalRunner:
             self.step : self.step + self.policy_cfg.action_config.action_chunk_steps,
         ] = action_chunk.transpose(0, 1)
 
-        actions_for_curr_step = self.all_time_actions[:, :, self.step]
+        # The chunks that cover this step are the ones queried at steps ``step - chunk + 1 .. step``
+        # (a chunk is predicted every step). Selecting them by position keeps a legitimately zero
+        # action, and one env's values never decide what another env averages.
+        chunk = self.policy_cfg.action_config.action_chunk_steps
+        first_query = max(0, self.step - chunk + 1)
+        actions_for_curr_step = self.all_time_actions[:, first_query : self.step + 1, self.step]
 
-        actions_populated = torch.all(torch.all(actions_for_curr_step != 0, dim=2), dim=0)
-        actions_for_curr_step = actions_for_curr_step[:, actions_populated]
-
+        # ACT's weighting: w_i = exp(-m * i) with i = 0 the oldest prediction, so the earliest chunk
+        # that covers this step counts most and each newer one slightly less.
         time_indices = torch.arange(
             actions_for_curr_step.shape[1],
             device=actions_for_curr_step.device,
             dtype=torch.float,
         )
-        exp_weights = torch.exp(self.k * time_indices)
+        exp_weights = torch.exp(-self.k * time_indices)
         exp_weights = exp_weights / exp_weights.sum()
 
         weighted_actions = actions_for_curr_step * exp_weights.unsqueeze(-1).unsqueeze(0)

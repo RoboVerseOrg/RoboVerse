@@ -441,6 +441,8 @@ def main():
         help="Seed for reproducible randomization. If None, uses random seed",
     )
     args = parser.parse_args()
+    if args.num_episodes < 1:
+        raise ValueError(f"--num_episodes must be >= 1 to report a success rate; got {args.num_episodes}")
 
     if args.device.startswith("cuda") and not torch.cuda.is_available():
         print("Warning: CUDA not available, switching to CPU")
