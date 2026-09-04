@@ -37,6 +37,25 @@ class BaseCameraCfg:
     support it (sapien2) apply the exact focal lengths / principal point instead of deriving them
     from fov/aperture. Defaults to None (derive from fov)."""
 
+    def __post_init__(self) -> None:
+        """A camera needs a positive pixel size and a finite position.
+
+        A zero-sized buffer or a NaN pose fails deep inside the renderer with no reference to the
+        camera that caused it.
+        """
+        from ._validate import finite_triple, positive_finite_or_none, positive_int
+
+        owner = f"{type(self).__name__}({self.name!r})"
+        positive_int(owner, "width", self.width)
+        positive_int(owner, "height", self.height)
+        finite_triple(owner, "pos", self.pos)
+        # the intrinsics below divide by these; a zero used to surface as a bare ZeroDivisionError
+        for field_name in ("focal_length", "horizontal_aperture"):
+            if hasattr(self, field_name):
+                positive_finite_or_none(owner, field_name, getattr(self, field_name))
+        if getattr(self, "look_at", None) is not None:
+            finite_triple(owner, "look_at", self.look_at)
+
 
 @configclass
 class PinholeCameraCfg(BaseCameraCfg):

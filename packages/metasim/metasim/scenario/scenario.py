@@ -70,6 +70,7 @@ class ScenarioCfg:
 
     def __post_init__(self) -> None:
         """Resolve strings & fetch assets; skip until `simulator` is set."""
+        self._validate()  # before any robot / scene lookup: a bad scalar must not trigger package discovery
         # if self.simulator is None:  # defer init until user specifies simulator
         #     return
 
@@ -84,6 +85,20 @@ class ScenarioCfg:
             self.ground = get_ground(self.ground)
 
         self._warn_duplicate_names()
+
+    def _validate(self) -> None:
+        """Reject values every backend would choke on later, naming the field and the fix.
+
+        Runs at construction and inside ``update``; ``from_dict`` and direct assignment bypass it.
+        """
+        from ._validate import positive_int, sequence_of_configs
+
+        self.robots = sequence_of_configs("ScenarioCfg", "robots", self.robots)
+        self.objects = sequence_of_configs("ScenarioCfg", "objects", self.objects)
+        self.cameras = sequence_of_configs("ScenarioCfg", "cameras", self.cameras)
+        self.lights = sequence_of_configs("ScenarioCfg", "lights", self.lights)
+        positive_int("ScenarioCfg", "num_envs", self.num_envs)
+        positive_int("ScenarioCfg", "decimation", self.decimation)
 
     def _warn_duplicate_names(self) -> None:
         """Surface duplicate robot/object names that silently break at launch.
@@ -152,10 +167,17 @@ class ScenarioCfg:
                 f"they are not ScenarioCfg fields and will have no effect "
                 f"(check for a typo). Valid fields: {sorted(valid_fields)}."
             )
+        previous = {key: getattr(self, key) for key in kwargs if key in valid_fields}
         for key, value in kwargs.items():
             if key in valid_fields:
                 setattr(self, key, value)
-        self.__post_init__()
+        try:
+            self.__post_init__()
+        except Exception:
+            # a rejected value must not stay behind on the (often shared, class-level) scenario
+            for key, value in previous.items():
+                setattr(self, key, value)
+            raise
         return self
 
     def replace(self, **kwargs):
