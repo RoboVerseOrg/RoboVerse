@@ -136,7 +136,8 @@ def test_worker_dispatches_commands_and_closes_cleanly():
 @pytest.mark.general
 def test_worker_forwards_sort_arg_to_get_body_names():
     """``get_body_names`` must reach the handler with the ``sort`` value
-    the caller passed, not a dropped/defaulted one."""
+    the caller passed, not a dropped/defaulted one.
+    """
     parent, _errq, thread = _run_worker_thread(_StubHandler)
 
     parent.send(("get_body_names", ("robot", False)))
@@ -154,7 +155,8 @@ def test_worker_forwards_sort_arg_to_get_body_names():
 @pytest.mark.general
 def test_worker_construction_failure_reports_real_error():
     """If ``handler_class()`` raises, the worker queues *that* error —
-    not a NameError from a ``finally: env.close()`` on an unbound name."""
+    not a NameError from a ``finally: env.close()`` on an unbound name.
+    """
 
     class _ExplodingHandler:
         def __init__(self):
@@ -174,7 +176,8 @@ def test_worker_construction_failure_reports_real_error():
 @pytest.mark.general
 def test_worker_does_not_close_unconstructed_env():
     """A construction failure must not trigger a close on a nonexistent env
-    (which historically raised NameError and masked the real error)."""
+    (which historically raised NameError and masked the real error).
+    """
 
     class _ExplodingHandler:
         closed = False
@@ -195,7 +198,8 @@ def test_worker_does_not_close_unconstructed_env():
 @pytest.mark.general
 def test_worker_handler_error_mid_loop_is_queued():
     """An exception raised by a command handler is captured on the error
-    queue rather than silently killing the loop."""
+    queue rather than silently killing the loop.
+    """
 
     class _FailingSimulate(_StubHandler):
         def simulate(self):
@@ -210,3 +214,32 @@ def test_worker_handler_error_mid_loop_is_queued():
     assert err_type == "ValueError"
     assert "simulate failed" in err_msg
     parent.close()
+
+
+@pytest.mark.general
+def test_parallel_set_states_routes_rows_by_env_id():
+    """One rule for every input shape: a full batch is indexed by env id (a permuted ``env_ids`` does
+    not transpose anything), one state is broadcast, one-per-env_id is positional, anything else raises.
+    """
+    from metasim.test.test_parallel_error_handling_general import _FakeRemote, _make_parallel_stub_handler
+
+    remotes = [_FakeRemote() for _ in range(3)]
+    h = _make_parallel_stub_handler(remotes, processes=[])  # the shared stub wrapper, real _check_error
+    states = [{"objects": {}, "robots": {"r": {"env": i}}} for i in range(3)]
+
+    def sent():
+        out = [[m for m in r.sent if m[0] == "set_states"] for r in remotes]
+        for r in remotes:
+            r.sent.clear()
+        return out
+
+    h._set_states(states, env_ids=[2])
+    assert sent() == [[], [], [("set_states", ([states[2]],))]]
+    h._set_states(states, env_ids=[2, 1, 0])  # permuted full batch: still row k -> env k
+    assert sent() == [[("set_states", ([states[i]],))] for i in range(3)]
+    h._set_states([states[1]], env_ids=[0, 2])  # broadcast
+    assert sent() == [[("set_states", ([states[1]],))], [], [("set_states", ([states[1]],))]]
+    h._set_states([states[0], states[2]], env_ids=[0, 2])  # positional, one per env_id
+    assert sent() == [[("set_states", ([states[0]],))], [], [("set_states", ([states[2]],))]]
+    with pytest.raises(ValueError, match="pass one state"):
+        h._set_states([states[0], states[1]], env_ids=[2])

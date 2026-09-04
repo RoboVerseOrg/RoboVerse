@@ -107,6 +107,8 @@ class IsaacsimHandler(BaseSimHandler):
     This class extends BaseSimHandler to provide specific functionality for Isaac Lab.
     """
 
+    set_states_restores_velocities = True  # TensorState path: write_root_velocity_to_sim / write_joint_velocity_to_sim
+
     @property
     def set_states_refreshes(self) -> bool:  # type: ignore[override]
         """``_set_states`` ends with ``refresh_render()`` only when the scene has cameras."""

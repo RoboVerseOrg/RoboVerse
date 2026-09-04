@@ -9,6 +9,7 @@ re-assign self.robots in its own __init__.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -58,7 +59,8 @@ class _StubHandler:
 
 class _MiniRLTask(RLTaskEnv):
     """Concrete subclass that doesn't override ``self.robots`` —
-    exposes whether the base sets it correctly."""
+    exposes whether the base sets it correctly.
+    """
 
     def _get_initial_states(self):
         return None
@@ -94,7 +96,8 @@ def _stub_scenario(monkeypatch):
 @pytest.mark.general
 def test_rl_task_env_exposes_robots_list_set_by_base(_stub_scenario, monkeypatch):
     """RLTaskEnv must set self.robots (plural) in its __init__ so any
-    downstream loop over robots works without subclass patching."""
+    downstream loop over robots works without subclass patching.
+    """
     handler = _StubHandler(_stub_scenario, robot_joints=["j0"])
 
     # Hand-build the env state get_states needs to return.
@@ -172,7 +175,8 @@ def test_rl_task_reward_terms_initialised_and_default_to_zeros():
 @pytest.mark.general
 def test_rl_task_env_robots_tolerates_empty_scenario(_stub_scenario):
     """RLTaskEnv should not crash when scenario.robots is empty (this happens
-    for renderer-only or perception-only tasks)."""
+    for renderer-only or perception-only tasks).
+    """
     empty_scenario = ScenarioCfg(robots=[], num_envs=1, simulator=None)
     # Just verify the new assignment doesn't IndexError on empty robots:
     robots = list(empty_scenario.robots) if empty_scenario.robots else []
@@ -184,7 +188,8 @@ def test_rl_task_env_robots_tolerates_empty_scenario(_stub_scenario):
 @pytest.mark.general
 def test_process_action_default_is_identity():
     """The sanctioned action hook defaults to identity on both bases, so adding
-    it is a no-op for every task that does not override it."""
+    it is a no-op for every task that does not override it.
+    """
     from metasim.task.base import BaseTaskEnv
 
     sentinel = object()
@@ -195,7 +200,8 @@ def test_process_action_default_is_identity():
 @pytest.mark.general
 def test_rl_task_step_applies_process_action_hook():
     """RLTaskEnv.step must run actions through ``_process_action`` before applying
-    them, so tasks can transform actions there instead of overriding ``step``."""
+    them, so tasks can transform actions there instead of overriding ``step``.
+    """
     captured = {}
 
     class _H:
@@ -349,7 +355,8 @@ def _step_env(base_cls, scenario, monkeypatch, *, hooks, env_device):
 def test_step_normalises_reward_and_termination_on_both_bases(_stub_scenario, monkeypatch, hook_device, base):
     """``step()`` returns a ``(num_envs,)`` float32 reward and bool terminated / timeout on the env device
     from both task bases, whatever dtype / device / container the hooks produce. With CUDA available the
-    hooks build their tensors on the other device than the handler, so the device move is exercised."""
+    hooks build their tensors on the other device than the handler, so the device move is exercised.
+    """
     from metasim.task.base import BaseTaskEnv
 
     if hook_device == "cuda" and not torch.cuda.is_available():
@@ -382,7 +389,8 @@ def test_step_normalises_reward_and_termination_on_both_bases(_stub_scenario, mo
 )
 def test_step_rejects_a_hook_return_of_the_wrong_shape_by_name(_stub_scenario, monkeypatch, bad, match):
     """A scalar / (N, 1) / dict from a hook used to slip through with the right dtype and silently break
-    RLTaskEnv's auto-reset; both bases now name the hook and the task."""
+    RLTaskEnv's auto-reset; both bases now name the hook and the task.
+    """
     from metasim.task.base import BaseTaskEnv
 
     n = _stub_scenario.num_envs
@@ -390,3 +398,59 @@ def test_step_rejects_a_hook_return_of_the_wrong_shape_by_name(_stub_scenario, m
     env = _step_env(BaseTaskEnv, _stub_scenario, monkeypatch, hooks=hooks, env_device="cpu")
     with pytest.raises((ValueError, TypeError), match=r"_Task\." + match):
         env.step(torch.zeros(n, 1))
+
+
+@pytest.mark.general
+@pytest.mark.parametrize("form", ["list", "dict"])
+def test_rl_task_reset_runs_reset_callbacks_before_the_states_and_refreshes_like_the_base(form):
+    """``RLTaskEnv.reset`` shares ``BaseTaskEnv``'s sequence: callbacks (list of ``fn(env_ids)`` or the
+    humanoid packs' ``{name: (fn, params)}``) run before the states are materialised, then the write,
+    then a render refresh unless the backend's write already did it.
+    """
+    calls = []
+
+    class _H:
+        num_envs = 1
+        set_states_refreshes = False
+        device = torch.device("cpu")
+        scenario = SimpleNamespace(cameras=[object()])  # a frame is consumed: the refresh must run
+
+        def set_states(self, states=None, env_ids=None):
+            calls.append("set_states")
+
+        def refresh_render(self):
+            calls.append("refresh_render")
+
+        def get_states(self, env_ids=None, mode="tensor"):
+            calls.append("get_states")
+            return None
+
+    env = RLTaskEnv.__new__(RLTaskEnv)
+    env.device = torch.device("cpu")
+    env.num_envs = 1
+    env.handler = _H()
+    env._episode_steps = torch.zeros(1, dtype=torch.int32)
+    env._initial_states = None
+    if form == "list":
+        env.reset_callback = [lambda env_ids: calls.append(f"callback{env_ids}")]
+    else:
+        env.reset_callback = {
+            "randomise": (lambda env, env_ids, gain: calls.append(f"callback{env_ids}x{gain}"), {"gain": 2})
+        }
+    env._prepare_states = lambda raw, env_ids: calls.append("prepare") or None
+    env._observation = lambda states: torch.zeros(1, 1)
+    env._privileged_observation = lambda states: None
+    env._obs_buf = None
+    env._priv_obs_buf = None
+    RLTaskEnv.reset(env, env_ids=[0])
+    expected_cb = "callback[0]" if form == "list" else "callback[0]x2"
+    assert calls[:4] == [expected_cb, "prepare", "set_states", "refresh_render"]
+    env.reset_callback = "not-callbacks"
+    with pytest.raises(TypeError, match="reset_callback must be"):
+        RLTaskEnv.reset(env, env_ids=[0])
+    # no cameras: the auto-reset must not pay a render refresh
+    calls.clear()
+    env.reset_callback = []
+    env.handler.scenario = SimpleNamespace(cameras=[])
+    RLTaskEnv.reset(env, env_ids=[0])
+    assert "refresh_render" not in calls

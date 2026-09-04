@@ -108,6 +108,10 @@ class NewtonHandler(BaseSimHandler):
     and the MuJoCo Warp solver for high-fidelity articulated body dynamics.
     """
 
+    get_states_honours_env_ids = True  # ``_get_states`` indexes by ``env_ids``
+    set_states_restores_velocities = True  # ``_set_states`` writes body_qd / joint_qd
+    set_states_restores_dict_velocities = True  # the dict path writes them too
+
     def __init__(
         self,
         scenario: ScenarioCfg,

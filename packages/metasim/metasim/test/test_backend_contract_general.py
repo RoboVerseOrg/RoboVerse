@@ -160,7 +160,8 @@ def test_known_gaps_are_actually_gaps():
     """Self-check: every entry in ``_KNOWN_GAPS`` must correspond to a real,
     currently-failing gap. Once a backend catches up, the entry becomes a
     lie — this test catches that so the xfail can be removed and the
-    contract tightened."""
+    contract tightened.
+    """
     classes = {cls.__name__: cls for cls in _import_all_backend_handlers()}
     for (class_name, method), reason in _KNOWN_GAPS.items():
         if class_name not in classes:
@@ -184,7 +185,8 @@ def test_set_states_invalidates_cache_on_all_backends():
     ``set_dof_targets`` both call ``_invalidate_state_caches``. If a
     future refactor reverts that, the cross-backend silent-staleness
     bugs that motivated this session come back. Static AST check —
-    no imports, no sim env."""
+    no imports, no sim env.
+    """
     import ast
     from pathlib import Path
 
@@ -231,7 +233,7 @@ def test_set_states_refreshes_declared_where_set_states_renders():
     """The backends whose ``_set_states`` already refreshes the renderer say so; the rest inherit False."""
     by_name = {cls.__name__: cls for cls in _import_all_backend_handlers()}
     class_level_true = {"BlenderHandler", "SuperdexHandler"}
-    instance_level = {"IsaacsimHandler", "HybridSimHandler", "ParallelHandler"}
+    instance_level = {"IsaacsimHandler", "MujocoHandler", "HybridSimHandler", "ParallelHandler"}
     for name, cls in by_name.items():
         attr = cls.set_states_refreshes
         if name in instance_level:
@@ -241,24 +243,42 @@ def test_set_states_refreshes_declared_where_set_states_renders():
 
 
 def test_parallel_wrapper_forwards_only_a_class_level_guarantee():
-    """A wrapped class whose answer is a property gives the wrapper no guarantee (never a property object)."""
+    """A class-level ``True`` on the wrapped class is a guarantee; a class-level ``False`` / absence means
+    no guarantee. A property on the wrapped class (MuJoCo: viewer-dependent) is asked of a worker, so
+    that case is exercised with a fake remote."""
     from metasim.sim.parallel import ParallelSimWrapper
 
     class _Yes:
         set_states_refreshes = True
+
+    class _Silent:
+        pass
 
     class _Maybe:
         @property
         def set_states_refreshes(self):
             return True
 
-    class _Silent:
-        pass
-
-    for base, expected in ((_Yes, True), (_Maybe, False), (_Silent, False)):
+    for base, expected in ((_Yes, True), (_Silent, False)):
         wrapper = ParallelSimWrapper(base)
-        instance = object.__new__(wrapper)  # no workers: the property must not need any state
+        instance = object.__new__(wrapper)  # no workers: a class-level answer must not need any state
         assert instance.set_states_refreshes is expected, base.__name__
+
+    class _Remote:
+        def __init__(self, answer):
+            self.answer = answer
+            self.sent = []
+
+        def send(self, msg):
+            self.sent.append(msg)
+
+    wrapper = ParallelSimWrapper(_Maybe)
+    instance = object.__new__(wrapper)
+    instance.remotes = [_Remote(True)]
+    instance._recv_or_surface = lambda idx: instance.remotes[idx].answer
+    assert instance.set_states_refreshes is True
+    assert instance.remotes[0].sent == [("set_states_refreshes", (None,))]
+    assert instance.set_states_refreshes is True and len(instance.remotes[0].sent) == 1  # asked once
 
 
 def _reset_with(flag: bool) -> list[str]:
@@ -299,3 +319,50 @@ def test_task_reset_refreshes_render_only_when_the_backend_did_not():
     """``BaseTaskEnv.reset`` consults the backend's capability flag instead of guessing the backend."""
     assert _reset_with(False) == ["set_states", "refresh_render", "get_states"]
     assert _reset_with(True) == ["set_states", "get_states"]
+
+
+def test_capability_flags_match_the_backends_that_implement_them():
+    """``get_states_honours_env_ids`` and ``set_states_restores_velocities`` are declared where the code does it."""
+    by_name = {cls.__name__: cls for cls in _import_all_backend_handlers()}
+    honours = {"MJXHandler", "NewtonHandler", "GenesisHandler", "HybridSimHandler", "ParallelHandler"}
+    restores = {"MujocoHandler", "SuperdexHandler", "NewtonHandler", "IsaacsimHandler", "IsaacgymHandler"}
+    dict_restores = {
+        "MujocoHandler",
+        "SuperdexHandler",
+        "NewtonHandler",
+    }  # Isaac Sim / Isaac Gym dict paths write poses only
+    for name, cls in by_name.items():
+        assert cls.get_states_honours_env_ids is (name in honours), f"{name}.get_states_honours_env_ids"
+        attr = cls.set_states_restores_velocities
+        dict_attr = cls.set_states_restores_dict_velocities
+        if name in {"ParallelHandler", "HybridSimHandler"}:
+            assert isinstance(attr, property) and isinstance(dict_attr, property), f"{name} forwards the wrapped answer"
+        else:
+            assert attr is (name in restores), f"{name}.set_states_restores_velocities is {attr!r}"
+            assert dict_attr is (name in dict_restores), f"{name}.set_states_restores_dict_velocities is {dict_attr!r}"
+
+
+def test_wrappers_forward_the_velocity_capability_of_what_they_wrap():
+    from metasim.sim.parallel import ParallelSimWrapper
+
+    class _Restores:
+        set_states_restores_velocities = True
+
+    class _Drops:
+        pass
+
+    assert object.__new__(ParallelSimWrapper(_Restores)).set_states_restores_velocities is True
+    assert object.__new__(ParallelSimWrapper(_Drops)).set_states_restores_velocities is False
+
+
+def test_get_states_honours_env_ids_declarations_are_pinned():
+    """The flag turns a self-healing slice into a hard error, so a wrong declaration breaks every
+    partial reset on that backend. The set is pinned here; a backend joining it needs its
+    ``_get_states`` to index robots and objects by ``env_ids`` (Isaac Gym indexes only its cameras and
+    stays out; MuJoCo, SAPIEN 3, PyBullet, SuperDex, Isaac Sim, Blender return the full batch).
+    """
+    honours = {cls.__name__ for cls in _import_all_backend_handlers() if cls.get_states_honours_env_ids}
+    installed = {cls.__name__ for cls in _import_all_backend_handlers()}
+    assert (
+        honours == {"MJXHandler", "NewtonHandler", "GenesisHandler", "HybridSimHandler", "ParallelHandler"} & installed
+    )

@@ -111,6 +111,15 @@ MUJOCO_ARENA_MEMORY = "512M"
 
 
 class MujocoHandler(BaseSimHandler):
+    set_states_restores_velocities = True  # ``_set_root_state`` / ``_set_joint_state`` write qvel
+    set_states_restores_dict_velocities = True  # the dict path writes them too
+
+    @property
+    def set_states_refreshes(self) -> bool:  # type: ignore[override]
+        """``_set_states`` ends with ``physics.forward()``; ``refresh_render`` adds a viewer sync, so a
+        state write is a full refresh only when no viewer is open."""
+        return getattr(self, "viewer", None) is None
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
         self._actions_cache: CompatActionInput = []
@@ -450,7 +459,6 @@ class MujocoHandler(BaseSimHandler):
 
     def _init_mujoco(self) -> mjcf.RootElement:
         """Initialize MuJoCo model with optional scene support."""
-
         mjcf_model = self._init_scene()
         self._configure_self_collision_policy(mjcf_model)
         # MuJoCo >= 3.x sizes its arena from `<size memory>` (the legacy njmax/nconmax hints no longer
@@ -523,7 +531,6 @@ class MujocoHandler(BaseSimHandler):
 
     def _apply_default_joint_positions(self) -> None:
         """Set initial joint positions from robot/object configs if provided."""
-
         # Robots
         for robot_idx, robot in enumerate(self.robots):
             if not getattr(robot, "default_joint_positions", None):
@@ -801,8 +808,7 @@ class MujocoHandler(BaseSimHandler):
         return actuator_states
 
     def _pack_state(self, body_ids: list[int]):
-        """
-        Pack pos(3), quat(4), lin_vel_world(3), ang_vel(3) for one-env MuJoCo.
+        """Pack pos(3), quat(4), lin_vel_world(3), ang_vel(3) for one-env MuJoCo.
 
         Args:
             body_ids: list of body IDs, e.g. [root_id] or [root_id] + body_ids_reindex
@@ -1055,7 +1061,8 @@ class MujocoHandler(BaseSimHandler):
     def _root_qvel(obj_state) -> np.ndarray:
         """Free-joint ``qvel`` (6,) for a state dict: world linear velocity, then angular velocity
         rotated into the body frame (MuJoCo stores free-joint angular velocity locally). Missing keys
-        mean *zero* — a partial state is a reset, not "keep whatever velocity the body had"."""
+        mean *zero* — a partial state is a reset, not "keep whatever velocity the body had".
+        """
         lin = np.asarray(obj_state.get("vel", (0.0, 0.0, 0.0)), dtype=np.float64).reshape(3)
         ang_world = np.asarray(obj_state.get("ang_vel", (0.0, 0.0, 0.0)), dtype=np.float64).reshape(3)
         quat = np.asarray(obj_state.get("rot", (1.0, 0.0, 0.0, 0.0)), dtype=np.float64).reshape(4)
@@ -1134,7 +1141,8 @@ class MujocoHandler(BaseSimHandler):
     def _set_states(self, states, env_ids=None, zero_vel=False):
         """Write a full state. Velocities present in the state (``vel``/``ang_vel``/``dof_vel``, always
         present when the input is a ``TensorState``) are restored so a recorded state round-trips;
-        absent velocities are zeroed. ``zero_vel=True`` forces a rest state regardless."""
+        absent velocities are zeroed. ``zero_vel=True`` forces a rest state regardless.
+        """
         if isinstance(states, TensorState):
             states = state_tensor_to_nested(self, states)
         if len(states) > 1:
@@ -1309,8 +1317,7 @@ class MujocoHandler(BaseSimHandler):
             return []
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
-        """
-        Charlie: needs to be taken down
+        """Charlie: needs to be taken down
         Get the reindexed body ids for a given object. Reindex means the body reordered by the returned ids will be sorted by their names alphabetically.
 
         Args:

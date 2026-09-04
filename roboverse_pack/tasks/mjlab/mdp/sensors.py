@@ -327,7 +327,11 @@ class ContactSensor:
             # f6 = (Fn, Ft1, Ft2, Mn, Mt1, Mt2) in contact frame.
             # For air-time / soft-landing the |F| matters; tangent components
             # are usually small relative to normal. Use the contact-frame F
-            # directly (mjlab uses the same when global_frame=False).
+            # directly (mjlab uses the same when global_frame=False). This is
+            # NOT a world-frame net force: a foot with several contacts of
+            # different frames sums components that are not co-aligned. A
+            # world-frame per-body force lives in
+            # ``metasim.queries.contact_force.mujoco_net_contact_forces_world``.
 
             found_np[env_idx, p_idx] += 1.0
             force_np[env_idx, p_idx] += f6[:3].astype(np.float32)

@@ -5445,7 +5445,10 @@
  "metasim.sim.base": {
   "BaseSimHandler": {
    "attributes": {
-    "set_states_refreshes": "bool"
+    "get_states_honours_env_ids": "bool",
+    "set_states_refreshes": "bool",
+    "set_states_restores_dict_velocities": "bool",
+    "set_states_restores_velocities": "bool"
    },
    "bases": [
     "ABC"
@@ -5744,6 +5747,9 @@
  },
  "metasim.sim.hybrid": {
   "HybridSimHandler": {
+   "attributes": {
+    "get_states_honours_env_ids": "bool"
+   },
    "bases": [
     "BaseSimHandler"
    ],
@@ -5874,6 +5880,14 @@
      "signature": "(self, seed: 'int') -> 'None'"
     },
     "set_states_refreshes": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "set_states_restores_dict_velocities": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "set_states_restores_velocities": {
      "params": null,
      "signature": "<property>"
     }

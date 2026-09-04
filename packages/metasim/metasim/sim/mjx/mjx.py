@@ -56,6 +56,8 @@ from .mjx_helper import (
 
 
 class MJXHandler(BaseSimHandler):
+    get_states_honours_env_ids = True  # ``_get_states`` indexes by ``env_ids``
+
     def __init__(
         self,
         scenario: ScenarioCfg,
@@ -642,8 +644,7 @@ class MJXHandler(BaseSimHandler):
             self._object_root_bid_cache[name] = bid + 1  # +1 because mjcf attaches a wrapper body
 
     def _build_sensor_cache(self) -> None:
-        """
-        Create a one-time lookup table that stores every sensor's
+        """Create a one-time lookup table that stores every sensor's
         name and its corresponding slice in `sensordata`.
         """
         self._sensor_slices: list[tuple[str, slice]] = []

@@ -62,7 +62,8 @@ def _make_minimal():
 @pytest.mark.general
 def test_minimal_handler_is_concrete():
     """A subclass implementing only the four documented abstracts can
-    be instantiated. Prevents accidental abstractmethod creep."""
+    be instantiated. Prevents accidental abstractmethod creep.
+    """
     h = _make_minimal()
     assert isinstance(h, BaseSimHandler)
 
@@ -70,7 +71,8 @@ def test_minimal_handler_is_concrete():
 @pytest.mark.general
 def test_get_joint_names_default_returns_empty_list():
     """Pre-fix this raised ``NotImplementedError`` while the docstring
-    said non-articulations return an empty list — contradictory."""
+    said non-articulations return an empty list — contradictory.
+    """
     h = _make_minimal()
     assert h._get_joint_names("any_obj") == []
     assert h.get_joint_names("any_obj") == []
@@ -86,7 +88,8 @@ def test_get_body_names_default_returns_empty_list():
 @pytest.mark.general
 def test_get_joint_names_default_honours_sort_kwarg():
     """Subclasses pass ``sort=False`` to recover insertion order. The
-    default must accept that kwarg without TypeError."""
+    default must accept that kwarg without TypeError.
+    """
     h = _make_minimal()
     assert h._get_joint_names("any_obj", sort=False) == []
     assert h._get_joint_names("any_obj", sort=True) == []
@@ -96,7 +99,8 @@ def test_get_joint_names_default_honours_sort_kwarg():
 def test_abstract_method_set_documents_the_contract():
     """The four required methods are the four declared in the contract
     summary in the class docstring. If you add an abstract method,
-    update the docstring."""
+    update the docstring.
+    """
     abstracts = BaseSimHandler.__abstractmethods__
     assert abstracts == frozenset({"_set_states", "_set_dof_targets", "_get_states", "_simulate"}), (
         f"abstract methods changed unexpectedly: {sorted(abstracts)}"
@@ -106,7 +110,8 @@ def test_abstract_method_set_documents_the_contract():
 @pytest.mark.general
 def test_no_stale_abstractmethod_comments_remain():
     """Lock the regression: ``# @abstractmethod`` placeholder comments
-    were the source of M6's "is it abstract or isn't it" confusion."""
+    were the source of M6's "is it abstract or isn't it" confusion.
+    """
     src = inspect.getsource(BaseSimHandler)
     # Allow the word inside string literals / docstrings; reject
     # commented-out decorator placeholders specifically.
@@ -118,7 +123,8 @@ def test_no_stale_abstractmethod_comments_remain():
 def test_class_docstring_lists_the_contract():
     """The contract is now in the docstring — make sure it stays there.
     A drive-by edit that wipes the contract section would defeat the
-    audit fix."""
+    audit fix.
+    """
     doc = BaseSimHandler.__doc__ or ""
     for required_method in ("_set_states", "_set_dof_targets", "_get_states", "_simulate"):
         assert required_method in doc, f"contract summary missing reference to {required_method}"
@@ -230,3 +236,92 @@ def test_get_states_dict_mode_subset_not_cached():
     sub2 = h.get_states(env_ids=[1, 2], mode="dict")
     assert len(sub2) == 2
     assert h.calls == [[0], None, [1, 2]]
+
+
+@pytest.mark.general
+def test_get_states_env_ids_permutation_is_honoured_on_backends_that_ignore_env_ids():
+    """A backend that returns the full batch for any ``env_ids`` used to pass the length check for a
+    permutation or duplication of the full batch, so ``get_states(env_ids=[2, 0, 1])`` came back in
+    natural order and the caller read env 2's state as env 0's.
+    """
+    import torch
+
+    from metasim.types import RobotState, TensorState
+
+    class _IgnoresEnvIds(BaseSimHandler):
+        num_envs = 3
+
+        def __init__(self):
+            self._tensor_state_cache = None
+            self._dict_state_cache = None
+
+        def _set_states(self, states, env_ids=None):
+            return None
+
+        def _set_dof_targets(self, actions):
+            return None
+
+        def _simulate(self):
+            return None
+
+        def _get_joint_names(self, obj_name, sort=True):
+            return ["j0"]
+
+        def _get_body_names(self, obj_name, sort=True):
+            return []
+
+        def _get_states(self, env_ids=None):
+            root = torch.zeros(3, 13)
+            root[:, 0] = torch.tensor([0.0, 1.0, 2.0])  # x = env index
+            return TensorState(objects={}, robots={"r0": RobotState(root_state=root)}, cameras={})
+
+    h = _IgnoresEnvIds()
+    permuted = h.get_states(env_ids=[2, 0, 1], mode="tensor")
+    assert permuted.robots["r0"].root_state[:, 0].tolist() == [2.0, 0.0, 1.0]
+    dup = h.get_states(env_ids=[1, 1], mode="tensor")
+    assert dup.robots["r0"].root_state[:, 0].tolist() == [1.0, 1.0]
+    natural = h.get_states(env_ids=[0, 1, 2], mode="tensor")
+    assert natural.robots["r0"].root_state[:, 0].tolist() == [0.0, 1.0, 2.0]
+
+
+@pytest.mark.general
+def test_get_states_env_ids_on_a_backend_that_honours_them_is_returned_as_is():
+    """A backend declaring ``get_states_honours_env_ids`` already returns the requested rows in order;
+    slicing them again would permute a permutation (the bug a length-only check invited).
+    """
+    import torch
+
+    from metasim.types import RobotState, TensorState
+
+    class _Honours(BaseSimHandler):
+        num_envs = 3
+        get_states_honours_env_ids = True
+
+        def __init__(self):
+            self._tensor_state_cache = None
+            self._dict_state_cache = None
+
+        def _set_states(self, states, env_ids=None):
+            return None
+
+        def _set_dof_targets(self, actions):
+            return None
+
+        def _simulate(self):
+            return None
+
+        def _get_joint_names(self, obj_name, sort=True):
+            return ["j0"]
+
+        def _get_body_names(self, obj_name, sort=True):
+            return []
+
+        def _get_states(self, env_ids=None):
+            ids = list(range(3)) if env_ids is None else list(env_ids)
+            root = torch.zeros(len(ids), 13)
+            root[:, 0] = torch.tensor([float(i) for i in ids])
+            return TensorState(objects={}, robots={"r0": RobotState(root_state=root)}, cameras={})
+
+    h = _Honours()
+    assert h.get_states(env_ids=[2, 0, 1], mode="tensor").robots["r0"].root_state[:, 0].tolist() == [2.0, 0.0, 1.0]
+    assert h.get_states(env_ids=[1, 0], mode="tensor").robots["r0"].root_state[:, 0].tolist() == [1.0, 0.0]

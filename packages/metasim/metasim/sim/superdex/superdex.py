@@ -184,6 +184,8 @@ class SuperdexHandler(BaseSimHandler):
     """MetaSim handler backed by SuperDex Physics (see module docstring)."""
 
     set_states_refreshes = True  # ``_set_states`` pushes the poses into the renderer
+    set_states_restores_velocities = True  # rigid and articulation velocities are written on restore
+    set_states_restores_dict_velocities = True  # the dict path writes them too
 
     _set_states_input_type = "dict"
 

@@ -25,7 +25,8 @@ from metasim.sim.base import BaseSimHandler
 @pytest.fixture
 def loguru_warnings():
     """Capture loguru WARNING+ records into a list. ``caplog`` only sees
-    stdlib logging; the base handler uses loguru, so we attach a sink."""
+    stdlib logging; the base handler uses loguru, so we attach a sink.
+    """
     records: list[str] = []
     sink_id = _loguru_logger.add(lambda msg: records.append(str(msg)), level="WARNING")
     try:
@@ -44,7 +45,8 @@ class _FakeRobot:
 
 class _StubHandler(BaseSimHandler):
     """Minimal subclass that bypasses ``__init__`` — we only need the
-    ``set_states`` / ``set_dof_targets`` boundaries, not a real scenario."""
+    ``set_states`` / ``set_dof_targets`` boundaries, not a real scenario.
+    """
 
     def __init__(self, robots: list[_FakeRobot] | None = None):
         self._tensor_state_cache = None
@@ -97,7 +99,8 @@ def test_known_keys_do_not_warn(loguru_warnings):
 def test_control_input_key_warns_with_set_dof_targets_hint(loguru_warnings):
     """``dof_pos_target`` is a control input — set_states drops it.
     The warning must steer the caller to ``set_dof_targets`` so the
-    silent-no-op bug can't recur."""
+    silent-no-op bug can't recur.
+    """
     handler = _StubHandler()
     states = _state(robot_keys={"dof_pos_target": {"j0": 0.5}})
     handler.set_states(states)
@@ -147,16 +150,17 @@ def test_distinct_unknown_keys_each_warn_once(loguru_warnings):
 def test_read_only_velocity_keys_warn(loguru_warnings):
     """``vel`` / ``ang_vel`` / ``dof_vel`` are populated by get_states
     but no backend writes them in _set_states — must warn so callers
-    don't believe they are initialising momentum."""
+    don't believe they are initialising momentum.
+    """
     handler = _StubHandler()
     handler.set_states(_state(robot_keys={"vel": [1, 0, 0]}))
     handler.set_states(_state(robot_keys={"ang_vel": [0, 1, 0]}))
     handler.set_states(_state(robot_keys={"dof_vel": {"j0": 0.5}}))
     out = "\n".join(loguru_warnings)
     assert "vel" in out
-    assert "no backend currently" in out
+    assert "does not write velocities" in out
     # Each key should warn exactly once (dedupe).
-    assert out.count("MuJoCo zeros qvel") == 3
+    assert out.count("starts from rest") == 3
 
 
 @pytest.mark.general
@@ -168,7 +172,7 @@ def test_read_only_velocity_warning_dedupes(loguru_warnings):
         handler.set_states(state)
     out = "\n".join(loguru_warnings)
     assert out.count("vel") >= 1
-    assert out.count("MuJoCo zeros qvel") == 1
+    assert out.count("starts from rest") == 1
 
 
 @pytest.mark.general
@@ -184,7 +188,8 @@ def test_object_role_warns_with_object_in_message(loguru_warnings):
 @pytest.mark.general
 def test_tensor_state_is_not_validated():
     """TensorState carries no free-form keys, so we should fast-path
-    past the dict validation without raising."""
+    past the dict validation without raising.
+    """
     handler = _StubHandler()
     # Anything non-list is treated as TensorState by _warn_set_states_keys
     sentinel = object()
@@ -197,7 +202,8 @@ def test_set_dof_targets_invalidates_state_cache_unit():
     """Unit-level guard: ``set_dof_targets`` must invalidate both state caches
     so that any backend whose ``get_states`` reads back action-derived fields
     (e.g. MuJoCo ``joint_pos_target = ctrl[reindex]``) cannot return stale data
-    between an action and the next ``simulate``."""
+    between an action and the next ``simulate``.
+    """
     handler = _StubHandler()
     sentinel_tensor = object()
     sentinel_dict = object()
@@ -262,7 +268,8 @@ def test_actions_cache_holds_last_set_dof_targets_input():
     handler has its own implementation, and tests assert
     ``handler.actions_cache is not None`` after ``set_dof_targets``.
     The base now owns the contract so it holds for ParallelHandler /
-    HybridSimHandler too, where it previously AttributeError'd."""
+    HybridSimHandler too, where it previously AttributeError'd.
+    """
     handler = _StubHandler(robots=[_FakeRobot("arm", ["j0", "j1"])])
     assert handler.actions_cache is None  # before any action
 
@@ -278,7 +285,8 @@ def test_action_input_to_tensor_warns_on_non_position_targets(loguru_warnings):
     backend routing dict actions through this helper (mujoco / pyrep)
     would silently miss those — surface the drop via a one-shot warn so
     callers can either bypass the helper or accept position-only
-    semantics intentionally."""
+    semantics intentionally.
+    """
     from metasim.utils.state import action_input_to_tensor
 
     handler = _StubHandler(robots=[_FakeRobot("arm", ["j0", "j1"])])
@@ -305,7 +313,8 @@ def test_action_input_to_tensor_quiet_on_position_only(loguru_warnings):
 @pytest.mark.general
 def test_action_input_to_tensor_dedupes_warning(loguru_warnings):
     """Hot-path RL training calls the helper thousands of times — the
-    warning must fire at most once per (robot, key) per process."""
+    warning must fire at most once per (robot, key) per process.
+    """
     from metasim.utils.state import action_input_to_tensor
 
     handler = _StubHandler(robots=[_FakeRobot("arm", ["j0"])])
@@ -319,7 +328,8 @@ def test_action_input_to_tensor_dedupes_warning(loguru_warnings):
 @pytest.mark.general
 def test_set_dof_targets_tensor_input_is_not_validated():
     """Tensor actions are indexed, not name-based — they go through the
-    fast path. Validation must skip them."""
+    fast path. Validation must skip them.
+    """
     import torch as _torch
 
     handler = _StubHandler(robots=[_FakeRobot("arm", ["j0", "j1"])])
@@ -333,7 +343,8 @@ def test_set_seed_is_deterministic_on_numpy_and_torch():
     """``BaseSimHandler.set_seed`` is the contract behind ``env.reset(seed=N)``.
     After seeding, ``np.random`` and ``torch.rand`` must produce identical
     sequences across two fresh handlers — otherwise the gym
-    reproducibility promise is a lie."""
+    reproducibility promise is a lie.
+    """
     import numpy as np
     import torch
 
@@ -356,7 +367,8 @@ def test_set_seed_is_deterministic_on_numpy_and_torch():
 def test_partial_pose_warns_pos_without_rot(loguru_warnings):
     """Cross-backend divergence: MuJoCo silently fills missing rot with
     identity, Sapien3 raises KeyError. Warn at the boundary so the
-    caller knows the input is ambiguous."""
+    caller knows the input is ambiguous.
+    """
     handler = _StubHandler()
     handler.set_states([{"objects": {}, "robots": {"arm": {"pos": [0, 0, 0]}}}])
     out = "\n".join(loguru_warnings)
@@ -383,7 +395,8 @@ def test_partial_pose_quiet_when_both_present(loguru_warnings):
 @pytest.mark.general
 def test_partial_pose_warning_dedupes_per_entity(loguru_warnings):
     """Hot-path reset() may be called many times — warning must fire
-    at most once per (role, entity, missing)."""
+    at most once per (role, entity, missing).
+    """
     handler = _StubHandler()
     state = [{"objects": {}, "robots": {"arm": {"pos": [0, 0, 0]}}}]
     handler.set_states(state)
@@ -396,7 +409,8 @@ def test_partial_pose_warning_dedupes_per_entity(loguru_warnings):
 @pytest.mark.general
 def test_set_seed_differs_with_different_seeds():
     """Sanity: distinct seeds must produce distinct sequences. Otherwise
-    set_seed is a no-op and the determinism test above is vacuous."""
+    set_seed is a no-op and the determinism test above is vacuous.
+    """
     import numpy as np
 
     handler = _StubHandler()
@@ -407,3 +421,15 @@ def test_set_seed_differs_with_different_seeds():
     seq_2 = np.random.rand(4).tolist()
 
     assert seq_1 != seq_2, "set_seed appears to be a no-op"
+
+
+@pytest.mark.general
+def test_velocity_keys_do_not_warn_on_a_backend_that_restores_them(loguru_warnings):
+    """The warning is about dropped values; a backend declaring ``set_states_restores_velocities`` keeps them."""
+
+    class _Restoring(_StubHandler):
+        set_states_restores_dict_velocities = True
+
+    handler = _Restoring()
+    handler.set_states([{"objects": {}, "robots": {"r": {"pos": [0, 0, 0], "rot": [1, 0, 0, 0], "vel": [0, 0, 1]}}}])
+    assert not any("velocities" in m for m in loguru_warnings)

@@ -82,6 +82,23 @@ class BaseSimHandler(ABC):
     #: False, which costs one extra refresh and never a stale frame.
     set_states_refreshes: bool = False
 
+    #: Backend capability: ``True`` when ``_set_states`` writes the velocity fields of a
+    #: ``TensorState`` (``root_state[:, 7:]``, ``joint_vel``) into the engine, so a recorded moving
+    #: state resumes moving. MuJoCo, SuperDex, Newton, Isaac Sim and Isaac Gym do; MJX zeroes
+    #: velocities unless ``zero_vel=False`` is passed; SAPIEN 3, PyBullet and Genesis drop them.
+    set_states_restores_velocities: bool = False
+
+    #: Same question for **dict** input (``vel`` / ``ang_vel`` / ``dof_vel`` keys). Isaac Sim and
+    #: Isaac Gym restore velocities from a ``TensorState`` but their dict paths write poses only, so
+    #: this is the flag ``set_states`` consults before warning that a dict's velocity keys are dropped.
+    set_states_restores_dict_velocities: bool = False
+
+    #: Backend capability: ``True`` when ``_get_states(env_ids)`` returns exactly those envs in that
+    #: order (MJX, Newton, Genesis, the parallel and hybrid wrappers). Backends that leave
+    #: it ``False`` return the full batch for any ``env_ids`` and ``get_states`` slices it into the
+    #: requested order, permutations and duplicates included.
+    get_states_honours_env_ids: bool = False
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         self.scenario = scenario
         self.optional_queries = optional_queries
@@ -223,11 +240,8 @@ class BaseSimHandler(ABC):
     # Keys that ``_set_states`` actually writes to the simulator.
     _SET_STATES_VALID_OBJECT_KEYS = frozenset({"pos", "rot", "dof_pos"})
     _SET_STATES_VALID_ROBOT_KEYS = frozenset({"pos", "rot", "dof_pos"})
-    # Velocity fields are populated by ``get_states`` but no backend honours
-    # them in ``_set_states`` today (MuJoCo zeros qvel, Sapien3's
-    # ``set_velocity`` calls are commented out). Listing them here makes the
-    # silent drop visible instead of letting callers believe they are
-    # initialising momentum.
+    # Velocity keys: written by the backends whose ``set_states_restores_velocities`` is True; dropped
+    # (with a one-shot warning) by the others. See the flag's docstring for the per-backend list.
     _SET_STATES_READ_ONLY_KEYS = frozenset({"vel", "ang_vel", "dof_vel"})
     # Control inputs that belong in ``set_dof_targets``, not ``set_states``.
     _SET_STATES_CONTROL_KEYS = frozenset({"dof_pos_target", "dof_vel_target", "dof_torque"})
@@ -291,14 +305,14 @@ class BaseSimHandler(ABC):
                                 f"Use set_dof_targets(...) to drive joints to a target."
                             )
                         elif key in self._SET_STATES_READ_ONLY_KEYS:
-                            log.warning(
-                                f"set_states received '{key}' under '{role}' — velocity fields are "
-                                f"populated by get_states for inspection, but no backend currently "
-                                f"writes them in _set_states (MuJoCo zeros qvel, Sapien3 ignores). "
-                                f"The value will be dropped. Pass it through simulate() with a "
-                                f"non-zero initial action instead, or open a feature request for "
-                                f"backend-side velocity initialisation."
-                            )
+                            if not self.set_states_restores_dict_velocities:
+                                log.warning(
+                                    f"set_states received '{key}' under '{role}' — {type(self).__name__} does not "
+                                    "write velocities from dict input (set_states_restores_dict_velocities is "
+                                    "False), so the value is dropped and the restored state starts from rest. "
+                                    "Pass a TensorState where the backend restores velocities "
+                                    "(set_states_restores_velocities), or on MuJoCo / SuperDex / Newton a dict."
+                                )
                         else:
                             log.warning(
                                 f"set_states received unknown key '{key}' under '{role}' — "
@@ -335,15 +349,22 @@ class BaseSimHandler(ABC):
         the same data) and say so once, instead of trusting every backend's signature.
         """
         n_env = _state_env_count(result)
-        if n_env is None or n_env == len(env_ids):
+        if n_env is None:
             return result
-        if n_env != self.num_envs:
+        if getattr(self, "get_states_honours_env_ids", False):
+            if n_env != len(env_ids):
+                raise RuntimeError(
+                    f"{type(self).__name__} declares get_states_honours_env_ids but _get_states(env_ids={env_ids}) "
+                    f"returned {n_env} envs"
+                )
+            return result
+        num_envs = getattr(self, "num_envs", None)  # a bare stub may not have gone through __init__
+        if num_envs is not None and n_env != num_envs:
             raise RuntimeError(
-                f"{type(self).__name__}._get_states(env_ids={env_ids}) returned {n_env} envs (handler has {self.num_envs})"
+                f"{type(self).__name__}._get_states(env_ids={env_ids}) returned {n_env} envs (handler has {num_envs})"
             )
-        if not getattr(self, "_env_ids_ignored_warned", False):
-            self._env_ids_ignored_warned = True
-            log.warning(f"{type(self).__name__} ignores env_ids in _get_states; the base class slices the full batch.")
+        if list(env_ids) == list(range(n_env)):
+            return result
         if isinstance(result, TensorState):
             return select_envs(result, env_ids)
         return [result[i] for i in env_ids]
@@ -689,6 +710,7 @@ class BaseSimHandler(ABC):
     def _get_camera_params(self, camera):
         """Get the camera parameters for GS rendering.
         For a new simulator, you should implement this method.
+
         Args:
             camera: PinholeCameraCfg object
 
