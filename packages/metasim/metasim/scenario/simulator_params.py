@@ -111,6 +111,11 @@ class SimParamCfg:
     newton_mujoco_disable_contacts: bool = False
 
     ## Resource management
+    # Worker threads of the physics engine for one scene. SuperDex: 0 = single-threaded (the default and the
+    # recommended setting), -1 = let SuperDex pick from the CPU count, n > 0 = that many. Batched runs
+    # (``num_envs > 1``) are one *process per env* (``ParallelSimWrapper``), each scene single-threaded, as the
+    # SuperDex maintainers recommend; a non-zero value multiplies across those processes and oversubscribes
+    # the machine, so the SuperDex handler warns when it is set.
     num_threads: int = 0
     # XXX: these parameters should be replaced by "device" in the future
     use_gpu_pipeline: bool = True

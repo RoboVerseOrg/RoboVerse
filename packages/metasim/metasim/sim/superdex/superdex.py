@@ -211,6 +211,13 @@ class SuperdexHandler(BaseSimHandler):
             f"(dt={physics_dt}, decimation={self.decimation}, solver_dt={solver_dt})"
         )
         self._num_threads = int(getattr(scenario.sim_params, "num_threads", 0) or 0)
+        if self._num_threads != 0:
+            log.warning(
+                f"[superdex] sim_params.num_threads={self._num_threads}: this scene will run SuperDex worker threads. "
+                "Batched runs (num_envs > 1) are one process per env with each scene single-threaded "
+                "(num_threads=0, the default and the SuperDex maintainers' recommendation); a non-zero value applies "
+                "to every worker process and oversubscribes the CPU."
+            )
         self._cache_dir = _assets.default_cache_dir()
         self._control_mode = getattr(scenario.sim_params, "superdex_control_mode", "pd")
         if self._control_mode not in ("pd", "implicit"):

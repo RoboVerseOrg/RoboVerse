@@ -20,6 +20,19 @@ from metasim.scenario.simulator_params import SimParamCfg
 pytestmark = pytest.mark.superdex
 
 
+@pytest.fixture
+def loguru_warnings():
+    """Collect loguru WARNING+ messages emitted during a test."""
+    from loguru import logger as _log
+
+    messages: list[str] = []
+    sink_id = _log.add(lambda m: messages.append(m.record["message"]), level="WARNING")
+    try:
+        yield messages
+    finally:
+        _log.remove(sink_id)
+
+
 def _scenario(**kwargs) -> ScenarioCfg:
     from metasim.example.example_pack.robots.franka_cfg import FrankaCfg
 
@@ -88,3 +101,13 @@ def test_simulate_advances_the_declared_env_step(monkeypatch, tmp_path):
         assert h._sim_time - t0 == pytest.approx(15 * 0.001)
     finally:
         h.close()
+
+
+def test_worker_threads_default_to_single_threaded_and_warn_otherwise(loguru_warnings):
+    """Batching is one process per env, each single-threaded; a thread count multiplies across workers."""
+    from metasim.sim.superdex.superdex import SuperdexHandler
+
+    assert SuperdexHandler(_scenario())._num_threads == 0
+    assert not any("num_threads" in m for m in loguru_warnings)
+    assert SuperdexHandler(_scenario(sim_params=SimParamCfg(num_threads=-1)))._num_threads == -1
+    assert any("oversubscribes" in m for m in loguru_warnings)
