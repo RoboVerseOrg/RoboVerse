@@ -2121,7 +2121,8 @@ class BlenderHandler(BaseSimHandler):
         # Scene transforms changed — invalidate the cached render so the next
         # ``_get_states`` re-renders the cameras instead of returning stale RGB.
         self._render_dirty = True
-        self.refresh_render()
+        if not self._defer_all_visual_flushes:  # a deferred batch renders once when it is flushed
+            self.refresh_render()
 
     def _apply_tensor_state(self, state: TensorState) -> None:
         for obj_name, obj_state in state.objects.items():

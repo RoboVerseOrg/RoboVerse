@@ -227,11 +227,16 @@ def isaacsim_app(request):
     session = request.session
     if hasattr(session, "items"):
         for item in session.items:
-            if hasattr(item, "callspec") and "handler" in item.callspec.params:
-                handler_param = item.callspec.params["handler"]
-                if isinstance(handler_param, dict) and handler_param.get("sim") == "isaacsim":
-                    needs_isaacsim = True
-                    break
+            if not hasattr(item, "callspec"):
+                continue
+            # the ``handler`` fixture and fixtures that build their own handlers (the hybrid
+            # MuJoCo + Isaac Sim test) both carry a ``{"sim": ...}`` param; only a *selected*
+            # isaacsim item may boot Kit, so a mujoco-only run never imports Isaac Lab
+            if any(
+                isinstance(value, dict) and value.get("sim") == "isaacsim" for value in item.callspec.params.values()
+            ):
+                needs_isaacsim = True
+                break
 
     if needs_isaacsim:
         from isaaclab.app import AppLauncher

@@ -140,7 +140,8 @@ if __name__ == "__main__":
         handler = get_handler(scenario)
     else:
         log.info(f"Using simulator: {args.sim}, render: {args.renderer}")
-        handler_physics = get_handler(scenario)
+        # the physics side never renders: camera-free and headless, so MuJoCo opens no GL context
+        handler_physics = get_handler(scenario.replace(cameras=[], headless=True))
         scenario.update(simulator=args.renderer)
         handler_renderer = get_handler(scenario)
         handler = HybridSimHandler(scenario, handler_physics, handler_renderer)
