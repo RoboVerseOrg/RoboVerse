@@ -63,8 +63,10 @@ jobs:
         working-directory: packages/metasim
         env:
           MUJOCO_GL: disable
-        # Baseline 2026-09-03: 36% of 27,378 statements. Raise the floor when coverage grows; never lower it.
-        run: python -m pytest -k general -q -rs --cov=metasim --cov-report=xml --cov-report=term --cov-fail-under=35
+        # Baseline 2026-09-03 as measured by THIS job (py3.10 / py3.11, simulator-free): 23.8% of 21,001
+        # statements. A local run with more backends installed imports more files and reports higher, so
+        # calibrate the floor from the CI log, not from a workstation. Raise it when coverage grows; never lower it.
+        run: python -m pytest -k general -q -rs --cov=metasim --cov-report=xml --cov-report=term --cov-fail-under=22
       - name: Coverage summary
         if: always()
         working-directory: packages/metasim
