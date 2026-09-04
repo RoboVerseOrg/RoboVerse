@@ -189,7 +189,7 @@ def reset_go1_default_pose(
         # randomization needs batched qpos write — deferred.
         return
     physics = env.handler.physics
-    rng = np.random.default_rng()
+    rng = np.random  # seeded by handler.set_seed; see cartpole_v2.reset_cartpole
     with physics.reset_context():
         # Base pose: pos (3) + quat xyzw (4)
         physics.data.qpos[0:3] = (0.0, 0.0, base_height)

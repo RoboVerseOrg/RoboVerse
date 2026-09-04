@@ -134,7 +134,7 @@ def _asset_name(env, asset_cfg) -> str:
 
 def _make_sampler(ranges: tuple[float, float], distribution: str) -> Callable[[tuple[int, ...]], np.ndarray]:
     """Return ``shape -> samples`` for a uniform / log-uniform range."""
-    rng = np.random.default_rng()
+    rng = np.random  # seeded by handler.set_seed; see cartpole_v2.reset_cartpole
     lo, hi = ranges
     if distribution == "log_uniform":
         log_lo, log_hi = np.log(max(lo, 1e-10)), np.log(max(hi, 1e-10))
@@ -471,7 +471,7 @@ def body_com_offset(
     if not ranges:
         raise ValueError("body_com_offset requires ranges, e.g. {0: (-0.025, 0.025)} (axis -> (lo, hi)).")
     sim = _sim_name(env)
-    rng = np.random.default_rng()
+    rng = np.random  # seeded by handler.set_seed; see cartpole_v2.reset_cartpole
 
     if sim == _MUJOCO:
         bids = _resolve_body_ids(env, asset_cfg)
@@ -614,6 +614,6 @@ def encoder_bias(
     (via ``scene_entity.resolve_joint_ids``), which every backend implements.
     """
     n = _num_joints(env, asset_cfg)
-    rng = np.random.default_rng()
+    rng = np.random  # seeded by handler.set_seed; see cartpole_v2.reset_cartpole
     bias = rng.uniform(*bias_range, size=(env.num_envs, n)).astype(np.float32)
     env._encoder_bias = torch.tensor(bias, device=env.device, dtype=torch.float32)

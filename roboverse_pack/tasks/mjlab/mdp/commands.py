@@ -331,7 +331,7 @@ class LiftingCommandManager:
             return
         qposadr = int(mp.jnt_qposadr[jid])
         r = self.cfg.object_pose_range
-        rng = np.random.default_rng()
+        rng = np.random  # seeded by handler.set_seed; see cartpole_v2.reset_cartpole
         pos = np.array(
             [rng.uniform(*r.x), rng.uniform(*r.y), rng.uniform(*r.z)],
             dtype=np.float64,

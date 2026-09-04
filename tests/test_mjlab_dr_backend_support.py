@@ -280,3 +280,40 @@ def test_push_by_setting_velocity_pushes_scene_mjcf_free_joint():
     assert 0.4 <= qvel[0] <= 0.5, "push silently no-opped on the MuJoCo scene-MJCF path"
     assert 0.7 <= qvel[5] <= 0.8
     assert np.allclose(qvel[1:5], 0.0)
+
+
+def _seed(seed: int) -> None:
+    """Seed the way a task's ``reset(seed=)`` does: through the handler contract, not by hand."""
+    from metasim.sim.base import BaseSimHandler
+
+    BaseSimHandler.set_seed(None, seed)  # seeds python / numpy / torch; the method uses no handler state
+
+
+@pytest.mark.general
+def test_dr_draws_are_reproducible_through_set_seed():
+    """The samplers draw from the RNG ``set_seed`` seeds: same seed, same DR; different seed, different DR."""
+    from roboverse_pack.tasks.mjlab.mdp.events_dr import _make_sampler
+
+    _seed(7)
+    a = _make_sampler((0.5, 1.5), "uniform")((4,))
+    _seed(7)
+    assert np.array_equal(a, _make_sampler((0.5, 1.5), "uniform")((4,)))
+    _seed(8)
+    assert not np.array_equal(a, _make_sampler((0.5, 1.5), "uniform")((4,)))
+
+    def com_after(seed):
+        _seed(seed)
+        env, handler = _make_env("newton")
+        body_com_offset(env, asset_cfg=_trunk_cfg(), operation="add", ranges={0: (0.02, 0.025), 2: (-0.03, -0.02)})
+        return handler._model.body_com.numpy().copy()
+
+    def bias_after(seed):
+        _seed(seed)
+        env, _ = _make_env("newton")
+        encoder_bias(
+            env, asset_cfg=SceneEntityCfg("go1", joint_names=tuple(sorted(JOINTS))), bias_range=(-0.015, 0.015)
+        )
+        return env._encoder_bias.clone()
+
+    assert np.array_equal(com_after(3), com_after(3)) and not np.array_equal(com_after(3), com_after(4))
+    assert torch.equal(bias_after(3), bias_after(3)) and not torch.equal(bias_after(3), bias_after(4))

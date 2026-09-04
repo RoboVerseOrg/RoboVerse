@@ -347,3 +347,32 @@ def test_close_override_allowlist_has_no_stale_entries():
     assert not stale, (
         "These files no longer override close() — remove them from KNOWN_CLOSE_OVERRIDES:\n  " + "\n  ".join(stale)
     )
+
+
+def _unseeded_generator_calls(path: pathlib.Path) -> list[str]:
+    """``np.random.default_rng()`` / ``RandomState()`` / ``Generator`` built without a seed in ``path``."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    hits = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+        if name not in ("default_rng", "RandomState"):
+            continue
+        seeded = any(not (isinstance(a, ast.Constant) and a.value is None) for a in node.args) or any(
+            k.arg == "seed" and not (isinstance(k.value, ast.Constant) and k.value is None) for k in node.keywords
+        )
+        if not seeded:
+            hits.append(f"{path.relative_to(_TASKS.parent.parent)}:{node.lineno}")
+    return hits
+
+
+@pytest.mark.general
+def test_no_task_builds_an_unseeded_numpy_generator():
+    """Task reset / DR noise must come from the RNG ``handler.set_seed`` seeds (global ``np.random``
+    or a generator seeded from it). A fresh ``np.random.default_rng()`` ignores ``reset(seed=N)`` and
+    makes the episode unreproducible while the seed plumbing looks correct (eight mjlab samplers did
+    this; ``cartpole_v2`` documents the fix)."""
+    offenders = [hit for path in sorted(_TASKS.rglob("*.py")) for hit in _unseeded_generator_calls(path)]
+    assert not offenders, f"unseeded NumPy generators ignore reset(seed=): {offenders}"

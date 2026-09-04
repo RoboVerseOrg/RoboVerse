@@ -191,7 +191,7 @@ class _MjlabCartpoleTrainBase(BaseTaskEnv):
             physics.data.qpos[0] = 0.0  # slider
             physics.data.qpos[1] = self._hinge_init  # hinge
             # mjlab reset_joints_by_offset (per-joint position + velocity range)
-            rng = np.random.default_rng()
+            rng = np.random  # seeded by handler.set_seed; see cartpole_v2.reset_cartpole
             slider_range = self._slider_pos_range if self._hinge_init == 0.0 else 0.0  # swingup uses 0
             physics.data.qpos[0] += rng.uniform(-slider_range, slider_range)
             physics.data.qpos[1] += rng.uniform(-self._hinge_pos_range, self._hinge_pos_range)
