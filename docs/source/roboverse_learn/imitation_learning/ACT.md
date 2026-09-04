@@ -11,7 +11,7 @@ ACT (Action Chunking with Transformers) implements a transformer-based VAE polic
 ## Installation
 
 ```bash
-cd roboverse_learn/il/act/detr
+cd roboverse_learn/il/policies/act/detr
 pip install -e .
 cd ../../../../../
 
@@ -48,10 +48,10 @@ pip install pandas wandb
 ### Step 2: Training and evaluation
 
 ```bash
-./roboverse_learn/il/act/act_run.sh
+./roboverse_learn/il/policies/act/act_run.sh
 ```
 
-`act_run.sh` uses `roboverse_learn/il/act/train.py` and the generated Zarr data, which gets stored in the `data_policy/` directory, to train the ACT model. Subsequently, `roboverse_learn/il/act/act_eval_runner.py` is utilized to evaluate the trained model.  
+`act_run.sh` uses `roboverse_learn/il/policies/act/train.py` and the generated Zarr data, which gets stored in the `data_policy/` directory, to train the ACT model. Subsequently, `roboverse_learn/il/policies/act/act_eval_runner.py` is utilized to evaluate the trained model.  
 
 **Outputs**: Training result is stored in `~/RoboVerse/info/outputs/ACT`. Evaluation result is stored in `~/RoboVerse/tmp/act`
 

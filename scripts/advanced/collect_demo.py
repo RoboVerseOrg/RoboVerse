@@ -129,6 +129,7 @@ from metasim.utils.state import state_tensor_to_nested
 from metasim.utils.tensor_util import tensor_to_cpu
 
 rootutils.setup_root(__file__, pythonpath=True)
+from roboverse_learn.il.utils.clean_state import ensure_clean_state
 
 # Import randomization components
 try:
@@ -173,93 +174,10 @@ def save_demo_mp(save_req_queue: mp.Queue, robot_cfg: RobotCfg, task_desc: str):
         save_demo(save_dir, demo, robot_cfg=robot_cfg, task_desc=task_desc)
 
 
-def ensure_clean_state(handler, expected_state=None):
-    """Ensure environment is in clean initial state with intelligent validation."""
-    prev_state = None
-    stable_count = 0
-    max_steps = 10
-    min_steps = 2
-
-    for step in range(max_steps):
-        handler.simulate()
-        current_state = handler.get_states(mode="tensor")
-
-        if step >= min_steps:
-            if prev_state is not None:
-                is_stable = True
-                if hasattr(current_state, "objects") and hasattr(prev_state, "objects"):
-                    for obj_name, obj_state in current_state.objects.items():
-                        if obj_name in prev_state.objects:
-                            curr_dof = getattr(obj_state, "dof_pos", None)
-                            prev_dof = getattr(prev_state.objects[obj_name], "dof_pos", None)
-                            if curr_dof is not None and prev_dof is not None:
-                                if not torch.allclose(curr_dof, prev_dof, atol=1e-5):
-                                    is_stable = False
-                                    break
-
-                if is_stable and expected_state is not None:
-                    is_correct_state = _validate_state_correctness(current_state, expected_state)
-                    if not is_correct_state:
-                        log.debug(f"State stable but incorrect at step {step}, continuing simulation...")
-                        stable_count = 0
-                        is_stable = False
-
-                if is_stable:
-                    stable_count += 1
-                    if stable_count >= 2:
-                        break
-                else:
-                    stable_count = 0
-
-            prev_state = current_state
-
-    if expected_state is not None:
-        final_state = handler.get_states(mode="tensor")
-        is_final_correct = _validate_state_correctness(final_state, expected_state)
-        if not is_final_correct:
-            log.warning(f"State validation failed after {max_steps} steps - reset may not have taken full effect")
-
-    handler.get_states(mode="tensor")
-
-
-def _validate_state_correctness(current_state, expected_state):
-    """Validate that current state matches expected initial state for critical objects."""
-    if not hasattr(current_state, "objects") or not hasattr(expected_state, "objects"):
-        return True
-
-    critical_objects = []
-    for obj_name, expected_obj in expected_state.objects.items():
-        if hasattr(expected_obj, "dof_pos") and getattr(expected_obj, "dof_pos", None) is not None:
-            critical_objects.append(obj_name)
-
-    if not critical_objects:
-        return True
-
-    tolerance = 5e-3
-
-    for obj_name in critical_objects:
-        if obj_name not in current_state.objects:
-            continue
-
-        expected_obj = expected_state.objects[obj_name]
-        current_obj = current_state.objects[obj_name]
-
-        expected_dof = getattr(expected_obj, "dof_pos", None)
-        current_dof = getattr(current_obj, "dof_pos", None)
-
-        if expected_dof is not None and current_dof is not None:
-            if not torch.allclose(current_dof, expected_dof, atol=tolerance):
-                diff = torch.abs(current_dof - expected_dof).max().item()
-                log.debug(f"DOF mismatch for {obj_name}: max diff = {diff:.6f} (tolerance = {tolerance})")
-                return False
-
-    return True
-
-
 def force_reset_to_state(env, state, env_id):
     """Force reset environment to specific state with validation."""
     env.reset(states=[state], env_ids=[env_id])
-    ensure_clean_state(env.handler, expected_state=state)
+    ensure_clean_state(env.handler, expected_state=state, env_id=env_id)
     if hasattr(env, "_episode_steps"):
         env._episode_steps[env_id] = 0
 

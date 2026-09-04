@@ -325,7 +325,7 @@ def evaluate_episode(
     # Reset environment - must use task_env directly to pass states
     # (GymEnvWrapper.reset() doesn't support states parameter)
     if randomization_manager is not None and init_states is not None:
-        from roboverse_learn.il.act.act_eval_runner import ensure_clean_state
+        from roboverse_learn.il.utils.clean_state import ensure_clean_state
 
         # Access task_env through wrapper
         env_unwrapped = env
