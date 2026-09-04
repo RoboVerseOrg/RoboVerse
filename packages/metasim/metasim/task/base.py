@@ -170,6 +170,29 @@ class BaseTaskEnv:
         """Get the terminated of the environment."""
         return torch.zeros(self.handler.num_envs, dtype=torch.bool, device=self.device)
 
+    def _as_step_tensor(self, value, *, dtype: torch.dtype, hook: str) -> torch.Tensor:
+        """``value`` as a ``(num_envs,)`` tensor of ``dtype`` on the env device: the type every ``step()`` field has.
+
+        ``_reward`` / ``_terminated`` / ``_time_out`` may return a tensor of the dtype ``get_states``
+        produced, a hand-built tensor without ``device=``, or a Python / numpy sequence; consumers get
+        one shape, dtype and device regardless of backend and base class. A wrong shape (a scalar, an
+        ``(N, 1)`` column, a tuple) is rejected here by name: downstream it would silently disable
+        ``RLTaskEnv``'s auto-reset or index ``reset`` with nested env ids.
+        """
+        try:
+            tensor = torch.as_tensor(value, dtype=dtype, device=self.device)
+        except (TypeError, ValueError, RuntimeError) as err:
+            raise TypeError(
+                f"{type(self).__name__}.{hook} returned {type(value).__name__}, which is not a ({self.num_envs},) "
+                f"{dtype} tensor: {err}"
+            ) from err
+        if tuple(tensor.shape) != (self.num_envs,):
+            raise ValueError(
+                f"{type(self).__name__}.{hook} returned shape {tuple(tensor.shape)}; step() needs one value per "
+                f"env, shape ({self.num_envs},)."
+            )
+        return tensor
+
     def _time_out(self, env_states) -> torch.Tensor:
         """Timeout flags."""
         return self._episode_steps >= self.max_episode_steps
@@ -202,13 +225,15 @@ class BaseTaskEnv:
         for callback in self.post_physics_step_callback:
             callback(env_states)
 
-        # compute reward/termination
-        rewards: Reward = self._reward(env_states)
-        terminated: Termination = self._terminated(env_states)
+        # compute reward/termination, normalised to the step() contract (see ``_as_step_tensor``)
+        rewards: Reward = self._as_step_tensor(self._reward(env_states), dtype=torch.float32, hook="_reward")
+        terminated: Termination = self._as_step_tensor(
+            self._terminated(env_states), dtype=torch.bool, hook="_terminated"
+        )
 
         # increment step counter and compute a single unified timeout
         self._episode_steps = self._episode_steps + 1
-        timeout: TimeOut = self._time_out(env_states)
+        timeout: TimeOut = self._as_step_tensor(self._time_out(env_states), dtype=torch.bool, hook="_time_out")
 
         return (
             self._observation(env_states),

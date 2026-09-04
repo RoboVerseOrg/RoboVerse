@@ -218,7 +218,7 @@ The template includes:
   3. `handler.simulate()`
   4. `env_states = handler.get_states()`
   5. `post_physics_step_callback(env_states)`
-  6. Compute `reward`, `terminated`, `timeout` and return `(obs, reward, terminated, timeout, info)` with `privileged_observation`.
+  6. Compute `reward`, `terminated`, `timeout` and return `(obs, reward, terminated, timeout, info)` with `privileged_observation`. The hooks may return any tensor / sequence; `step()` hands back a `(num_envs,)` float32 reward and bool `terminated` / `timeout` on the env device, and rejects a wrong shape by naming the hook.
 * **Reset flow**: can use external `states` or fall back to `_initial_states`. Calls `handler.set_states(...)`, fetches `env_states`, and resets episode counters.
 * **Flexible override**: You can also override `step()` and `reset()` functions directly, bypassing the callback system entirely.
 
