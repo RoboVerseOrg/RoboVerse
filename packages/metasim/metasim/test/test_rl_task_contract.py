@@ -22,13 +22,19 @@ from metasim.task.rl_task import RLTaskEnv
 class _StubHandler:
     """Bare-minimum handler that satisfies RLTaskEnv's launch-time needs."""
 
-    def __init__(self, scenario: ScenarioCfg, robot_joints: list[str]) -> None:
+    def __init__(self, scenario: ScenarioCfg, robot_joints: list[str], device: str | torch.device = "cpu") -> None:
         self.scenario = scenario
         self.num_envs = scenario.num_envs
         self._robot_joints = robot_joints
         self._tensor_state_cache = None
         self._dict_state_cache = None
-        self.device = torch.device("cpu")
+        self.device = torch.device(device)
+
+    def set_dof_targets(self, actions) -> None:  # step() drives these two
+        pass
+
+    def simulate(self) -> None:
+        pass
 
     def launch(self) -> None:
         return None
@@ -284,3 +290,103 @@ def test_step_publishes_the_terminal_observation_not_the_post_reset_one():
         "sanity: the returned obs is the post-reset one (0.0) -- which is exactly why the raw "
         "key must not be taken from it"
     )
+
+
+def _step_env(base_cls, scenario, monkeypatch, *, hooks, env_device):
+    """A task on ``base_cls`` whose reward / terminated / time_out hooks return ``hooks`` values.
+
+    ``BaseTaskEnv`` is built through its real ``__init__`` (the stub handler satisfies it);
+    ``RLTaskEnv`` is hand-built the way the other step tests in this file do, because its ``__init__``
+    needs real initial states.
+    """
+    from metasim.task.base import BaseTaskEnv
+
+    handler = _StubHandler(scenario, ["j1"], device=env_device)
+    n = scenario.num_envs
+
+    class _Task(base_cls):
+        max_episode_steps = 5
+
+        def _reward(self, states):
+            return hooks["reward"]
+
+        def _terminated(self, states):
+            return hooks["terminated"]
+
+        def _time_out(self, states):
+            return hooks["time_out"]
+
+        def _observation(self, states):
+            return torch.zeros(n, 1)
+
+        def _privileged_observation(self, states):
+            return None
+
+    if base_cls is BaseTaskEnv:
+
+        def _instantiate(self, scenario):
+            self.handler = handler
+            handler.launch()
+
+        monkeypatch.setattr(BaseTaskEnv, "_instantiate_env", _instantiate)
+        return _Task(scenario)
+
+    env = _Task.__new__(_Task)
+    env.device = torch.device(env_device)
+    env.num_envs = n
+    env.handler = handler
+    env._episode_steps = torch.zeros(n, dtype=torch.int32, device=env.device)
+    env._action_low = torch.full((1,), -10.0)
+    env._action_high = torch.full((1,), 10.0)
+    env.max_episode_steps = 5
+    env.reset = lambda *args, **kwargs: (torch.zeros(n, 1), {})  # auto-reset of done envs needs no real states here
+    return env
+
+
+@pytest.mark.general
+@pytest.mark.parametrize("hook_device", ["cpu", "cuda"])
+@pytest.mark.parametrize("base", ["BaseTaskEnv", "RLTaskEnv"])
+def test_step_normalises_reward_and_termination_on_both_bases(_stub_scenario, monkeypatch, hook_device, base):
+    """``step()`` returns a ``(num_envs,)`` float32 reward and bool terminated / timeout on the env device
+    from both task bases, whatever dtype / device / container the hooks produce. With CUDA available the
+    hooks build their tensors on the other device than the handler, so the device move is exercised."""
+    from metasim.task.base import BaseTaskEnv
+
+    if hook_device == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA not available")
+    env_device = torch.device("cpu" if hook_device == "cuda" else ("cuda" if torch.cuda.is_available() else "cpu"))
+    n = _stub_scenario.num_envs
+    hooks = {
+        "reward": torch.full((n,), 1.0, dtype=torch.float64, device=hook_device),
+        "terminated": torch.ones(n, dtype=torch.int64, device=hook_device),
+        "time_out": [False] * n,  # a plain Python sequence is accepted too
+    }
+    base_cls = BaseTaskEnv if base == "BaseTaskEnv" else RLTaskEnv
+    env = _step_env(base_cls, _stub_scenario, monkeypatch, hooks=hooks, env_device=env_device)
+    assert env.device == env_device
+    _obs, reward, terminated, timeout, _info = env.step(torch.zeros(n, 1))
+    for value, dtype in ((reward, torch.float32), (terminated, torch.bool), (timeout, torch.bool)):
+        assert value.dtype == dtype and value.device.type == env_device.type and tuple(value.shape) == (n,)
+    assert bool(terminated.all()) is True and bool(timeout.any()) is False
+
+
+@pytest.mark.general
+@pytest.mark.parametrize(
+    ("bad", "match"),
+    [
+        (True, r"_terminated returned shape \(\); step\(\) needs one value per env"),
+        (torch.ones(2, 1, dtype=torch.bool), r"_terminated returned shape \(2, 1\)"),
+        ({"done": True}, r"_terminated returned dict"),
+    ],
+    ids=["scalar", "column", "dict"],
+)
+def test_step_rejects_a_hook_return_of_the_wrong_shape_by_name(_stub_scenario, monkeypatch, bad, match):
+    """A scalar / (N, 1) / dict from a hook used to slip through with the right dtype and silently break
+    RLTaskEnv's auto-reset; both bases now name the hook and the task."""
+    from metasim.task.base import BaseTaskEnv
+
+    n = _stub_scenario.num_envs
+    hooks = {"reward": torch.zeros(n), "terminated": bad, "time_out": torch.zeros(n, dtype=torch.bool)}
+    env = _step_env(BaseTaskEnv, _stub_scenario, monkeypatch, hooks=hooks, env_device="cpu")
+    with pytest.raises((ValueError, TypeError), match=r"_Task\." + match):
+        env.step(torch.zeros(n, 1))
