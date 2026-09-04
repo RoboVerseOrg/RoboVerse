@@ -23,6 +23,34 @@ except ImportError:
     pass
 
 
+def mujoco_net_contact_forces_world(model, data) -> np.ndarray:
+    """Net contact force on every MuJoCo body, ``(nbody, 3)`` float64 in the **world** frame.
+
+    ``mj_contactForce`` reports each contact's wrench in the contact frame (normal, tangent, tangent)
+    acting on ``geom2``, and ``data.contact.frame`` holds those three axes as rows in world
+    coordinates; the world-frame force is the axes weighted by the components, added to ``geom2``'s
+    body with ``geom1``'s body taking the reaction. Summing the contact-frame components directly gave
+    a vector of plausible magnitude in the wrong direction, and the old signs gave each body the
+    reaction instead of the force it feels; Isaac Sim / Isaac Gym report world-frame forces on the
+    body, so this matches them. One vectorised pass, no per-contact torch dispatch.
+    """
+    nbody = int(model.nbody)
+    ncon = int(data.ncon)
+    net = np.zeros((nbody, 3), dtype=np.float64)
+    if ncon == 0:
+        return net
+    wrench = np.zeros((ncon, 6), dtype=np.float64)
+    for i in range(ncon):
+        mujoco.mj_contactForce(getattr(model, "ptr", model), getattr(data, "ptr", data), i, wrench[i])
+    frames = np.asarray(data.contact.frame[:ncon], dtype=np.float64).reshape(ncon, 3, 3)
+    world = np.einsum("nji,nj->ni", frames, wrench[:, :3])  # rows are axes: f_world = frame^T f_contact
+    body1 = np.asarray(model.geom_bodyid)[np.asarray(data.contact.geom1[:ncon])]
+    body2 = np.asarray(model.geom_bodyid)[np.asarray(data.contact.geom2[:ncon])]
+    np.add.at(net, body2, world)
+    np.add.at(net, body1, -world)
+    return net
+
+
 class ContactForces(BaseQueryType):
     """Optional query to fetch per-body net contact forces for each robot.
 
@@ -98,22 +126,9 @@ class ContactForces(BaseQueryType):
         Returns:
             torch.Tensor: shape (nbody, 3), contact forces for each body
         """
-        nbody = self.handler.physics.model.nbody
-        contact_forces = torch.zeros((nbody, 3), device=self.handler.device)
-
-        for i in range(self.handler.physics.data.ncon):
-            contact = self.handler.physics.data.contact[i]
-            force = np.zeros(6, dtype=np.float64)
-            mujoco.mj_contactForce(self.handler.physics.model.ptr, self.handler.physics.data.ptr, i, force)
-            f_contact = torch.from_numpy(force[:3]).to(device=self.handler.device)
-
-            body1 = self.handler.physics.model.geom_bodyid[contact.geom1]
-            body2 = self.handler.physics.model.geom_bodyid[contact.geom2]
-
-            contact_forces[body1] += f_contact
-            contact_forces[body2] -= f_contact
-
-        return contact_forces
+        model, data = self.handler.physics.model, self.handler.physics.data
+        forces = mujoco_net_contact_forces_world(model, data)
+        return torch.from_numpy(forces).to(device=self.handler.device, dtype=torch.float32)
 
     def _get_contact_forces_newton(self) -> torch.Tensor:
         """Get contact forces from Newton simulator.

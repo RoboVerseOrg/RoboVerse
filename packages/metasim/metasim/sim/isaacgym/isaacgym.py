@@ -41,6 +41,8 @@ from metasim.utils.terrain_utils import TerrainGenerator
 
 
 class IsaacgymHandler(BaseSimHandler):
+    set_states_restores_velocities = True  # TensorState path writes root_states[:, 7:13] and dof_states[:, 1]
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         super().__init__(scenario, optional_queries)
         self._actions_cache: CompatActionInput = []
@@ -784,8 +786,9 @@ class IsaacgymHandler(BaseSimHandler):
 
         for cam_id, cam in enumerate(self.cameras):
             state = CameraState(
-                rgb=torch.stack([self._rgb_tensors[env_id][cam_id][..., :3] for env_id in env_ids]),
-                depth=-torch.stack([self._depth_tensors[env_id][cam_id] for env_id in env_ids]),  # -z
+                # full batch like the bodies: the base class slices every field to ``env_ids`` once
+                rgb=torch.stack([self._rgb_tensors[env_id][cam_id][..., :3] for env_id in range(self.num_envs)]),
+                depth=-torch.stack([self._depth_tensors[env_id][cam_id] for env_id in range(self.num_envs)]),  # -z
             )
             camera_states[cam.name] = state
         self.gym.end_access_image_tensors(self.sim)

@@ -143,8 +143,12 @@ class RLTaskEnv(BaseTaskEnv):
 
         self._episode_steps[env_ids] = 0
         raw_states = self._initial_states if states is None else states
+        self._run_reset_callbacks(env_ids)  # before the states are materialised, as BaseTaskEnv does
         states_to_set = self._prepare_states(raw_states, env_ids)
-        self.handler.set_states(states=states_to_set, env_ids=env_ids)
+        # the auto-reset inside step() fires on nearly every training step; a render refresh there is
+        # only worth paying when the observation actually contains a camera frame
+        has_cameras = bool(getattr(getattr(self.handler, "scenario", None), "cameras", None))
+        self._write_reset_states(states_to_set, env_ids, refresh=has_cameras)
 
         states = self.handler.get_states(mode="tensor")
         first_obs = self._observation(states).to(self.device)

@@ -81,4 +81,43 @@ def test_contact_forces_mujoco_with_shared_handler(handler):
     # Expect at least some non-zero contact forces once the robot has interacted with the ground.
     assert torch.any(current.norm(dim=-1) > 0), "MuJoCo contact forces should be non-zero for some bodies."
 
+    # World frame, force on the body: the ground supports the settled robot, so the summed contact
+    # force over its bodies points up (+z) and carries its weight. Before the frame rotation and
+    # sign fix this sum was in the contact frame with the reaction sign.
+    total = current[0].sum(dim=0)
+    assert total[2] > 0, f"net contact force on the robot must point up, got {total.tolist()}"
+    assert total[2] > 0.5 * total.norm(), f"net contact force is not mostly vertical: {total.tolist()}"
+
     log.info("ContactForces on MuJoCo produces non-zero yet globally balanced contact forces.")
+
+
+@pytest.mark.general
+def test_mujoco_contact_frame_helper_reports_world_frame_support_force():
+    """A cube resting on a 15 degree ramp: the helper gives the cube +m g along world z and the ramp the
+    reaction. Summing the raw ``mj_contactForce`` components put ~cos(15 degrees) m g on the contact
+    normal and the rest on a tangent axis, and the old signs gave the cube the reaction.
+    """
+    mujoco = pytest.importorskip("mujoco")
+    import numpy as np
+
+    from metasim.queries.contact_force import mujoco_net_contact_forces_world
+
+    xml = """
+    <mujoco><option gravity="0 0 -9.81"/>
+      <worldbody>
+        <geom name="ramp" type="box" size="5 5 0.05" euler="0 15 0" friction="2 0.005 0.0001"/>
+        <body name="cube" pos="0 0 0.25">
+          <freejoint/><geom type="box" size="0.05 0.05 0.05" mass="1" friction="2 0.005 0.0001"/>
+        </body>
+      </worldbody>
+    </mujoco>"""
+    model = mujoco.MjModel.from_xml_string(xml)
+    data = mujoco.MjData(model)
+    for _ in range(1500):
+        mujoco.mj_step(model, data)
+    assert data.ncon >= 1
+    forces = mujoco_net_contact_forces_world(model, data)
+    cube = forces[model.body("cube").id]
+    assert np.linalg.norm(cube) == pytest.approx(9.81, rel=0.05), cube
+    assert cube[2] / np.linalg.norm(cube) == pytest.approx(1.0, abs=0.05), cube
+    assert forces[model.body("world").id][2] == pytest.approx(-cube[2], rel=1e-6)

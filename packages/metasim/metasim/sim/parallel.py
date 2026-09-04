@@ -107,10 +107,30 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         # num_envs>1 (the only case where this wrapper class is used).
         _set_states_input_type = "dict"
 
+        get_states_honours_env_ids = True  # ``_get_states`` polls the workers in ``env_ids`` order
+
+        @property
+        def set_states_restores_velocities(self) -> bool:  # type: ignore[override]
+            """The workers run ``base_cls``; whether a restore keeps velocities is its property."""
+            return getattr(base_cls, "set_states_restores_velocities", False) is True
+
+        @property
+        def set_states_restores_dict_velocities(self) -> bool:  # type: ignore[override]
+            return getattr(base_cls, "set_states_restores_dict_velocities", False) is True
+
         @property
         def set_states_refreshes(self) -> bool:  # type: ignore[override]
-            """The workers run ``base_cls``; only a class-level ``True`` on it is a guarantee."""
-            return getattr(base_cls, "set_states_refreshes", False) is True
+            """A class-level ``True`` on the wrapped backend is a guarantee; a property (MuJoCo: only without a
+            viewer) is asked of worker 0 once, since every worker runs the same headless configuration."""
+            declared = getattr(base_cls, "set_states_refreshes", False)
+            if declared is True:
+                return True
+            if isinstance(declared, property):
+                if not hasattr(self, "_worker_set_states_refreshes"):
+                    self.remotes[0].send(("set_states_refreshes", (None,)))
+                    self._worker_set_states_refreshes = bool(self._recv_or_surface(0))
+                return self._worker_set_states_refreshes
+            return False
 
         def __new__(cls, scenario: ScenarioCfg, extra_spec: dict[str, BaseQueryType] | None = None):
             """If num_envs is one, simply use the original single-thread class."""
@@ -200,7 +220,8 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             """``recv`` with worker-death detection. A dead worker closes the
             pipe end, which raises ``EOFError`` or ``ConnectionResetError`` —
             translate that into the real underlying error from the queue
-            instead of letting the user chase a cryptic IPC traceback."""
+            instead of letting the user chase a cryptic IPC traceback.
+            """
             try:
                 return self.remotes[remote_idx].recv()
             except (EOFError, ConnectionResetError, BrokenPipeError) as err:
@@ -230,7 +251,8 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         @staticmethod
         def _send(remote: Connection, msg) -> None:
             """``send`` that tolerates a dead worker: the following ``recv`` / ``_check_error``
-            reports the worker's real error, which a ``BrokenPipeError`` here would only hide."""
+            reports the worker's real error, which a ``BrokenPipeError`` here would only hide.
+            """
             try:
                 remote.send(msg)
             except (BrokenPipeError, ConnectionResetError, EOFError, OSError):
@@ -269,24 +291,27 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             self.closed = True
 
         def _set_states(self, states: list[DictEnvState], env_ids: list[int] | None = None) -> None:
+            """One state per env: broadcast one, one per ``env_id``, or the full batch indexed by env id.
+
+            The full-batch form (``len(states) == num_envs``) always means "row ``k`` belongs to env
+            ``k``", as the vectorised backends read ``root_state[env_ids]``; so ``env_ids=[2, 0, 1]``
+            with a full batch does not transpose anything.
+            """
             if env_ids is None:
                 env_ids = list(range(self.num_envs))
-
             if len(states) == 1:
-                payload = states[0]
-                for env_idx in env_ids:
-                    self.remotes[env_idx].send(("set_states", ([payload],)))
-                self._check_error()
-                return
-
-            if len(states) != len(env_ids):
+                rows = [states[0]] * len(env_ids)
+            elif len(states) == self.num_envs:
+                rows = [states[env_idx] for env_idx in env_ids]
+            elif len(states) == len(env_ids):
+                rows = list(states)
+            else:
                 raise ValueError(
-                    f"states nums {len(states)} and env_ids nums {len(env_ids)} are inconsistent, "
-                    "in parallel mode, it must be one-to-one or single broadcast"
+                    f"states has {len(states)} envs for env_ids {env_ids} (handler has {self.num_envs}); pass one state "
+                    "(broadcast), one per env_id, or the full batch"
                 )
-
-            for local_idx, env_idx in enumerate(env_ids):
-                self.remotes[env_idx].send(("set_states", ([states[local_idx]],)))
+            for env_idx, row in zip(env_ids, rows, strict=True):
+                self.remotes[env_idx].send(("set_states", ([row],)))
             self._check_error()
 
         def _get_states(self, env_ids: list[int] | None = None, **kwargs) -> TensorState:

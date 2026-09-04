@@ -193,6 +193,35 @@ class BaseTaskEnv:
             )
         return tensor
 
+    def _run_reset_callbacks(self, env_ids: list[int]) -> None:
+        """Run the task's reset callbacks.
+
+        A list of ``fn(env_ids)`` (the base contract) or the humanoid packs' ``{name: (fn, params)}``
+        mapping; anything else is a configuration error, not a no-op.
+        """
+        callbacks = self.reset_callback
+        if isinstance(callbacks, dict):
+            for fn, params in callbacks.values():
+                fn(self, env_ids, **(params or {}))
+            return
+        if not isinstance(callbacks, (list, tuple)):
+            raise TypeError(
+                f"{type(self).__name__}.reset_callback must be a list of callables or a name -> (fn, params) dict"
+            )
+        for callback in callbacks:
+            callback(env_ids)
+
+    def _write_reset_states(self, states, env_ids: list[int], *, refresh: bool = True) -> None:
+        """Write the reset states and refresh the renderer unless the backend's write already did.
+
+        ``set_states_refreshes`` says whether the write refreshed (on Isaac Sim the unconditional
+        refresh was two extra RTX passes); ``refresh=False`` skips it where no frame is consumed (the
+        RL auto-reset without cameras).
+        """
+        self.handler.set_states(states=states, env_ids=env_ids)
+        if refresh and not self.handler.set_states_refreshes:
+            self.handler.refresh_render()
+
     def _time_out(self, env_states) -> torch.Tensor:
         """Timeout flags."""
         return self._episode_steps >= self.max_episode_steps
@@ -286,14 +315,9 @@ class BaseTaskEnv:
         if env_ids is None:
             env_ids = list(range(self.handler.num_envs))
 
-        for callback in self.reset_callback:
-            callback(env_ids)
+        self._run_reset_callbacks(env_ids)
         states_to_set = self._initial_states if states is None else states
-        self.handler.set_states(states=states_to_set, env_ids=env_ids)
-        if not self.handler.set_states_refreshes:
-            # the backend declares whether its state write already refreshed the renderer;
-            # on Isaac Sim the unconditional call was two more RTX passes on top of _set_states' own
-            self.handler.refresh_render()
+        self._write_reset_states(states_to_set, env_ids)
         env_states = self.handler.get_states(env_ids=env_ids, mode="tensor")
         info = {
             "privileged_observation": self._privileged_observation(env_states),

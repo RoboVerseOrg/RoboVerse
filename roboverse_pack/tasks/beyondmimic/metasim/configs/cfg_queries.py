@@ -9,18 +9,12 @@ from __future__ import annotations
 
 from collections import deque
 
-import numpy as np
 import torch
 
 from metasim.sim.base import BaseQueryType, BaseSimHandler
 
 try:
     import isaacgym
-except ImportError:
-    pass
-
-try:
-    import mujoco
 except ImportError:
     pass
 
@@ -76,27 +70,11 @@ class ContactForces(BaseQueryType):
             )
 
     def _get_contact_forces_mujoco(self) -> torch.Tensor:
-        """Compute net contact forces on each body.
+        """World-frame net contact force per body; the frame / sign convention lives in one place."""
+        from metasim.queries.contact_force import mujoco_net_contact_forces_world
 
-        Returns:
-            torch.Tensor: shape (nbody, 3), contact forces for each body
-        """
-        nbody = self.handler.physics.model.nbody
-        contact_forces = torch.zeros((nbody, 3), device=self.handler.device)
-
-        for i in range(self.handler.physics.data.ncon):
-            contact = self.handler.physics.data.contact[i]
-            force = np.zeros(6, dtype=np.float64)
-            mujoco.mj_contactForce(self.handler.physics.model.ptr, self.handler.physics.data.ptr, i, force)
-            f_contact = torch.from_numpy(force[:3]).to(device=self.handler.device)
-
-            body1 = self.handler.physics.model.geom_bodyid[contact.geom1]
-            body2 = self.handler.physics.model.geom_bodyid[contact.geom2]
-
-            contact_forces[body1] += f_contact
-            contact_forces[body2] -= f_contact
-
-        return contact_forces
+        forces = mujoco_net_contact_forces_world(self.handler.physics.model, self.handler.physics.data)
+        return torch.from_numpy(forces).to(device=self.handler.device, dtype=torch.float32)
 
     def __call__(self):
         """Call the query."""

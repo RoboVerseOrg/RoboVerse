@@ -51,10 +51,22 @@ class HybridSimHandler(BaseSimHandler):
         # renderers whose refresh_render takes `passes` can render a synced step in one pass
         self._renderer_single_pass = "passes" in inspect.signature(render_handler.refresh_render).parameters
 
+    get_states_honours_env_ids = True  # ``_get_states`` slices both sides to ``env_ids``
+
+    @property
+    def set_states_restores_velocities(self) -> bool:  # type: ignore[override]
+        """Physics owns the state: whether a restore keeps velocities is the physics handler's property."""
+        return bool(getattr(self.physics_handler, "set_states_restores_velocities", False))
+
+    @property
+    def set_states_restores_dict_velocities(self) -> bool:  # type: ignore[override]
+        return bool(getattr(self.physics_handler, "set_states_restores_dict_velocities", False))
+
     @property
     def set_states_refreshes(self) -> bool:  # type: ignore[override]
         """``set_states`` pushes the physics state into the render handler; whether that write leaves
-        the renderer's frame current is the render handler's property."""
+        the renderer's frame current is the render handler's property.
+        """
         return bool(getattr(self.render_handler, "set_states_refreshes", False))
 
     def refresh_render(self) -> None:

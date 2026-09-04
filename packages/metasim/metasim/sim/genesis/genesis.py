@@ -61,6 +61,7 @@ except ImportError:
 
 
 class GenesisHandler(BaseSimHandler):
+    get_states_honours_env_ids = True  # ``_get_states`` indexes by ``env_ids``
     # ``_set_states`` indexes ``state["objects"]`` directly, so it only
     # accepts the list-of-dict form; the base converts TensorState input.
     _set_states_input_type = "dict"
@@ -669,9 +670,7 @@ class GenesisHandler(BaseSimHandler):
                 joint._dofs_frictionloss = sanitized
 
     def _sanitize_urdf(self, urdf_path: str | None) -> str | None:
-        """
-        removing empty <collision> nodes.
-        """
+        """Removing empty <collision> nodes."""
         if urdf_path is None:
             return None
 
