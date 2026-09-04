@@ -92,6 +92,10 @@ class SimParamCfg:
     # closed-loop behaviour matches it. "implicit": SuperDex's native constraint-based pose controller
     # (stiffer, ignores effort limits, converges in a few ms).
     superdex_control_mode: Literal["pd", "implicit"] = "pd"
+    # SuperDex only: the step the implicit solver takes. None -> 5 ms (``metasim.sim.superdex.DEFAULT_SOLVER_DT``);
+    # the env step (``dt * decimation``) is covered by ``round(env_step / solver_dt)`` steps of equal size, so
+    # ``dt`` and ``decimation`` keep their meaning. 0.001 reproduces the pre-1.0 1 ms stepping.
+    superdex_solver_dt: float | None = None
 
     ## MJX, Newton specific parameters
     nconmax: int | None = 512
@@ -107,6 +111,11 @@ class SimParamCfg:
     newton_mujoco_disable_contacts: bool = False
 
     ## Resource management
+    # Worker threads of the physics engine for one scene. SuperDex: 0 = single-threaded (the default and the
+    # recommended setting), -1 = let SuperDex pick from the CPU count, n > 0 = that many. Batched runs
+    # (``num_envs > 1``) are one *process per env* (``ParallelSimWrapper``), each scene single-threaded, as the
+    # SuperDex maintainers recommend; a non-zero value multiplies across those processes and oversubscribes
+    # the machine, so the SuperDex handler warns when it is set.
     num_threads: int = 0
     # XXX: these parameters should be replaced by "device" in the future
     use_gpu_pipeline: bool = True

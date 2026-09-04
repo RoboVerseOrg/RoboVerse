@@ -19,7 +19,7 @@ def get_kinematics_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     """
     return ScenarioCfg(
         robots=[G1Dof29Cfg()],
-        objects=[PrimitiveCubeCfg(name="test_cube", size=[0.1, 0.1, 0.1])],
+        objects=[PrimitiveCubeCfg(name="test_cube", size=[0.1, 0.1, 0.1], color=[0.5, 0.5, 0.5])],
         num_envs=num_envs,
         simulator=sim,
         headless=True,

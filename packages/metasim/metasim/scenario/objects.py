@@ -109,6 +109,11 @@ class _PrimitiveMixin:
 
     def __post_init__(self):
         super().__post_init__()
+        if isinstance(self.color, type(MISSING)):  # configclass deep-copies defaults, so identity is not enough
+            raise ValueError(
+                f"{type(self).__name__}({self.name!r}).color is required: pass an RGB list such as [0.8, 0.1, 0.1] "
+                "(every backend reads it to build the visual material)."
+            )
 
     @property
     def volume(self) -> float:
