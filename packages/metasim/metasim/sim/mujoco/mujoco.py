@@ -468,10 +468,20 @@ class MujocoHandler(BaseSimHandler):
         self._add_objects_to_model(mjcf_model)
         self._add_robots_to_model(mjcf_model)
         self._add_cameras_to_model(mjcf_model)
+        self._add_lights_to_model(mjcf_model)
 
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
         return mjcf_model
+
+    def _add_lights_to_model(self, mjcf_model: mjcf.RootElement) -> None:
+        """Render ``scenario.lights`` when ``sim_params.mujoco_use_scenario_lights`` asks for it; see ``lights.py``."""
+        from .lights import add_scenario_lights, scenario_lights_enabled
+
+        if not scenario_lights_enabled(self.scenario):
+            return
+        created = add_scenario_lights(mjcf_model, list(self.lights or []))
+        log.debug(f"MuJoCo: scenario light rig replaces the headlight: {[light.name for light in created]}")
 
     def _init_scene(self) -> mjcf.RootElement:
         """Initialize scene elements."""

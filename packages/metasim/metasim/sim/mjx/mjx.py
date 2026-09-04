@@ -561,6 +561,11 @@ class MJXHandler(BaseSimHandler):
         self.mj_objects[self._robot.name] = robot_attached
         self._mujoco_robot_name = robot_attached.full_identifier
 
+        # the same opt-in light rig as the MuJoCo backend (both render through mujoco.Renderer)
+        from metasim.sim.mujoco.lights import add_scenario_lights, scenario_lights_enabled
+
+        if scenario_lights_enabled(self.scenario):
+            add_scenario_lights(mjcf_model, list(self.lights or []))
         return mjcf_model
 
     ############################################################
