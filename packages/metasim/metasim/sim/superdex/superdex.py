@@ -187,6 +187,16 @@ class SuperdexHandler(BaseSimHandler):
     set_states_restores_velocities = True  # rigid and articulation velocities are written on restore
     set_states_restores_dict_velocities = True  # the dict path writes them too
 
+    @property
+    def physics_dt(self) -> float | None:  # type: ignore[override]
+        """The solver step (``env_step / substeps``); see ``DEFAULT_SOLVER_DT``."""
+        return float(self._dt) if getattr(self, "_dt", None) else None
+
+    @property
+    def env_step_s(self) -> float | None:  # type: ignore[override]
+        """The env step is covered by ``_substeps`` solver steps, not ``decimation`` physics steps."""
+        return float(self._dt * self._substeps) if getattr(self, "_dt", None) else None
+
     _set_states_input_type = "dict"
 
     def __init__(self, scenario: ScenarioCfg, optional_queries=None):

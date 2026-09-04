@@ -49,6 +49,8 @@ DEPTH_EPSILON = 1e-8
 class SinglePybulletHandler(BaseSimHandler):
     """Pybullet Handler class."""
 
+    _default_physics_dt = 1.0 / 240.0  # the engine default this backend passes at construction
+
     # ``_set_states`` indexes per-env dicts; the base converts TensorState input.
     _set_states_input_type = "dict"
 
@@ -111,7 +113,7 @@ class SinglePybulletHandler(BaseSimHandler):
     def _build_pybullet(self):
         self.client = p.connect(p.DIRECT if self.headless else p.GUI)
         p.setPhysicsEngineParameter(
-            fixedTimeStep=self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1.0 / 240.0,
+            fixedTimeStep=self.physics_dt,
         )
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(*self.scenario.gravity)

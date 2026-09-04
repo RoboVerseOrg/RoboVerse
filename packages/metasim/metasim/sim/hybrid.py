@@ -107,6 +107,15 @@ class HybridSimHandler(BaseSimHandler):
         finally:
             self.render_handler.close()
 
+    @property
+    def physics_dt(self) -> float | None:  # type: ignore[override]
+        """Physics owns the time base."""
+        return self.physics_handler.physics_dt
+
+    @property
+    def env_step_s(self) -> float | None:  # type: ignore[override]
+        return self.physics_handler.env_step_s
+
     def set_seed(self, seed: int) -> None:
         """Forward the reproducibility seed to both wrapped handlers.
 

@@ -72,6 +72,10 @@ def _worker(
                 remote.send("handshake")
             elif cmd == "device":
                 remote.send(env.device)
+            elif cmd == "physics_dt":
+                remote.send(env.physics_dt)
+            elif cmd == "env_step_s":
+                remote.send(env.env_step_s)
             else:
                 raise NotImplementedError(f"Command {cmd} not implemented")
     except KeyboardInterrupt:
@@ -384,6 +388,17 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             for remote in self.remotes:
                 remote.send(("set_seed", (seed,)))
             self._check_error()
+
+        @property
+        def physics_dt(self):  # type: ignore[override]
+            """The workers' physics step (worker 0 answers; all run the same backend and scenario)."""
+            self.remotes[0].send(("physics_dt", (None,)))
+            return self._recv_or_surface(0)
+
+        @property
+        def env_step_s(self):  # type: ignore[override]
+            self.remotes[0].send(("env_step_s", (None,)))
+            return self._recv_or_surface(0)
 
         def refresh_render(self):
             for remote in self.remotes:

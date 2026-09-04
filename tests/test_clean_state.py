@@ -88,3 +88,11 @@ def test_robot_drift_and_robot_expectations_are_ignored():
     h = _Stub(moving_steps=0)
     assert ensure_clean_state(h, {"robots": {"franka": {"dof_pos": {"joint_a": 99.0}}}, "objects": {}}) is True
     assert h.steps == 4
+
+
+def test_on_step_receives_the_full_state_after_every_simulate():
+    """A batched recorder keeps the settle steps of the other envs; it needs every intermediate state."""
+    h = _Stub(moving_steps=2)
+    seen = []
+    ensure_clean_state(h, on_step=lambda state: seen.append(float(state.objects["drawer"].joint_pos[0, 0])))
+    assert len(seen) == h.steps == 4

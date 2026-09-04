@@ -57,6 +57,7 @@ from .mjx_helper import (
 
 class MJXHandler(BaseSimHandler):
     get_states_honours_env_ids = True  # ``_get_states`` indexes by ``env_ids``
+    _default_physics_dt = 0.002  # the MJCF compiler default when sim_params.dt is None
 
     def __init__(
         self,

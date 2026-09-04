@@ -6,6 +6,17 @@ import pickle
 
 import yaml
 
+#: File extensions the loader dispatches on; the directory resolver searches the same set.
+TRAJ_SUFFIXES = (".pkl", ".pkl.gz", ".json", ".yaml", ".yml")
+
+
+class TrajectoryFileError(RuntimeError):
+    """A trajectory file exists but cannot be read (truncated, corrupt, or from a removed module).
+
+    Deliberately not a ``ValueError``: the task bases swallow ``ValueError`` from ``get_traj`` as
+    "no demo, use the defaults", which would hide the corruption.
+    """
+
 
 def load_traj_file(path: str):
     """Load a trajectory from a file.

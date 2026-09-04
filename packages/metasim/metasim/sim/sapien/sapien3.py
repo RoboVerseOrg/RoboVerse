@@ -141,6 +141,8 @@ def load_actor_from_urdf(
 class Sapien3Handler(BaseSimHandler):
     """Sapien3 Handler class."""
 
+    _default_physics_dt = 1 / 100  # the engine default this backend passes at construction
+
     # ``_set_states`` indexes per-env dicts; the base converts TensorState input.
     _set_states_input_type = "dict"
 
@@ -228,7 +230,7 @@ class Sapien3Handler(BaseSimHandler):
 
         self.engine.set_renderer(self.renderer)
         self.scene = self.engine.create_scene(scene_config)
-        self.scene.set_timestep(self.scenario.sim_params.dt if self.scenario.sim_params.dt is not None else 1 / 100)
+        self.scene.set_timestep(self.physics_dt)
         ground_material = self.renderer.create_material()
         ground_material.base_color = np.array([202, 164, 114, 256]) / 256
         ground_material.specular = 0.5

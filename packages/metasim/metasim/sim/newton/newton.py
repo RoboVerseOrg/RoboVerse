@@ -111,6 +111,7 @@ class NewtonHandler(BaseSimHandler):
     get_states_honours_env_ids = True  # ``_get_states`` indexes by ``env_ids``
     set_states_restores_velocities = True  # ``_set_states`` writes body_qd / joint_qd
     set_states_restores_dict_velocities = True  # the dict path writes them too
+    _default_physics_dt = 0.005  # the engine default this backend passes at construction
 
     def __init__(
         self,
@@ -1588,7 +1589,7 @@ class NewtonHandler(BaseSimHandler):
 
     def _simulate(self) -> None:
         """Advance simulation by one step (with decimation substeps)."""
-        dt = self.scenario.sim_params.dt if self.scenario.sim_params.dt else 0.005
+        dt = self.physics_dt
 
         for _ in range(self.decimation):
             # Apply gravity compensation (per-body) if configured

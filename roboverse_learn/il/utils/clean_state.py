@@ -49,15 +49,28 @@ def _is_settled(current, previous) -> bool:
 
 
 def ensure_clean_state(
-    handler, expected_state=None, *, env_id: int = 0, max_steps: int = 10, min_steps: int = 2
+    handler,
+    expected_state=None,
+    *,
+    env_id: int = 0,
+    max_steps: int = 10,
+    min_steps: int = 2,
+    on_step=None,
 ) -> bool:
-    """Step until the objects settle; True when they did and (if given) env ``env_id`` matches ``expected_state``."""
+    """Step until the objects settle; True when they did and (if given) env ``env_id`` matches ``expected_state``.
+
+    ``simulate()`` steps every env of a batched handler, so settling one env also advances the others.
+    ``on_step(state)`` is called with the full ``TensorState`` after each step so a recorder can keep
+    those steps in the other envs' episodes instead of silently losing them.
+    """
     prev_state = None
     stable_count = 0
     current_state = None
     for step in range(max_steps):
         handler.simulate()
         current_state = handler.get_states(mode="tensor")
+        if on_step is not None:
+            on_step(current_state)
         if step >= min_steps and prev_state is not None:
             if _is_settled(current_state, prev_state):
                 stable_count += 1
