@@ -136,6 +136,11 @@ def set_seed(seed):
 def main():
     args = parse_args()
     num_envs: int = args.num_envs
+    if num_envs != 1:
+        # This runner feeds env 0's image and joint state to the policy, sends one action, records env
+        # 0's video and keeps a single-env ensembling buffer; more envs would be stepped with a broadcast
+        # action and never scored. The vectorised evaluator is roboverse_learn/il/runners/default_runner.py.
+        raise ValueError(f"act_eval_runner evaluates one env per episode; got --num_envs {num_envs}")
 
     import numpy as np
     import torch
@@ -349,10 +354,7 @@ def main():
         log.debug(f"Env: {i}")
 
         step = 0
-        MaxStep = 800
-        SuccessOnce = [False] * num_envs
-        SuccessEnd = [False] * num_envs
-        TimeOut = [False] * num_envs
+        MaxStep = max_timesteps  # the buffers below are sized by it; the task's own time_out ends an episode
         image_list = []
 
         # act specific
@@ -384,9 +386,9 @@ def main():
                     all_actions = policy(qpos, curr_image)
                 if args.temporal_agg:
                     all_time_actions[[step], step : step + num_queries] = all_actions
-                    actions_for_curr_step = all_time_actions[:, step]
-                    actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
-                    actions_for_curr_step = actions_for_curr_step[actions_populated]
+                    # the chunks covering this step are the rows written at steps step-num_queries+1..step;
+                    # selecting them by position keeps a legitimately all-zero (dataset-mean) action
+                    actions_for_curr_step = all_time_actions[max(0, step - num_queries + 1) : step + 1, step]
                     k = 0.01
                     exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
                     exp_weights = exp_weights / exp_weights.sum()
@@ -415,23 +417,13 @@ def main():
                 env.handler.refresh_render()
                 # print(reward, success, time_out)
 
-                # eval
-                # if success[0]:
-                #     TotalSuccess += 1
-                #     print(f"Env {i} Success")
-                if success[0] and not SuccessOnce[0]:
+                # one env per episode: the first success ends it as a success, a time-out as a failure
+                if bool(success[0]):
                     TotalSuccess += 1
-                    SuccessOnce[0] = True
-                    print(f"Env {i} Success")
+                    print(f"Episode {i} Success")
                     break
-
-                SuccessOnce = [SuccessOnce[i] or success[i] for i in range(num_envs)]
-                TimeOut = [TimeOut[i] or time_out[i] for i in range(num_envs)]
-                for TimeOutIndex in range(num_envs):
-                    if TimeOut[TimeOutIndex]:
-                        SuccessEnd[TimeOutIndex] = False
-                if all(TimeOut):
-                    print("All time out")
+                if bool(time_out[0]):
+                    print(f"Episode {i} time out")
                     break
 
                 step += 1

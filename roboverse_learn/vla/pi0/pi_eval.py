@@ -316,6 +316,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> bool:
     args = parse_args()
+    if args.num_episodes < 1:
+        raise ValueError(f"--num_episodes must be >= 1 to report a success rate; got {args.num_episodes}")
 
     if args.device.startswith("cuda") and not torch.cuda.is_available():
         print("CUDA not available, falling back to CPU")
