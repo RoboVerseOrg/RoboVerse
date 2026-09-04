@@ -107,6 +107,7 @@ def compare_params(old: list[dict[str, Any]] | None, new: list[dict[str, Any]] |
 
 def _class_entry(cls: type) -> dict[str, Any]:
     methods: dict[str, str] = {}
+    attributes: dict[str, str] = {}
     for name, member in cls.__dict__.items():
         if name.startswith("_") and name != "__init__":
             continue
@@ -116,11 +117,16 @@ def _class_entry(cls: type) -> dict[str, Any]:
             methods[name] = {"signature": "<property>", "params": None}
         elif inspect.isfunction(member):
             methods[name] = {"signature": _signature(member), "params": _params(member)}
+        elif not inspect.isroutine(member) and not isinstance(member, type):
+            # a plain class attribute callers read (a capability flag, a default): its removal breaks them
+            attributes[name] = type(member).__name__
     entry: dict[str, Any] = {
         "kind": "class",
         "bases": [b.__name__ for b in cls.__bases__ if b is not object],
         "methods": dict(sorted(methods.items())),
     }
+    if attributes:
+        entry["attributes"] = dict(sorted(attributes.items()))
     if dataclasses.is_dataclass(cls):
         entry["fields"] = [f.name for f in dataclasses.fields(cls)]
     return entry

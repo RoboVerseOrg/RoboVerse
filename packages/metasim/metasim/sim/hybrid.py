@@ -51,6 +51,16 @@ class HybridSimHandler(BaseSimHandler):
         # renderers whose refresh_render takes `passes` can render a synced step in one pass
         self._renderer_single_pass = "passes" in inspect.signature(render_handler.refresh_render).parameters
 
+    @property
+    def set_states_refreshes(self) -> bool:  # type: ignore[override]
+        """``set_states`` pushes the physics state into the render handler; whether that write leaves
+        the renderer's frame current is the render handler's property."""
+        return bool(getattr(self.render_handler, "set_states_refreshes", False))
+
+    def refresh_render(self) -> None:
+        """Cameras come from the render handler, so a refresh request goes there."""
+        self.render_handler.refresh_render()
+
     def launch(self, **render_launch_kwargs) -> None:
         """Launch both physics and render simulations.
 

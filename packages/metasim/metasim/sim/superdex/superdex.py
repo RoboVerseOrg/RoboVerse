@@ -172,6 +172,8 @@ class _Rigid:
 class SuperdexHandler(BaseSimHandler):
     """MetaSim handler backed by SuperDex Physics (see module docstring)."""
 
+    set_states_refreshes = True  # ``_set_states`` pushes the poses into the renderer
+
     _set_states_input_type = "dict"
 
     def __init__(self, scenario: ScenarioCfg, optional_queries=None):

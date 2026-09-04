@@ -107,6 +107,11 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         # num_envs>1 (the only case where this wrapper class is used).
         _set_states_input_type = "dict"
 
+        @property
+        def set_states_refreshes(self) -> bool:  # type: ignore[override]
+            """The workers run ``base_cls``; only a class-level ``True`` on it is a guarantee."""
+            return getattr(base_cls, "set_states_refreshes", False) is True
+
         def __new__(cls, scenario: ScenarioCfg, extra_spec: dict[str, BaseQueryType] | None = None):
             """If num_envs is one, simply use the original single-thread class."""
             if scenario.num_envs == 1:
@@ -367,6 +372,14 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
             self.remotes[0].send(("get_body_names", (obj_name, sort)))
             return self._recv_or_surface(0)
+
+        # the public names above are answered by worker 0 over the pipe; the private hooks the base
+        # class would call are routed to them so the backend contract holds for the wrapper too
+        def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
+            return self.get_joint_names(obj_name, sort)
+
+        def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+            return self.get_body_names(obj_name, sort)
 
         @property
         def device(self) -> torch.device:
