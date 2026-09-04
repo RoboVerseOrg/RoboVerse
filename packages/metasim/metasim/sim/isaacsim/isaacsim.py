@@ -107,7 +107,10 @@ class IsaacsimHandler(BaseSimHandler):
     This class extends BaseSimHandler to provide specific functionality for Isaac Lab.
     """
 
-    set_states_refreshes = True
+    @property
+    def set_states_refreshes(self) -> bool:  # type: ignore[override]
+        """``_set_states`` ends with ``refresh_render()`` only when the scene has cameras."""
+        return len(self.cameras) > 0
 
     def __init__(self, scenario_cfg: ScenarioCfg, optional_queries: list[BaseQueryType] | None = None):
         super().__init__(scenario_cfg, optional_queries)

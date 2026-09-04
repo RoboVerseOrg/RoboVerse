@@ -27,43 +27,38 @@ from metasim.sim.base import BaseSimHandler
 
 
 def _import_all_backend_handlers() -> list[type[BaseSimHandler]]:
-    """Import every backend module so its ``BaseSimHandler`` subclasses
-    register in ``__subclasses__``. Missing optional deps are tolerated —
-    we list every backend we *intend* to ship.
+    """The concrete handler classes a user can obtain: every entry of the backend registry
+    (``metasim.utils.setup_util.SIM_BACKENDS``, the single source of truth for dispatch), the
+    composite ``HybridSimHandler``, and one ``ParallelSimWrapper`` instance class so the wrapper's
+    contract is covered too. Enumerating the registry instead of walking ``__subclasses__`` keeps stub
+    handlers defined by other test modules (which register as subclasses when files share a process)
+    out of the parametrization.
     """
-    backends = [
-        "metasim.sim.mujoco.mujoco",
-        "metasim.sim.mjx.mjx",
-        "metasim.sim.sapien.sapien2",
-        "metasim.sim.sapien.sapien3",
-        "metasim.sim.pybullet.pybullet",
-        "metasim.sim.newton.newton",
-        "metasim.sim.genesis.genesis",
-        "metasim.sim.blender.blender",
-        "metasim.sim.isaacgym.isaacgym",
-        "metasim.sim.isaacsim.isaacsim",
-        "metasim.sim.pyrep.pyrep",
-        "metasim.sim.superdex.superdex",
-        "metasim.sim.parallel",
-        "metasim.sim.hybrid",
-    ]
-    imported: list[type[BaseSimHandler]] = []
-    for mod_name in backends:
+    import importlib
+
+    from metasim.utils.setup_util import SIM_BACKENDS
+
+    classes: list[type[BaseSimHandler]] = []
+    first_single: type[BaseSimHandler] | None = None
+    for spec in SIM_BACKENDS.values():
         try:
-            __import__(mod_name)
+            cls = getattr(importlib.import_module(spec.module), spec.cls)
         except Exception:
-            continue
-    # Walk subclasses transitively; ``parallel`` / ``hybrid`` wrap others.
-    seen: set[type[BaseSimHandler]] = set()
-    stack: list[type[BaseSimHandler]] = list(BaseSimHandler.__subclasses__())
-    while stack:
-        cls = stack.pop()
-        if cls in seen:
-            continue
-        seen.add(cls)
-        imported.append(cls)
-        stack.extend(cls.__subclasses__())
-    return imported
+            continue  # optional backend not installed here
+        classes.append(cls)
+        if spec.parallel and first_single is None:
+            first_single = cls
+    try:
+        from metasim.sim.hybrid import HybridSimHandler
+
+        classes.append(HybridSimHandler)
+    except Exception:
+        pass
+    if first_single is not None:
+        from metasim.sim.parallel import ParallelSimWrapper
+
+        classes.append(ParallelSimWrapper(first_single))
+    return classes
 
 
 # Documented contract methods every backend must override. Grouped so we
@@ -214,3 +209,93 @@ def test_set_states_invalidates_cache_on_all_backends():
             f"this re-opens the cross-backend stale-cache bug fixed in p0_fixes_2026_05_26. "
             f"If the invalidation moved elsewhere, update this test to look there."
         )
+
+
+@pytest.mark.parametrize("cls", _import_all_backend_handlers(), ids=lambda c: c.__name__)
+def test_backend_declares_set_states_refreshes(cls: type[BaseSimHandler]):
+    """Every backend states whether ``_set_states`` leaves its renderer current.
+
+    ``BaseTaskEnv.reset`` and the benchmark render sync read ``set_states_refreshes`` to decide whether
+    a ``refresh_render()`` is still needed; a backend that says nothing inherits ``False`` (an extra
+    refresh, never a stale frame). A ``property`` is allowed for answers that depend on the instance
+    (Isaac Sim: only with cameras; the composites: whatever they wrap).
+    """
+    attr = getattr(cls, "set_states_refreshes", None)
+    assert attr is not None, f"{cls.__name__} lost the set_states_refreshes capability flag"
+    if isinstance(attr, property):
+        return
+    assert isinstance(attr, bool), f"{cls.__name__}.set_states_refreshes must be a bool, got {attr!r}"
+
+
+def test_set_states_refreshes_declared_where_set_states_renders():
+    """The backends whose ``_set_states`` already refreshes the renderer say so; the rest inherit False."""
+    by_name = {cls.__name__: cls for cls in _import_all_backend_handlers()}
+    class_level_true = {"BlenderHandler", "SuperdexHandler"}
+    instance_level = {"IsaacsimHandler", "HybridSimHandler", "ParallelHandler"}
+    for name, cls in by_name.items():
+        attr = cls.set_states_refreshes
+        if name in instance_level:
+            assert isinstance(attr, property), f"{name}.set_states_refreshes should depend on the instance"
+        else:
+            assert attr is (name in class_level_true), f"{name}.set_states_refreshes is {attr!r}"
+
+
+def test_parallel_wrapper_forwards_only_a_class_level_guarantee():
+    """A wrapped class whose answer is a property gives the wrapper no guarantee (never a property object)."""
+    from metasim.sim.parallel import ParallelSimWrapper
+
+    class _Yes:
+        set_states_refreshes = True
+
+    class _Maybe:
+        @property
+        def set_states_refreshes(self):
+            return True
+
+    class _Silent:
+        pass
+
+    for base, expected in ((_Yes, True), (_Maybe, False), (_Silent, False)):
+        wrapper = ParallelSimWrapper(base)
+        instance = object.__new__(wrapper)  # no workers: the property must not need any state
+        assert instance.set_states_refreshes is expected, base.__name__
+
+
+def _reset_with(flag: bool) -> list[str]:
+    """Drive ``BaseTaskEnv.reset`` with a stub handler that records its calls."""
+    import torch
+
+    from metasim.task.base import BaseTaskEnv
+
+    calls: list[str] = []
+
+    class _Stub:
+        num_envs = 2
+        set_states_refreshes = flag
+
+        def set_states(self, states=None, env_ids=None):
+            calls.append("set_states")
+
+        def refresh_render(self):
+            calls.append("refresh_render")
+
+        def get_states(self, env_ids=None, mode="tensor"):
+            calls.append("get_states")
+            return None
+
+    env = BaseTaskEnv.__new__(BaseTaskEnv)
+    env.handler = _Stub()
+    env.reset_callback = []
+    env._initial_states = None
+    env._episode_steps = torch.zeros(2, dtype=torch.long)
+    env.device = torch.device("cpu")
+    env._privileged_observation = lambda states: None
+    env._observation = lambda states: None
+    env.reset()
+    return calls
+
+
+def test_task_reset_refreshes_render_only_when_the_backend_did_not():
+    """``BaseTaskEnv.reset`` consults the backend's capability flag instead of guessing the backend."""
+    assert _reset_with(False) == ["set_states", "refresh_render", "get_states"]
+    assert _reset_with(True) == ["set_states", "get_states"]

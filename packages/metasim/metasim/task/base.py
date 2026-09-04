@@ -265,7 +265,10 @@ class BaseTaskEnv:
             callback(env_ids)
         states_to_set = self._initial_states if states is None else states
         self.handler.set_states(states=states_to_set, env_ids=env_ids)
-        self.handler.refresh_render()
+        if not self.handler.set_states_refreshes:
+            # the backend declares whether its state write already refreshed the renderer;
+            # on Isaac Sim the unconditional call was two more RTX passes on top of _set_states' own
+            self.handler.refresh_render()
         env_states = self.handler.get_states(env_ids=env_ids, mode="tensor")
         info = {
             "privileged_observation": self._privileged_observation(env_states),

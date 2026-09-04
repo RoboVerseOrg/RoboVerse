@@ -8,6 +8,11 @@
  },
  "metasim.constants": {
   "PhysicStateType": {
+   "attributes": {
+    "GEOM": "PhysicStateType",
+    "RIGIDBODY": "PhysicStateType",
+    "XFORM": "PhysicStateType"
+   },
    "bases": [
     "IntEnum"
    ],
@@ -15,6 +20,21 @@
    "methods": {}
   },
   "SimType": {
+   "attributes": {
+    "BLENDER": "SimType",
+    "GENESIS": "SimType",
+    "ISAACGYM": "SimType",
+    "ISAACLAB": "SimType",
+    "ISAACSIM": "SimType",
+    "MJX": "SimType",
+    "MUJOCO": "SimType",
+    "NEWTON": "SimType",
+    "PYBULLET": "SimType",
+    "PYREP": "SimType",
+    "SAPIEN2": "SimType",
+    "SAPIEN3": "SimType",
+    "SUPERDEX": "SimType"
+   },
    "bases": [
     "Enum"
    ],
@@ -2128,6 +2148,9 @@
  },
  "metasim.scenario.objects": {
   "ArticulationObjCfg": {
+   "attributes": {
+    "file_type": "dict"
+   },
    "bases": [
     "_FileBasedMixin",
     "BaseArticulationObjCfg"
@@ -5271,6 +5294,10 @@
    }
   },
   "Requirement": {
+   "attributes": {
+    "optional": "bool",
+    "tested": "str"
+   },
    "bases": [],
    "fields": [
     "dist",
@@ -5405,6 +5432,9 @@
  },
  "metasim.sim.base": {
   "BaseSimHandler": {
+   "attributes": {
+    "set_states_refreshes": "bool"
+   },
    "bases": [
     "ABC"
    ],
@@ -5766,6 +5796,16 @@
      ],
      "signature": "(self, **render_launch_kwargs) -> 'None'"
     },
+    "refresh_render": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
     "render": {
      "params": [
       {
@@ -5820,6 +5860,10 @@
       }
      ],
      "signature": "(self, seed: 'int') -> 'None'"
+    },
+    "set_states_refreshes": {
+     "params": null,
+     "signature": "<property>"
     }
    }
   }
@@ -5867,6 +5911,11 @@
  },
  "metasim.task.base": {
   "BaseTaskEnv": {
+   "attributes": {
+    "max_episode_steps": "int",
+    "supported_simulators": "NoneType",
+    "traj_filepath": "NoneType"
+   },
    "bases": [],
    "kind": "class",
    "methods": {
@@ -5986,6 +6035,9 @@
  },
  "metasim.task.rl_task": {
   "RLTaskEnv": {
+   "attributes": {
+    "max_episode_steps": "int"
+   },
    "bases": [
     "BaseTaskEnv"
    ],
@@ -6097,6 +6149,15 @@
  },
  "metasim.types": {
   "CameraState": {
+   "attributes": {
+    "instance_id_seg": "NoneType",
+    "instance_id_seg_id2label": "NoneType",
+    "instance_seg": "NoneType",
+    "instance_seg_id2label": "NoneType",
+    "intrinsics": "NoneType",
+    "pos": "NoneType",
+    "quat_world": "NoneType"
+   },
    "bases": [],
    "fields": [
     "rgb",
@@ -6198,6 +6259,12 @@
    "methods": {}
   },
   "ObjectState": {
+   "attributes": {
+    "body_names": "NoneType",
+    "body_state": "NoneType",
+    "joint_pos": "NoneType",
+    "joint_vel": "NoneType"
+   },
    "bases": [],
    "fields": [
     "root_state",
@@ -6267,6 +6334,15 @@
    "methods": {}
   },
   "RobotState": {
+   "attributes": {
+    "body_names": "NoneType",
+    "body_state": "NoneType",
+    "joint_effort_target": "NoneType",
+    "joint_pos": "NoneType",
+    "joint_pos_target": "NoneType",
+    "joint_vel": "NoneType",
+    "joint_vel_target": "NoneType"
+   },
    "bases": [],
    "fields": [
     "root_state",
@@ -6465,6 +6541,11 @@
  },
  "metasim.utils.replay": {
   "ReplayReport": {
+   "attributes": {
+    "worst": "float",
+    "worst_key": "str",
+    "worst_step": "int"
+   },
    "bases": [],
    "fields": [
     "level",
@@ -6646,6 +6727,10 @@
  },
  "metasim.utils.setup_util": {
   "BackendSpec": {
+   "attributes": {
+    "install_hint": "str",
+    "parallel": "bool"
+   },
    "bases": [],
    "fields": [
     "module",

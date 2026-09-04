@@ -75,6 +75,13 @@ class BaseSimHandler(ABC):
 
     _set_states_input_type: Literal["dict", "both"] = "both"
 
+    #: Backend capability, read by ``BaseTaskEnv.reset`` and the benchmark render sync: ``True`` when
+    #: this handler's ``_set_states`` already brings its renderer up to date with the written state,
+    #: so no ``refresh_render()`` is needed afterwards. Isaac Sim (with cameras), Blender and SuperDex
+    #: say True; composite handlers forward the wrapped renderer's answer; everything else inherits
+    #: False, which costs one extra refresh and never a stale frame.
+    set_states_refreshes: bool = False
+
     def __init__(self, scenario: ScenarioCfg, optional_queries: dict[str, BaseQueryType] | None = None):
         self.scenario = scenario
         self.optional_queries = optional_queries
