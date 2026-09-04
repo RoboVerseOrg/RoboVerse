@@ -31,6 +31,11 @@ class StaticIndex:
     """Modules with a ``register_task`` call whose arguments are not all string literals."""
     scanned_modules: int = 0
     parse_failures: dict[str, str] = field(default_factory=dict)
+    collisions: dict[str, list[str]] = field(default_factory=dict)
+    """lower-cased task name -> every module that registers it, for names claimed by more than one
+    module. ``names`` keeps the first. The registry imports all of them on lookup and refuses the
+    name if they register different classes (re-registering the same class is allowed, as at
+    runtime)."""
 
 
 def _decorator_names(node: ast.AST) -> list[str] | None:
@@ -125,8 +130,11 @@ def _scan_source(module_name: str, path: str, index: StaticIndex, cache: dict | 
         index.dynamic_modules.add(module_name)
     for raw in names:
         key = raw.strip().lower()
-        if key:
-            index.names.setdefault(key, module_name)
+        if not key:
+            continue
+        first = index.names.setdefault(key, module_name)
+        if first != module_name:
+            index.collisions.setdefault(key, [first]).append(module_name)
 
 
 def _module_source_path(module_name: str) -> str | None:
@@ -178,8 +186,8 @@ def build_static_index(
         if "." not in pkg_name and pkg_name in local_modules:
             continue
         try:
-            spec = find_spec(pkg_name)
-        except (ImportError, ValueError) as exc:
+            spec = find_spec(pkg_name)  # imports the parent package: its __init__ may raise anything
+        except Exception as exc:
             index.parse_failures[pkg_name] = f"{type(exc).__name__}: {exc}"
             continue
         if spec is None:
@@ -187,17 +195,20 @@ def build_static_index(
             continue
         if spec.submodule_search_locations:
             for module_name, src in _iter_package_sources(pkg_name, list(spec.submodule_search_locations)):
-                if src in seen_paths:
+                if os.path.realpath(src) in seen_paths:
                     continue
-                seen_paths.add(src)
+                seen_paths.add(os.path.realpath(src))
                 _scan_source(module_name, src, index, cache)
         elif spec.origin and spec.origin.endswith(".py"):
+            seen_paths.add(os.path.realpath(spec.origin))
             _scan_source(pkg_name, spec.origin, index, cache)
     for mod in local_modules:
         src = _module_source_path(mod)
         if src is None and os.path.isfile(mod + ".py"):
             src = mod + ".py"
-        if src:
+        # a file reachable both as a package module and as a cwd module (symlinks resolved) is one registration
+        if src and os.path.realpath(src) not in seen_paths:
+            seen_paths.add(os.path.realpath(src))
             _scan_source(mod, src, index, cache)
     if cache is not None:
         _save_cache(cache_path, cache)

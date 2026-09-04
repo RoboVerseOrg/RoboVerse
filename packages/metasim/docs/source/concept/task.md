@@ -128,6 +128,14 @@ Additional task packages are opt-in. MetaSim discovers them from, in order:
 
 Discovery is triggered by `get_task_class`, `list_tasks`, or `metasim.register_gym_envs()`.
 
+**One name, one class.** Registering the same class again (an alias module re-exporting it) or the same
+class definition again (a module re-executed: reload, a notebook cell, a task file run as a script) is
+fine. Two *different* classes under one name is a conflict: the first stays registered, a warning is
+logged when the second registers, and `get_task_class` raises `ValueError` naming both modules until one
+is renamed. The lookup imports every module the static index saw claiming the name before answering, so
+the answer does not depend on which module some earlier lookup imported; a claimant that fails to import
+also makes the name refused (the next lookup retries it). `list_tasks` still lists such a name.
+
 For source-checkout development in this repository, the root `metasim.toml` opts in `roboverse_pack` as a content package:
 
 ```toml
