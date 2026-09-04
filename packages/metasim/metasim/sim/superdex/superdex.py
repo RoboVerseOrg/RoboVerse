@@ -60,12 +60,23 @@ except ImportError as _exc:  # pragma: no cover - surfaced by get_sim_handler_cl
     ) from _exc
 
 DEFAULT_DT = 1.0 / 1000.0
-"""Physics step used when ``ScenarioCfg.sim_params.dt`` is None.
+"""Physics step ``decimation`` counts when ``ScenarioCfg.sim_params.dt`` is None.
 
 Same default as the MuJoCo backend (``mjcf_model.option.timestep = 0.001``), so an env step
 (``dt * decimation``) spans the same simulated time on both backends and drop / tracking
-trajectories line up step for step. SuperDex's implicit integrator would be stable at 10-25 ms;
-at 1 ms a Franka step costs ~0.1 ms, so the parity default is cheap.
+trajectories line up step for step. It is *not* the step the solver takes: see ``DEFAULT_SOLVER_DT``.
+"""
+
+DEFAULT_SOLVER_DT = 5.0 / 1000.0
+"""Step the SuperDex solver actually takes when ``sim_params.superdex_solver_dt`` is None.
+
+SuperDex integrates fully implicitly and is stable at 10-25 ms; stepping it at 1 ms only burns time
+(its maintainers' guidance). ``_simulate`` therefore covers the env step (``decimation * dt``) in
+``round(env_step / solver_dt)`` solver steps of ``env_step / n`` each, so the simulated time per env
+step is exactly what ``dt`` and ``decimation`` say on every backend: 15 x 1 ms becomes 3 x 5 ms,
+15 x 5 ms stays 15 x 5 ms, 4 x 1 ms becomes 1 x 4 ms (the step is rounded to divide the env step,
+so it is 5 ms only when the env step is a multiple of 5 ms). Set ``superdex_solver_dt=0.001`` to
+recover the old 1 ms solver stepping, e.g. for a bit-for-bit comparison with an older recording.
 """
 
 DEFAULT_FRICTION = 1.0
@@ -183,7 +194,22 @@ class SuperdexHandler(BaseSimHandler):
         self._articulations: dict[str, _Articulation] = {}
         self._rigids: dict[str, _Rigid] = {}
         self._renderer = None
-        self._dt = scenario.sim_params.dt if scenario.sim_params.dt is not None else DEFAULT_DT
+        physics_dt = scenario.sim_params.dt if scenario.sim_params.dt is not None else DEFAULT_DT
+        env_step = float(physics_dt) * int(self.decimation)
+        if not (env_step > 0.0):
+            raise ValueError(
+                f"[superdex] dt * decimation = {physics_dt} * {self.decimation} must be > 0 (the scene would never advance)"
+            )
+        solver_dt = getattr(scenario.sim_params, "superdex_solver_dt", None)
+        solver_dt = float(solver_dt) if solver_dt is not None else DEFAULT_SOLVER_DT
+        if not (solver_dt > 0.0):
+            raise ValueError(f"[superdex] sim_params.superdex_solver_dt={solver_dt!r} must be > 0")
+        self._substeps = max(1, round(env_step / solver_dt))
+        self._dt = env_step / self._substeps  # solver step; divides the env step exactly
+        log.debug(
+            f"[superdex] env step {env_step * 1e3:.3g} ms = {self._substeps} solver step(s) of {self._dt * 1e3:.3g} ms "
+            f"(dt={physics_dt}, decimation={self.decimation}, solver_dt={solver_dt})"
+        )
         self._num_threads = int(getattr(scenario.sim_params, "num_threads", 0) or 0)
         self._cache_dir = _assets.default_cache_dir()
         self._control_mode = getattr(scenario.sim_params, "superdex_control_mode", "pd")
@@ -270,7 +296,7 @@ class SuperdexHandler(BaseSimHandler):
             self._add_articulation(cfg, is_robot=False)
         elif isinstance(cfg, _PRIMITIVE_CFGS):
             mesh = _assets.primitive_trimesh(cfg)
-            color = tuple(cfg.color) if getattr(cfg, "color", None) else None
+            color = tuple(float(c) for c in cfg.color[:3])
             self._add_rigid_mesh(cfg, mesh, mass=float(cfg.mass), density=None, visuals=[(mesh, np.eye(4), color)])
         elif isinstance(cfg, RigidObjCfg):
             self._add_rigid_from_file(cfg)
@@ -596,7 +622,7 @@ class SuperdexHandler(BaseSimHandler):
         """One substep of effort-clamped PD (pd control mode) plus any effort targets.
 
         The MuJoCo backend applies ``tau = clip(kp e - kd qd, +-L)`` (``e = q* - q``). Applying that
-        explicitly is unstable here (kd ~ 1e4 at a 1 ms step), so the spring/damper stays inside
+        explicitly is unstable here (kd ~ 1e4 at a 1 ms solver step; coarser solver steps make the clamp reshaping below coarser too), so the spring/damper stays inside
         SuperDex's implicit controller and the clamp is reproduced by shaping what the controller
         tracks each substep:
 
@@ -631,7 +657,7 @@ class SuperdexHandler(BaseSimHandler):
 
     # ------------------------------------------------------------------ simulation
     def _simulate(self) -> None:
-        for _ in range(self.decimation):
+        for _ in range(self._substeps):
             for art in self._articulations.values():
                 if art.controlled and self._control_mode == "pd":
                     self._apply_pd_torques(art)

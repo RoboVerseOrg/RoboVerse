@@ -24,7 +24,9 @@ SETTLE_STEPS = 30
 # L1 one-step tolerance per backend. The TensorState round-trip is exact (1e-6) everywhere; what
 # differs is engine state that no public API exposes. SuperDex (position-based dynamics) rebuilds
 # its previous-position buffer from the written velocity, which leaves a ~1e-3 rad/s residual on
-# the first step after a restore (measured 1.3e-3 on the Franka). Widen only where measured; a new
+# the first step after a restore. Measured on the Franka: 1.7e-4 at the default 3 x 5 ms solver
+# stepping (what this suite runs), 1.2e-3 at superdex_solver_dt=0.001 (15 x 1 ms), 1.98e-3 with an
+# explicit dt=0.005 (15 x 5 ms, 75 ms env step). Widen only where measured; a new
 # backend gets the strict default until someone characterises its residual.
 L1_STEP_TOL = {"superdex": 2e-3}
 DEFAULT_L1_STEP_TOL = 1e-4

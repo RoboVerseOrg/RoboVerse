@@ -92,6 +92,10 @@ class SimParamCfg:
     # closed-loop behaviour matches it. "implicit": SuperDex's native constraint-based pose controller
     # (stiffer, ignores effort limits, converges in a few ms).
     superdex_control_mode: Literal["pd", "implicit"] = "pd"
+    # SuperDex only: the step the implicit solver takes. None -> 5 ms (``metasim.sim.superdex.DEFAULT_SOLVER_DT``);
+    # the env step (``dt * decimation``) is covered by ``round(env_step / solver_dt)`` steps of equal size, so
+    # ``dt`` and ``decimation`` keep their meaning. 0.001 reproduces the pre-1.0 1 ms stepping.
+    superdex_solver_dt: float | None = None
 
     ## MJX, Newton specific parameters
     nconmax: int | None = 512
