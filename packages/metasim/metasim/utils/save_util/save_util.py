@@ -9,6 +9,7 @@ import pickle as pkl
 import imageio as iio
 import numpy as np
 import torch
+from loguru import logger as log
 
 from metasim.types import DictEnvState
 from metasim.utils.io_util import write_16bit_depth_video
@@ -86,7 +87,12 @@ def save_demo(save_dir: str, demo: list[DictEnvState], robot_config, task_desc="
         metadata["robot_root_state"].append(root_state_flat.tolist())
 
     # Full EE state only (no separate pos/quat/gripper fields)
-    ee_states = get_ee_state_from_list(demo, robot_config, tensorize=True)  # (T, 8)
+    ee_states = get_ee_state_from_list(demo, robot_config, tensorize=True)  # (T, 7): pos, rpy, gripper
+    if len(demo) and ee_states.shape[0] == 0:
+        log.warning(
+            f"{save_dir}: 'ee_state' is empty; this recording carries no body states (the backend reports none), "
+            "so no end-effector pose can be derived. Converters that need it will refuse this demo."
+        )
     metadata["ee_state"] = ee_states.detach().cpu().tolist()
     metadata["task_desc"] = task_desc
 

@@ -85,3 +85,27 @@ def test_reset_seed_is_reproducible(gym_env):
 
     other, _ = gym_env.reset(seed=8)
     assert not torch.allclose(a, other["actor"]), "a different seed must give a different reset state"
+
+
+def test_a_raising_sensor_or_command_manager_surfaces_from_step_and_reset(gym_env):
+    """The manager base used to wrap every manager / sensor update and reset in ``except Exception:
+    pass``, so a broken sensor fed zeroed contact history into the reward with no sign of it."""
+
+    class _Broken:
+        def update(self, dt):
+            raise RuntimeError("sensor broke")
+
+        def reset(self, env_ids):
+            raise RuntimeError("sensor broke")
+
+    task_env = gym_env.unwrapped.task_env
+    gym_env.reset(seed=0)
+    task_env._mjlab_sensors["_broken"] = _Broken()
+    try:
+        with pytest.raises(RuntimeError, match="sensor broke"):
+            gym_env.step(torch.zeros(1, gym_env.unwrapped.task_env.num_actions))
+        with pytest.raises(RuntimeError, match="sensor broke"):
+            gym_env.reset(seed=0)
+    finally:
+        del task_env._mjlab_sensors["_broken"]
+    gym_env.reset(seed=0)

@@ -132,10 +132,7 @@ def terrain_levels_vel(
     cmd_mgr = getattr(env, "command_managers", {}).get(command_name)
     if cmd_mgr is None:
         return None
-    try:
-        cmd = cmd_mgr.current()
-    except Exception:
-        return None
+    cmd = cmd_mgr.current()  # a failing command read used to disable the curriculum silently
     # Current root position of the asset.
     try:
         states = env.handler.get_states(mode="tensor")

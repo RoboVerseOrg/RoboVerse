@@ -8,40 +8,10 @@ import torch
 from dm_control import mjcf
 from loguru import logger as log
 
-from metasim.utils.log import warn_once
-
-try:
-    # Patch mujoco.renderer.Renderer.__del__ to avoid noisy TypeError if glfw.free is None
-    if hasattr(mujoco, "renderer") and hasattr(mujoco.renderer, "Renderer"):
-        _orig_renderer_del = getattr(mujoco.renderer.Renderer, "__del__", None)
-
-        def _safe_renderer_del(self):
-            try:
-                if _orig_renderer_del is not None:
-                    _orig_renderer_del(self)
-            except Exception:
-                # Swallow exceptions during interpreter shutdown
-                return
-
-        mujoco.renderer.Renderer.__del__ = _safe_renderer_del
-
-    # Patch mujoco.glfw.GLContext.__del__ similarly if present
-    if hasattr(mujoco, "glfw") and hasattr(mujoco.glfw, "GLContext"):
-        _orig_glctx_del = getattr(mujoco.glfw.GLContext, "__del__", None)
-
-        def _safe_glctx_del(self):
-            try:
-                if _orig_glctx_del is not None:
-                    _orig_glctx_del(self)
-            except Exception:
-                return
-
-        mujoco.glfw.GLContext.__del__ = _safe_glctx_del
-except Exception:
-    pass
-
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.scenario.robot import RobotCfg
+from metasim.sim.mujoco.renderer_teardown import attach_renderer_teardown, close_renderer
+from metasim.utils.log import warn_once
 
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
@@ -150,7 +120,8 @@ class MujocoHandler(BaseSimHandler):
         self._mj_lock = threading.RLock()
         self._mj_model = None  # native mujoco.MjModel for offscreen rendering
         self._mj_data = None  # native mujoco.MjData  for offscreen rendering
-        self.renderer = None  # mujoco.Renderer (offscreen)
+        self.renderer = None  # mujoco.Renderer (offscreen), created through _new_renderer
+        self._renderer_finalizer = None
         self._split_render_physics_only = bool(self.headless) and len(self.cameras) == 0
 
     def _get_camera_params(self, camera_id: str, camera):
@@ -246,7 +217,7 @@ class MujocoHandler(BaseSimHandler):
         # Create a default-sized renderer unless this handler is acting as a
         # physics-only backend for split-render mode.
         if not self._split_render_physics_only:
-            self.renderer = mujoco.Renderer(self._mj_model, width=640, height=480)
+            self._new_renderer(640, 480)
 
         self.body_names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
         self.robot_body_names = []
@@ -951,7 +922,7 @@ class MujocoHandler(BaseSimHandler):
                             camera.width,
                             camera.height,
                         ):
-                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
+                            self._new_renderer(camera.width, camera.height)
                         # mirror state and render
                         self._mirror_state_to_native()
                         self.renderer.update_scene(self._mj_data, camera=camera_id)
@@ -977,7 +948,7 @@ class MujocoHandler(BaseSimHandler):
                             camera.width,
                             camera.height,
                         ):
-                            self.renderer = mujoco.Renderer(self._mj_model, width=camera.width, height=camera.height)
+                            self._new_renderer(camera.width, camera.height)
 
                         # Keep native model/data in sync with dm_control physics
                         self._mirror_state_to_native()
@@ -1224,6 +1195,17 @@ class MujocoHandler(BaseSimHandler):
         if not self.headless:
             self.viewer.sync()
 
+    def _new_renderer(self, width: int, height: int) -> None:
+        """Replace the offscreen renderer: the previous one is closed, the new one's teardown registered.
+
+        Every ``mujoco.Renderer`` this handler creates goes through here, so ``close()``, garbage
+        collection and interpreter exit always release the renderer that is actually live.
+        """
+        if self.renderer is not None and self._renderer_finalizer is not None:
+            self._renderer_finalizer()
+        self.renderer = mujoco.Renderer(self._mj_model, width=width, height=height)
+        self._renderer_finalizer = attach_renderer_teardown(self, self.renderer)
+
     def close(self):
         # Idempotent close: nullify each handle after closing so that a
         # second ``close()`` (e.g. context-manager exit + explicit close)
@@ -1235,10 +1217,11 @@ class MujocoHandler(BaseSimHandler):
                 pass
             self.viewer = None
         if self.renderer is not None:
-            try:
-                self.renderer.close()
-            except Exception:
-                pass
+            finalizer = getattr(self, "_renderer_finalizer", None)  # a renderer set without _new_renderer has no hooks
+            if finalizer is not None:
+                finalizer()
+            else:
+                close_renderer(self.renderer)
             self.renderer = None
 
     ############################################################

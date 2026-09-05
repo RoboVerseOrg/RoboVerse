@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 
 import torch
 
+from metasim.utils.math import euler_xyz_from_quat
+
 
 @dataclass
 class VelocityCommandRanges:
@@ -151,20 +153,16 @@ class VelocityCommandManager:
         return self._command
 
     def _current_heading(self) -> torch.Tensor | None:
-        """Yaw angle of all envs (from registered robot root quat)."""
-        try:
-            states = self.env.handler.get_states(mode="tensor")
-            if not states.robots:
-                return None
-            robot_name = next(iter(states.robots))
-            root = states.robots[robot_name].root_state
-            # wxyz quat
-            w, x, y, z = root[:, 3], root[:, 4], root[:, 5], root[:, 6]
-            siny_cosp = 2.0 * (w * z + x * y)
-            cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
-            return torch.atan2(siny_cosp, cosy_cosp)
-        except Exception:
+        """Yaw angle of all envs (from registered robot root quat); None when the scene has no robot.
+
+        A failing state read propagates: returning None here left the previous yaw-rate command in
+        place and the tracking rewards saw a stale target with no sign of it.
+        """
+        states = self.env.handler.get_states(mode="tensor")
+        if not states.robots:
             return None
+        robot_name = next(iter(states.robots))
+        return euler_xyz_from_quat(states.robots[robot_name].root_state[:, 3:7])[2]  # wxyz -> yaw
 
 
 # ---------------------------------------------------------------------------

@@ -62,3 +62,6 @@ def test_act_eval_runner_rejects_multi_env_and_scores_the_env_it_runs():
     assert "MaxStep = 800" not in src and "MaxStep = max_timesteps" in src
     assert "SuccessOnce" not in src, "the per-env bookkeeping that scored only env 0 is gone"
     assert "actions_populated" not in src, "overlapping chunks are selected by position, as in BaseEvalRunner"
+    assert "get_joint_reindex" not in src and "get_joint_names(args.robot, sort=True)" in src, (
+        "the sorted-order action is paired with the sorted joint names; no reindex (and no config-key order) to keep consistent"
+    )

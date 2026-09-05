@@ -74,7 +74,10 @@ def get_traj_v2(traj_filepath, robot: RobotCfg, data=None):
                     all_states[demo_idx][step_idx][obj_name]["pos"] = torch.tensor(state[obj_name]["pos"])
                     all_states[demo_idx][step_idx][obj_name]["rot"] = torch.tensor(state[obj_name]["rot"])
     else:
-        log.error("No states found in the trajectory data")
+        log.warning(
+            "The trajectory file carries actions and initial states only (no per-step states): "
+            "state-anchored replay is unavailable"
+        )
         all_states = None
 
     return init_states, all_actions, all_states

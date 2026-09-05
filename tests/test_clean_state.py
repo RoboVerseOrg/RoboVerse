@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import torch
 from loguru import logger as log
 
-from roboverse_learn.il.utils.clean_state import ensure_clean_state, settle_recipients
+from roboverse_learn.il.utils.clean_state import demo_outcomes, ensure_clean_state, settle_recipients
 
 
 class _Stub:
@@ -153,3 +153,30 @@ def test_settle_recipients_are_the_other_envs_that_keep_recording():
     assert settle_recipients(5, **kw) == [0, 3]
     assert settle_recipients(5, env_id=None, finished=None, terminal=None, recording=[4]) == [4]
     assert settle_recipients(2, env_id=0, recording=[]) == []
+
+
+def test_demo_outcomes_a_success_on_the_time_out_step_is_saved_once_as_a_success():
+    """The collector used to count the success, defer its save, and then save the same demo as a failure
+    in the time-out branch of the same step."""
+    kw = dict(finished=[False, False, False, False], limit=20)
+    out = demo_outcomes(
+        success=[True, True, False, False],
+        time_out=[True, False, True, False],
+        run_out=[False, False, False, False],
+        steps_after_success=[0, 3, 0, 0],
+        **kw,
+    )
+    assert (out.counted, out.save_success, out.save_failed, out.holding) == ({0}, {0}, {2}, {1}), (
+        "env 1 keeps recording, env 3 keeps stepping"
+    )
+    out = demo_outcomes(
+        success=[True, True, True, False],
+        time_out=[False, False, False, True],
+        run_out=[False, True, False, False],
+        steps_after_success=[20, 0, 5, 0],
+        finished=[False, False, True, False],
+        limit=20,
+    )
+    assert (out.counted, out.save_success, out.save_failed, out.holding) == ({1}, {0, 1}, {3}, set()), (
+        "limit reached, out of actions, finished env ignored"
+    )

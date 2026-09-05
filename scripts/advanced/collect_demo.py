@@ -135,7 +135,7 @@ from metasim.utils.tensor_util import tensor_to_cpu
 from metasim.utils.trajectory import episode_from_states, provenance_from_handler, save_episode
 
 rootutils.setup_root(__file__, pythonpath=True)
-from roboverse_learn.il.utils.clean_state import ensure_clean_state, settle_recipients
+from roboverse_learn.il.utils.clean_state import demo_outcomes, ensure_clean_state, settle_recipients
 
 # Import randomization components
 try:
@@ -645,66 +645,61 @@ def main():
             demo_idx = demo_idxs[env_id]
             collector.add(demo_idx, obs[env_id], tensor_state=tensor_obs, env_id=env_id)
 
-        # envs whose demo ends this iteration (saved as success, timed out, or ran out of actions): their
-        # legacy demos and episodes are closed below, so they must not absorb another env's settle frames
-        done_mask = time_out | torch.tensor(run_out, device=time_out.device)
-        terminal = set(done_mask.nonzero().squeeze(-1).tolist())
-        for env_id in success.nonzero().squeeze(-1).tolist():
-            if not finished[env_id] and (
-                run_out[env_id] or steps_after_success[env_id] >= args.tot_steps_after_success
-            ):
-                terminal.add(env_id)
-        for env_id in success.nonzero().squeeze(-1).tolist():
-            if finished[env_id]:
-                continue
-
+        outcomes = demo_outcomes(
+            success=success.tolist(),
+            time_out=time_out.tolist(),
+            run_out=run_out,
+            finished=finished,
+            steps_after_success=steps_after_success,
+            limit=args.tot_steps_after_success,
+        )
+        # envs whose demo ends this iteration: their legacy demos and episodes are closed below, so they
+        # must not absorb another env's settle frames
+        terminal = outcomes.save_success | outcomes.save_failed
+        for env_id in sorted(outcomes.counted):
+            log.info(f"Demo {demo_idxs[env_id]} in Env {env_id} succeeded!")
+            tot_success += 1
+            pbar.update(1)
+            pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
+        for env_id in outcomes.holding:
+            steps_after_success[env_id] += 1
+        for env_id in sorted(outcomes.save_success):
             demo_idx = demo_idxs[env_id]
-            if steps_after_success[env_id] == 0:
-                log.info(f"Demo {demo_idx} in Env {env_id} succeeded!")
-                tot_success += 1
-                pbar.update(1)
-                pbar.set_description(f"Frame {global_step} Success {tot_success} Giveup {tot_give_up}")
+            steps_after_success[env_id] = 0
+            collector.save(demo_idx, status="success")
+            collector.delete(demo_idx)
 
-            if not run_out[env_id] and steps_after_success[env_id] < args.tot_steps_after_success:
-                steps_after_success[env_id] += 1
+            if (not stop_flag) and (demo_indexer.next_idx < max_demo):
+                new_demo_idx = demo_indexer.next_idx
+                demo_idxs[env_id] = new_demo_idx
+                log.info(f"Transitioning Env {env_id}: Demo {demo_idx} to Demo {new_demo_idx}")
+
+                randomization_manager.apply_randomization(new_demo_idx, is_initial=False)
+                randomization_manager.update_positions_to_table(new_demo_idx, env_id)
+                randomization_manager.update_camera_look_at(env_id)
+                randomization_manager.apply_camera_randomization()  # Apply camera randomization
+                force_reset_to_state(
+                    env,
+                    init_states[new_demo_idx],
+                    env_id,
+                    collector=collector,
+                    demo_idxs=demo_idxs,
+                    finished=finished,
+                    terminal=terminal,
+                )
+
+                tensor_obs = env.handler.get_states(mode="tensor")
+                obs = state_tensor_to_nested(env.handler, tensor_obs)
+                collector.create(new_demo_idx, obs[env_id], tensor_state=tensor_obs, env_id=env_id)
+                terminal.discard(env_id)  # reset and recording again: it keeps stepping
+                demo_indexer.move_on()
+                run_out[env_id] = False
             else:
-                steps_after_success[env_id] = 0
-                collector.save(demo_idx, status="success")
-                collector.delete(demo_idx)
+                finished[env_id] = True
 
-                if (not stop_flag) and (demo_indexer.next_idx < max_demo):
-                    new_demo_idx = demo_indexer.next_idx
-                    demo_idxs[env_id] = new_demo_idx
-                    log.info(f"Transitioning Env {env_id}: Demo {demo_idx} to Demo {new_demo_idx}")
-
-                    randomization_manager.apply_randomization(new_demo_idx, is_initial=False)
-                    randomization_manager.update_positions_to_table(new_demo_idx, env_id)
-                    randomization_manager.update_camera_look_at(env_id)
-                    randomization_manager.apply_camera_randomization()  # Apply camera randomization
-                    force_reset_to_state(
-                        env,
-                        init_states[new_demo_idx],
-                        env_id,
-                        collector=collector,
-                        demo_idxs=demo_idxs,
-                        finished=finished,
-                        terminal=terminal,
-                    )
-
-                    tensor_obs = env.handler.get_states(mode="tensor")
-                    obs = state_tensor_to_nested(env.handler, tensor_obs)
-                    collector.create(new_demo_idx, obs[env_id], tensor_state=tensor_obs, env_id=env_id)
-                    terminal.discard(env_id)  # reset and recording again: it keeps stepping
-                    demo_indexer.move_on()
-                    run_out[env_id] = False
-                else:
-                    finished[env_id] = True
-
-        for env_id in (time_out | torch.tensor(run_out, device=time_out.device)).nonzero().squeeze(-1).tolist():
-            if finished[env_id]:
-                continue
-
+        for env_id in sorted(outcomes.save_failed):  # a success saved above is never also saved as a failure
             demo_idx = demo_idxs[env_id]
+            steps_after_success[env_id] = 0  # a success that did not hold is not carried into the retry
             log.info(f"Demo {demo_idx} in Env {env_id} timed out!")
             collector.save(demo_idx, status="failed")
             collector.delete(demo_idx)

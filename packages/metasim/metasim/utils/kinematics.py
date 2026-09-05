@@ -306,14 +306,21 @@ def get_ee_state_from_list(env_states, robot_config, tensorize: bool = False, us
     if gripper_open_q.numel() != len(ee_joint_names) or gripper_close_q.numel() != len(ee_joint_names):
         raise ValueError("gripper_(open|close)_q must match ee_joint_names length")
 
+    # A frame without body states cannot yield an EE pose. Skipping it silently used to shorten the
+    # result, so ``ee_state[t]`` no longer described step ``t``; a recording that has no body states at
+    # all (or no frame at all) yields nothing (``save_demo`` warns), a partial one is an error naming the frame.
+    without_body = [t for t, env_state in enumerate(env_states) if "body" not in env_state["robots"][robot_name]]
+    if len(without_body) == len(env_states):  # no frame usable, or no frame at all
+        return torch.zeros((0, 7 if use_rpy else 8), dtype=torch.float32) if tensorize else []
+    if without_body:
+        raise ValueError(
+            f"EE state: {len(without_body)} of {len(env_states)} frames carry no body states for robot "
+            f"{robot_name!r} (first at step {without_body[0]}); an EE trajectory would be misaligned with the actions"
+        )
+
     ee_states = []
     for env_state in env_states:
         robot_state = env_state["robots"][robot_name]
-
-        # Skip if "body" field is not present in the state
-        if "body" not in robot_state:
-            continue
-
         body_state = robot_state["body"][ee_body_name]
 
         ee_pos_world = torch.as_tensor(body_state["pos"], dtype=torch.float32).view(3)  # (3,)
