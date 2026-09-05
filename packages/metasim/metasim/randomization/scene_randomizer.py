@@ -507,8 +507,11 @@ class SceneRandomizer(BaseRandomizerType):
 
                 # Apply material (adapter will handle unique naming internally)
                 self.adapter.apply_mdl_material(prim_path, element.default_material)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(
+                    f"Material {element.default_material!r} could not be applied to {prim_path}: "
+                    f"{type(exc).__name__}: {exc}; the prim keeps its previous look"
+                )
 
     # -------------------------------------------------------------------------
     # USD Asset Processing

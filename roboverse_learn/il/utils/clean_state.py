@@ -18,6 +18,8 @@ expected state (if any) matched. Callers that reset one env pass its ``env_id``.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import torch
 from loguru import logger as log
 
@@ -26,6 +28,46 @@ from metasim.utils.state import _dof_tensor_to_dict  # the demo writer's joint-n
 JOINT_ATOL = 1e-5
 POSITION_ATOL = 1e-4
 EXPECTED_ATOL = 5e-3
+
+
+@dataclass
+class DemoOutcomes:
+    """What one collector step decided for each env (see :func:`demo_outcomes`)."""
+
+    counted: set[int]
+    """envs whose success first appeared on this step (counted once)"""
+    save_success: set[int]
+    """envs whose demo is saved as a success now"""
+    save_failed: set[int]
+    """envs whose demo is saved as a failure now"""
+    holding: set[int]
+    """succeeding envs that keep recording their trailing steps"""
+
+
+def demo_outcomes(*, success, time_out, run_out, finished, steps_after_success, limit: int) -> DemoOutcomes:
+    """Which envs' demos are counted, saved as success or as failure, or keep recording after one step.
+
+    A succeeding env is *counted* on the step its success first appears; its demo is *saved as
+    success* once it has recorded ``limit`` more steps or its episode cannot continue (out of actions,
+    or the task's time-out on that same step), otherwise it is *holding*. An env whose episode ends
+    without success is *saved as failure*. One env lands in at most one of the save sets: a success
+    on the time-out step used to be counted and then saved as a failure.
+    """
+    out = DemoOutcomes(set(), set(), set(), set())
+    for env_id in range(len(finished)):
+        if finished[env_id]:
+            continue
+        ended = bool(run_out[env_id]) or bool(time_out[env_id])
+        if bool(success[env_id]):
+            if steps_after_success[env_id] == 0:
+                out.counted.add(env_id)
+            if ended or steps_after_success[env_id] >= limit:
+                out.save_success.add(env_id)
+            else:
+                out.holding.add(env_id)
+        elif ended:
+            out.save_failed.add(env_id)
+    return out
 
 
 def settle_recipients(num_envs: int, *, env_id: int | None, finished=None, terminal=None, recording=()) -> list[int]:

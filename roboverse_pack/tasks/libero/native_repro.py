@@ -234,7 +234,7 @@ def make_native_handler(
         handler.body_names = [(handler.physics.model.body(i).name or "") for i in range(handler.physics.model.nbody)]
         handler.robot_body_names = []
         handler._mujoco_robot_names = []
-        handler.renderer = None
+        handler.close()  # releases the renderer MetaSim's launch created before it failed; nulling it would not
 
     info["launched_via"] = launched_via
     # Resolve the agentview camera id (the attach route prefixes it, e.g.

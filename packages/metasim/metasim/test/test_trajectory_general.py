@@ -299,3 +299,30 @@ def test_backend_failures_while_reporting_the_time_base_are_not_recorded_as_unkn
     with pytest.raises(RuntimeError, match="worker 0 died"):
         env_step_seconds(_Broken())
     assert env_step_seconds(_Unresolved()) is None
+
+
+def test_ee_state_never_returns_a_misaligned_trajectory():
+    """A recording without body states yields no EE states (the writer can say so); one where only some
+    frames carry them is refused, because skipping those frames shifted every later EE state."""
+    from types import SimpleNamespace
+
+    from metasim.utils.kinematics import get_ee_state_from_list
+
+    robot = SimpleNamespace(
+        name="arm", ee_body_name="hand", ee_joint_names=["f1"], gripper_open_q=[0.04], gripper_close_q=[0.0]
+    )
+    with_body = {
+        "robots": {
+            "arm": {
+                "body": {"hand": {"pos": [0.0, 0.0, 0.5], "rot": [1.0, 0.0, 0.0, 0.0]}},
+                "dof_pos": {"f1": 0.04},
+            }
+        }
+    }
+    without = {"robots": {"arm": {"dof_pos": {"f1": 0.04}}}}
+    assert get_ee_state_from_list([without, without], robot, tensorize=True).shape == (0, 7)
+    assert get_ee_state_from_list([], robot, tensorize=True).shape == (0, 7) and get_ee_state_from_list([], robot) == []
+    assert get_ee_state_from_list([without], robot, tensorize=True, use_rpy=False).shape == (0, 8)
+    assert get_ee_state_from_list([with_body, with_body], robot, tensorize=True).shape == (2, 7)
+    with pytest.raises(ValueError, match=r"1 of 3 frames carry no body states .*first at step 1"):
+        get_ee_state_from_list([with_body, without, with_body], robot, tensorize=True)

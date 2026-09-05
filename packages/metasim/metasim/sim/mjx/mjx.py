@@ -27,6 +27,7 @@ from mujoco import mjx
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.sim.mujoco.renderer_teardown import attach_renderer_teardown
 
 if TYPE_CHECKING:
     from metasim.scenario.scenario import ScenarioCfg
@@ -129,6 +130,7 @@ class MJXHandler(BaseSimHandler):
             max_w = max(c.width for c in self.cameras)
             max_h = max(c.height for c in self.cameras)
             self._renderer = mujoco.Renderer(self._mj_model, width=max_w, height=max_h)
+            self._renderer_finalizer = attach_renderer_teardown(self, self._renderer)
         self._render_data = mujoco.MjData(self._mj_model)
 
         if self.optional_queries is None:
@@ -335,12 +337,15 @@ class MJXHandler(BaseSimHandler):
             except Exception:
                 pass
             self._viewer = None
-        renderer = getattr(self, "_renderer", None)
-        if renderer is not None:
-            try:
-                renderer.close()
-            except Exception:
-                pass
+        if getattr(self, "_renderer", None) is not None:
+            finalizer = getattr(self, "_renderer_finalizer", None)  # a renderer set without launch() has no hooks
+            if finalizer is not None:
+                finalizer()
+            else:
+                try:
+                    self._renderer.close()
+                except Exception:
+                    pass
             self._renderer = None
 
     def _ensure_id_cache(self, ts: TensorState | None = None):

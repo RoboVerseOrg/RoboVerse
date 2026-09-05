@@ -99,8 +99,9 @@ jobs:
       - name: Run test suite
         env:
           # Hosted runners have no EGL/GLX; with MUJOCO_GL=egl `import mujoco` itself fails
-          # (eglQueryString on a None library). `disable` skips GL context creation entirely;
-          # nothing in tests/ renders on MuJoCo, and the suite is identical locally with this value.
+          # (eglQueryString on a None library). `disable` skips GL context creation entirely.
+          # Only tests/test_examples_smoke.py renders on MuJoCo; it skips under this value (with the
+          # reason) and runs on any machine with EGL.
           MUJOCO_GL: disable
         # Baseline 2026-09-03: 61% of 30,237 statements across roboverse_pack + roboverse_learn.
         run: python -m pytest tests/ -rs --cov=roboverse_pack --cov=roboverse_learn --cov-report=xml --cov-report=term --cov-fail-under=58

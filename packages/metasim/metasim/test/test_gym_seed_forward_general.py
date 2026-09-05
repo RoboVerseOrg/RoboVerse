@@ -95,3 +95,24 @@ def test_accepts_seed_detection_is_cached():
     assert getattr(task, "_reset_accepts_seed_cached", None) is True
     # Second call must return the same answer without re-inspecting.
     assert _task_reset_accepts_seed(task) is True
+
+
+@pytest.mark.general
+def test_registering_a_task_twice_only_warns_and_a_registration_error_propagates(monkeypatch):
+    """Gymnasium overrides a duplicate id with a warning (a hot reload); the bare excepts that used to
+    wrap ``register`` also hid a failing registration, which now surfaces."""
+    import gymnasium as gym
+
+    from metasim.task import gym_registration
+
+    env_id = gym_registration.register_task_with_gym("probe.task", "RoboVerseProbe/twice-v0")
+    assert env_id == "RoboVerseProbe/twice-v0"
+    assert gym.spec(env_id).vector_entry_point is not None
+    gym_registration.register_task_with_gym("probe.task", env_id)  # the override is a warning, not an error
+
+    def _boom(**kwargs):
+        raise ValueError("bad entry point")
+
+    monkeypatch.setattr(gym_registration, "register", _boom)
+    with pytest.raises(ValueError, match="bad entry point"):
+        gym_registration.register_task_with_gym("probe.task", "RoboVerseProbe/broken-v0")

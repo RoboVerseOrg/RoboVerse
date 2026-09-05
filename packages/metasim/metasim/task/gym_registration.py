@@ -12,12 +12,9 @@ import torch
 from gymnasium.envs.registration import _find_spec, register
 from gymnasium.vector import SyncVectorEnv
 from gymnasium.vector.vector_env import VectorEnv
+from loguru import logger as log
 
 from .registry import get_task_class, list_tasks
-
-# Local fallback registry for vector entry points when Gymnasium does not
-# support the `vector_entry_point` argument in `register()`.
-_VECTOR_ENTRY_POINTS: dict[str, Callable[..., VectorEnv]] = {}
 
 
 def _task_reset_accepts_seed(task_env) -> bool:
@@ -54,7 +51,7 @@ def _task_reset_accepts_seed(task_env) -> bool:
 # Use the official enum for autoreset mode (required to silence the warning)
 try:
     from gymnasium.vector import AutoresetMode
-except Exception:
+except ImportError:
     AutoresetMode = None  # Fallback won't silence the warning, but keeps compatibility
 
 
@@ -244,61 +241,33 @@ def _make_vector_entry_point(task_name: str) -> Callable[..., VectorEnv]:
 def register_all_tasks_with_gym(prefix: str = "RoboVerse/") -> None:
     """Register all known tasks for both gymnasium.make and gymnasium.make_vec.
 
-    This is safe to call multiple times.
+    Safe to call more than once: ids already in Gymnasium's registry are left alone (no override
+    warning per task). A task name Gymnasium rejects (its id grammar, or a versioned / unversioned
+    clash) does not stop the others from registering and is not fatal for the scripts that register
+    everything at import: each rejected name is logged as a warning naming the task and the reason,
+    and ``gym.make`` of that one id fails as unregistered.
     """
     for task_name in list_tasks():
         env_id = f"{prefix}{task_name}"
-        entry = _make_entry_point_single(task_name)
-        vec_entry = _make_vector_entry_point(task_name)
+        if env_id in gym.registry:
+            continue
         try:
-            register(id=env_id, entry_point=entry, vector_entry_point=vec_entry)
-        except TypeError:
-            try:
-                register(id=env_id, entry_point=entry)
-            except Exception:
-                pass
-            _VECTOR_ENTRY_POINTS[env_id] = vec_entry
-            try:
-                spec_ = _find_spec(env_id)
-                spec_.vector_entry_point = vec_entry  # type: ignore[attr-defined]
-            except Exception:
-                pass
-        except Exception:
-            # Ignore duplicate registrations during hot reload.
-            pass
+            register_task_with_gym(task_name, env_id)
+        except gym.error.Error as exc:
+            log.warning(f"Task {task_name!r} was not registered with Gymnasium: {exc}")
 
 
 def register_task_with_gym(task_name: str, env_id: str | None = None) -> str:
-    """Register a single task with both single-env and vectorized entry points."""
+    """Register a single task with both single-env and vectorized entry points.
+
+    Gymnasium warns and overrides on a duplicate id (a hot reload); a bad entry point raises, as it
+    should: the bare excepts that used to sit here hid exactly that.
+    """
     if env_id is None:
         env_id = f"RoboVerse/{task_name}"
     entry = _make_entry_point_single(task_name)
     vec_entry = _make_vector_entry_point(task_name)
-    try:
-        register(id=env_id, entry_point=entry, vector_entry_point=vec_entry)
-    except TypeError:
-        try:
-            # Older Gymnasium versions do not support vector_entry_point as a kwarg.
-            # Register the single-env entry first.
-            register(id=env_id, entry_point=entry)
-        except Exception:
-            # Ignore duplicate registrations during hot reload.
-            pass
-        # Store locally for our make_vec fallback.
-        _VECTOR_ENTRY_POINTS[env_id] = vec_entry
-        # Additionally, attach the vector entry point to the spec if available so
-        # gymnasium.make_vec can discover it on older versions.
-        try:
-            spec_ = _find_spec(env_id)
-            # Some Gymnasium versions allow arbitrary attributes on EnvSpec.
-            # Use direct attribute assignment to avoid linter warnings about setattr.
-            spec_.vector_entry_point = vec_entry  # type: ignore[attr-defined]
-        except Exception:
-            # Best-effort: make_vec helper will still work using our local registry.
-            pass
-    except Exception:
-        # Ignore duplicate registrations during hot reload.
-        pass
+    register(id=env_id, entry_point=entry, vector_entry_point=vec_entry)  # the spec carries both entry points
     return env_id
 
 
@@ -322,7 +291,7 @@ def make_vec(
     try:
         spec_ = _find_spec(env_id)
         vec_ep = getattr(spec_, "vector_entry_point", None)
-    except Exception:
+    except gym.error.Error:  # not registered yet
         spec_ = None
         vec_ep = None
 

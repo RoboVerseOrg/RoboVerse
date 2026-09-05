@@ -403,17 +403,11 @@ class ManagerBasedRVEnv(RLTaskEnv):
         # Reset command managers (resample fresh velocity command for the
         # newly-reset envs).
         for mgr in self.command_managers.values():
-            try:
-                mgr.reset(env_ids)
-            except Exception:
-                pass
+            mgr.reset(env_ids)
 
         # Reset sensors (zero air-time / contact-time / history).
         for sensor in self._mjlab_sensors.values():
-            try:
-                sensor.reset(env_ids)
-            except Exception:
-                pass
+            sensor.reset(env_ids)
 
         # Reset events (e.g. random base velocity, randomize joint default).
         for func, params in self.reset_events.values():
@@ -496,18 +490,14 @@ class ManagerBasedRVEnv(RLTaskEnv):
 
         # Command managers update (e.g. velocity command resample) — must
         # happen before reward computation so reward sees fresh commands.
+        # a manager or sensor that raises would otherwise leave stale commands / zeroed contact history
+        # feeding the reward and observations with no sign of it; let it surface
         for mgr in self.command_managers.values():
-            try:
-                mgr.update()
-            except Exception:
-                pass  # Tolerate misbehaving managers; logged elsewhere.
+            mgr.update()
 
         # Sensors update — must happen post-physics, before reward + obs.
         for sensor in self._mjlab_sensors.values():
-            try:
-                sensor.update(self.step_dt)
-            except Exception:
-                pass
+            sensor.update(self.step_dt)
 
         env_states = self.handler.get_states(mode="tensor")
 

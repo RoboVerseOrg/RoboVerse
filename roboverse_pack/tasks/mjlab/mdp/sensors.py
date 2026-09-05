@@ -44,6 +44,30 @@ import numpy as np
 import torch
 
 
+def _sensor_backend(env, sensor: str, newton_api: tuple[str, ...]) -> str:
+    """The backend a sensor runs on: ``"mujoco"`` (physics in-process) or ``"newton"`` (the needed queries).
+
+    A sensor whose Newton path needs only tensor states (``newton_api`` empty) runs on any backend
+    through that path. One that needs Newton's contact / subtree queries is refused up front on a
+    handler without them (the parallel MuJoCo wrapper of ``--sim mujoco --num_envs > 1``, MJX): the
+    sensor used to pick the Newton path anyway and fail on the first update with an ``AttributeError``,
+    which the env swallowed, so the reward saw zeroed contacts with no sign of it.
+    """
+    from roboverse_pack.tasks.mjlab.mdp.events_dr import _sim_name
+
+    handler = env.handler
+    if hasattr(handler, "physics"):
+        return "mujoco"
+    if all(hasattr(handler, name) for name in newton_api):
+        return "newton"
+    sim = _sim_name(env)
+    raise NotImplementedError(
+        f"mjlab sensor '{sensor}' is not implemented for the '{sim}' backend ({type(handler).__name__}): it has no "
+        f"{', '.join(newton_api)}. Supported backends are 'mujoco' (num_envs=1 only) and 'newton'. A sensor must not "
+        "silently report zeros; run the task on a supported backend or remove the sensor from the task's cfg."
+    )
+
+
 @dataclass
 class ContactSensorCfg:
     """Mirrors mjlab ``ContactSensorCfg``.
@@ -148,7 +172,7 @@ class ContactSensor:
 
         # Newton path: no MuJoCo physics. Defer primary-foot → body-column
         # resolution to the first update (needs the solver's model body names).
-        self._newton = not hasattr(env.handler, "physics")
+        self._newton = _sensor_backend(env, type(self).__name__, ("get_net_contact_forces_by_body",)) == "newton"
         if self._newton:
             self._newton_body_cols: list[int] | None = None
             return
@@ -453,7 +477,7 @@ class TerrainHeightSensor:
         # Newton path: no ray-cast; on flat terrain foot-height-above-ground is
         # just the foot body z (ground plane at z=0). Defer body-column
         # resolution to the first update.
-        self._newton = not hasattr(env.handler, "physics")
+        self._newton = _sensor_backend(env, type(self).__name__, ()) == "newton"
         if self._newton:
             self._newton_body_cols: list[int] | None = None
             return
@@ -632,7 +656,7 @@ class TerrainGridScanSensor:
         self._local_xy = torch.stack([gx.flatten(), gy.flatten()], dim=-1).numpy().astype(np.float64)  # (R, 2)
         self._R = self._local_xy.shape[0]
         self._heights = torch.zeros((env.num_envs, self._R), device=self.device, dtype=torch.float32)
-        self._newton = not hasattr(env.handler, "physics")
+        self._newton = _sensor_backend(env, type(self).__name__, ()) == "newton"
         if self._newton:
             self._newton_body_col: int | None = None
             return
@@ -736,7 +760,7 @@ class BuiltinSensor:
 
         # Newton path: mujoco_warp computes subtree_* on the batched data, read
         # via handler.get_subtree_field. Defer body-column resolution to update.
-        self._newton = not hasattr(env.handler, "physics")
+        self._newton = _sensor_backend(env, type(self).__name__, ("get_subtree_field",)) == "newton"
         if self._newton:
             self._newton_body_col: int | None = None
             return

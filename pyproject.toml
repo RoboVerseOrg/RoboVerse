@@ -246,6 +246,7 @@ markers = [
     "general: lightweight test that needs no simulator backend",
     "requires_optional(*modules, extra=None): skip unless the optional dependencies are installed",
     "requires_asset(*relpaths): skip unless the roboverse_data assets are present",
+    "examples: runs a getting-started example end to end (subprocess, MuJoCo rendering); deselect with -m 'not examples'",
 ]
 
 [tool.coverage.run]

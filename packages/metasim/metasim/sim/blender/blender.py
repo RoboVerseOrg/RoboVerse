@@ -7,6 +7,7 @@ import shutil
 import struct
 import sys
 import tempfile
+import weakref
 from dataclasses import dataclass
 from math import cos, sin, tau
 from pathlib import Path
@@ -1670,6 +1671,8 @@ class BlenderHandler(BaseSimHandler):
         # rather than the launch-time defaults.
         self._render_dirty: bool = True
         self._tmp_dir = Path(tempfile.mkdtemp(prefix="metasim_blender_"))
+        # removed when the handler is garbage-collected or the interpreter exits, not only on close()
+        self._tmp_dir_finalizer = weakref.finalize(self, shutil.rmtree, str(self._tmp_dir), ignore_errors=True)
 
     def launch(self) -> None:
         super().launch()
@@ -2253,7 +2256,7 @@ class BlenderHandler(BaseSimHandler):
         self.refresh_render()
 
     def close(self) -> None:
-        shutil.rmtree(self._tmp_dir, ignore_errors=True)
+        self._tmp_dir_finalizer()
 
     def _set_dof_targets(self, actions: CompatActionInput) -> None:
         _ = actions

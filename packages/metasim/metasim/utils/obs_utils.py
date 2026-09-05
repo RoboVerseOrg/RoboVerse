@@ -29,18 +29,26 @@ class ObsSaver:
         self.images: list[NDArray] = []
 
         self.image_idx = 0
+        self._disabled = False
 
     def add(self, state: TensorState):
         """Add the observation to the list."""
         if self.image_dir is None and self.video_path is None:
             return
 
-        try:
-            rgb_data = torch.concat([cam.rgb for cam in state.cameras.values()], dim=2)  # horizontal concat
-            image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
-        except Exception as e:
-            log.error(f"Error adding observation: {e}")
+        if self._disabled:
             return
+        frames = [cam.rgb for cam in state.cameras.values() if getattr(cam, "rgb", None) is not None]
+        if not frames:
+            # dropping frames silently would leave a video that no longer lines up with the recorded steps
+            self._disabled = True
+            log.warning(
+                f"ObsSaver({self.video_path or self.image_dir}): the state carries no camera RGB "
+                "(no camera in the scenario, or rgb not among its data_types); nothing will be saved"
+            )
+            return
+        rgb_data = torch.concat(frames, dim=2)  # horizontal concat
+        image = make_grid(rgb_data.permute(0, 3, 1, 2) / 255, nrow=int(rgb_data.shape[0] ** 0.5))  # (C, H, W)
 
         if self.image_dir is not None:
             os.makedirs(self.image_dir, exist_ok=True)
