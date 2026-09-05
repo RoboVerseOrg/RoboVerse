@@ -10,6 +10,8 @@ import torch
 import zarr
 from tqdm import tqdm
 
+from roboverse_learn.il.utils.demo_metadata import check_demo_metadata
+
 try:
     from pytorch3d import transforms
 except ImportError:
@@ -160,8 +162,10 @@ def main():
             continue
         else:
             with open(os.path.join(demo_dir, "metadata.json"), encoding="utf-8") as f:
-                # print("metadata load dir:", demo_dir)
                 metadata = json.load(f)
+        check_demo_metadata(
+            metadata, observation_space=args.observation_space, action_space=args.action_space, demo_dir=demo_dir
+        )
 
         data_length = len(metadata["joint_qpos"])
         # Read each requested camera's frames. head_camera falls back to the legacy

@@ -86,6 +86,25 @@ def _frame_iter(video_path: Path):
     return iio.imiter(video_path, plugin="FFMPEG")
 
 
+def _check_targets(meta: dict, episode_dir, state_key: str, action_key: str) -> None:
+    """Refuse an episode whose targets are missing or null, before any frame is read.
+
+    A backend that reports no joint targets leaves ``joint_qpos_target: null`` in ``metadata.json``;
+    ``np.asarray`` on it used to fail with an obscure error per episode. A length mismatch between
+    states and targets stays the warn-and-truncate this converter has always done. Local on purpose:
+    this script is documented to run inside the policy's own environment, where ``roboverse_learn``
+    is not importable (the shared check lives in ``roboverse_learn.il.utils.demo_metadata``).
+    """
+    if state_key not in meta:
+        raise ValueError(f"{episode_dir}: metadata.json has no {state_key!r}; not a RoboVerse demo")
+    targets = meta.get(action_key)
+    if targets is None or any(t is None for t in targets):
+        raise ValueError(
+            f"{episode_dir}: {action_key!r} is missing or null (the recording backend reported no joint targets), "
+            "so no action can be built; re-collect on a backend that reports joint_pos_target"
+        )
+
+
 def convert(args: Args) -> None:
     input_root = args.input_root.expanduser().resolve()
     if not input_root.exists():
@@ -140,6 +159,7 @@ def convert(args: Args) -> None:
         video_path = episode_dir / args.video_name
         meta = _load_metadata(meta_path)
         states = np.asarray(meta[args.state_key], dtype=np.float32)
+        _check_targets(meta, episode_dir, args.state_key, args.action_key)
         actions = np.asarray(meta[args.action_key], dtype=np.float32)
         prompt = str(meta.get(args.prompt_key, episode_dir.parent.name))
 
