@@ -199,9 +199,21 @@ class SimpleReplayBuffer(nn.Module):
                 all_indices,
             )
 
-            # Create masks for rewards after first done
-            # This creates a cumulative product that zeroes out rewards after the first done
-            done_masks = torch.cumprod(1.0 - all_dones, dim=2)  # [n_env, batch_size, n_step]
+            # Keep the reward on the transition that ends an episode, then
+            # mask all later transitions.  ``cumprod(1 - done)`` starts with
+            # zero at the terminal transition, which silently drops terminal
+            # rewards from every n-step target.  Truncations must stop the
+            # return as well: their bootstrap value is handled separately
+            # through ``final_truncations`` below.
+            episode_ends = (all_dones > 0) | (all_truncations > 0)
+            not_ended = (~episode_ends).to(dtype=all_rewards.dtype)
+            done_masks = torch.cat(
+                [
+                    torch.ones_like(not_ended[..., :1]),
+                    torch.cumprod(not_ended[..., :-1], dim=2),
+                ],
+                dim=2,
+            )  # [n_env, batch_size, n_step]
 
             # Create discount factors
             discounts = torch.pow(self.gamma, torch.arange(self.n_steps, device=self.device))  # [n_steps]
