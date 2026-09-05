@@ -387,7 +387,7 @@ def main():
 
     if args.save_recording:
         log.info(f"\nRecording saved to: {args.save_recording}")
-        log.info("You can replay it with: rerun {args.save_recording}")
+        log.info(f"You can replay it with: rerun {args.save_recording}")
 
     log.info("=" * 70)
 
