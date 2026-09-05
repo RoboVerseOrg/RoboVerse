@@ -34,7 +34,7 @@ def _find_function(tree: ast.AST, class_name: str, func_name: str) -> ast.Functi
 
 
 def _calls_get_joint_names_sorted(fn: ast.FunctionDef) -> bool:
-    """True if ``fn`` calls ``*._get_joint_names(...)`` with ``sort=True``.
+    """True if ``fn`` calls ``*._get_joint_names(...)`` / ``*.get_joint_names(...)`` with ``sort=True``.
 
     Accepts either the keyword form ``sort=True`` or the positional form
     ``_get_joint_names(obj_name, True)`` — both mean sorted order.
@@ -42,7 +42,9 @@ def _calls_get_joint_names_sorted(fn: ast.FunctionDef) -> bool:
     for node in ast.walk(fn):
         if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
             continue
-        if node.func.attr != "_get_joint_names":
+        if node.func.attr == "get_action_joint_names":
+            return True  # the handler-order layout: sorted joint names per robot by construction
+        if node.func.attr not in ("_get_joint_names", "get_joint_names"):
             continue
         for kw in node.keywords:
             if kw.arg == "sort" and isinstance(kw.value, ast.Constant) and kw.value.value is True:
@@ -60,9 +62,8 @@ def _references_attr(fn: ast.FunctionDef, attr: str) -> bool:
 # (source file, class, function that materializes joint_pos_target, native-order
 #  attribute that must NOT be used to build it).
 _CASES = [
-    pytest.param(
-        "isaacgym/isaacgym.py", "IsaacgymHandler", "_joint_pos_target_from_cache", "_joint_info", id="isaacgym"
-    ),
+    # Isaac Gym and Genesis delegate to the one base implementation, which is checked in their place
+    pytest.param("base.py", "BaseSimHandler", "_action_spans", "_joint_info", id="base"),  # the slice per robot
     pytest.param("pybullet/pybullet.py", "SinglePybulletHandler", "_get_states", "object_joint_order", id="pybullet"),
 ]
 
@@ -89,3 +90,56 @@ def test_joint_pos_target_uses_sorted_joint_order(rel_path: str, class_name: str
         f"({native_attr!r}) — joint_pos_target[i] would refer to a different "
         f"joint than joint_pos[i] whenever the native order is not alphabetical."
     )
+
+
+@pytest.mark.general
+def test_genesis_and_isaacgym_read_the_target_from_the_base_helper():
+    """Their own materialisers (native joint order, None for tensor actions) are gone; a re-inlined copy
+    would escape the base-helper check above."""
+    for rel in ("genesis/genesis.py", "isaacgym/isaacgym.py"):
+        source = _SIM_ROOT.joinpath(rel).read_text(encoding="utf-8")
+        assert "_joint_pos_target_from_action_cache(" in source, rel
+        assert "def _joint_pos_target_from_cache" not in source, rel
+
+
+@pytest.mark.general
+def test_every_backend_reports_no_position_target_for_an_effort_driven_robot():
+    """One predicate from the robot config gates ``joint_pos_target`` at every backend's report site: an
+    effort-driven robot's applied tensor (or ``ctrl``) is a torque and must not be reported as a position."""
+    from types import SimpleNamespace
+
+    from metasim.sim.base import BaseSimHandler
+
+    class _H(BaseSimHandler):
+        def _set_states(self, states, env_ids=None):
+            pass
+
+        def _set_dof_targets(self, actions):
+            pass
+
+        def _get_states(self, env_ids=None):
+            return None
+
+        def _simulate(self):
+            pass
+
+    h = _H.__new__(_H)
+    h.object_dict = {
+        "pos": SimpleNamespace(control_type={"j1": "position"}),
+        "mixed": SimpleNamespace(control_type={"j1": "position", "j2": "effort"}),
+        "none": SimpleNamespace(control_type=None),
+    }
+    assert h._robot_reports_position_target("pos") and h._robot_reports_position_target("none")
+    assert not h._robot_reports_position_target("mixed")
+    for rel in (
+        "mujoco/mujoco.py",
+        "mjx/mjx.py",
+        "sapien/sapien3.py",
+        "sapien/sapien2.py",
+        "pybullet/pybullet.py",
+        "isaacsim/isaacsim.py",
+        "newton/newton.py",
+        "superdex/superdex.py",
+    ):
+        assert "_robot_reports_position_target(" in _SIM_ROOT.joinpath(rel).read_text(encoding="utf-8"), rel
+    assert "_robot_reports_position_target(" in _SIM_ROOT.joinpath("base.py").read_text(encoding="utf-8")

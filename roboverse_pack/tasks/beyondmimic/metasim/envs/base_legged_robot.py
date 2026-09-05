@@ -327,6 +327,7 @@ class LeggedRobotTask(RLTaskEnv):
 
         # reset envs and MDP
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        self._note_auto_reset(reset_env_ids.tolist(), env_states, self.extras)
         if len(reset_env_ids) > 0:
             self._reset_idx(env_ids=reset_env_ids)
 

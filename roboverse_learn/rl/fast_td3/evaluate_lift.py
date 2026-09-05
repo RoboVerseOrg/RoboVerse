@@ -39,7 +39,6 @@ except ImportError:
 
 from datetime import datetime
 
-import numpy as np
 import torch
 from loguru import logger as log
 from torch.amp import autocast
@@ -47,98 +46,12 @@ from torch.amp import autocast
 from metasim.task.registry import get_task_class
 from metasim.utils.demo_util import save_traj_file
 from roboverse_learn.rl.fast_td3.fttd3_module import Actor, EmpiricalNormalization
-
-
-def extract_state_dict(env, scenario, env_idx=0):
-    """Extract state dictionary from handler states.
-
-    Args:
-        env: Environment with handler
-        scenario: Scenario configuration to get joint names
-        env_idx: Environment index to extract state from
-
-    Returns:
-        Dictionary containing positions, rotations, and joint positions for all objects and robots
-    """
-    state_dict = {}
-
-    # Get states from handler (returns TensorState object)
-    if not hasattr(env, "handler") or env.handler is None:
-        log.warning("Handler not available, returning empty state")
-        return state_dict
-
-    handler_states = env.handler.get_states(mode="tensor")
-    if handler_states is None:
-        log.warning("Handler.get_states() returned None")
-        return state_dict
-
-    # Create lookup dicts for configurations
-    obj_cfg_dict = {obj.name: obj for obj in scenario.objects}
-    robot_cfg_dict = {robot.name: robot for robot in scenario.robots}
-
-    # Extract object states
-    if hasattr(handler_states, "objects"):
-        for obj_name, obj_state in handler_states.objects.items():
-            pos = obj_state.root_state[env_idx, :3].cpu().numpy()  # [x, y, z]
-            quat = obj_state.root_state[env_idx, 3:7].cpu().numpy()  # [w, x, y, z]
-
-            state_entry = {
-                "pos": pos,
-                "rot": quat,
-            }
-
-            # Add joint positions if the object has joints
-            if obj_state.joint_pos is not None and obj_name in obj_cfg_dict:
-                obj_cfg = obj_cfg_dict[obj_name]
-                if hasattr(obj_cfg, "actuators") and obj_cfg.actuators is not None:
-                    # Joint names are sorted alphabetically (standard in handlers)
-                    joint_names = sorted(obj_cfg.actuators.keys())
-                    joint_positions = obj_state.joint_pos[env_idx].cpu().numpy()
-                    state_entry["dof_pos"] = {
-                        name: float(pos) for name, pos in zip(joint_names, joint_positions, strict=False)
-                    }
-
-            state_dict[obj_name] = state_entry
-
-    # Extract robot states
-    if hasattr(handler_states, "robots"):
-        for robot_name, robot_state in handler_states.robots.items():
-            pos = robot_state.root_state[env_idx, :3].cpu().numpy()  # [x, y, z]
-            quat = robot_state.root_state[env_idx, 3:7].cpu().numpy()  # [w, x, y, z]
-
-            state_entry = {
-                "pos": pos,
-                "rot": quat,
-            }
-
-            # Add joint positions for robot
-            if robot_name in robot_cfg_dict:
-                robot_cfg = robot_cfg_dict[robot_name]
-                if robot_cfg.actuators is not None:
-                    # Joint names are sorted alphabetically (standard in handlers)
-                    joint_names = sorted(robot_cfg.actuators.keys())
-                    joint_positions = robot_state.joint_pos[env_idx].cpu().numpy()
-                    state_entry["dof_pos"] = {
-                        name: float(pos) for name, pos in zip(joint_names, joint_positions, strict=False)
-                    }
-
-            state_dict[robot_name] = state_entry
-
-    return state_dict
-
-
-def tensor_to_list(data):
-    """Recursively convert tensors to lists/numpy arrays."""
-    if isinstance(data, torch.Tensor):
-        return data.cpu().numpy().tolist()
-    elif isinstance(data, dict):
-        return {k: tensor_to_list(v) for k, v in data.items()}
-    elif isinstance(data, list):
-        return [tensor_to_list(item) for item in data]
-    elif isinstance(data, np.ndarray):
-        return data.tolist()
-    else:
-        return data
+from roboverse_learn.rl.fast_td3.trajectory_record import (
+    commanded_action,
+    initial_states,
+    recorded_step,
+    restart_done_envs,
+)
 
 
 def load_checkpoint(checkpoint_path: str, device: torch.device):
@@ -157,7 +70,6 @@ def evaluate_lift_collection(
     obs_normalizer,
     target_count: int,
     device: torch.device,
-    scenario=None,
     task_name: str = "eval",
     amp_enabled: bool = False,
     amp_device_type: str = "cpu",
@@ -205,13 +117,18 @@ def evaluate_lift_collection(
 
     obs, info = env.reset()
 
+    init_states = initial_states(env.handler)
     for i in range(num_eval_envs):
-        current_episode_init_state[i] = extract_state_dict(env, scenario, env_idx=i)
+        current_episode_init_state[i] = init_states[i]
 
     max_steps_per_episode = env.max_episode_steps
     max_total_steps = max_steps_per_episode * 10000
 
     log.info(f"Starting lift trajectory collection, target: {target_count}")
+
+    robot_name = env.robot.name  # the recorded robot (single-robot tasks)
+
+    env.record_terminal_states = True  # keep the pre-reset state of auto-reset envs for the recorder
 
     for step in range(max_total_steps):
         if len(collected_trajs) >= target_count:
@@ -225,38 +142,23 @@ def evaluate_lift_collection(
         next_obs, rewards, terminated, time_out, infos = env.step(actions.float())
         dones = terminated | time_out
 
-        handler_states = None
-        if hasattr(env, "handler") and env.handler is not None:
-            handler_states = env.handler.get_states(mode="tensor")
-
-        for i in range(num_eval_envs):
-            if done_masks[i]:
-                continue
-
+        # one conversion for the envs still collecting; an env auto-reset on this step is taken from the state its
+        # episode ended in, so the terminal (action, state) pair and the lift bookkeeping of that step are kept
+        active = [i for i in range(num_eval_envs) if not done_masks[i]]
+        # a step that cannot be recorded is a configuration error that shows on the first step: it raises
+        records = recorded_step(env.handler, env.handler.get_states(mode="tensor"), infos, active)
+        record_of = dict(zip(active, records, strict=True))
+        for i in active:
             grasp_success = infos.get("grasp_success", torch.zeros(num_eval_envs, dtype=torch.bool, device=device))[i]
             lift_active = infos.get("lift_active", torch.zeros(num_eval_envs, dtype=torch.bool, device=device))[i]
 
-            robot_name = scenario.robots[0].name
-            joint_names = sorted(scenario.robots[0].actuators.keys())
-
-            if handler_states is not None and hasattr(handler_states, "robots") and robot_name in handler_states.robots:
-                robot_state = handler_states.robots[robot_name]
-                joint_positions = robot_state.joint_pos[i].cpu().numpy()
-            else:
-                robot_state = obs.robots[robot_name]
-                joint_positions = robot_state.joint_pos[i].cpu().numpy()
-
-            action_record = {
-                "dof_pos_target": {name: float(pos) for name, pos in zip(joint_names, joint_positions, strict=False)},
-            }
-
-            current_episode_actions[i].append(action_record)
-            current_state = extract_state_dict(env, scenario, env_idx=i)
+            current_episode_actions[i].append(commanded_action(record_of[i], robot_name=robot_name))
+            current_state = record_of[i].state
             current_episode_states[i].append(current_state)
 
             if grasp_success and lift_active and not in_lift_phase[i]:
                 in_lift_phase[i] = True
-                lift_start_state[i] = extract_state_dict(env, scenario, env_idx=i)
+                lift_start_state[i] = current_state
                 lift_frame_count[i] = 1
                 recording_traj[i] = True
 
@@ -273,11 +175,8 @@ def evaluate_lift_collection(
                             "states": current_episode_states[i],
                         }
 
-                        traj_data_serializable = tensor_to_list(traj_data)
-                        state_data_serializable = tensor_to_list(lift_start_state[i])
-
-                        collected_trajs.append(traj_data_serializable)
-                        collected_states.append(state_data_serializable)
+                        collected_trajs.append(traj_data)  # already plain Python (recorded_step)
+                        collected_states.append(lift_start_state[i])
 
                         # Mark episode as successful (count at most once per episode)
                         if not success_in_episode[i]:
@@ -308,48 +207,31 @@ def evaluate_lift_collection(
 
         newly_done = dones & ~done_masks
         if newly_done.any():
-            for i in range(num_eval_envs):
-                if newly_done[i]:
-                    episodes_completed += 1
+            done_ids = newly_done.nonzero(as_tuple=False).squeeze(-1).tolist()
+            # every done env (recorded above) starts its next episode from the state it was reset to
+            fresh = restart_done_envs(env, done_ids, infos, next_obs, init_states=True)
+            for i in done_ids:
+                episodes_completed += 1
 
-                    lift_start_state[i] = None
-                    lift_frame_count[i] = 0
-                    in_lift_phase[i] = False
-                    recording_traj[i] = False
-                    current_episode_actions[i] = []
-                    current_episode_states[i] = []
-                    current_episode_init_state[i] = None
-                    current_returns[i] = 0
-                    current_lengths[i] = 0
-                    # reset per-episode success flag for next episode
-                    success_in_episode[i] = False
-
-            done_masks = torch.logical_or(done_masks, dones)
-
-        if done_masks.all():
-            done_masks.fill_(False)
-            obs, info = env.reset()
-
-            for i in range(num_eval_envs):
                 lift_start_state[i] = None
                 lift_frame_count[i] = 0
                 in_lift_phase[i] = False
                 recording_traj[i] = False
                 current_episode_actions[i] = []
                 current_episode_states[i] = []
-                current_episode_init_state[i] = extract_state_dict(env, scenario, env_idx=i)
-                # reset per-episode success flag after full reset
+                current_episode_init_state[i] = fresh[i]
+                current_returns[i] = 0
+                current_lengths[i] = 0
+                # reset per-episode success flag for next episode
                 success_in_episode[i] = False
-        else:
-            obs = next_obs
 
-    # Treat each active env as an attempted episode, and count it as successful if it already
-    active_envs = (~done_masks).sum().item() if "done_masks" in locals() else 0
-    successes_in_active = sum(
-        1
-        for i in range(num_eval_envs)
-        if "done_masks" in locals() and not done_masks[i] and success_in_episode.get(i, False)
-    )
+        obs = next_obs
+
+    # an env with an episode in flight (still collecting, and not just reset) is one attempted episode,
+    # successful if it already succeeded
+    in_flight = [i for i in range(num_eval_envs) if not done_masks[i] and current_lengths[i] > 0]
+    active_envs = len(in_flight)
+    successes_in_active = sum(1 for i in in_flight if success_in_episode.get(i, False))
     attempted_episodes = episodes_completed + active_envs
     total_successful_episodes = successful_episodes_count + successes_in_active
 
@@ -357,7 +239,6 @@ def evaluate_lift_collection(
         os.makedirs(traj_dir, exist_ok=True)
         os.makedirs(state_dir, exist_ok=True)
 
-        robot_name = scenario.robots[0].name
         trajs = {robot_name: collected_trajs}
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -485,7 +366,6 @@ def main():
         obs_normalizer=obs_normalizer,
         target_count=args.target_count,
         device=device,
-        scenario=scenario,
         task_name=task_name,
         amp_enabled=amp_enabled,
         amp_device_type=amp_device_type,

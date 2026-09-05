@@ -176,6 +176,9 @@ class HybridSimHandler(BaseSimHandler):
         # is a no-op for ``"both"`` handlers.
         self.physics_handler._set_states(self.physics_handler._normalise_set_states_input(states), env_ids)
         self.physics_handler._invalidate_state_caches()
+        refresh = getattr(self.physics_handler, "_refresh_action_targets_after_reset", None)
+        if refresh is not None:
+            refresh(states, env_ids)  # its reported target, as base.set_states does
         # Pull the physics-resolved tensor state (with body_state filled in by
         # whatever FK the physics handler runs) and forward that to the render
         # handler. Necessary for articulations: render handlers typically have

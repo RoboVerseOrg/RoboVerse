@@ -61,6 +61,7 @@ except ImportError:
 
 
 class GenesisHandler(BaseSimHandler):
+    _reports_target_from_action_cache = True  # the engine holds no joint target; see BaseSimHandler
     get_states_honours_env_ids = True  # ``_get_states`` indexes by ``env_ids``
     _default_physics_dt = 1 / 100  # the engine default this backend passes at construction
 
@@ -258,7 +259,11 @@ class GenesisHandler(BaseSimHandler):
         for obj in self.robots:
             obj_inst = self.object_inst_dict[obj.name]
             joint_reindex = self.get_joint_reindex(obj.name)
-            joint_pos_target = self._joint_pos_target_from_cache(obj.name)
+            joint_pos_target = self._joint_pos_target_from_action_cache(obj.name)
+            effort_target = self._get_effort_targets() if self._get_control_mode(obj.name) == "effort" else None
+            if env_ids is not None:  # every other field is sliced by env_ids here
+                joint_pos_target = None if joint_pos_target is None else joint_pos_target[env_ids]
+                effort_target = None if effort_target is None else effort_target[env_ids]
             state = RobotState(
                 root_state=torch.cat(
                     [
@@ -275,9 +280,7 @@ class GenesisHandler(BaseSimHandler):
                 joint_vel=obj_inst.get_dofs_velocity(envs_idx=env_ids)[:, joint_reindex],
                 joint_pos_target=joint_pos_target,
                 joint_vel_target=None,  # Genesis uses position/effort control; vel target not separately tracked
-                joint_effort_target=self._get_effort_targets()
-                if self._get_control_mode(obj.name) == "effort"
-                else None,
+                joint_effort_target=effort_target,
             )
             robot_states[obj.name] = state
 
@@ -424,41 +427,6 @@ class GenesisHandler(BaseSimHandler):
         if not self.headless and hasattr(self.scene_inst, "viewer") and self.scene_inst.viewer:
             self.scene_inst.viewer.update()
 
-    def _joint_pos_target_from_cache(self, robot_name: str) -> torch.Tensor | None:
-        """Materialize cached dof_pos_target for ``robot_name`` into a (num_envs, num_dof) tensor.
-
-        Returns None when the cache is empty, in raw-tensor form, or the requested
-        robot was not specified in the most recent ``_set_dof_targets`` call.
-        """
-        cache = self._actions_cache
-        if not cache or isinstance(cache, (torch.Tensor, np.ndarray)):
-            return None
-        # Build in alphabetically-sorted joint order so the reported
-        # ``joint_pos_target`` aligns with ``joint_pos`` (which is
-        # ``get_dofs_position()[:, joint_reindex]``). Values are name-keyed, so
-        # iterating sorted names is sufficient; using sort=False produced a
-        # target vector misaligned with joint_pos whenever the sim joint order
-        # was not already alphabetical.
-        joint_names = self._get_joint_names(robot_name, sort=True)
-        if not joint_names:
-            return None
-        targets_per_env: list[list[float]] = []
-        for env_idx, env_action in enumerate(cache):
-            if env_idx >= self.num_envs:
-                break
-            if not isinstance(env_action, dict):
-                return None
-            robot_action = env_action.get(robot_name)
-            if not isinstance(robot_action, dict):
-                return None
-            dof_pos_target = robot_action.get("dof_pos_target")
-            if dof_pos_target is None:
-                return None
-            targets_per_env.append([float(dof_pos_target.get(n, 0.0)) for n in joint_names])
-        if not targets_per_env:
-            return None
-        return torch.tensor(targets_per_env, dtype=torch.float32, device=self.device)
-
     def _set_dof_targets(self, actions: CompatActionInput) -> None:
         self._actions_cache = actions
 
@@ -584,7 +552,7 @@ class GenesisHandler(BaseSimHandler):
             return None
 
         # Sorted order so joint_effort_target aligns with joint_pos/joint_vel
-        # (see _joint_pos_target_from_cache). Values are name-keyed.
+        # (see BaseSimHandler._joint_pos_target_from_action_cache). Values are name-keyed.
         joint_names = self._get_joint_names(self.robot.name, sort=True)
         effort_targets = []
         for action in self._actions_cache:

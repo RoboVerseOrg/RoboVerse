@@ -897,7 +897,11 @@ class MujocoHandler(BaseSimHandler):
                 joint_vel=torch.tensor([
                     self._read_joint_qvel(f"{model_name}/{jn}", qvel_snapshot) for jn in joint_names
                 ]).unsqueeze(0),
-                joint_pos_target=torch.from_numpy(ctrl_snapshot[actuator_reindex]).unsqueeze(0),
+                joint_pos_target=(
+                    torch.from_numpy(ctrl_snapshot[actuator_reindex]).unsqueeze(0)
+                    if self._robot_reports_position_target(robot.name)
+                    else None  # an effort-driven robot's ctrl is a torque, not a position target
+                ),
                 joint_vel_target=torch.from_numpy(self._current_vel_target).unsqueeze(0)
                 if self._current_vel_target is not None
                 else None,

@@ -467,7 +467,7 @@ class SinglePybulletHandler(BaseSimHandler):
                 body_state=None,  # per-link state via p.getLinkState; not yet wired
                 joint_pos=torch.tensor([p.getJointState(obj_id, i)[0] for i in joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor([p.getJointState(obj_id, i)[1] for i in joint_reindex]).unsqueeze(0),
-                joint_pos_target=joint_pos_target,
+                joint_pos_target=joint_pos_target if self._robot_reports_position_target(robot.name) else None,
                 joint_vel_target=None,  # PyBullet motor control is integrated; not separately tracked
                 joint_effort_target=None,  # PyBullet motor control is integrated; not separately tracked
             )

@@ -7,8 +7,16 @@ from torchvision.utils import make_grid
 
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
-from metasim.types import CompatActionInput, Info
-from metasim.utils.state import list_state_to_tensor
+from metasim.types import CompatActionInput, Info, TensorState
+from metasim.utils.state import list_state_to_tensor, select_envs
+
+
+def _terminal_copy(states, env_ids: list[int]):
+    """Objects and robots of ``env_ids`` copied out of ``states`` (cameras are not part of a recorded episode)."""
+    if not env_ids or states is None:
+        return None
+    physics_only = TensorState(objects=states.objects, robots=states.robots, cameras={}, extras={})
+    return select_envs(physics_only, env_ids)
 
 
 class RLTaskEnv(BaseTaskEnv):
@@ -164,6 +172,23 @@ class RLTaskEnv(BaseTaskEnv):
         info = {"privileged_observation": priv_obs}
         return first_obs, info
 
+    #: set by a recorder: ``info["terminal_states"]`` then carries the auto-reset envs' pre-reset state
+    record_terminal_states: bool = False
+
+    def _note_auto_reset(self, env_ids: list[int], states, info: dict) -> None:
+        """Record in ``info`` which envs this step auto-resets and the state their episodes ended in.
+
+        ``info["auto_reset_env_ids"]`` and ``info["terminal_states"]`` (the objects and robots of
+        those envs, copied before the reset when ``record_terminal_states`` is set; None otherwise,
+        so training runs pay no gather) let a recorder keep the terminal (action, state) pair instead
+        of the reset pose. Call it right before resetting: ``RLTaskEnv.step`` does; a task that owns
+        its own reset loop must too, or a recorder cannot tell the two apart.
+        """
+        info["auto_reset_env_ids"] = list(env_ids)
+        info["terminal_states"] = (
+            _terminal_copy(states, info["auto_reset_env_ids"]) if self.record_terminal_states else None
+        )
+
     def step(
         self,
         actions: CompatActionInput,
@@ -213,12 +238,13 @@ class RLTaskEnv(BaseTaskEnv):
             "observations": {"raw": {"obs": obs.clone()}},
         }
 
-        done_indices = episode_done.nonzero(as_tuple=False).squeeze(-1)
-        if done_indices.numel():
-            self.reset(env_ids=done_indices.tolist())
+        done_ids = episode_done.nonzero(as_tuple=False).squeeze(-1).tolist()
+        self._note_auto_reset(done_ids, states, info)
+        if done_ids:
+            self.reset(env_ids=done_ids)
             states_after = self.handler.get_states(mode="tensor")
             obs_after = self._observation(states_after).to(self.device)
-            obs[done_indices] = obs_after[done_indices]
+            obs[done_ids] = obs_after[done_ids]
 
         return obs, reward, terminated, time_out, info
 

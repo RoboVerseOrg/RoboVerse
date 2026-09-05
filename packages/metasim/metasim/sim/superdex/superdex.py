@@ -789,7 +789,9 @@ class SuperdexHandler(BaseSimHandler):
         )
         if cls is RobotState:
             kwargs["joint_pos_target"] = (
-                torch.from_numpy(art.target_pose[idx]).float().unsqueeze(0) if art.target_pose is not None else None
+                torch.from_numpy(art.target_pose[idx]).float().unsqueeze(0)
+                if art.target_pose is not None and self._robot_reports_position_target(art.cfg.name)
+                else None
             )
             kwargs["joint_vel_target"] = (
                 torch.from_numpy(art.target_vel[idx]).float().unsqueeze(0) if art.target_vel is not None else None

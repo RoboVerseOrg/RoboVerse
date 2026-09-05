@@ -386,6 +386,7 @@ class LeggedRobotTask(AgentTask):
 
         # reset envs
         reset_env_idx = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        self._note_auto_reset(reset_env_idx.tolist(), env_states, self.extras)  # the recorder's contract
         if len(reset_env_idx) > 0:
             self.reset(env_ids=reset_env_idx)
             # Get updated states after reset
