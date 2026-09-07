@@ -1,6 +1,45 @@
 """Sub-module containing utilities for camera parameters."""
 
+import numpy as np
 import torch
+
+from metasim.utils.math import quat_from_matrix
+
+#: Change of basis from an OpenGL camera frame (right +X, up +Y, backward +Z) to the world-convention
+#: frame ``CameraState.quat_world`` uses (forward +X, left +Y, up +Z): forward = -Z_gl, left = -X_gl,
+#: up = +Y_gl. ``convert_camera_frame_orientation_convention(origin="opengl", target="world")`` is the same
+#: rotation (a test pins that); this is the matrix form, one matmul per call on the state-read path.
+_OPENGL_TO_WORLD = torch.tensor([[0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [-1.0, 0.0, 0.0]])
+
+
+def camera_quat_world_from_opengl(c2w_rotation: torch.Tensor) -> torch.Tensor:
+    """``CameraState.quat_world`` (w, x, y, z) from a camera-to-world rotation in the OpenGL convention.
+
+    MuJoCo's ``cam_xmat`` and every OpenGL-style renderer describe the camera frame as right +X, up +Y,
+    looking down -Z; the state reports the world convention (forward +X, up +Z) that Isaac Sim's
+    ``quat_w_world`` uses, so a consumer rotates +X by the quaternion to get the viewing direction on
+    every backend. The inverse is ``CameraState.quat_opengl``.
+
+    Args:
+        c2w_rotation: ``(..., 3, 3)`` rotation matrices whose columns are the camera's right, up and
+            backward axes in world coordinates (any float dtype; the result is float32).
+    """
+    return quat_from_matrix(c2w_rotation.to(torch.float32) @ _OPENGL_TO_WORLD)
+
+
+def camera_pose_fields(intrinsics: np.ndarray, c2w: np.ndarray) -> dict[str, torch.Tensor]:
+    """The ``pos`` / ``quat_world`` / ``intrinsics`` of a single-env ``CameraState`` from a backend's matrices.
+
+    Every backend that renders a Gaussian-splat background already computes ``(Ks, c2w)`` for it: a
+    ``(3, 3)`` intrinsics matrix and a ``(4, 4)`` camera-to-world transform in the OpenGL convention.
+    This is the one place they become state fields (each ``(1, ...)``, float32).
+    """
+    c2w_t = torch.from_numpy(np.asarray(c2w, dtype=np.float32))
+    return {
+        "pos": c2w_t[:3, 3].clone().unsqueeze(0),
+        "quat_world": camera_quat_world_from_opengl(c2w_t[:3, :3]).unsqueeze(0),
+        "intrinsics": torch.from_numpy(np.asarray(intrinsics, dtype=np.float32)).unsqueeze(0),
+    }
 
 
 def get_cam_params(

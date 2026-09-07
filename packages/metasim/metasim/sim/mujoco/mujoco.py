@@ -25,6 +25,7 @@ import threading
 from metasim.queries.base import BaseQueryType
 from metasim.sim import BaseSimHandler
 from metasim.types import CompatActionInput
+from metasim.utils.camera_util import camera_pose_fields
 from metasim.utils.state import (
     CameraState,
     ObjectState,
@@ -125,42 +126,17 @@ class MujocoHandler(BaseSimHandler):
         self._split_render_physics_only = bool(self.headless) and len(self.cameras) == 0
 
     def _get_camera_params(self, camera_id: str, camera):
-        """Get camera intrinsics and extrinsics from MuJoCo camera configuration.
+        """Intrinsics and camera-to-world transform of a camera, from the physics camera and the config.
 
         Returns:
             Ks: (3, 3) intrinsic matrix
-            c2w: (4, 4) camera-to-world transformation matrix
+            c2w: (4, 4) camera-to-world transformation matrix (OpenGL convention: the camera looks down -Z)
         """
-        mj_camera = self.physics.model.camera(camera_id)
-
-        # Extrinsics: build from camera configuration
-        cam_pos = self.physics.data.cam_xpos[mj_camera.id]
-
-        # Compute camera orientation from pos and look_at
-        forward = np.array(camera.look_at) - np.array(camera.pos)
-        forward = forward / np.linalg.norm(forward)
-
-        world_up = np.array([0, 0, 1])
-        right = np.cross(forward, world_up)
-        right = right / np.linalg.norm(right)
-        up = np.cross(right, forward)
-
-        # Build c2w matrix (OpenGL convention: camera looks along -Z)
+        mj_camera_id = self.physics.model.camera(camera_id).id
         c2w = np.eye(4)
-        c2w[:3, 0] = right
-        c2w[:3, 1] = up
-        c2w[:3, 2] = -forward  # Z axis points backward
-        c2w[:3, 3] = cam_pos
-
-        # Intrinsics: compute from vertical FOV
-        fovy_rad = np.deg2rad(camera.vertical_fov)
-        fy = camera.height / (2 * np.tan(fovy_rad / 2))
-        fx = fy  # assume square pixels
-        cx = camera.width / 2.0
-        cy = camera.height / 2.0
-        Ks = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
-
-        return Ks, c2w
+        c2w[:3, :3] = self.physics.data.cam_xmat[mj_camera_id].reshape(3, 3)
+        c2w[:3, 3] = self.physics.data.cam_xpos[mj_camera_id]
+        return np.array(camera.intrinsics, dtype=np.float64), c2w
 
     def launch(self) -> None:
         # dm_control's static ``sizes.array_sizes`` tables list MjModel/MjData
@@ -987,14 +963,14 @@ class MujocoHandler(BaseSimHandler):
                     )
                     depth = torch.from_numpy(np.ascontiguousarray(depth_np)).unsqueeze(0)
 
+            # the physics camera's pose and the config intrinsics: a mounted camera is where it is
+            Ks, c2w = self._get_camera_params(camera_id, camera)
+
             # Additional GS background rendering and blending (if enabled)
             if self.scenario.gs_scene is not None and self.scenario.gs_scene.with_gs_background:
                 assert ROBO_SPLATTER_AVAILABLE, (
                     "RoboSplatter is not available. GS background rendering will be disabled."
                 )
-
-                # Extract camera parameters
-                Ks, c2w = self._get_camera_params(camera_id, camera)
 
                 # Render GS background
                 gs_cam = SplatCamera.init_from_pose_list(
@@ -1035,7 +1011,7 @@ class MujocoHandler(BaseSimHandler):
                     else:
                         depth = torch.from_numpy(np.ascontiguousarray(depth_comp.copy())).unsqueeze(0)
 
-            state = CameraState(rgb=locals().get("rgb", None), depth=locals().get("depth", None))
+            state = CameraState(rgb=rgb, depth=depth, **camera_pose_fields(Ks, c2w))
             camera_states[camera.name] = state
         extras = self.get_extra()
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)

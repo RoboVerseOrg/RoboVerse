@@ -259,8 +259,8 @@ class CameraState:
         This is experimental and subject to change.
     """
 
-    ## Camera parameters — Optional because not every backend populates them
-    ## (e.g. pybullet only sets pos/intrinsics, sapien2 omits intrinsics on first frame).
+    ## Camera parameters — Optional because not every backend populates them: MuJoCo and Isaac Sim fill all
+    ## three, Blender pos and intrinsics, Newton intrinsics; the rest report None.
     pos: CameraPosTensor | None = None
     """Position of the camera. Shape is (num_envs, 3)."""
     quat_world: CameraQuatTensor | None = None
