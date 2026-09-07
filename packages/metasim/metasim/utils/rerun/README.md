@@ -19,16 +19,10 @@ from metasim.task.registry import get_task_class
 from metasim.utils.rerun.rerun_env_wrapper import TaskRerunWrapper
 
 # Create environment
-task_cls = get_task_class('reach_origin')
-scenario = task_cls.scenario.update(
-    robots=['franka'],
-    simulator='mujoco',
-    num_envs=1024,
-    headless=True,
-    cameras=[]
-)
+task_cls = get_task_class("reach_origin")
+scenario = task_cls.scenario.update(robots=["franka"], simulator="mujoco", num_envs=1024, headless=True, cameras=[])
 
-env = task_cls(scenario, device='cuda')
+env = task_cls(scenario, device="cuda")
 
 # Wrap environment to enable visualization
 rerun_env = TaskRerunWrapper(env, app_name="RL Training", update_freq=10)
@@ -91,10 +85,10 @@ CONFIG = {
 
 ```python
 TaskRerunWrapper(
-    task_env,           # RLTaskEnv or similar
+    task_env,  # RLTaskEnv or similar
     app_name="RoboVerse Training",  # Rerun application name
-    update_freq=10,     # Update visualization every N steps
-    spawn=True,         # Auto-open Rerun viewer
+    update_freq=10,  # Update visualization every N steps
+    spawn=True,  # Auto-open Rerun viewer
 )
 ```
 

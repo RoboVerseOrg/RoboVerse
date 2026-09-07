@@ -122,8 +122,8 @@ from metasim.sim.sapien_handler import SapienHandler
 from metasim.sim.isaacsim_handler import IsaacSimHandler
 
 # Same scenario works with any simulator
-handler = MujocoHandler(scenario)    # or
-handler = SapienHandler(scenario)    # or
+handler = MujocoHandler(scenario)  # or
+handler = SapienHandler(scenario)  # or
 handler = IsaacSimHandler(scenario)
 ```
 
