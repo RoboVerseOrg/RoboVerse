@@ -14,6 +14,7 @@ from loguru import logger as log
 from metasim.types import DictEnvState
 from metasim.utils.io_util import write_16bit_depth_video
 from metasim.utils.kinematics import get_ee_state_from_list
+from metasim.utils.log import warn_once
 from metasim.utils.math import convert_camera_frame_orientation_convention, matrix_from_quat, quat_apply
 
 
@@ -54,12 +55,49 @@ def _camera_metadata(camera_state: dict) -> dict[str, list]:
     return out
 
 
-def save_demo(save_dir: str, demo: list[DictEnvState], robot_config, task_desc=""):
-    """Save a list-state demo sequence and metadata (incl. full EE states)."""
+def save_demo(save_dir: str, demo: list[DictEnvState], robot_config, task_desc="", *, camera_name: str | None = None):
+    """Save a list-state demo sequence and metadata (incl. full EE states).
+
+    The legacy format holds one robot and one camera: the configured robot (``robot_config.name``, the one
+    the ``ee_state`` column describes) and ``camera_name``, or the first camera when None. The robots and
+    cameras it leaves out are named in a warning once per process.
+    """
     os.makedirs(save_dir, exist_ok=True)
 
-    robot_name = next(iter(demo[0]["robots"].keys()))
-    camera_name = next(iter(demo[0]["cameras"].keys()))
+    robot_name = robot_config.name
+    if robot_name not in demo[0]["robots"]:
+        raise ValueError(
+            f"save_demo: robot {robot_name!r} (robot_config.name) is not in the demo, which has "
+            f"{sorted(demo[0]['robots'])}"
+        )
+    if not demo[0]["cameras"]:
+        raise ValueError("save_demo: the legacy demo format needs a camera (rgb.mp4 / depth_uint16.mkv) and got none")
+    if camera_name is None:
+        camera_name = next(iter(demo[0]["cameras"]))
+    elif camera_name not in demo[0]["cameras"]:
+        raise ValueError(
+            f"save_demo: camera {camera_name!r} is not in the demo, which has {sorted(demo[0]['cameras'])}"
+        )
+    left_out = [n for n in demo[0]["robots"] if n != robot_name] + [n for n in demo[0]["cameras"] if n != camera_name]
+    if left_out:
+        warn_once(
+            ("save_demo.left_out", robot_name, camera_name, frozenset(left_out)),
+            f"save_demo writes one robot ({robot_name!r}) and one camera ({camera_name!r}); {sorted(left_out)} are "
+            "not written (the legacy format has no room for them; pass camera_name= to pick the camera, record "
+            "v2/v3 episodes for the rest). Warned once per process.",
+        )
+    # ``joint_qpos_target[t]`` is the target frame t+1 was driven to (the last frame's own), so the target of
+    # frame 0 is never read: a post-reset first frame without one (Genesis, Isaac Gym before the first action)
+    # is fine, and the column is written when every frame it reads has a target, empty when none has
+    targets = [frame["robots"][robot_name].get("dof_pos_target") for frame in demo]
+    read_targets = targets[1:] + targets[-1:]
+    missing = [t for t, target in enumerate(read_targets) if target is None]
+    if missing and len(missing) != len(read_targets):
+        raise ValueError(
+            f"save_demo: robot {robot_name!r} reports no dof_pos_target on frames {missing[:10]} but does on "
+            "others; a partial joint_qpos_target column is not written"
+        )
+    has_target = not missing
 
     rgb_frames = []
     depth_frames = []
@@ -94,7 +132,7 @@ def save_demo(save_dir: str, demo: list[DictEnvState], robot_config, task_desc="
 
         metadata["joint_qpos"].append([robot_state["dof_pos"][k] for k in sorted(robot_state["dof_pos"].keys())])
 
-        if next(iter(demo[0]["robots"].values())).get("dof_pos_target", None) is not None:
+        if has_target:
             if t < len(demo) - 1:
                 next_robot_state = demo[t + 1]["robots"][robot_name]
                 target_dof_pos = [

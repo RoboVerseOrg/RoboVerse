@@ -183,3 +183,86 @@ def test_state_nested_to_v2_flattens_one_namespace_keeps_the_v2_keys_and_refuses
     assert state_nested_to_v2(nested) == {"cube": {"pos": [1.0]}, "arm": {"pos": [2.0], "dof_pos": {"j": 0.1}}}
     with pytest.raises(ValueError, match=r"both: \['arm'\]"):
         state_nested_to_v2({"objects": {"arm": {}}, "robots": {"arm": {}}})
+
+
+def _legacy_demo(steps: int = 3) -> list[dict]:
+    """Two robots and two cameras, shaped like ``state_tensor_to_nested`` output; robot ``r`` reports targets."""
+    import torch
+
+    demo = []
+    for t in range(steps):
+        q = t * 0.01
+        r = {
+            "dof_pos": {"j0": q, "j1": q + 0.1, "f1": 0.04},
+            "dof_pos_target": {"j0": q + 0.005, "j1": q + 0.105, "f1": 0.04},
+            "pos": torch.zeros(3),
+            "rot": torch.tensor([1.0, 0.0, 0.0, 0.0]),
+            "vel": torch.zeros(3),
+            "ang_vel": torch.zeros(3),
+            "body": {"ee": {"pos": torch.zeros(3), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])}},
+        }
+        other = {"dof_pos": {"j0": 9.0, "j1": 9.0, "f1": 9.0}}  # listed first, no targets
+        cam = {"rgb": torch.full((8, 8, 3), t * 10, dtype=torch.uint8)}
+        cam2 = {"rgb": torch.full((8, 8, 3), 200, dtype=torch.uint8)}  # distinct pixels: the choice is visible
+        demo.append({"robots": {"other": other, "r": r}, "cameras": {"cam": cam, "cam2": cam2}})
+    return demo
+
+
+def _robot_cfg(name="r"):
+    return SimpleNamespace(
+        name=name, ee_body_name="ee", ee_joint_names=["f1"], gripper_open_q=[0.04], gripper_close_q=[0.0]
+    )
+
+
+def test_save_demo_writes_the_configured_robot_and_names_what_it_leaves_out(tmp_path):
+    """The legacy format holds one robot: the configured one (the ``ee_state`` column already followed it), in
+    every column including the targets, never whichever robot the dict lists first; the robots and cameras
+    left out are named once per process; a missing robot or camera refuses."""
+    import json
+
+    import imageio.v2 as iio
+    from loguru import logger
+
+    from metasim.utils.log import reset_warn_once
+    from metasim.utils.save_util import save_demo
+
+    reset_warn_once()
+    warnings: list[str] = []
+    sink = logger.add(lambda m: warnings.append(str(m)), level="WARNING")
+    try:
+        save_demo(str(tmp_path / "d"), _legacy_demo(), _robot_cfg(), "t")
+        save_demo(str(tmp_path / "d2"), _legacy_demo(), _robot_cfg(), "t")
+        save_demo(str(tmp_path / "h"), _legacy_demo(2), _robot_cfg(), "t", camera_name="cam2")  # an explicit choice
+    finally:
+        logger.remove(sink)
+    assert any("['cam', 'other']" in w for w in warnings), "the explicit choice leaves the first camera out"
+    frame = iio.mimread(str(tmp_path / "h" / "rgb.mp4"))[0]
+    assert abs(float(frame.mean()) - 200.0) < 8.0, "rgb.mp4 holds cam2's pixels (lossy video, hence the slack)"
+    meta = json.loads((tmp_path / "d" / "metadata.json").read_text())
+    assert meta["joint_qpos"][0] == pytest.approx([0.04, 0.0, 0.1]), "robot 'r' (the config), not 'other' (first)"
+    assert meta["joint_qpos_target"][0] == pytest.approx([0.04, 0.015, 0.115]), "the next frame's target, of 'r'"
+    left_out = [w for w in warnings if "['cam2', 'other']" in w]
+    assert len(left_out) == 1, "named once per process, not once per demo"
+
+    with pytest.raises(ValueError, match=r"'absent' .* is not in the demo"):
+        save_demo(str(tmp_path / "e"), _legacy_demo(2), _robot_cfg("absent"), "t")
+    with pytest.raises(ValueError, match=r"camera 'nope' is not in the demo"):
+        save_demo(str(tmp_path / "f"), _legacy_demo(2), _robot_cfg(), "t", camera_name="nope")
+    demo = _legacy_demo(2)
+    for step in demo:
+        step["cameras"] = {}
+    with pytest.raises(ValueError, match="needs a camera"):
+        save_demo(str(tmp_path / "g"), demo, _robot_cfg(), "t")
+    # the target column is the next frame's target, so a post-reset first frame without one is fine
+    demo = _legacy_demo(3)
+    demo[0]["robots"]["r"]["dof_pos_target"] = None
+    save_demo(str(tmp_path / "i"), demo, _robot_cfg(), "t")
+    meta = json.loads((tmp_path / "i" / "metadata.json").read_text())
+    assert meta["joint_qpos_target"][0] == pytest.approx([0.04, 0.015, 0.115])
+    demo[1]["robots"]["r"]["dof_pos_target"] = None  # frame 1's target is read for frame 0: a partial column
+    with pytest.raises(ValueError, match=r"no dof_pos_target on frames \[0\]"):
+        save_demo(str(tmp_path / "j"), demo, _robot_cfg(), "t")
+    for frame in demo:
+        frame["robots"]["r"]["dof_pos_target"] = None
+    save_demo(str(tmp_path / "k"), demo, _robot_cfg(), "t")  # no targets at all: an empty column
+    assert json.loads((tmp_path / "k" / "metadata.json").read_text())["joint_qpos_target"] == [None] * 3
