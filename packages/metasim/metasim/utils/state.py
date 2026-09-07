@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from itertools import chain
 
 import numpy as np
@@ -92,31 +93,17 @@ def join_tensor_states(tensor_states: list[TensorState]) -> TensorState:
     for key in all_camera_keys:
         camera_states = [state.cameras[key] for state in tensor_states if key in state.cameras]
         if camera_states:
-            rst.cameras[key] = CameraState(
-                rgb=torch.cat([cam.rgb for cam in camera_states], dim=0) if camera_states[0].rgb is not None else None,
-                depth=torch.cat([cam.depth for cam in camera_states], dim=0)
-                if camera_states[0].depth is not None
-                else None,
-                pos=torch.cat([cam.pos for cam in camera_states], dim=0) if camera_states[0].pos is not None else None,
-                quat_world=torch.cat([cam.quat_world for cam in camera_states], dim=0)
-                if camera_states[0].quat_world is not None
-                else None,
-                intrinsics=torch.cat([cam.intrinsics for cam in camera_states], dim=0)
-                if camera_states[0].intrinsics is not None
-                else None,
-                # Segmentation was silently dropped here, so a backend that
-                # populates it (e.g. isaacsim) lost it the moment the state
-                # passed through a parallel join. The id2label maps are per-env
-                # identical (same label space across envs), so take the first.
-                instance_id_seg=torch.cat([cam.instance_id_seg for cam in camera_states], dim=0)
-                if camera_states[0].instance_id_seg is not None
-                else None,
-                instance_id_seg_id2label=camera_states[0].instance_id_seg_id2label,
-                instance_seg=torch.cat([cam.instance_seg for cam in camera_states], dim=0)
-                if camera_states[0].instance_seg is not None
-                else None,
-                instance_seg_id2label=camera_states[0].instance_seg_id2label,
-            )
+            # every per-env field is concatenated (segmentation used to be dropped here, so a backend that
+            # populates it lost it in a parallel join); the id2label maps are the same label space in every
+            # env, so the first one stands
+            first = camera_states[0]
+            fields = {
+                key: torch.cat([getattr(cam, key) for cam in camera_states], dim=0)
+                for key in _CAMERA_TENSOR_FIELDS
+                if getattr(first, key) is not None
+            }
+            fields.update({key: getattr(first, key) for key in _CAMERA_LABEL_FIELDS})
+            rst.cameras[key] = CameraState(**{"rgb": None, "depth": None, **fields})
 
     # Join sensors (assuming similar structure to objects)
     # for key in all_sensor_keys:
@@ -160,6 +147,12 @@ def _dof_array_to_dict(dof_array, joint_names: list[str]) -> dict[str, float]:
     assert isinstance(dof_array, (list, np.ndarray))
     joint_names = sorted(joint_names)
     return {jn: dof_array[i] for i, jn in enumerate(joint_names)}
+
+
+#: ``CameraState`` fields a nested camera dict carries under the same names: per-env tensors (images, pose,
+#: intrinsics) are sliced by env, the ``*_id2label`` maps are shared by every env and copied whole.
+_CAMERA_LABEL_FIELDS = tuple(f.name for f in dataclasses.fields(CameraState) if f.name.endswith("_id2label"))
+_CAMERA_TENSOR_FIELDS = tuple(f.name for f in dataclasses.fields(CameraState) if f.name not in _CAMERA_LABEL_FIELDS)
 
 
 def _warn_action_input_drops_non_position(handler: BaseSimHandler, actions: list) -> None:
@@ -402,10 +395,14 @@ def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -
         camera_states = {}
         for camera_name, camera_state in tensor_state.cameras.items():
             cam_dict = {}
-            if camera_state.rgb is not None:
-                cam_dict["rgb"] = camera_state.rgb[env_id].cpu()
-            if camera_state.depth is not None:
-                cam_dict["depth"] = camera_state.depth[env_id].cpu()
+            for key in _CAMERA_TENSOR_FIELDS:
+                value = getattr(camera_state, key)
+                if value is not None:
+                    cam_dict[key] = value[env_id].cpu()
+            for key in _CAMERA_LABEL_FIELDS:
+                value = getattr(camera_state, key)
+                if value is not None:
+                    cam_dict[key] = dict(value)
             camera_states[camera_name] = cam_dict
 
         extra_states = {}
@@ -558,21 +555,18 @@ def list_state_to_tensor(
 
     # -------- cameras ---------------------------------------------
     for cam in cam_names:
-        # The write side (state_tensor_to_nested) only emits "rgb"/"depth" when
-        # the corresponding tensor is non-None, so a depth-only or rgb-only
-        # camera dict lacks the other key. Index each only when present and pass
-        # None otherwise (CameraState accepts None); the both-present path is
-        # unchanged.
         cam_dicts = [es["cameras"][cam] for es in env_states if "cameras" in es and cam in es["cameras"]]
-        rgb = (
-            torch.stack([cd["rgb"] for cd in cam_dicts], dim=0).to(dev) if cam_dicts and "rgb" in cam_dicts[0] else None
-        )
-        depth = (
-            torch.stack([cd["depth"] for cd in cam_dicts], dim=0).to(dev)
-            if cam_dicts and "depth" in cam_dicts[0]
-            else None
-        )
-        cameras[cam] = CameraState(rgb=rgb, depth=depth)
+        # the first env decides which fields are present; an env missing one of them raises (KeyError) rather
+        # than the whole batch silently losing the field
+        fields = {
+            key: torch.stack([cd[key] for cd in cam_dicts], dim=0).to(dev)
+            for key in _CAMERA_TENSOR_FIELDS
+            if cam_dicts and key in cam_dicts[0]
+        }
+        fields.update({
+            key: dict(cam_dicts[0][key]) for key in _CAMERA_LABEL_FIELDS if cam_dicts and key in cam_dicts[0]
+        })
+        cameras[cam] = CameraState(**{"rgb": None, "depth": None, **fields})
 
     # -------- extras ----------------------------------------------
     for extra_key in extra_names:

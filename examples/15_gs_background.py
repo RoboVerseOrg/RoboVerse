@@ -7,6 +7,8 @@ try:
 except ImportError:
     pass
 
+import dataclasses
+
 import numpy as np
 import rootutils
 import torch
@@ -28,7 +30,6 @@ from metasim.scenario.lights import DistantLightCfg, DomeLightCfg, SphereLightCf
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import GSSceneCfg, ScenarioCfg
-from metasim.types import CameraState
 from metasim.utils import configclass
 from metasim.utils.obs_utils import ObsSaver
 from metasim.utils.setup_util import get_sim_handler_class
@@ -429,7 +430,7 @@ if __name__ == "__main__":
             cam_state = obs.cameras[current_cam_name]
             if cam_state.rgb is not None and cam_state.rgb.dim() == 5:
                 # Shape: (num_envs, 1, H, W, C) -> squeeze to (num_envs, H, W, C)
-                cam_state = CameraState(rgb=cam_state.rgb.squeeze(1), depth=cam_state.depth)
+                cam_state = dataclasses.replace(cam_state, rgb=cam_state.rgb.squeeze(1))  # keeps the pose fields
 
             # Replace cameras dict with only the current camera to create a rotating effect
             obs.cameras = {"orbit_camera": cam_state}
@@ -464,7 +465,7 @@ if __name__ == "__main__":
                         combined_img = combined_img.unsqueeze(0)
 
                     # Create new camera state
-                    new_cam_state = CameraState(rgb=combined_img, depth=cam_state.depth)
+                    new_cam_state = dataclasses.replace(cam_state, rgb=combined_img)
                     obs.cameras = {"orbit_camera": new_cam_state}
 
         obs_saver.add(obs)

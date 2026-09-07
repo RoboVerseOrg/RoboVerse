@@ -116,6 +116,22 @@ Metasim `TaskWrappers` by default encourages the user to write the `observation(
 
 One disadvantage of `TensorState` is that it is diffucult for human users to undestand the mapping between tensor indices and actual states. So we also provide a more user-friendly interface.
 
+### Camera pose
+
+`CameraState.pos`, `quat_world` and `intrinsics` say where a camera was and how it projects when the frame
+was read. `quat_world` follows the world convention (rotate +X by it for the viewing direction, +Z is up);
+`CameraState.quat_opengl` gives the OpenGL form. MuJoCo and Isaac Sim fill all three (MuJoCo from the
+physics camera, so a camera mounted on a link reports where the link is); Blender fills `pos` and
+`intrinsics`, Newton `intrinsics`; the other backends leave them `None`. `state_tensor_to_nested` carries
+every field under its own name and `list_state_to_tensor` reads them back, the first env deciding which
+fields are present.
+
+`metasim.utils.save_util.save_demo` writes them per frame into `metadata.json`: `cam_pos`, `cam_intr` (3x3),
+`cam_extr` (the 4x4 **world-to-camera** matrix in the OpenCV convention, x right, y down, z forward, the
+matrix `camera_util.get_cam_params` builds and `obs_utils.get_pcd_from_rgbd` consumes) and `cam_look_at` (a
+point one metre along the optical axis; only `cam_extr` carries the roll of a mounted camera). A key whose
+field the backend did not report is an empty list.
+
 ## Dict State
 
 `DictState` is more user-friendly compared to `TensorState`, but scrifices efficiency.

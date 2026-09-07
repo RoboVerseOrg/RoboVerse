@@ -14,10 +14,44 @@ from loguru import logger as log
 from metasim.types import DictEnvState
 from metasim.utils.io_util import write_16bit_depth_video
 from metasim.utils.kinematics import get_ee_state_from_list
+from metasim.utils.math import convert_camera_frame_orientation_convention, matrix_from_quat, quat_apply
 
 
 def _normalize_depth(depth: np.ndarray) -> np.ndarray:
     return (depth - depth.min()) / (depth.max() - depth.min())
+
+
+def _camera_metadata(camera_state: dict) -> dict[str, list]:
+    """The ``cam_*`` metadata of one frame from a nested camera dict (``state_tensor_to_nested``).
+
+    ``cam_pos`` is the camera position, ``cam_intr`` the 3x3 intrinsics, ``cam_extr`` the 4x4 world-to-camera
+    transform in the OpenCV convention (x right, y down, z forward), the matrix ``camera_util.get_cam_params``
+    builds and ``obs_utils.get_pcd_from_rgbd`` consumes, and ``cam_look_at`` a point on the optical axis one
+    metre ahead of the camera. Only ``cam_extr`` carries the roll of a mounted camera: rebuilding the extrinsic
+    from ``cam_pos`` / ``cam_look_at`` with ``get_cam_params`` assumes world +Z is up. Each key is written from the field it needs (``cam_pos`` from ``pos``, ``cam_intr`` from
+    ``intrinsics``, the other two from ``pos`` and ``quat_world``) and is an empty list when the backend leaves
+    that field None, as every entry was before the pose travelled with the state.
+    """
+    pos = camera_state.get("pos")
+    quat = camera_state.get("quat_world")
+    intrinsics = camera_state.get("intrinsics")
+    out = {
+        "cam_pos": [] if pos is None else torch.as_tensor(pos).tolist(),
+        "cam_intr": [] if intrinsics is None else torch.as_tensor(intrinsics).tolist(),
+        "cam_look_at": [],
+        "cam_extr": [],
+    }
+    if pos is not None and quat is not None:
+        quat = torch.as_tensor(quat, dtype=torch.float32).unsqueeze(0)
+        pos = torch.as_tensor(pos, dtype=torch.float32)
+        forward = quat_apply(quat, torch.tensor([[1.0, 0.0, 0.0]]))[0]  # +X is forward in the world convention
+        c2w_cv = matrix_from_quat(convert_camera_frame_orientation_convention(quat, origin="world", target="ros"))[0]
+        w2c = torch.eye(4)
+        w2c[:3, :3] = c2w_cv.T
+        w2c[:3, 3] = -c2w_cv.T @ pos
+        out["cam_extr"] = w2c.tolist()
+        out["cam_look_at"] = (pos + forward).tolist()
+    return out
 
 
 def save_demo(save_dir: str, demo: list[DictEnvState], robot_config, task_desc=""):
@@ -55,12 +89,8 @@ def save_demo(save_dir: str, demo: list[DictEnvState], robot_config, task_desc="
             metadata["depth_min"].append(float(depth_np.min()))
             metadata["depth_max"].append(float(depth_np.max()))
 
-        metadata["cam_pos"].append(camera_state.get("cam_pos", []).tolist() if "cam_pos" in camera_state else [])
-        metadata["cam_look_at"].append(
-            camera_state.get("cam_look_at", []).tolist() if "cam_look_at" in camera_state else []
-        )
-        metadata["cam_intr"].append(camera_state.get("cam_intr", []).tolist() if "cam_intr" in camera_state else [])
-        metadata["cam_extr"].append(camera_state.get("cam_extr", []).tolist() if "cam_extr" in camera_state else [])
+        for key, value in _camera_metadata(camera_state).items():
+            metadata[key].append(value)
 
         metadata["joint_qpos"].append([robot_state["dof_pos"][k] for k in sorted(robot_state["dof_pos"].keys())])
 

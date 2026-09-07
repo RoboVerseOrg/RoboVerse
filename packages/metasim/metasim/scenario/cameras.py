@@ -31,7 +31,10 @@ class BaseCameraCfg:
     mount_pos: tuple[float, float, float] | None = None
     """Position of the camera on the mount. Defaults to None."""
     mount_quat: tuple[float, float, float, float] | None = None
-    """Quaternion of the camera on the mount. Defaults to None."""
+    """Quaternion ``(w, x, y, z)`` of the camera on the mount, in the backend's native camera frame: an MJCF
+    camera (MuJoCo, SuperDex) looks down its local -Z with +Y up, Isaac Sim's mounted camera looks along +X
+    with +Z up, so the same value points a wrist camera differently per backend (``CameraState.quat_world``
+    reports where it ended up). Defaults to None."""
     intrinsic: list[list[float]] | None = None
     """Explicit 3x3 pinhole intrinsic [[fx,0,cx],[0,fy,cy],[0,0,1]]. When set, backends that
     support it (sapien2) apply the exact focal lengths / principal point instead of deriving them
