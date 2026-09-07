@@ -110,7 +110,6 @@ class Args:
 
 args = tyro.cli(Args)
 
-import multiprocessing as mp
 import os
 
 try:
@@ -170,16 +169,6 @@ def get_run_out(all_actions, env, demo_idxs: list[int]) -> list[bool]:
     return run_out
 
 
-def save_demo_mp(save_req_queue: mp.Queue, robot_cfg: RobotCfg, task_desc: str):
-    from metasim.utils.save_util import save_demo
-
-    while (save_request := save_req_queue.get()) is not None:
-        demo = save_request["demo"]
-        save_dir = save_request["save_dir"]
-        log.info(f"Received save request, saving to {save_dir}")
-        save_demo(save_dir, demo, robot_cfg=robot_cfg, task_desc=task_desc)
-
-
 def force_reset_to_state(env, state, env_id, collector=None, demo_idxs=None, finished=None, terminal=None):
     """Force reset one env to ``state`` and settle it.
 
@@ -232,10 +221,6 @@ class DemoCollector:
         )
         self._warned_no_targets = False
         self._slice_cache: tuple | None = None  # (batched state, its physics-only CPU copy): moved once per step
-        self.save_request_queue = mp.Queue()
-        self.save_proc = mp.Process(target=save_demo_mp, args=(self.save_request_queue, robot_cfg, task_desc))
-        self.save_proc.start()
-
         TaskName = args.task
         if args.custom_save_dir:
             self.base_save_dir = args.custom_save_dir
@@ -347,9 +332,7 @@ class DemoCollector:
         self.episode_actions.pop(demo_idx, None)
 
     def final(self):
-        self.save_request_queue.put(None)  # signal to save_demo_mp to exit
-        self.save_proc.join()
-        assert self.cache == {}
+        assert self.cache == {}, f"demos still cached at the end of the run: {sorted(self.cache)}"
 
 
 def should_skip(log_dir: str, demo_idx: int):
