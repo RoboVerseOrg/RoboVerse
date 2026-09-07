@@ -85,10 +85,12 @@ You will get the following image:
 
 **Initial State Setup**: Use `handler.set_states()` to position objects:
 ```python
-init_states = [{
-    "objects": {
-        "cube": {"pos": torch.tensor([0.3, -0.2, 0.05]), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])},
-        "sphere": {"pos": torch.tensor([0.4, -0.6, 0.05]), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])},
+init_states = [
+    {
+        "objects": {
+            "cube": {"pos": torch.tensor([0.3, -0.2, 0.05]), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])},
+            "sphere": {"pos": torch.tensor([0.4, -0.6, 0.05]), "rot": torch.tensor([1.0, 0.0, 0.0, 0.0])},
+        }
     }
-}]
+]
 ```

@@ -75,7 +75,7 @@ snapshot_download(
     allow_patterns="demo_assets/*",
 )
 
-target_asset_type = AssetType.MJCF # or AssetType.USD
+target_asset_type = AssetType.MJCF  # or AssetType.USD
 
 urdf_paths = [
     f"{data_dir}/demo_assets/remote_control/result/remote_control.urdf",

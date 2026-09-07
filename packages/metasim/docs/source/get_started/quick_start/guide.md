@@ -49,12 +49,7 @@ Here's how to create a basic scenario:
 from metasim.scenario.scenario import ScenarioCfg
 
 # Simple scenario with just a robot
-scenario = ScenarioCfg(
-    robots=["franka"],
-    simulator="mujoco",
-    num_envs=1
-)
-
+scenario = ScenarioCfg(robots=["franka"], simulator="mujoco", num_envs=1)
 ```
 
 Fields include: `robots` (robot configurations), `objects` (scene objects), `simulator` (physics engine), `num_envs` (number of parallel environments), `headless` (run without GUI), `cameras` (camera sensors), `lights` (lighting setup), and `sim_params` (physics parameters like timestep).
@@ -89,23 +84,19 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.utils.setup_util import get_handler
 
 # Define your scenario
-scenario = ScenarioCfg(
-    robots=["franka"],
-    simulator="mujoco",
-    num_envs=1
-)
+scenario = ScenarioCfg(robots=["franka"], simulator="mujoco", num_envs=1)
 
 # Create handler directly - one step
 handler = get_handler(scenario)
 
 # Control loop
 states = ...
-handler.set_state(states)     # Set state (for resets)
+handler.set_state(states)  # Set state (for resets)
 
 actions = ...  # Your control actions
-handler.set_dof_targets(actions)     # Apply actions to robot
+handler.set_dof_targets(actions)  # Apply actions to robot
 
-handler.simulate()                  # Step physics
+handler.simulate()  # Step physics
 obs = handler.get_state(mode="tensor")  # Get updated state
 ```
 
@@ -127,18 +118,12 @@ task_cls = get_task_class(args.task)  # e.g., "example.reaching"
 
 # Get default scenario and update with specific parameters
 scenario = task_cls.scenario.update(
-    robots=[args.robot], 
-    simulator=args.sim, 
-    num_envs=args.num_envs, 
-    headless=args.headless, 
-    cameras=[]
+    robots=[args.robot], simulator=args.sim, num_envs=args.num_envs, headless=args.headless, cameras=[]
 )
 
 # Create task environment
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 env = task_cls(scenario=scenario, device=device)
-
-
 ```
 
 ```python

@@ -60,8 +60,8 @@ registry = ObjectRegistry.get_instance()
 
 # Query objects
 all_objects = registry.list_objects()
-static_only = registry.list_objects(lifecycle='static')
-dynamic_only = registry.list_objects(lifecycle='dynamic')
+static_only = registry.list_objects(lifecycle="static")
+dynamic_only = registry.list_objects(lifecycle="dynamic")
 
 # Get object metadata
 meta = registry.get_object_metadata("table")
@@ -123,7 +123,7 @@ ManualGeometryCfg(
     geometry_type="cube",
     size=(10.0, 10.0, 0.1),
     position=(0.0, 0.0, 0.005),
-    default_material="roboverse_data/materials/arnold/Carpet/Carpet_Beige.mdl"
+    default_material="roboverse_data/materials/arnold/Carpet/Carpet_Beige.mdl",
 )
 ```
 
@@ -135,7 +135,7 @@ USDAssetCfg(
     name="table",
     usd_path="EmbodiedGenData/dataset/basic_furniture/table/uuid.urdf",
     position=(0.0, 0.0, 0.0),
-    scale=(1.2, 1.5, 1.0)
+    scale=(1.2, 1.5, 1.0),
 )
 ```
 
@@ -150,7 +150,7 @@ USDAssetPoolCfg(
     name="table_pool",
     usd_paths=[...],  # Multiple USD files
     selection_strategy="random",
-    per_path_overrides={...}  # Per-asset calibrations
+    per_path_overrides={...},  # Per-asset calibrations
 )
 ```
 
@@ -169,8 +169,8 @@ MaterialRandomCfg(
     obj_name="box_base",
     mdl=MDLMaterialCfg(
         mdl_paths=[...],  # Paths to MDL files
-        randomize_material_variant=True  # Select from variants within files
-    )
+        randomize_material_variant=True,  # Select from variants within files
+    ),
 )
 ```
 
@@ -183,11 +183,7 @@ Material application includes:
 **Physical Materials** (optional):
 
 ```python
-PhysicalMaterialCfg(
-    friction_range=(0.3, 0.7),
-    restitution_range=(0.1, 0.3),
-    enabled=True
-)
+PhysicalMaterialCfg(friction_range=(0.3, 0.7), restitution_range=(0.1, 0.3), enabled=True)
 ```
 
 Modifies friction and restitution on physics-enabled objects. Note that dynamic objects (created by SceneRandomizer) are visual-only and skip physical material randomization.
@@ -209,16 +205,12 @@ Randomizes physics properties of static objects:
 ```python
 ObjectRandomCfg(
     obj_name="box_base",
-    physics=PhysicsRandomCfg(
-        mass_range=(10.0, 30.0),
-        friction_range=(0.3, 0.8),
-        enabled=True
-    ),
+    physics=PhysicsRandomCfg(mass_range=(10.0, 30.0), friction_range=(0.3, 0.8), enabled=True),
     pose=PoseRandomCfg(
         position_range=[(-0.1, 0.1), (-0.1, 0.1), (0, 0)],
         rotation_range=(0, 30),  # Degrees
-        enabled=False  # Disabled in trajectory replay
-    )
+        enabled=False,  # Disabled in trajectory replay
+    ),
 )
 ```
 
@@ -231,25 +223,18 @@ Controls lighting parameters with support for multiple light types:
 ```python
 LightRandomCfg(
     light_name="ceiling_main",
-    intensity=LightIntensityRandomCfg(
-        intensity_range=(16000, 30000),
-        enabled=True
-    ),
+    intensity=LightIntensityRandomCfg(intensity_range=(16000, 30000), enabled=True),
     color=LightColorRandomCfg(
         temperature_range=(3000, 6000),  # Kelvin
         use_temperature=True,
-        enabled=True
+        enabled=True,
     ),
     position=LightPositionRandomCfg(
-        position_range=((-1, 1), (-1, 1), (-0.2, 0.2)),
-        relative_to_origin=True,
-        enabled=True
+        position_range=((-1, 1), (-1, 1), (-0.2, 0.2)), relative_to_origin=True, enabled=True
     ),
     orientation=LightOrientationRandomCfg(
-        angle_range=((-20, 20), (-20, 20), (-180, 180)),
-        relative_to_origin=True,
-        enabled=True
-    )
+        angle_range=((-20, 20), (-20, 20), (-180, 180)), relative_to_origin=True, enabled=True
+    ),
 )
 ```
 
@@ -265,24 +250,13 @@ Perturbs camera parameters to simulate sensor variations:
 CameraRandomCfg(
     camera_name="main_camera",
     position=CameraPositionRandomCfg(
-        delta_range=((-0.1, 0.1), (-0.1, 0.1), (-0.05, 0.05)),
-        use_delta=True,
-        enabled=True
+        delta_range=((-0.1, 0.1), (-0.1, 0.1), (-0.05, 0.05)), use_delta=True, enabled=True
     ),
-    orientation=CameraOrientationRandomCfg(
-        rotation_delta=((-5, 5), (-5, 5), (-5, 5)),
-        enabled=True
-    ),
+    orientation=CameraOrientationRandomCfg(rotation_delta=((-5, 5), (-5, 5), (-5, 5)), enabled=True),
     look_at=CameraLookAtRandomCfg(
-        look_at_delta=((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)),
-        use_delta=True,
-        enabled=True
+        look_at_delta=((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05)), use_delta=True, enabled=True
     ),
-    intrinsics=CameraIntrinsicsRandomCfg(
-        fov_range=(45, 60),
-        use_fov=True,
-        enabled=True
-    )
+    intrinsics=CameraIntrinsicsRandomCfg(fov_range=(45, 60), use_fov=True, enabled=True),
 )
 ```
 
@@ -349,10 +323,10 @@ This is controlled by `randomize_material_variant`:
 MDLMaterialCfg(mdl_paths=[...], randomize_material_variant=True)
 
 # Explicit variant specification
-mdl_paths=["path/to/Wood.mdl::Oak"]
+mdl_paths = ["path/to/Wood.mdl::Oak"]
 
 # Always use first variant in file
-randomize_material_variant=False
+randomize_material_variant = False
 ```
 
 Variant selection is deterministic given a seed. The system parses MDL files to extract all available material names and uses the randomizer's RNG to select one.
@@ -363,10 +337,7 @@ Variant selection is deterministic given a seed. The system parses MDL files to 
 
 ```python
 # 1. Create randomizer with configuration
-scene_cfg = ScenePresets.tabletop_workspace(
-    room_size=10.0,
-    wall_height=5.0
-)
+scene_cfg = ScenePresets.tabletop_workspace(room_size=10.0, wall_height=5.0)
 scene_rand = SceneRandomizer(scene_cfg, seed=42)
 
 # 2. Bind to simulation handler
@@ -412,8 +383,8 @@ randomizers = {
     "scene": SceneRandomizer(scene_cfg, seed=42),
     "material": MaterialRandomizer(mat_cfg, seed=43),
     "object": ObjectRandomizer(obj_cfg, seed=44),
-    "light": [LightRandomizer(light_cfg, seed=45+i) for i in range(5)],
-    "camera": CameraRandomizer(cam_cfg, seed=50)
+    "light": [LightRandomizer(light_cfg, seed=45 + i) for i in range(5)],
+    "camera": CameraRandomizer(cam_cfg, seed=50),
 }
 
 # Bind all
@@ -423,6 +394,7 @@ for rand_list in randomizers.values():
             rand.bind_handler(handler)
     else:
         rand.bind_handler(handler)
+
 
 # Apply all
 def apply_all(level):
@@ -513,7 +485,7 @@ ManualGeometryCfg(
     position=(0.0, 0.0, 0.65),
     rotation=(1.0, 0.0, 0.0, 0.0),  # Quaternion (w, x, y, z)
     add_collision=True,  # Add CollisionAPI for spatial queries
-    default_material="path/to/material.mdl"  # Optional default appearance
+    default_material="path/to/material.mdl",  # Optional default appearance
 )
 ```
 
@@ -530,7 +502,7 @@ USDAssetCfg(
     position=(0.0, 0.0, 0.37),
     rotation=(1.0, 0.0, 0.0, 0.0),
     scale=(1.2, 1.5, 1.0),
-    auto_download=True
+    auto_download=True,
 )
 ```
 
@@ -547,16 +519,12 @@ Asset pools enable geometric diversity:
 ```python
 USDAssetPoolCfg(
     name="table",
-    usd_paths=[
-        "path/to/table1.urdf",
-        "path/to/table2.urdf",
-        "path/to/table3.urdf"
-    ],
+    usd_paths=["path/to/table1.urdf", "path/to/table2.urdf", "path/to/table3.urdf"],
     per_path_overrides={
         "table1.urdf": {"position": (0, 0, 0.37), "scale": (1.2, 1.5, 1.0)},
-        "table2.urdf": {"position": (0.3, 0, 0.37), "scale": (1.2, 1.4, 1.0)}
+        "table2.urdf": {"position": (0.3, 0, 0.37), "scale": (1.2, 1.4, 1.0)},
     },
-    selection_strategy="random"  # or "sequential"
+    selection_strategy="random",  # or "sequential"
 )
 ```
 
@@ -582,10 +550,7 @@ To avoid consecutive repetition, the random strategy filters out the currently l
 from metasim.randomization import MaterialRandomizer, MaterialPresets
 
 # Using preset
-mat_rand = MaterialRandomizer(
-    MaterialPresets.mdl_family_object("box_base", family=("wood", "metal")),
-    seed=123
-)
+mat_rand = MaterialRandomizer(MaterialPresets.mdl_family_object("box_base", family=("wood", "metal")), seed=123)
 
 # Or manual configuration
 from metasim.randomization import MaterialRandomCfg, MDLMaterialCfg
@@ -593,12 +558,9 @@ from metasim.randomization import MaterialRandomCfg, MDLMaterialCfg
 mat_rand = MaterialRandomizer(
     MaterialRandomCfg(
         obj_name="box_base",
-        mdl=MDLMaterialCfg(
-            mdl_paths=["path/to/Wood.mdl", "path/to/Metal.mdl"],
-            randomize_material_variant=True
-        )
+        mdl=MDLMaterialCfg(mdl_paths=["path/to/Wood.mdl", "path/to/Metal.mdl"], randomize_material_variant=True),
     ),
-    seed=123
+    seed=123,
 )
 
 mat_rand.bind_handler(handler)
@@ -621,10 +583,7 @@ A key feature of the refactored system is the ability to randomize materials on 
 scene_rand()  # Creates table with default Plywood material
 
 # Later: Randomize table material
-table_mat = MaterialRandomizer(
-    MaterialPresets.mdl_family_object("table", family=("wood", "metal")),
-    seed=99
-)
+table_mat = MaterialRandomizer(MaterialPresets.mdl_family_object("table", family=("wood", "metal")), seed=99)
 table_mat.bind_handler(handler)
 table_mat()  # Changes table material to random wood or metal
 ```
@@ -644,6 +603,7 @@ MaterialPresets.mdl_family_object("floor", family=("carpet", "wood", "stone"))
 
 # Specific collection
 from metasim.randomization.presets import MDLCollections
+
 paths = MDLCollections.family("metal")  # All metal materials
 ```
 
@@ -679,7 +639,7 @@ wall_seed = base_seed + 100
 for wall_name in ["wall_front", "wall_back", "wall_left", "wall_right"]:
     wall_mat = MaterialRandomizer(
         MaterialPresets.mdl_family_object(wall_name, family="masonry"),
-        seed=wall_seed  # Same seed for all
+        seed=wall_seed,  # Same seed for all
     )
     wall_mat.bind_handler(handler)
     wall_mat()
@@ -703,6 +663,7 @@ RoboVerse supports Hybrid mode, where IsaacLab manages physics and IsaacSim hand
 class SceneRandomizer(BaseRandomizerType):
     REQUIRES_HANDLER = "render"  # Needs IsaacSim for USD operations
 
+
 class ObjectRandomizer(BaseRandomizerType):
     REQUIRES_HANDLER = "physics"  # Needs IsaacLab for physics APIs
 ```
@@ -718,7 +679,7 @@ For vectorized training with different randomization per environment:
 scene_cfg = SceneRandomCfg(
     workspace_layer=WorkspaceLayerCfg(
         shared=False,  # Different table per env
-        elements=[USDAssetPoolCfg(...)]
+        elements=[USDAssetPoolCfg(...)],
     )
 )
 
@@ -759,7 +720,7 @@ class MyPresets:
                     ManualGeometryCfg(
                         name="floor",
                         size=(20.0, 20.0, 0.1),
-                        default_material="roboverse_data/materials/arnold/Concrete/Concrete_Polished.mdl"
+                        default_material="roboverse_data/materials/arnold/Concrete/Concrete_Polished.mdl",
                     ),
                     # ... walls, ceiling
                 ]
@@ -768,11 +729,12 @@ class MyPresets:
                 elements=[
                     USDAssetPoolCfg(
                         name="workbench",
-                        usd_paths=[...]  # Industrial tables
+                        usd_paths=[...],  # Industrial tables
                     )
                 ]
-            )
+            ),
         )
+
 
 # Use in task
 scene_rand = SceneRandomizer(MyPresets.industrial_workspace(), seed=42)

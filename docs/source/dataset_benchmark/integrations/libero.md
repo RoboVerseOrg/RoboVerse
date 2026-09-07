@@ -70,13 +70,13 @@ user-set value or the base `~/.libero`). No manual config editing needed.
 ## Usage
 
 ```python
-import roboverse_pack.tasks.libero          # auto-registers Libero/<suite>__<task>
-import roboverse_pack.tasks.libero_plus     # auto-registers LiberoPlus/<suite>__<task>
+import roboverse_pack.tasks.libero  # auto-registers Libero/<suite>__<task>
+import roboverse_pack.tasks.libero_plus  # auto-registers LiberoPlus/<suite>__<task>
 from roboverse_pack.tasks.libero_plus import make_liberoplus_env
 
 # build any of the 10,120 perturbation tasks by (suite, task index)
 env = make_liberoplus_env("libero_object", 7, seed=0)
-obs, reward, done, info = env.step([0.0] * 7)   # native legacy-gym 4-tuple (kept for fidelity)
+obs, reward, done, info = env.step([0.0] * 7)  # native legacy-gym 4-tuple (kept for fidelity)
 ```
 
 ## Native MetaSim tasks — run (and delete) LIBERO
@@ -93,9 +93,9 @@ other RoboVerse task and run with `libero`/`robosuite` uninstalled:
 from metasim.task.registry import get_task_class
 
 Task = get_task_class("libero_native.10__KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it")
-env = Task()                                   # loads the vendored scene; no libero
+env = Task()  # loads the vendored scene; no libero
 obs, info = env.reset()
-obs, reward, terminated, time_out, info = env.step(action)   # 7-D OSC delta + gripper
+obs, reward, terminated, time_out, info = env.step(action)  # 7-D OSC delta + gripper
 ```
 
 Each task is a first-class `BaseTaskEnv` (`NativeLiberoEnv`); a static bundle under
