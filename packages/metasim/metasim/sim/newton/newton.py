@@ -1797,7 +1797,7 @@ class NewtonHandler(BaseSimHandler):
             body_state=body_state,
             joint_pos=joint_pos,
             joint_vel=joint_vel,
-            joint_pos_target=joint_pos_target,
+            joint_pos_target=joint_pos_target if self._robot_reports_position_target(robot_name) else None,
             joint_vel_target=joint_vel_target,
             joint_effort_target=joint_effort_target,
         )

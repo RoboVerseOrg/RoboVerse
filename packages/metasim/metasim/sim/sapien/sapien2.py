@@ -549,7 +549,7 @@ class Sapien2Handler(BaseSimHandler):
                 body_state=link_state.unsqueeze(0),
                 joint_pos=torch.tensor(robot_inst.get_qpos()[joint_reindex]).unsqueeze(0),
                 joint_vel=torch.tensor(robot_inst.get_qvel()[joint_reindex]).unsqueeze(0),
-                joint_pos_target=pos_target,
+                joint_pos_target=pos_target if self._robot_reports_position_target(robot.name) else None,
                 joint_vel_target=vel_target,
                 joint_effort_target=effort_target,
             )

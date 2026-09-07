@@ -215,6 +215,13 @@ def action_input_to_tensor(
     this helper (mujoco / pyrep). Surface the drop so callers can either
     bypass this helper or accept the position-only semantics intentionally.
     """
+    return _action_input_to_tensor(handler, actions, device)
+
+
+def _action_input_to_tensor(
+    handler: BaseSimHandler, actions: CompatActionInput, device: str | torch.device = "cpu", *, warn: bool = True
+) -> torch.Tensor:
+    """``action_input_to_tensor``; ``warn=False`` for a read of an action the backend already applied in full."""
     if isinstance(actions, torch.Tensor):
         action_tensor = actions.to(device=device, dtype=torch.float32)
     elif isinstance(actions, np.ndarray):
@@ -223,7 +230,8 @@ def action_input_to_tensor(
         joint_names_by_robot = {robot.name: handler.get_joint_names(robot.name, sort=True) for robot in handler.robots}
         action_dim = sum(len(joint_names) for joint_names in joint_names_by_robot.values())
         action_tensor = torch.zeros((len(actions), action_dim), dtype=torch.float32, device=device)
-        _warn_action_input_drops_non_position(handler, actions)
+        if warn:
+            _warn_action_input_drops_non_position(handler, actions)
 
         for env_id, action in enumerate(actions):
             offset = 0

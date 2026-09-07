@@ -41,84 +41,12 @@ from metasim.scenario.cameras import PinholeCameraCfg
 from metasim.task.registry import get_task_class
 from metasim.utils.demo_util import save_traj_file
 from roboverse_learn.rl.fast_td3.fttd3_module import Actor, EmpiricalNormalization
-
-
-def extract_state_dict(env, scenario, env_idx=0):
-    """Extract state dictionary from handler states (similar to teleop_keyboard).
-
-    Args:
-        env: Environment with handler
-        scenario: Scenario configuration to get joint names
-        env_idx: Environment index to extract state from
-
-    Returns:
-        Dictionary containing positions, rotations, and joint positions for all objects and robots
-    """
-    state_dict = {}
-
-    # Get states from handler (returns TensorState object)
-    if not hasattr(env, "handler") or env.handler is None:
-        log.warning("Handler not available, returning empty state")
-        return state_dict
-
-    handler_states = env.handler.get_states(mode="tensor")
-    if handler_states is None:
-        log.warning("Handler.get_states() returned None")
-        return state_dict
-
-    # Create lookup dicts for configurations
-    obj_cfg_dict = {obj.name: obj for obj in scenario.objects}
-    robot_cfg_dict = {robot.name: robot for robot in scenario.robots}
-
-    # Extract object states
-    if hasattr(handler_states, "objects"):
-        for obj_name, obj_state in handler_states.objects.items():
-            pos = obj_state.root_state[env_idx, :3].cpu().numpy()  # [x, y, z]
-            quat = obj_state.root_state[env_idx, 3:7].cpu().numpy()  # [w, x, y, z]
-
-            state_entry = {
-                "pos": pos,
-                "rot": quat,
-            }
-
-            # Add joint positions if the object has joints
-            if obj_state.joint_pos is not None and obj_name in obj_cfg_dict:
-                obj_cfg = obj_cfg_dict[obj_name]
-                if hasattr(obj_cfg, "actuators") and obj_cfg.actuators is not None:
-                    # Joint names are sorted alphabetically (standard in handlers)
-                    joint_names = sorted(obj_cfg.actuators.keys())
-                    joint_positions = obj_state.joint_pos[env_idx].cpu().numpy()
-                    state_entry["dof_pos"] = {
-                        name: float(pos) for name, pos in zip(joint_names, joint_positions, strict=False)
-                    }
-
-            state_dict[obj_name] = state_entry
-
-    # Extract robot states
-    if hasattr(handler_states, "robots"):
-        for robot_name, robot_state in handler_states.robots.items():
-            pos = robot_state.root_state[env_idx, :3].cpu().numpy()  # [x, y, z]
-            quat = robot_state.root_state[env_idx, 3:7].cpu().numpy()  # [w, x, y, z]
-
-            state_entry = {
-                "pos": pos,
-                "rot": quat,
-            }
-
-            # Add joint positions for robot
-            if robot_name in robot_cfg_dict:
-                robot_cfg = robot_cfg_dict[robot_name]
-                if robot_cfg.actuators is not None:
-                    # Joint names are sorted alphabetically (standard in handlers)
-                    joint_names = sorted(robot_cfg.actuators.keys())
-                    joint_positions = robot_state.joint_pos[env_idx].cpu().numpy()
-                    state_entry["dof_pos"] = {
-                        name: float(pos) for name, pos in zip(joint_names, joint_positions, strict=False)
-                    }
-
-            state_dict[robot_name] = state_entry
-
-    return state_dict
+from roboverse_learn.rl.fast_td3.trajectory_record import (
+    commanded_action,
+    initial_states,
+    recorded_step,
+    restart_done_envs,
+)
 
 
 def load_checkpoint(checkpoint_path: str, device: torch.device):
@@ -137,7 +65,6 @@ def evaluate(
     obs_normalizer,
     num_episodes: int,
     device: torch.device,
-    scenario=None,
     task_name: str = "eval",
     amp_enabled: bool = False,
     amp_device_type: str = "cpu",
@@ -159,7 +86,6 @@ def evaluate(
         obs_normalizer: Observation normalizer
         num_episodes: Number of episodes to run
         device: Device to run evaluation on
-        scenario: Scenario configuration (required for trajectory saving)
         task_name: Task name for trajectory filename
         amp_enabled: Whether to use automatic mixed precision
         amp_device_type: Device type for AMP
@@ -178,6 +104,7 @@ def evaluate(
     actor.eval()
     obs_normalizer.eval()
 
+    render_each_episode = render and render_each_episode  # per-episode videos need rendering
     num_eval_envs = env.num_envs
     episode_returns = []
     episode_lengths = []
@@ -200,8 +127,7 @@ def evaluate(
     episode_step_count = {}  # Dict: env_id -> step count in current episode
 
     if save_traj:
-        if scenario is None:
-            raise ValueError("scenario must be provided when save_traj=True")
+        env.record_terminal_states = True  # keep the pre-reset state of auto-reset envs for the recorder
         for i in range(num_eval_envs):
             all_episodes[i] = []
             current_episode_actions[i] = []
@@ -212,23 +138,24 @@ def evaluate(
     episodes_per_env = torch.zeros(num_eval_envs, dtype=torch.long, device=device)  # Track episodes per env
     current_returns = torch.zeros(num_eval_envs, device=device)
     current_lengths = torch.zeros(num_eval_envs, device=device)
-    done_masks = torch.zeros(num_eval_envs, dtype=torch.bool, device=device)
     finished_envs = torch.zeros(num_eval_envs, dtype=torch.bool, device=device)  # Envs that reached num_episodes
 
     obs, info = env.reset()
 
     # Record initial states for trajectory saving
     if save_traj:
+        init_states = initial_states(env.handler)
         for i in range(num_eval_envs):
-            current_episode_init_state[i] = extract_state_dict(env, scenario, env_idx=i)
+            current_episode_init_state[i] = init_states[i]
 
     if render and not render_each_episode:
         frames.append(env.render())
     elif render_each_episode:
         current_frame = env.render()
         for i in range(num_eval_envs):
-            if not done_masks[i]:
-                episode_frames[i].append(current_frame)
+            episode_frames[i].append(current_frame)
+
+    robot_name = env.robot.name  # the recorded robot (single-robot tasks)
 
     max_steps = env.max_episode_steps * num_episodes
 
@@ -246,46 +173,24 @@ def evaluate(
 
         # Record trajectory data (with downsampling)
         if save_traj:
-            # Get states from handler for trajectory recording
-            handler_states = None
-            if hasattr(env, "handler") and env.handler is not None:
-                handler_states = env.handler.get_states(mode="tensor")
+            # every save_every_n_steps steps, and always on an env's terminal step; an env auto-reset on this
+            # step is taken from the state its episode ended in, so the terminal (action, state) pair is
+            # recorded, not the reset pose
+            due = [
+                i
+                for i in range(num_eval_envs)
+                if not finished_envs[i] and (episode_step_count[i] % save_every_n_steps == 0 or bool(dones[i]))
+            ]
+            # a step that cannot be recorded (no reported target, a task without the auto-reset contract) is a
+            # configuration error that shows on the first step: it raises rather than evaluate with nothing saved
+            records = recorded_step(env.handler, env.handler.get_states(mode="tensor"), infos, due) if due else []
+            for k, i in enumerate(due):
+                current_episode_actions[i].append(commanded_action(records[k], robot_name=robot_name))
+                if save_states and current_episode_states[i] is not None:
+                    current_episode_states[i].append(records[k].state)
 
             for i in range(num_eval_envs):
-                # Only record for envs that haven't finished all episodes
-                if not finished_envs[i] and not done_masks[i] and (episode_step_count[i] % save_every_n_steps == 0):
-                    # Get robot joint positions as actions from handler states
-                    robot_name = scenario.robots[0].name
-                    joint_names = sorted(scenario.robots[0].actuators.keys())
-
-                    if (
-                        handler_states is not None
-                        and hasattr(handler_states, "robots")
-                        and robot_name in handler_states.robots
-                    ):
-                        # Use handler states (preferred)
-                        robot_state = handler_states.robots[robot_name]
-                        joint_positions = robot_state.joint_pos[i].cpu().numpy()
-                    else:
-                        # Fallback to obs if handler not available
-                        robot_state = obs.robots[robot_name]
-                        joint_positions = robot_state.joint_pos[i].cpu().numpy()
-
-                    action_record = {
-                        "dof_pos_target": {
-                            name: float(pos) for name, pos in zip(joint_names, joint_positions, strict=False)
-                        },
-                    }
-                    current_episode_actions[i].append(action_record)
-
-                    # Record state if requested
-                    if save_states and current_episode_states[i] is not None:
-                        # Extract state for this specific env using handler
-                        current_state = extract_state_dict(env, scenario, env_idx=i)
-                        current_episode_states[i].append(current_state)
-
-                # Increment step count for active environments
-                if not finished_envs[i] and not done_masks[i]:
+                if not finished_envs[i]:
                     episode_step_count[i] += 1
 
         # Render current frame
@@ -296,100 +201,85 @@ def evaluate(
             else:
                 for i in range(num_eval_envs):
                     # Only render for envs that haven't finished all episodes
-                    if not finished_envs[i] and not done_masks[i]:
+                    if not finished_envs[i]:
                         episode_frames[i].append(current_frame)
 
         # Update episode statistics (only for envs still running)
-        active_mask = ~done_masks & ~finished_envs
+        active_mask = ~finished_envs
         current_returns = torch.where(active_mask, current_returns + rewards, current_returns)
         current_lengths = torch.where(active_mask, current_lengths + 1, current_lengths)
 
         # Check for newly completed episodes (only for envs that haven't finished all episodes)
-        newly_done = dones & ~done_masks & ~finished_envs
+        newly_done = dones & ~finished_envs
         if newly_done.any():
             import imageio.v2 as iio
 
-            for i in range(num_eval_envs):
-                if newly_done[i]:
-                    episode_returns.append(current_returns[i].item())
-                    episode_lengths.append(current_lengths[i].item())
+            done_ids = newly_done.nonzero(as_tuple=False).squeeze(-1).tolist()
+            # every done env (recorded above) starts its next episode from the state it was reset to
+            fresh = restart_done_envs(env, done_ids, infos, next_obs, init_states=save_traj)
+            for i in done_ids:
+                episode_returns.append(current_returns[i].item())
+                episode_lengths.append(current_lengths[i].item())
 
-                    # Check for success if available in info
-                    if "success" in infos:
-                        episode_successes.append(infos["success"][i].item())
+                # Check for success if available in info
+                if "success" in infos:
+                    episode_successes.append(infos["success"][i].item())
 
-                    # Save individual episode video if enabled
-                    if render_each_episode and episode_frames[i] and video_path:
-                        # Use env_id and episode number for filename
-                        base_dir = os.path.dirname(video_path)
-                        base_name = os.path.splitext(os.path.basename(video_path))[0]
-                        ext = os.path.splitext(video_path)[1] or ".mp4"
-                        ep_video_path = os.path.join(
-                            base_dir, f"{base_name}_env{i:02d}_ep{episodes_per_env[i].item():02d}{ext}"
-                        )
+                # Save individual episode video if enabled
+                if render_each_episode and episode_frames[i] and video_path:
+                    # Use env_id and episode number for filename
+                    base_dir = os.path.dirname(video_path)
+                    base_name = os.path.splitext(os.path.basename(video_path))[0]
+                    ext = os.path.splitext(video_path)[1] or ".mp4"
+                    ep_video_path = os.path.join(
+                        base_dir, f"{base_name}_env{i:02d}_ep{episodes_per_env[i].item():02d}{ext}"
+                    )
 
-                        os.makedirs(base_dir, exist_ok=True)
-                        iio.mimsave(ep_video_path, episode_frames[i], fps=30)
-                        log.info(
-                            f"Env {i} Episode {episodes_per_env[i].item()}: Saved video to {ep_video_path} (return: {current_returns[i].item():.2f})"
-                        )
+                    os.makedirs(base_dir, exist_ok=True)
+                    iio.mimsave(ep_video_path, episode_frames[i], fps=30)
+                    log.info(
+                        f"Env {i} Episode {episodes_per_env[i].item()}: Saved video to {ep_video_path} (return: {current_returns[i].item():.2f})"
+                    )
 
-                        # Clear frames for this env
-                        episode_frames[i] = []
+                    # Clear frames for this env
+                    episode_frames[i] = []
 
-                    # Save trajectory for this episode if enabled
-                    if save_traj and len(current_episode_actions[i]) > 0:
-                        episode_data = {
-                            "init_state": current_episode_init_state[i],
-                            "actions": current_episode_actions[i],
-                            "states": current_episode_states[i] if save_states else None,
-                        }
-                        all_episodes[i].append(episode_data)
-                        log.info(
-                            f"Env {i} Episode {episodes_per_env[i].item()}: Saved trajectory ({len(current_episode_actions[i])} steps, return: {current_returns[i].item():.2f})"
-                        )
+                # Save trajectory for this episode if enabled
+                if save_traj and len(current_episode_actions[i]) > 0:
+                    episode_data = {
+                        "init_state": current_episode_init_state[i],
+                        "actions": current_episode_actions[i],
+                        "states": current_episode_states[i] if save_states else None,
+                    }
+                    all_episodes[i].append(episode_data)
+                    log.info(
+                        f"Env {i} Episode {episodes_per_env[i].item()}: Saved trajectory ({len(current_episode_actions[i])} steps, return: {current_returns[i].item():.2f})"
+                    )
 
-                        # Reset trajectory tracking for this env
-                        current_episode_actions[i] = []
-                        if save_states:
-                            current_episode_states[i] = []
-                        episode_step_count[i] = 0
+                if save_traj:
+                    current_episode_actions[i] = []
+                    if save_states:
+                        current_episode_states[i] = []
+                    episode_step_count[i] = 0
+                    current_episode_init_state[i] = fresh[i]
 
-                    episodes_completed += 1
-                    episodes_per_env[i] += 1
+                episodes_completed += 1
+                episodes_per_env[i] += 1
 
-                    # Check if this env has finished all required episodes
-                    if episodes_per_env[i] >= num_episodes:
-                        finished_envs[i] = True
-                        log.info(f"Env {i}: Completed all {num_episodes} episodes")
+                # Check if this env has finished all required episodes
+                if episodes_per_env[i] >= num_episodes:
+                    finished_envs[i] = True
+                    log.info(f"Env {i}: Completed all {num_episodes} episodes")
 
-                    # Reset stats for this env
-                    current_returns[i] = 0
-                    current_lengths[i] = 0
-
-            done_masks = torch.logical_or(done_masks, dones)
+                # Reset stats for this env
+                current_returns[i] = 0
+                current_lengths[i] = 0
 
         # Stop if all envs have finished their episodes
         if finished_envs.all():
             break
 
-        # Reset done_masks for envs that are still running (haven't finished all episodes)
-        if (done_masks & ~finished_envs).any():
-            done_masks.fill_(False)
-            obs, info = env.reset()
-
-            # Record initial states for new episodes if saving trajectories
-            if save_traj:
-                for i in range(num_eval_envs):
-                    current_episode_init_state[i] = extract_state_dict(env, scenario, env_idx=i)
-
-            # Add first frame for new episodes if rendering per episode
-            if render_each_episode:
-                current_frame = env.render()
-                for i in range(num_eval_envs):
-                    episode_frames[i].append(current_frame)
-        else:
-            obs = next_obs
+        obs = next_obs
 
     # Save single video if rendering all episodes together
     if render and not render_each_episode and frames and video_path:
@@ -408,7 +298,6 @@ def evaluate(
 
         if len(all_episodes_flat) > 0:
             # Organize in v2 format
-            robot_name = scenario.robots[0].name
             trajs = {robot_name: all_episodes_flat}
 
             # Create output directory
@@ -667,7 +556,6 @@ def main():
         obs_normalizer=obs_normalizer,
         num_episodes=args.num_episodes,
         device=device,
-        scenario=scenario,
         task_name=task_name,
         amp_enabled=amp_enabled,
         amp_device_type=amp_device_type,

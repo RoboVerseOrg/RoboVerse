@@ -803,7 +803,11 @@ class IsaacsimHandler(BaseSimHandler):
                 body_state=body_state,
                 joint_pos=obj_inst.data.joint_pos[:, joint_reindex].clone(),
                 joint_vel=obj_inst.data.joint_vel[:, joint_reindex].clone(),
-                joint_pos_target=obj_inst.data.joint_pos_target[:, joint_reindex].clone(),
+                joint_pos_target=(
+                    obj_inst.data.joint_pos_target[:, joint_reindex].clone()
+                    if self._robot_reports_position_target(obj.name)
+                    else None
+                ),
                 joint_vel_target=obj_inst.data.joint_vel_target[:, joint_reindex].clone(),
                 joint_effort_target=obj_inst.data.joint_effort_target[:, joint_reindex].clone(),
             )

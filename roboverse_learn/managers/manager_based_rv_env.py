@@ -506,6 +506,7 @@ class ManagerBasedRVEnv(RLTaskEnv):
         self.reward_buf = self._reward(env_states)
 
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        self._note_auto_reset(reset_env_ids.tolist(), env_states, self.extras)  # the recorder's contract
         if reset_env_ids.numel() > 0:
             self._reset_idx(reset_env_ids)
             for func, params in self.terminate_events.values():

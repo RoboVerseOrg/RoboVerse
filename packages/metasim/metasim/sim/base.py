@@ -13,7 +13,12 @@ from loguru import logger as log
 from metasim.queries.base import BaseQueryType
 from metasim.types import CompatActionInput, DictStateBatch, StateMode, StateOutput, TensorState
 from metasim.utils.gs_util import quaternion_multiply
-from metasim.utils.state import list_state_to_tensor, select_envs, state_tensor_to_nested
+from metasim.utils.state import (
+    _action_input_to_tensor,
+    list_state_to_tensor,
+    select_envs,
+    state_tensor_to_nested,
+)
 
 try:
     from robo_splatter.models.basic import GSInstance, RenderConfig
@@ -375,6 +380,7 @@ class BaseSimHandler(ABC):
             self._set_states(normalised, env_ids)
         finally:
             self._invalidate_state_caches()
+        self._refresh_action_targets_after_reset(states, env_ids)
 
     def _enforce_env_subset(self, result, env_ids: list[int]):
         """Make ``get_states(env_ids=...)`` return exactly those envs.
@@ -522,6 +528,7 @@ class BaseSimHandler(ABC):
         # writes for back-compat with their internal use, but the public
         # contract is now owned by the base.
         self._actions_cache = actions
+        self._action_tensor_for = None  # a re-submitted (possibly mutated) buffer is re-read
         # Backends like MuJoCo write actuator ctrl here, and ``get_states`` reads ctrl
         # back as ``joint_pos_target``. Without invalidation, the cached state held a
         # pre-action joint_pos_target until the next simulate() — silent staleness.
@@ -645,6 +652,126 @@ class BaseSimHandler(ABC):
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get the joint names for a given object."""
         return self._get_joint_names(obj_name, sort)
+
+    #: True for backends whose engine does not hold the joint target, so ``get_states`` reports it from the
+    #: action cache (``_joint_pos_target_from_action_cache``) and ``set_states`` refreshes it.
+    _reports_target_from_action_cache: bool = False
+
+    def _robot_reports_position_target(self, robot_name: str) -> bool:
+        """Whether ``joint_pos_target`` is a joint *position* target for ``robot_name`` on this backend.
+
+        A robot with an effort-controlled joint is driven by torques: the tensor handed to
+        ``set_dof_targets`` (or the engine's ``ctrl``) is not a position target and must not be
+        reported as one. The same rule on every backend, read from the robot config's ``control_type``.
+        """
+        cfg = getattr(self, "object_dict", {}).get(robot_name)
+        control_type = getattr(cfg, "control_type", None) or {}
+        return not any(mode == "effort" for mode in control_type.values())
+
+    def _action_tensor(self) -> torch.Tensor | None:
+        """The last ``set_dof_targets`` input as a ``(num_envs, action_dim)`` tensor, or None before the first.
+
+        Normalised on first read (``action_input_to_tensor``: a tensor is the handler-order concatenation
+        of the robots' sorted joints, a dict is decoded the same way, without the dropped-key warning: the
+        backend applied the whole action), a single row expanded to every env, copied (a buffer mutated
+        after that first read cannot change the report) and memoised until the next action.
+
+        Raises:
+            ValueError: the input has neither one row nor one per env.
+        """
+        cache = getattr(self, "_actions_cache", None)
+        if cache is None or (isinstance(cache, list) and not cache):
+            return None
+        if getattr(self, "_action_tensor_for", None) is not cache:
+            tensor = _action_input_to_tensor(self, cache, device=self.device, warn=False)
+            if tensor.shape[0] == 1 and self.num_envs > 1:
+                tensor = tensor.expand(self.num_envs, -1)  # a single row was broadcast to every env at set time
+            elif tensor.shape[0] != self.num_envs:
+                raise ValueError(
+                    f"set_dof_targets received {tensor.shape[0]} action rows for {self.num_envs} envs; pass one row "
+                    "per env, or a single row for every env"
+                )
+            self._action_tensor_cache = tensor.clone()
+            self._action_tensor_for = cache
+        return self._action_tensor_cache
+
+    def _joint_pos_target_from_action_cache(self, robot_name: str) -> torch.Tensor | None:
+        """``(num_envs, num_joints)`` targets for ``robot_name`` from the last ``set_dof_targets`` input.
+
+        Backends whose engine does not hold the target (Genesis, Isaac Gym) report ``joint_pos_target``
+        from this: the ``get_action_joint_names`` slice of ``_action_tensor``, as a copy. A ``set_states``
+        overwrites the rows of the envs it reset with their new joint positions, as MuJoCo and Isaac Sim
+        report after a reset. ``None`` before the first action, when a dict action named no target for
+        the robot, or when the backend drives the robot by effort.
+        """
+        cache = getattr(self, "_actions_cache", None)
+        if cache is None or (isinstance(cache, list) and not cache):
+            return None
+        if not self._robot_reports_position_target(robot_name):
+            return None
+        if isinstance(cache, list) and any(
+            (env_action.get(robot_name) or {}).get("dof_pos_target") is None for env_action in cache
+        ):
+            return None  # the dict named no target for this robot; nothing to convert
+        span = self._action_span(robot_name)
+        if span is None:
+            return None
+        return self._action_tensor()[:, span].clone()
+
+    def _action_spans(self) -> dict[str, slice]:
+        """Each robot's slice of a handler-order action tensor (``get_action_joint_names`` order)."""
+        spans, offset = {}, 0
+        for name, joint_names in self.get_action_joint_names().items():
+            spans[name] = slice(offset, offset + len(joint_names))
+            offset += len(joint_names)
+        return spans
+
+    def _action_span(self, robot_name: str) -> slice | None:
+        return self._action_spans().get(robot_name)
+
+    def _refresh_action_targets_after_reset(
+        self, states: TensorState | DictStateBatch, env_ids: list[int] | None
+    ) -> None:
+        """After ``set_states``: the reset envs' *reported* target becomes the joint position just written.
+
+        That matches what MuJoCo (``ctrl`` rewritten on reset) and Isaac Sim report. Only the report is
+        aligned: on the cache-derived backends the engine's PD target is rewritten by the next
+        ``set_dof_targets``. Read from the ``set_states`` input (no state gather); a robot the input
+        gives no joint positions for keeps its report, and so does a joint a dict leaves out. A
+        full-batch input is indexed by env id, a subset is taken in ``env_ids`` order.
+        """
+        if not self._reports_target_from_action_cache:
+            return
+        tensor = self._action_tensor()
+        if tensor is None:
+            return
+        rows = list(range(self.num_envs)) if env_ids is None else [int(i) for i in env_ids]
+        joint_names_by_robot = self.get_action_joint_names()
+        for robot_name, span in self._action_spans().items():
+            written = self._written_joint_pos(states, robot_name, joint_names_by_robot[robot_name], rows)
+            if written is None:
+                continue
+            written = written.to(tensor.device, tensor.dtype)
+            tensor[rows, span] = torch.where(torch.isnan(written), tensor[rows, span], written)
+
+    def _written_joint_pos(self, states, robot_name: str, joint_names: list[str], rows: list[int]):
+        """``(len(rows), num_joints)`` joint positions a ``set_states`` input wrote for ``robot_name``.
+
+        None when the input carries no joint positions for the robot; NaN marks a joint a dict left out.
+        """
+        if isinstance(states, TensorState):
+            joint_pos = getattr(states.robots.get(robot_name), "joint_pos", None)
+            if joint_pos is None:
+                return None
+            return joint_pos[rows] if joint_pos.shape[0] == self.num_envs else joint_pos  # full batch, or a subset
+        entries = [states[i] for i in rows] if len(states) == self.num_envs else list(states)
+        per_env = [((e.get("robots") or {}).get(robot_name) or {}).get("dof_pos") for e in entries]
+        if len(per_env) != len(rows) or any(d is None for d in per_env):
+            return None  # no joint positions for this robot: its report stands
+        return torch.tensor(
+            [[float(d[name]) if name in d else float("nan") for name in joint_names] for d in per_env],
+            dtype=torch.float32,
+        )
 
     def get_action_joint_names(self) -> dict[str, list[str]]:
         """Get the handler/API joint order used for tensor actions."""

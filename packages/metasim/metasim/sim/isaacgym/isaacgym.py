@@ -41,6 +41,7 @@ from metasim.utils.terrain_utils import TerrainGenerator
 
 
 class IsaacgymHandler(BaseSimHandler):
+    _reports_target_from_action_cache = True  # the engine holds no joint target; see BaseSimHandler
     set_states_restores_velocities = True  # TensorState path writes root_states[:, 7:13] and dof_states[:, 1]
     _default_physics_dt = 1 / 60  # gymapi.SimParams() default when sim_params.dt is None
 
@@ -761,7 +762,7 @@ class IsaacgymHandler(BaseSimHandler):
             body_state = self._rigid_body_states.view(self.num_envs, -1, 13)[:, body_ids_reindex, :]
             body_state = self._reorder_quat_xyzw_to_wxyz(body_state)
 
-            joint_pos_target = self._joint_pos_target_from_cache(robot)
+            joint_pos_target = self._joint_pos_target_from_action_cache(robot.name)
             state = RobotState(
                 root_state=root_state,
                 body_names=self._get_body_names(robot.name),
@@ -828,39 +829,6 @@ class IsaacgymHandler(BaseSimHandler):
             action_array_list.append(action_array)
         action_array_all = torch.cat(action_array_list, dim=0)
         return action_array_all
-
-    def _joint_pos_target_from_cache(self, robot) -> torch.Tensor | None:
-        """Materialize cached dof_pos_target for ``robot`` into a (num_envs, num_dof) tensor.
-
-        Returns None when the cache is empty or in raw-tensor form (no joint names
-        recoverable without the action_input_to_tensor mapping).
-        """
-        cache = self._actions_cache
-        if not cache or isinstance(cache, (torch.Tensor, np.ndarray)):
-            return None
-        # Iterate joints in alphabetically-sorted order so the reported
-        # ``joint_pos_target`` aligns with ``joint_pos`` (emitted via
-        # ``_get_joint_ids_reindex``, i.e. sorted-name order). ``_joint_info[...]["names"]``
-        # is native DOF order, so using it produced a target vector misaligned with
-        # ``joint_pos`` whenever the URDF joint order was not already alphabetical.
-        # Values are name-keyed, so only the output ordering changes.
-        joint_names = self._get_joint_names(robot.name, sort=True)
-        targets_per_env = []
-        for env_idx, env_action in enumerate(cache):
-            if env_idx >= self._num_envs:
-                break
-            if not isinstance(env_action, dict):
-                return None
-            robot_action = env_action.get(robot.name)
-            if not isinstance(robot_action, dict):
-                return None
-            dof_pos_target = robot_action.get("dof_pos_target")
-            if dof_pos_target is None:
-                return None
-            targets_per_env.append([float(dof_pos_target.get(n, 0.0)) for n in joint_names])
-        if not targets_per_env:
-            return None
-        return torch.tensor(targets_per_env, dtype=torch.float32, device=self.device)
 
     def _set_dof_targets(self, actions: CompatActionInput):
         self._actions_cache = actions

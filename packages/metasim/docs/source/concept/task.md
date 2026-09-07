@@ -237,7 +237,7 @@ The template includes:
 * **Auto device**: defaults to CUDA if available.
 * **Auto reset on done**: after each step, envs flagged by `terminated | time_out` are reset in-place, and their observations refreshed.
 * **Initial state acceleration**: uses `list_state_to_tensor(handler, _get_initial_states())` to convert list states to tensor states for faster resets.
-* **Info payload**: includes `privileged_observation`, `episode_steps`, and cached raw observations `observations.raw.obs`.
+* **Info payload**: includes `privileged_observation`, `episode_steps`, cached raw observations `observations.raw.obs`, `auto_reset_env_ids` (the envs this step auto-reset) and `terminal_states` (the objects and robots of those envs copied before the reset when `env.record_terminal_states` is set, else None). A task that runs its own reset loop calls `self._note_auto_reset(env_ids, states, self.extras)` right before resetting, so a recorder can keep the terminal transition instead of the reset pose.
 * **Utilities**: `unnormalise_action(a)` maps actions from `[-1,1]` to joint physical ranges.
 
 ### Differences at a Glance

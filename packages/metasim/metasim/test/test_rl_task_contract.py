@@ -454,3 +454,92 @@ def test_rl_task_reset_runs_reset_callbacks_before_the_states_and_refreshes_like
     env.handler.scenario = SimpleNamespace(cameras=[])
     RLTaskEnv.reset(env, env_ids=[0])
     assert "refresh_render" not in calls
+
+
+@pytest.mark.general
+def test_step_reports_the_auto_reset_envs_and_a_copy_of_their_terminal_state():
+    """A recorder needs the state a done episode ended in, not the pose the env reset to."""
+    from metasim.types import RobotState, TensorState
+
+    resets = []
+
+    class _H:
+        num_envs = 2
+
+        def __init__(self):
+            self.z = 1.0
+
+        def set_dof_targets(self, a):
+            pass
+
+        def simulate(self):
+            self.z += 1.0
+
+        def get_states(self, mode="tensor"):
+            root = torch.tensor([[0.0, 0.0, self.z, 1.0, 0.0, 0.0, 0.0] + [0.0] * 6] * 2)
+            arm = RobotState(
+                root_state=root,
+                body_names=None,
+                body_state=None,
+                joint_pos=torch.zeros(2, 1),
+                joint_vel=torch.zeros(2, 1),
+                joint_pos_target=None,
+                joint_vel_target=None,
+                joint_effort_target=None,
+            )
+            return TensorState(objects={}, robots={"arm": arm}, cameras={}, extras={})
+
+    env = RLTaskEnv.__new__(RLTaskEnv)
+    env.device = torch.device("cpu")
+    env.num_envs = 2
+    env.handler = _H()
+    env._episode_steps = torch.zeros(2, dtype=torch.int32)
+    env._action_low, env._action_high = torch.tensor([-1.0]), torch.tensor([1.0])
+    env._observation = lambda states: states.robots["arm"].root_state[:, 2:3].clone()
+    env._privileged_observation = lambda states: torch.zeros(2, 1)
+    env._reward = lambda states: torch.zeros(2)
+    env._terminated = lambda states: torch.tensor([False, True])
+    env._time_out = lambda states: torch.zeros(2, dtype=torch.bool)
+    env._process_action = lambda a: a
+    env.record_terminal_states = True
+
+    def _reset(env_ids=None, **kw):
+        resets.append(env_ids)
+        env.handler.z = 0.0  # the reset pose
+
+    env.reset = _reset
+    _, _, terminated, _, info = RLTaskEnv.step(env, torch.zeros(2, 1))
+    assert terminated.tolist() == [False, True] and resets == [[1]]
+    assert info["auto_reset_env_ids"] == [1]
+    assert float(info["terminal_states"].robots["arm"].root_state[0, 2]) == 2.0, "the state before the reset"
+    assert info["terminal_states"].robots["arm"].root_state.shape[0] == 1, "only the reset envs, copied"
+
+
+@pytest.mark.general
+def test_note_auto_reset_is_the_contract_a_self_resetting_task_calls():
+    """Tasks with their own reset loop (humanoid, beyondmimic) call it before resetting; the copy holds
+    only objects and robots, and no reset means an empty id list and no copy."""
+    from metasim.types import RobotState, TensorState
+
+    root = torch.tensor([[0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0] + [0.0] * 6] * 3)
+    arm = RobotState(
+        root_state=root,
+        body_names=None,
+        body_state=None,
+        joint_pos=torch.zeros(3, 1),
+        joint_vel=torch.zeros(3, 1),
+        joint_pos_target=None,
+        joint_vel_target=None,
+        joint_effort_target=None,
+    )
+    states = TensorState(objects={}, robots={"arm": arm}, cameras={}, extras={"per_env": torch.zeros(3, 1)})
+    env = RLTaskEnv.__new__(RLTaskEnv)
+    info = {}
+    env._note_auto_reset([0, 2], states, info)
+    assert info["auto_reset_env_ids"] == [0, 2] and info["terminal_states"] is None, "no copy unless a recorder asks"
+    env.record_terminal_states = True
+    env._note_auto_reset([0, 2], states, info)
+    assert info["terminal_states"].robots["arm"].root_state.shape[0] == 2
+    assert info["terminal_states"].extras == {}, "only objects and robots are copied"
+    env._note_auto_reset([], states, info)
+    assert info["auto_reset_env_ids"] == [] and info["terminal_states"] is None

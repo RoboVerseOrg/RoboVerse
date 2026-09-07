@@ -81,3 +81,28 @@ def get_traj_v2(traj_filepath, robot: RobotCfg, data=None):
         all_states = None
 
     return init_states, all_actions, all_states
+
+
+V2_STATE_KEYS = ("pos", "rot", "dof_pos")
+"""What a v2 state entry carries per entity, as every other v2 writer emits it: a replayed state is
+written back with ``set_states``, which takes exactly these (velocities are dropped by several
+backends and a target is a control input, so neither belongs in a recorded state)."""
+
+
+def state_nested_to_v2(env_state: dict) -> dict:
+    """One env's nested state as the flat v2 entry.
+
+    The input is ``{"objects": {...}, "robots": {...}}`` as ``state_tensor_to_nested`` yields it; the
+    output is ``{entity: {"pos", "rot", ..., "dof_pos", ...}}``.
+
+    Objects and robots share one namespace in v2 (a clash is refused); ``convert_state_v2_to_v3`` is
+    the inverse. Only ``V2_STATE_KEYS`` are kept, and only when present and not None.
+    """
+    objects, robots = env_state.get("objects", {}), env_state.get("robots", {})
+    clash = set(objects) & set(robots)
+    if clash:
+        raise ValueError(f"v2 keeps objects and robots in one namespace; these names are both: {sorted(clash)}")
+    return {
+        name: {k: v for k, v in entity.items() if k in V2_STATE_KEYS and v is not None}
+        for name, entity in {**objects, **robots}.items()
+    }

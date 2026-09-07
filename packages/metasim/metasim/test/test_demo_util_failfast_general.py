@@ -169,3 +169,17 @@ def test_directory_resolution_ignores_sidecars_named_after_the_robot(tmp_path):
     assert get_traj(str(d), robot, v2_as_v3=False)[1][0][0]["dof_pos_target"] == {"j": 0.1}
     fmt, path, _ = detect_traj_format(str(d), "franka")
     assert fmt == "v2" and path.endswith("franka.pkl")
+
+
+def test_state_nested_to_v2_flattens_one_namespace_keeps_the_v2_keys_and_refuses_a_clash():
+    from metasim.utils.demo_util.demo_util_v2 import state_nested_to_v2
+
+    nested = {
+        "objects": {"cube": {"pos": [1.0], "vel": [0.0], "body": {"b": {}}}},
+        "robots": {
+            "arm": {"pos": [2.0], "dof_pos": {"j": 0.1}, "dof_pos_target": {"j": 0.2}, "dof_torque": {"j": 3.0}}
+        },
+    }
+    assert state_nested_to_v2(nested) == {"cube": {"pos": [1.0]}, "arm": {"pos": [2.0], "dof_pos": {"j": 0.1}}}
+    with pytest.raises(ValueError, match=r"both: \['arm'\]"):
+        state_nested_to_v2({"objects": {"arm": {}}, "robots": {"arm": {}}})
