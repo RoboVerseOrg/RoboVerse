@@ -14,6 +14,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import torch
+from loguru import logger
 
 from metasim.scenario.robot import RobotCfg
 from metasim.scenario.scenario import ScenarioCfg
@@ -543,3 +544,103 @@ def test_note_auto_reset_is_the_contract_a_self_resetting_task_calls():
     assert info["terminal_states"].extras == {}, "only objects and robots are copied"
     env._note_auto_reset([], states, info)
     assert info["auto_reset_env_ids"] == [] and info["terminal_states"] is None
+
+
+@pytest.mark.general
+def test_a_dict_action_is_clamped_like_the_tensor_of_the_same_numbers():
+    """``step`` clips a tensor action to the joint-limit box. A dict action (every replayed v2 demo, and the
+    name-based API) must reach the engine bounded the same way for the robots those limits describe, or the
+    same command drives the robot to two different places depending on how it was written."""
+    from metasim.utils.log import reset_warn_once
+
+    captured = {}
+
+    class _H:
+        num_envs = 1
+
+        def set_dof_targets(self, a):
+            captured["applied"] = a
+
+        def simulate(self):
+            return None
+
+        def get_states(self, mode="tensor"):
+            return None
+
+    env = RLTaskEnv.__new__(RLTaskEnv)
+    env.device = torch.device("cpu")
+    env.num_envs = 1
+    env.handler = _H()
+    env._episode_steps = torch.zeros(1, dtype=torch.int32)
+    env._action_low = torch.tensor([-1.0, 0.0])
+    env._action_high = torch.tensor([1.0, 0.04])
+    # 'arm' is position-driven, so its limits describe its slots; 'legs' is not settled and is left alone
+    env._clamp_limits_by_robot = {"arm": {"j1": (-1.0, 1.0), "gripper": (0.0, float(torch.tensor(0.04)))}}
+    env._observation = lambda states: torch.zeros(1, 1)
+    env._privileged_observation = lambda states: torch.zeros(1, 1)
+    env._reward = lambda states: torch.zeros(1)
+    env._terminated = lambda states: torch.zeros(1, dtype=torch.bool)
+    env._time_out = lambda states: torch.zeros(1, dtype=torch.bool)
+    env._process_action = lambda actions: actions
+
+    reset_warn_once()
+    warnings = []
+    sink = logger.add(lambda m: warnings.append(str(m)), level="WARNING")
+    try:
+        action = [
+            {
+                "arm": {"dof_pos_target": {"j1": 5.0, "gripper": 5.0}, "dof_effort_target": {"j1": 99.0}},
+                "legs": {"dof_pos_target": {"knee": 3.0}},
+            }
+        ]
+        RLTaskEnv.step(env, action)
+    finally:
+        logger.remove(sink)
+    applied = captured["applied"][0]
+    assert applied["arm"]["dof_pos_target"] == {"j1": 1.0, "gripper": pytest.approx(0.04)}
+    assert applied["arm"]["dof_effort_target"] == {"j1": 99.0}, "a torque is not bounded by a joint-angle limit"
+    assert applied["legs"]["dof_pos_target"] == {"knee": 3.0}, "a robot whose slots the limits may not describe"
+    assert action[0]["arm"]["dof_pos_target"]["j1"] == 5.0, "the caller's dict is not modified"
+    assert len([w for w in warnings if "'j1'" in w]) == 1, "a clamp that fires is visible, once per joint"
+
+    # the two paths clamp to the same number, not a float32 on one side and a Python float on the other
+    RLTaskEnv.step(env, torch.tensor([[5.0, 5.0]]))
+    assert torch.allclose(captured["applied"], torch.tensor([[1.0, 0.04]]))
+    assert float(captured["applied"][0, 1]) == applied["arm"]["dof_pos_target"]["gripper"]
+
+    # in bounds, an unknown joint, an unknown robot, and NaN: nothing is rewritten or copied
+    for passthrough in (
+        [{"arm": {"dof_pos_target": {"j1": 0.5, "typo": 7.0}}, "other": {"dof_pos_target": {"j": 9.0}}}],
+        [{"arm": {"dof_pos_target": {"j1": float("nan")}}}],
+    ):
+        RLTaskEnv.step(env, passthrough)
+        assert captured["applied"] is passthrough and captured["applied"][0] is passthrough[0]
+
+
+@pytest.mark.general
+def test_clamp_bounds_cover_the_robots_whose_slots_the_joint_limits_describe():
+    """The dict-path bounds are the config's joint limits, in float32, for the robots every backend drives by
+    position. A robot with an effort-driven joint takes torques in some or all of those slots depending on
+    the backend, so it is left out and keeps the behaviour it has; so is every robot if the handler cannot
+    answer."""
+    from types import SimpleNamespace
+
+    arm = RobotCfg(name="arm")
+    arm.joint_limits = {"j0": (-1.0, 1.0), "j1": (-0.04, 2.0)}
+    cart = RobotCfg(name="cart")
+    cart.joint_limits = {"pole": (-3.14, 3.14), "slider": (-4.0, 4.0)}
+    cart.control_type = {"slider": "effort"}
+
+    env = RLTaskEnv.__new__(RLTaskEnv)
+    env.device = torch.device("cpu")
+    env.robots = [arm, cart]
+    env.joint_names_by_robot = {"arm": ["j0", "j1"], "cart": ["pole", "slider"]}
+    env.handler = SimpleNamespace(_robot_reports_position_target=lambda name: name == "arm")
+    env._build_clamp_bounds()
+    assert env._clamp_limits_by_robot == {"arm": {"j0": (-1.0, 1.0), "j1": (float(torch.tensor(-0.04)), 2.0)}}, (
+        "float32, as the tensor bounds are; the effort-driven robot is not settled here"
+    )
+
+    env.handler = SimpleNamespace()  # a handler that does not answer the predicate
+    env._build_clamp_bounds()
+    assert env._clamp_limits_by_robot == {}
