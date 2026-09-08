@@ -8,6 +8,7 @@ from torchvision.utils import make_grid
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.types import CompatActionInput, Info, TensorState
+from metasim.utils.log import warn_once
 from metasim.utils.state import list_state_to_tensor, select_envs
 
 
@@ -84,6 +85,8 @@ class RLTaskEnv(BaseTaskEnv):
         self._action_low = torch.tensor(action_low, dtype=torch.float32, device=self.device)
         self._action_high = torch.tensor(action_high, dtype=torch.float32, device=self.device)
         self.num_actions = self._action_low.shape[0]
+
+        self._build_clamp_bounds()
 
     # -------------------------------------------------------------------------
     # hooks / spaces
@@ -189,11 +192,98 @@ class RLTaskEnv(BaseTaskEnv):
             _terminal_copy(states, info["auto_reset_env_ids"]) if self.record_terminal_states else None
         )
 
+    def _build_clamp_bounds(self) -> None:
+        """Build the joint-angle bounds the dict action path clamps to, for the robots they certainly apply to.
+
+        A robot every backend drives by position takes joint angles in its action slots, so ``joint_limits``
+        bounds them, and the tensor path already clips them there. A robot with an effort-driven joint takes
+        torques in some or all of those slots, and which ones depends on the backend (MuJoCo routes per
+        joint, Isaac Gym and Newton send the whole vector to force), so an angle limit may not describe them
+        at all: those robots are left out here and keep the behaviour they have on both paths. See the
+        CHANGELOG for the open half. A handler that does not answer the predicate leaves every robot out.
+
+        The bounds are read back from a float32 tensor so the dict path clamps to the numbers the tensor
+        path's float32 bounds produce, not to a Python float that rounds elsewhere.
+        """
+        self._clamp_limits_by_robot: dict[str, dict[str, tuple[float, float]]] = {}
+        reports_position = getattr(self.handler, "_robot_reports_position_target", None)
+        if reports_position is None:
+            return
+        for robot in self.robots:
+            if not reports_position(robot.name):
+                continue
+            joint_names = self.joint_names_by_robot[robot.name]
+            low = torch.tensor([robot.joint_limits[j][0] for j in joint_names], dtype=torch.float32)
+            high = torch.tensor([robot.joint_limits[j][1] for j in joint_names], dtype=torch.float32)
+            self._clamp_limits_by_robot[robot.name] = {
+                j: (float(low[i]), float(high[i])) for i, j in enumerate(joint_names)
+            }
+
+    def _clamp_dict_actions(self, actions):
+        """``dof_pos_target`` entries of a dict action clamped to the same bounds the tensor path uses.
+
+        The same command must reach the engine whichever way it was written, or a replayed demo (dict
+        actions) drives the robot somewhere a policy rollout of the same numbers (a tensor) cannot.
+        Only the robots ``_build_clamp_bounds`` could settle are clamped;
+        ``dof_vel_target`` / ``dof_effort_target`` entries are passed through. A clamp that fires is warned
+        about once per robot and joint, because a demo recorded outside the config's limits then replays as a
+        different trajectory. A value already in bounds is not rewritten and NaN is
+        left as it is, so an action that needs no clamping reaches the handler as the caller's own object;
+        the caller's dicts are never modified. The scan is per env, robot and joint, on the dict path only.
+        """
+        # a subclass that builds on BaseTaskEnv.__init__ has no bounds, and neither has a scenario whose
+        # robots are all effort-driven: the action goes through as it did before, without the per-env scan
+        if not isinstance(actions, list) or not getattr(self, "_clamp_limits_by_robot", None):
+            return actions
+        clamped = list(actions)
+        changed = False
+        for env_id, env_action in enumerate(actions):
+            if not isinstance(env_action, dict):
+                continue
+            for robot_name, robot_action in env_action.items():
+                limits = self._clamp_limits_by_robot.get(robot_name)
+                targets = robot_action.get("dof_pos_target") if isinstance(robot_action, dict) else None
+                if not limits or not targets:
+                    continue
+                # NaN is neither below nor above a bound: it is out of range in no direction, and the tensor
+                # path passes it through too
+                if not any(
+                    value < limits[joint][0] or value > limits[joint][1]
+                    for joint, value in targets.items()
+                    if joint in limits
+                ):
+                    continue
+                new_targets = {}
+                for joint, value in targets.items():
+                    low, high = limits.get(joint, (None, None))
+                    # a value the limits do not describe, or one that is not a number (a demo may carry None
+                    # for an unactuated joint), reaches the backend as it did before
+                    if low is None or not isinstance(value, (int, float)) or not (value < low or value > high):
+                        new_targets[joint] = value
+                        continue
+                    new_targets[joint] = min(max(value, low), high)
+                    warn_once(
+                        ("rl_task.clamped_action", robot_name, joint),
+                        f"{type(self).__name__}: joint target {joint!r} of {robot_name!r} was outside the "
+                        f"configured joint_limits {(low, high)} and was clamped; a demo recorded outside them "
+                        "replays as a different trajectory. Warned once per robot and joint.",
+                    )
+                if clamped[env_id] is env_action:
+                    clamped[env_id] = dict(env_action)
+                clamped[env_id][robot_name] = {**robot_action, "dof_pos_target": new_targets}
+                changed = True
+        return clamped if changed else actions
+
     def step(
         self,
         actions: CompatActionInput,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]:
-        """One step with joint-space actions (auto-clamped)."""
+        """One step with joint-space actions.
+
+        A tensor action is clipped to the joint-limit box (``_action_low`` / ``_action_high``). A dict action
+        is clipped to the same limits for the robots those limits certainly describe, so the same command
+        reaches the engine whichever way it was written; see ``_build_clamp_bounds``.
+        """
         self._episode_steps += 1
 
         # Sanctioned action-transform hook (default identity). Lets tasks apply
@@ -209,7 +299,7 @@ class RLTaskEnv(BaseTaskEnv):
             real_actions = torch.maximum(torch.minimum(actions, self._action_high), self._action_low)
             self.handler.set_dof_targets(real_actions)
         else:
-            self.handler.set_dof_targets(actions)
+            self.handler.set_dof_targets(self._clamp_dict_actions(actions))
         self.handler.simulate()
         states = self.handler.get_states(mode="tensor")
         obs = self._observation(states).to(self.device)
