@@ -183,8 +183,8 @@ from metasim.utils.rerun.rerun_util import RerunVisualizer
 # 1. Initialize visualizer
 visualizer = RerunVisualizer(
     app_name="My Simulation",
-    spawn=True,           # Auto-open viewer
-    save_path="my_sim.rrd"  # Optional: save recording
+    spawn=True,  # Auto-open viewer
+    save_path="my_sim.rrd",  # Optional: save recording
 )
 
 # 2. Add coordinate frame (optional)
@@ -198,11 +198,11 @@ visualizer.visualize_scenario_items(scenario.robots, robot_states)
 for step in range(num_steps):
     # Set timeline position
     visualizer.set_time(step)
-    
+
     # Run simulation
     handler.simulate()
     obs = handler.get_states(mode="tensor")
-    
+
     # Extract and update states
     for name, state in robot_states.items():
         visualizer.update_item_pose(name, state)

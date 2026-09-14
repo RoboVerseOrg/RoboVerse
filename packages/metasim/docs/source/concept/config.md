@@ -33,10 +33,8 @@ class ScenarioCfg:
     # Runtime
     render: RenderCfg = RenderCfg()
     sim_params: SimParamCfg = SimParamCfg()
-    simulator: Literal["isaaclab","isaacgym","sapien2","sapien3",
-                       "genesis","pybullet","mujoco"] | None = None
-    renderer:  Literal["isaaclab","isaacgym","sapien2","sapien3",
-                       "genesis","pybullet","mujoco"] | None = None
+    simulator: Literal["isaaclab", "isaacgym", "sapien2", "sapien3", "genesis", "pybullet", "mujoco"] | None = None
+    renderer: Literal["isaaclab", "isaacgym", "sapien2", "sapien3", "genesis", "pybullet", "mujoco"] | None = None
 
     # Misc
     num_envs: int = 1
@@ -153,13 +151,12 @@ The class provides mechanisms for asset management and dynamic updates:
 
 ```python
 RobotCfg(
-  name="robot_template",
-  num_joints=2,
-  urdf_path="roboverse_data/robots/your_robot/urdf/your_robot.urdf",
-  fix_base_link=True,
-  enabled_gravity=True,
-  control_type={"joint1": "position", "joint2": "effort"},
-  actuators={"joint1": BaseActuatorCfg(stiffness=500, damping=10),
-             "joint2": BaseActuatorCfg(effort_limit_sim=50)}
+    name="robot_template",
+    num_joints=2,
+    urdf_path="roboverse_data/robots/your_robot/urdf/your_robot.urdf",
+    fix_base_link=True,
+    enabled_gravity=True,
+    control_type={"joint1": "position", "joint2": "effort"},
+    actuators={"joint1": BaseActuatorCfg(stiffness=500, damping=10), "joint2": BaseActuatorCfg(effort_limit_sim=50)},
 )
 ```

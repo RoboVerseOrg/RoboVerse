@@ -119,14 +119,14 @@ class PutBananaTask(Task):
                 name="banana",
                 usd_path="...",
                 pos=(0.5, 0.2, 0.15),  # ← From saved poses
-                rot=(0, 0, 0, 1),      # ← From saved poses
+                rot=(0, 0, 0, 1),  # ← From saved poses
             ),
         ],
         robots=[
             RobotCfg(
                 name="franka",
-                pos=(0.0, 0.0, 0.0),   # ← From saved poses
-                rot=(0, 0, 0, 1),      # ← From saved poses
+                pos=(0.0, 0.0, 0.0),  # ← From saved poses
+                rot=(0, 0, 0, 1),  # ← From saved poses
             ),
         ],
     )

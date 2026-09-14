@@ -113,7 +113,8 @@ class SmolVLARunner:
 
                 self.processor = AutoProcessor.from_pretrained(checkpoint_path, trust_remote_code=True)
                 self.model = (
-                    AutoModel.from_pretrained(
+                    AutoModel
+                    .from_pretrained(
                         checkpoint_path,
                         torch_dtype=torch.bfloat16,
                         low_cpu_mem_usage=True,
