@@ -51,7 +51,7 @@ isaacsim211 = [
 ]
 isaacgym = [
     "numpy<2",
-    "fsspec<=2025.3.0",  # fsspec==2025.3.1 has bug with python 3.8
+    "fsspec<=2026.7.0",  # fsspec==2025.3.1 has bug with python 3.8
 ]
 mujoco = ["mujoco", "dm-control"]
 mjx = ["torch==2.7.0", "mujoco-mjx>=3.2.7", "dm-control", "jax[cuda]==0.6.2"]
