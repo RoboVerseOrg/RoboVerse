@@ -19,16 +19,16 @@ from metasim.task.registry import get_task_class
 from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
 
 # 创建环境
-task_cls = get_task_class('reach_origin')
+task_cls = get_task_class("reach_origin")
 scenario = task_cls.scenario.update(
-    robots=['franka'],
-    simulator='mujoco',
+    robots=["franka"],
+    simulator="mujoco",
     num_envs=1024,
     headless=False,  # 启用渲染以支持 Viser
-    cameras=[]
+    cameras=[],
 )
 
-env = task_cls(scenario, device='cuda')
+env = task_cls(scenario, device="cuda")
 
 # 包装环境以启用可视化
 viser_env = TaskViserWrapper(env, port=8080)
@@ -91,9 +91,9 @@ TaskViserWrapper 透明代理所有环境属性：
 
 ```python
 wrapper = TaskViserWrapper(env)
-print(wrapper.num_envs)      # 代理到 env.num_envs
-print(wrapper.num_actions)   # 代理到 env.num_actions
-print(wrapper.num_obs)       # 代理到 env.num_obs
+print(wrapper.num_envs)  # 代理到 env.num_envs
+print(wrapper.num_actions)  # 代理到 env.num_actions
+print(wrapper.num_obs)  # 代理到 env.num_obs
 print(wrapper.action_space)  # 代理到 env.action_space
 ```
 
