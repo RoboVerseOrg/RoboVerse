@@ -131,18 +131,10 @@ class BaseRandomizerType:
         IsaacSim handler module on non-Isaac envs — `IsaacsimHandler` itself
         imports `omni` at module load.
         """
-        cls_name = type(actual_handler).__name__
-        if cls_name not in {"IsaacsimHandler", "IsaaclabHandler"}:
+        names = {cls.__name__ for cls in type(actual_handler).__mro__}
+        if not names.intersection({"IsaacsimHandler", "IsaaclabHandler"}):
             return None
-        try:
-            return IsaacSimAdapter(actual_handler)
-        except ImportError as exc:
-            logger.warning(
-                "IsaacSim handler detected but IsaacSimAdapter import failed (%s); "
-                "USD-based randomizers will be no-ops",
-                exc,
-            )
-            return None
+        return IsaacSimAdapter(actual_handler)
 
     def _is_hybrid_handler(self, handler) -> bool:
         """Check if handler is a HybridSimHandler.
@@ -251,21 +243,28 @@ class BaseRandomizerType:
                     )
                 )
 
-        # Register cameras
-        if hasattr(handler, "cameras"):
-            for camera in handler.cameras:
-                prim_path = f"/World/{camera.name}"
-
-                registry.register(
-                    ObjectMetadata(
-                        name=camera.name,
-                        category="camera",
-                        lifecycle="static",
-                        prim_paths=[prim_path],
-                        shared=True,
-                        has_physics=False,
-                    )
+        # Use the sensor's actual per-env path, including mounted camera parents.
+        sensors = getattr(getattr(handler, "scene", None), "sensors", {})
+        for camera in getattr(handler, "cameras", []):
+            sensor = sensors.get(camera.name)
+            prim_path = getattr(getattr(sensor, "cfg", None), "prim_path", None)
+            if prim_path is None:
+                # Non-USD handlers do not have USD camera targets to register.
+                continue
+            shared = "env_.*" not in prim_path
+            paths = (
+                [prim_path] if shared else [prim_path.replace("env_.*", f"env_{i}") for i in range(handler.num_envs)]
+            )
+            registry.register(
+                ObjectMetadata(
+                    name=camera.name,
+                    category="camera",
+                    lifecycle="static",
+                    prim_paths=paths,
+                    shared=shared,
+                    has_physics=False,
                 )
+            )
 
         # Register lights
         if hasattr(handler, "lights"):

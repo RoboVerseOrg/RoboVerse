@@ -89,6 +89,13 @@ class DRConfig:
     scene_mode: Literal[0, 1, 2, 3] = 0
     randomization_seed: int | None = None
 
+    def __post_init__(self):
+        """Reject unsupported levels and scene modes at the configuration boundary."""
+        for name in ("level", "scene_mode"):
+            value = getattr(self, name)
+            if type(value) is not int or value not in range(4):
+                raise ValueError(f"DRConfig.{name} must be an integer in [0, 3], got {value!r}")
+
 
 class DomainRandomizationManager:
     """Unified Domain Randomization Manager.
@@ -165,15 +172,19 @@ class DomainRandomizationManager:
             return False
 
         if not RANDOMIZATION_AVAILABLE:
-            log.warning("Domain randomization requested but components not available")
-            return False
-
+            raise RuntimeError("Domain randomization requested but components are unavailable")
+        renderer = getattr(self.handler, "render_handler", self.handler)
+        names = {cls.__name__ for cls in type(renderer).__mro__}
+        if not names.intersection({"IsaacsimHandler", "IsaaclabHandler"}):
+            raise NotImplementedError(
+                "DomainRandomizationManager scene presets require Isaac Sim. "
+                "Use VisualRandomizer for portable Blender / Isaac Sim appearance augmentation."
+            )
         return True
 
     def _setup_randomizers(self):
         """Initialize all randomizers based on level and mode."""
         seed = self.config.randomization_seed
-        self._setup_reproducibility(seed)
 
         self.randomizers = {
             "scene": None,
@@ -195,19 +206,6 @@ class DomainRandomizationManager:
         # Camera Randomization (Level 3+)
         if self.config.level >= 3:
             self._setup_camera_randomizers(seed)
-
-    def _setup_reproducibility(self, seed: int | None):
-        """Setup global reproducibility if seed is provided."""
-        if seed is not None:
-            torch.manual_seed(seed)
-            import random
-
-            import numpy as np
-
-            np.random.seed(seed)
-            random.seed(seed)
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed(seed)
 
     def _setup_scene_randomizer(self, seed: int | None):
         """Setup SceneRandomizer based on scene_mode."""
@@ -439,39 +437,33 @@ class DomainRandomizationManager:
         if self.config.level == 0 or not self.randomizers:
             return
 
-        # Enable global defer flag
-        if self.handler:
-            self.handler._defer_all_visual_flushes = True
-
+        renderer = getattr(self.handler, "render_handler", self.handler)
+        previous_defer = renderer._defer_all_visual_flushes
+        renderer._defer_all_visual_flushes = True
         try:
-            # Scene creation/switching
-            if self.randomizers["scene"]:
-                if is_initial or self.config.level >= 1:
-                    scene_rand = self.randomizers["scene"]
-                    original_auto_flush = scene_rand.cfg.auto_flush_visuals
-                    scene_rand.cfg.auto_flush_visuals = False
+            scene_rand = self.randomizers.get("scene")
+            if scene_rand and (is_initial or self.config.level >= 1):
+                original_auto_flush = scene_rand.cfg.auto_flush_visuals
+                scene_rand.cfg.auto_flush_visuals = False
+                try:
                     scene_rand()
+                finally:
                     scene_rand.cfg.auto_flush_visuals = original_auto_flush
-
-            # Level 1+: Material randomization (environment only)
             if self.config.level >= 1:
                 for mat_rand in self.randomizers["material_dynamic"]:
                     mat_rand()
-
-            # Level 2+: Lighting
             if self.config.level >= 2:
                 for light_rand in self.randomizers["light"]:
                     light_rand()
-
         finally:
-            # Disable global defer and flush once
-            if self.handler:
-                self.handler._defer_all_visual_flushes = False
-                if hasattr(self.handler, "flush_visual_updates"):
-                    try:
-                        self.handler.flush_visual_updates(wait_for_materials=True, settle_passes=2)
-                    except Exception as e:
-                        log.debug(f"Failed to flush visual updates: {e}")
+            renderer._defer_all_visual_flushes = previous_defer
+        # Do not swallow failures, flush partial work, or break a caller's outer batch.
+        if not previous_defer:
+            renderer.flush_visual_updates(wait_for_materials=True, settle_passes=2)
+        # Scene/material/light edits stale any cached state; a hybrid wraps its own cache.
+        renderer._invalidate_state_caches()
+        if self.handler is not renderer:
+            self.handler._invalidate_state_caches()
 
     def update_camera_look_at(self, env_id: int = 0):
         """Update camera position and look_at to focus on table after scene switch."""
