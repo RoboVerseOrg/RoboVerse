@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import inspect
+import numbers
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import torch
@@ -237,6 +239,33 @@ class HybridSimHandler(BaseSimHandler):
 
         # Get states from physics and sync to render, then render exactly once
         self._push_to_renderer(self._for_renderer(self.physics_handler._get_states()))
+
+    def simulate_steps(self, *, steps: int, actions: Sequence[CompatActionInput] | None = None) -> None:
+        """Advance ``steps`` control intervals and render only the final state.
+
+        Without ``actions`` the current targets stay fixed (open loop). With
+        ``actions``, one entry per interval is applied through ``set_dof_targets``
+        before that interval, which replays a recorded action sequence without an
+        image per step. Each interval is exactly one physics handler ``simulate()``
+        call, including its own decimation. Use ordinary ``simulate()`` when a
+        controller needs an image each interval. This does not reset physics,
+        velocities or actuator targets between steps.
+        """
+        if isinstance(steps, bool) or not isinstance(steps, numbers.Integral) or steps < 1:
+            raise ValueError("steps must be a positive integer")
+        steps = int(steps)
+        if actions is not None:
+            actions = list(actions)
+            if len(actions) != steps:
+                raise ValueError(f"actions must provide exactly one entry per step ({steps}), got {len(actions)}")
+        try:
+            for index in range(steps):
+                if actions is not None:
+                    self.set_dof_targets(actions[index])
+                self.physics_handler.simulate()
+            self._push_to_renderer(self._for_renderer(self.physics_handler.get_states(mode="tensor")))
+        finally:
+            self._invalidate_state_caches()
 
     def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get joint names from physics handler."""

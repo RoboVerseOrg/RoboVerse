@@ -35,6 +35,7 @@ PUBLIC_MODULES: tuple[str, ...] = (
     "metasim.scenario.lights",
     "metasim.scenario.grounds",
     "metasim.scenario.render",
+    "metasim.randomization.visual",
     "metasim.scenario.simulator_params",
     "metasim.sim.base",
     "metasim.sim.hybrid",

@@ -258,8 +258,15 @@ class IsaacsimHandler(BaseSimHandler):
                 # set look at position using isaaclab's api
                 if camera.mount_to is None:
                     camera_inst = self.scene.sensors[camera.name]
-                    position_tensor = torch.as_tensor(camera.pos, device=self.device).expand(self.num_envs, -1)
-                    camera_lookat_tensor = torch.as_tensor(camera.look_at, device=self.device).expand(self.num_envs, -1)
+                    visual_pose = getattr(self, "_visual_camera_poses", {}).get(camera.name)
+                    if visual_pose is None:
+                        position_tensor = torch.as_tensor(camera.pos, device=self.device).expand(self.num_envs, -1)
+                        camera_lookat_tensor = torch.as_tensor(camera.look_at, device=self.device).expand(
+                            self.num_envs, -1
+                        )
+                    else:
+                        # Keep per-env episode jitter when hybrid state replay refreshes cameras.
+                        position_tensor, camera_lookat_tensor = (value.to(self.device) for value in visual_pose)
                     position_tensor = position_tensor + env_origins
                     camera_lookat_tensor = camera_lookat_tensor + env_origins
                     camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
@@ -755,6 +762,9 @@ class IsaacsimHandler(BaseSimHandler):
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
+        if getattr(self, "_visual_refresh_pending", False):
+            self.refresh_render()
+
         # Special handling for the first frame to ensure camera is properly positioned; skipped when
         # refresh_render already rendered this state (the hybrid handler renders every synced step)
         if self._physics_step_counter == 0 and not self._render_current:
@@ -898,7 +908,7 @@ class IsaacsimHandler(BaseSimHandler):
                 instance_id_seg_id2label=instance_id_seg_id2label,
                 pos=camera_inst.data.pos_w.clone(),
                 quat_world=camera_inst.data.quat_w_world.clone(),
-                intrinsics=torch.tensor(camera.intrinsics, device=self.device)[None, ...].repeat(self.num_envs, 1, 1),
+                intrinsics=camera_inst.data.intrinsic_matrices.clone(),
             )
         extras = self.get_extra()
         return TensorState(objects=object_states, robots=robot_states, cameras=camera_states, extras=extras)
@@ -1226,6 +1236,8 @@ class IsaacsimHandler(BaseSimHandler):
         raise ValueError(f"Unsupported object type: {type(obj)}")
 
     def _load_terrain(self) -> None:
+        if self.scenario.ground is None and not self.scenario.add_default_ground:
+            return
         import isaaclab.sim as sim_utils
         from isaaclab.terrains import TerrainGeneratorCfg, TerrainImporterCfg
         from isaaclab.terrains.trimesh import mesh_terrains_cfg as mesh_cfg
@@ -1579,6 +1591,17 @@ class IsaacsimHandler(BaseSimHandler):
                     f"RTX - Real-Time 2.0 (RealTimePathTracing) is not engaged (got /rtx/rendermode={applied!r}). "
                     + hint
                 )
+
+        if self.scenario.render.mode == "pathtracing":
+            render_cfg = self.scenario.render
+            if render_cfg.samples is not None:
+                settings.set_int("/rtx/pathtracing/totalSpp", render_cfg.samples)
+                settings.set_int("/rtx/pathtracing/spp", min(render_cfg.samples, 32))
+                settings.set_bool("/rtx/pathtracing/adaptiveSampling/enabled", False)
+                settings.set_bool("/rtx/resetPtAccumOnAnimTimeChange", False)
+            if render_cfg.max_bounces is not None:
+                settings.set_int("/rtx/pathtracing/maxBounces", render_cfg.max_bounces)
+            settings.set_bool("/rtx/pathtracing/optixDenoiser/enabled", render_cfg.denoise)
 
         log.info(f"Render mode: {settings.get_as_string('/rtx/rendermode')}")
         log.info(f"Render totalSpp: {settings.get('/rtx/pathtracing/totalSpp')}")
@@ -1955,6 +1978,8 @@ class IsaacsimHandler(BaseSimHandler):
                 ),
                 width=camera.width,
                 height=camera.height,
+                # Isaac Lab otherwise reports the reset-time pose after the camera moves.
+                update_latest_camera_pose=True,
                 colorize_instance_segmentation=False,
                 colorize_instance_id_segmentation=False,
             )
@@ -1963,36 +1988,54 @@ class IsaacsimHandler(BaseSimHandler):
         log.debug(f"Added camera {camera.name} to scene with prim_path: {prim_path}")
 
     def refresh_render(self, passes: int = 2) -> None:
-        """Render the current state: ``passes`` x (scene update, ``sim.render()``, sensor update).
+        """Propagate scene edits, wait for assets, accumulate samples, then read sensors.
 
-        Two passes are the safe default after teleporting prims (the first pass propagates the
-        transforms, the second sees them). A caller that already flushed the writes and renders
-        every step (``HybridSimHandler``) uses one. Skipped while ``_defer_all_visual_flushes``
-        is set, so a batch of writes renders once at the end instead of once per write.
+        ``passes`` is a minimum render budget. Path tracing adds configurable
+        settling frames and enough iterations for ``RenderCfg.samples``. No
+        simulation steps occur. Deferred batches skip refresh until their final write.
         """
         if getattr(self, "_defer_all_visual_flushes", False):
             return
-        physics_dt = float(getattr(self, "physics_dt", 0.0))
+        self._render_current = False
         if self.scene is not None:
-            try:
-                self.scene.update(dt=0.0)
-            except Exception as err:
-                log.debug(f"Scene update failed during visual refresh: {err}")
+            self.scene.update(dt=0.0)
         sensors = getattr(self.scene, "sensors", {}) if self.scene is not None else {}
-        for i in range(max(1, int(passes))):
+        count = max(1, int(passes))
+        cfg = self.scenario.render
+        if cfg.mode == "pathtracing" and cfg.samples is not None:
+            # Propagation frames precede accumulation. No scene writes or sensor
+            # updates between these renders: those can reset path-tracer accumulation.
+            spp = min(cfg.samples, 32)
+            count = max(count, cfg.settle_frames + (cfg.samples + spp - 1) // spp)
+        propagation = min(count, cfg.settle_frames)
+        for _ in range(propagation):
             if self.sim is not None:
-                try:
-                    self.sim.render()
-                except Exception as err:
-                    log.debug(f"SimulationContext render failed during visual refresh pass {i + 1}: {err}")
-            for sensor in sensors.values():
-                update = getattr(sensor, "update", None)
-                if callable(update):
-                    try:
-                        update(dt=physics_dt)
-                    except Exception as err:
-                        log.debug(f"Sensor update failed during visual refresh pass {i + 1}: {err}")
+                self.sim.render()
+        self._wait_for_render_assets()
+        for _ in range(count - propagation):
+            if self.sim is not None:
+                self.sim.render()
+        for sensor in sensors.values():
+            sensor.update(dt=0.0, force_recompute=True)
         self._render_current = True
+        self._visual_refresh_pending = False
+
+    def _wait_for_render_assets(self) -> None:
+        """Wait for USD loading without advancing the timeline or PhysX.
+
+        This checks pending stage assets, not perceptual convergence or every
+        renderer's shader cache. Configured settling and accumulation follow it.
+        """
+        import time
+
+        import omni.usd
+
+        context = omni.usd.get_context()
+        deadline = time.monotonic() + self.scenario.render.asset_timeout_s
+        while context.get_stage_loading_status()[2] > 0:
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Isaac render capture timed out waiting for pending USD assets")
+            self.sim.render()
 
     def flush_visual_updates(self, *, wait_for_materials: bool = False, settle_passes: int = 2) -> None:
         """Drive SimulationApp/scene/sensors for a few frames to settle visual state.

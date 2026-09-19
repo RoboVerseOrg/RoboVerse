@@ -79,6 +79,17 @@ asserts on a 4-env hybrid that:
 
 ## Performance
 
+For offline captures with fixed actions between output frames, call
+`handler.simulate_steps(steps=4)`. It advances four ordinary physics control
+intervals (including backend decimation), then synchronizes/renders once.
+Use `simulate()` for controllers requiring observations after every interval.
+Batching does not reset velocities, actuator targets or camera augmentation.
+Set `ScenarioCfg.add_default_ground=False` and define the same fixed support
+geometry in both handlers when an implicit renderer floor would misrepresent
+the physics scene. Blender, Isaac Sim, MuJoCo, SAPIEN2 and SuperDex honor this
+opt-out; PyBullet, SAPIEN3, Newton, Isaac Gym, Genesis and MJX still add their
+ground unconditionally, so pair a ground-free renderer only with one of the former.
+
 Measured on one RTX 5090, Isaac Sim 5.0, Isaac Lab 2.2.1, MuJoCo 3.x, Franka + two primitives,
 one 256×256 pinhole camera per env, headless. "simulate" includes the physics step and the state
 push into the renderer; "get_states" includes the RTX render and the readback.
@@ -100,3 +111,21 @@ GPU memory, not time, is the limit: each env adds roughly 3 GB of render-product
 so 16 envs do not fit on a 32 GB card even at 128×128 (the run drowns in Vulkan
 `ERROR_OUT_OF_DEVICE_MEMORY` and has to be killed). Size the stage to ~8 envs per 32 GB GPU and add
 processes/GPUs beyond that; the per-env figure keeps falling up to that point.
+
+
+## Reproducible visual augmentation
+
+Bind `metasim.randomization.VisualRandomizer` to the launched hybrid handler. It
+selects `render_handler`, leaving the physics state untouched. Sample a recipe per
+episode, apply it once, and then replay/simulate the episode. `apply(render=False)`
+defers the image until the next state read or hybrid push. Camera jitter changes
+the rendered calibration reported in `CameraState`; do not use the original
+`ScenarioCfg` as the augmented camera's calibration.
+
+[Tutorial 6](../get_started/quick_start/6_advanced_rendering.md) has asset-free
+MuJoCo-to-Blender/Isaac Sim commands, multi-view videos, HDRI/PBR examples and
+replay/sharding. The [capability matrix](../concept/randomization.md) describes
+shared-world lighting and unsupported mounted cameras/instance materials.
+An arbitrary external MJCF is not automatically a portable scene: object/body
+names, render assets and visual geometry must be represented by matching
+`ScenarioCfg` entries, using the hybrid handler's existing state-mapping contract.

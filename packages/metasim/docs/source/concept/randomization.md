@@ -1,5 +1,195 @@
 # Domain Randomization System
 
+## Portable appearance recipes
+
+Use `VisualRandomizer` for appearance variation of an already launched Blender or
+Isaac Sim scene. Use the legacy `DomainRandomizationManager` below for Isaac Sim
+scene-construction presets. Its enabled presets now reject other renderers;
+previously successful binding could conceal unsupported USD operations.
+
+```python
+from metasim.randomization import (
+    EnvironmentRandomCfg, LightingRandomCfg, SurfaceRandomCfg, ViewRandomCfg,
+    VisualRandomizationCfg, VisualRandomizer, VisualRecipe,
+)
+
+augment = VisualRandomizer(
+    VisualRandomizationCfg(
+        materials={"cube": SurfaceRandomCfg(roughness=(0.2, 0.8))},
+        lights={"key": LightingRandomCfg(intensity_scale=(0.7, 1.3))},
+        cameras={"front": ViewRandomCfg()},
+        environment=EnvironmentRandomCfg(hdri_paths=("/absolute/studio.exr",)),
+    ),
+    seed=0,
+)
+recipe = augment.sample(sample_id=episode_id, variant_id=0)
+# Sampling and JSON serialization require no renderer. Asset files must exist.
+saved = recipe.to_json()
+augment.bind_handler(handler)  # launched renderer or HybridSimHandler
+augment.apply(VisualRecipe.from_json(saved))
+```
+
+Omit categories to preserve their existing appearance. Material names refer to
+scenario objects/robots; Blender also accepts explicit scene object names, and
+Isaac Sim accepts `ground` for its shared ground. Light names must be explicit
+scenario names (e.g. `key`, not the default ambiguous `light`). Dome lights belong
+to `environment`, not `lights`. Camera names refer to unmounted pinhole cameras.
+
+Each `(seed, sample_id, variant_id, category, target name)` has an independent
+BLAKE2b-derived random stream. Order, worker count and adding another target do
+not change an existing target's values. Neither sampling nor legacy DR-manager
+construction reseeds the caller's Python, NumPy or Torch RNG. Save one recipe per
+episode and apply it once before replaying its states for temporal consistency.
+Reapplying uses binding-time light baselines and camera configuration, not the
+previous jittered values. Bind once after launch and after setting camera calibration.
+
+`apply(recipe, render=False)` defers rendering and invalidates both renderer and
+public state caches. The next state read or hybrid state push refreshes the image.
+No augmentation call advances physics or changes object transforms/collisions.
+All target names, numerical values, UV requirements and asset paths are checked
+before scene mutation; backend errors propagate. A backend error can leave partial
+edits, so preflight is not a transactional rollback.
+
+### PBR and environment assets
+
+`SurfaceRandomCfg(textures=(TextureSetCfg(...), ...))` selects a coherent set of
+`base_color`, `roughness`, `metallic`, and `normal` files. A supplied map replaces
+that channel's sampled constant. Base color maps use sRGB; scalar maps use the red
+channel as raw data; normal maps use raw OpenGL (+Y) tangent-space normals. Targets
+need UVs on every mesh (`st` in USD); native USD primitives are not guaranteed to
+provide UVs. No auto-unwrapping is performed. Constant material colors are linear RGB.
+
+`color_palette` selects complete RGB triples instead of unrelated channel values.
+Use measured or plausible reflectances for your target materials. `uv_scale` holds
+U and V sampling ranges; `uv_rotation` is in radians about the UV origin. All maps
+share the same scale/rotation, preserving their alignment. These transforms change
+texture repetition, not mesh dimensions or collision geometry. `ior` controls the
+dielectric Fresnel response (range 1–3); metalness still determines the workflow.
+These fields arrived with schema version 2 (new recipes are version 3, below).
+Version 1 JSON remains readable with unit UV scale, zero UV rotation and IOR 1.5,
+without rewriting its original serialized fields.
+
+Blender uses Principled BSDF; Isaac Sim uses USD Preview Surface in the metalness
+workflow. Materials intentionally replace all surfaces within a selected hierarchy;
+unselected objects retain their material bindings. Overlapping Blender hierarchy
+targets and USD instance targets are rejected. Realize/disable instances in the
+asset preparation stage if individual material edits are needed.
+
+HDRIs must be local equirectangular `.hdr` or `.exr` files. Without an HDRI,
+`environment.color` controls uniform world lighting; with an HDRI, its pixel colors
+replace that value. Strength uses Blender background strength and USD dome
+intensity `500 * strength`. Light intensity jitter is a multiplier of the original
+rig. These are backend calibrations, not a claim of equal physical brightness.
+World lighting replaces the Blender world; on Isaac Sim the recipe drives its own
+dome light under `/World/MetaSimVisual` and mutes every dome that existed at bind
+time (scenario dome lights and the skies shipped inside interior scenes), so the
+world is exactly the recipe's. HDRI rotation is in radians around Z; renderer
+texture conventions can still produce different orientations.
+
+### Color temperature, depth of field and packed maps (schema v3)
+
+`LightingRandomCfg(color_temperature=(3200, 6500))` samples a Kelvin value and
+realizes the light color with `color_temperature_to_rgb` (CIE Planckian-locus fit,
+normalized so the brightest channel is 1). The same linear RGB is written to the
+Blender light and the USD light, so both renderers receive identical numbers; the
+recipe stores both `color_temperature` and the resulting `color`.
+
+`ViewRandomCfg(f_stop=(2.8, 8.0), focus_scale=(0.9, 1.1))` enables thin-lens depth
+of field: Cycles `dof.aperture_fstop` / `focus_distance` and USD camera `fStop` /
+`focusDistance`. The focus distance is the jittered camera-to-look-at distance times
+`focus_scale`; an f-stop of zero keeps the pinhole camera. Reported intrinsics are
+unaffected by depth of field. The f-number is a millimetre-lens f-number on both
+renderers: Isaac Sim derives its aperture from the USD `focalLength` read in tenths
+of the metre stage unit, so the adapter writes `f_stop * 100` to the USD camera
+(measured: Isaac f/140 matches Blender f/1.4) and passes the authored focal length
+to Isaac Lab when it sets intrinsics, which would otherwise shrink it to 1/width.
+
+`TextureSetCfg(orm=...)` accepts a glTF-style packed map (R occlusion, G roughness,
+B metallic) instead of separate roughness/metallic files; occlusion is not used by
+either shader. `SurfaceRandomCfg(uv_projection="box")` authors metric per-face planar
+UVs on every mesh of the target (Blender UV layer `metasim_box`, USD face-varying
+`st`) with one texture tile per metre times `uv_scale`, using the same formula on
+both renderers. It is meant for primitives and other geometry without authored UVs
+and never changes geometry or collisions.
+
+### Image-space sensor stage
+
+`SensorRandomCfg` describes a per-camera lens/sensor pipeline that runs on the
+captured image, identically for every renderer: sRGB decode to linear, optional
+auto exposure (`auto_exposure` is a target mean linear luminance; the gain that
+meets it, clamped to 1/16–16, is reported as `SensorCapture.exposure_gain` and
+makes interiors, HDRIs and light rigs of very different brightness comparable),
+exposure (EV), red/blue white-balance gains, OpenCV Brown–Conrady distortion (k1, k2, p1, p2),
+natural cos⁴ vignetting, Gaussian defocus and heteroscedastic shot/read noise
+(variance `shot_noise * value + read_noise`), then sRGB encode. Apply it with
+`recipe.apply_sensor(camera, rgb, intrinsics, frame=i)`, which returns a
+`SensorCapture` holding the processed uint8 image and the OpenCV calibration that
+describes it (`intrinsics`, `distortion = [k1, k2, p1, p2, 0]`, `model =
+"opencv_pinhole"`). Barrel distortion zooms the output focal length just enough that
+every output pixel samples inside the render, so images have no invalid borders and
+the reported matrix stays exact. Noise is seeded by recipe, camera and frame, so the
+stage is deterministic and needs no renderer. It operates on tone-mapped output and
+approximates a camera pipeline; it is not a radiometric sensor simulation.
+
+New recipes use schema version 3. Version 1 and 2 JSON remain readable with their
+original appearance: no color temperature, pinhole cameras, mesh UVs and no sensor
+stage.
+
+### Capability and scaling boundaries
+
+| Capability | Blender | Isaac Sim |
+| --- | --- | --- |
+| Constant PBR / coherent UV texture sets | Principled BSDF | USD Preview Surface |
+| Named lights / world HDRI | Yes | Yes |
+| Position, look-at and focal camera jitter | Unmounted pinhole | Unmounted pinhole |
+| Light color temperature (Kelvin → linear RGB) | Yes | Yes |
+| Thin-lens depth of field (`f_stop`, `focus_scale`) | Cycles camera DOF | USD camera `fStop` / `focusDistance` |
+| Packed ORM maps / metric box UV projection | Yes | Yes (`UsdGeom.Mesh` targets) |
+| Image-space sensor stage with OpenCV calibration | Renderer independent | Renderer independent |
+| Environment subset materials/cameras (`env_ids=[...]`) | One env/process | Per-env prims/sensors |
+| Light/world isolation per environment | Shared world | Shared world |
+| Physics/domain geometry randomization | Use physics/ScenarioCfg separately | Use physics/ScenarioCfg or legacy scene presets |
+| Pixel-identical output across renderers/hardware | Not promised | Not promised |
+
+For independent Isaac Sim env appearances, make a materials/cameras-only recipe
+and apply to a selected `env_ids`. A recipe containing lights, world or shared
+ground cannot be restricted to a subset. Empty selections are no-ops; invalid or
+duplicate indices fail. Mounted cameras and explicit intrinsic overrides are
+currently rejected rather than being silently interpreted in the wrong frame.
+Isaac camera augmentation also rejects Gaussian-splat background compositing:
+that compositor currently projects using static configuration calibration.
+For ordinary RTX captures, `CameraState.intrinsics` comes from the actual sensor
+and includes per-env focal augmentation.
+
+Reuse a single randomizer per handler/stage. Blender reuses one material per
+selected target, updates existing nodes while the texture-channel topology stays
+constant, and removes only its own unused images.
+USD uses stable per-target material paths. This bounds authored resources by the
+target set rather than sample count; renderer-internal caches/VRAM still require
+measurement in the deployment environment. Shard Blender across processes and
+Isaac Sim across stages/processes when worlds/HDRIs must differ. The updated
+[Tutorial 6](../get_started/quick_start/6_advanced_rendering.md) writes per-variant
+atomic directories, asset hashes, calibration and timing manifests.
+
+### Review findings and remaining validation
+
+The original visual randomizers assume USD/Isaac Sim even though binding supports
+other handlers. The portable recipe path makes capabilities explicit and bypasses
+legacy randomizers that still catch some inner operation errors. Registry metadata
+is now scoped to the handler lifetime; the compatibility no-argument lookup returns
+the last-bound registry. Pass a handler explicitly when using multiple simulations.
+DR batching now restores the actual render handler's defer flag and scene auto-flush
+setting on errors, preserves outer batches, and surfaces final flush failures.
+
+Contract tests cover recipe determinism, malformed input, RNG isolation, registry
+lifecycle, cache invalidation and render scheduling. These do not establish rendered
+quality, photometric parity, throughput or VRAM stability. The real renderer test is
+`metasim/test/randomization/test_visual_render.py`; run it in each mapped backend
+environment and inspect demo output before relying on the backend for a dataset.
+
+Material conventions follow the [USD Preview Surface specification](https://openusd.org/dev/spec_usdpreviewsurface.html).
+
+
 ## Overview
 
 RoboVerse provides a comprehensive domain randomization system designed to bridge the sim-to-real gap by introducing controlled variability across scene composition, material properties, lighting conditions, and camera parameters. The system is built on a principled architecture that separates object lifecycle management from property editing, enabling flexible composition and reproducible experiments.
