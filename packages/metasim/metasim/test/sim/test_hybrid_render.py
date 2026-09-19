@@ -12,6 +12,7 @@ session fixture in ``metasim/test/conftest.py`` starts the Isaac Sim app for the
 
 from __future__ import annotations
 
+import copy
 import time
 
 import numpy as np
@@ -118,6 +119,40 @@ def test_camera_outputs_have_contract_shapes(hybrid):
     cam = state.cameras["cam"]
     assert cam.rgb is not None and tuple(cam.rgb.shape) == (NUM_ENVS, 256, 256, 3) and cam.rgb.dtype == torch.uint8
     assert cam.depth is not None and tuple(cam.depth.shape) == (NUM_ENVS, 256, 256)
+
+
+def test_batched_steps_preserve_controlled_robot_trajectory(hybrid, monkeypatch):
+    """Holding identical targets produces identical physics with fewer render syncs."""
+    initial = copy.deepcopy(hybrid.physics_handler.get_states(mode="tensor"))
+    names = hybrid.physics_handler.get_joint_names("franka", sort=True)
+    targets = initial.robots["franka"].joint_pos.clone()
+    targets[:, names.index("panda_joint1")] = torch.linspace(-0.3, 0.3, NUM_ENVS)
+    hybrid.set_states(copy.deepcopy(initial))
+    hybrid.set_dof_targets(targets)
+    for _ in range(12):
+        hybrid.simulate()
+    expected = copy.deepcopy(hybrid.physics_handler.get_states(mode="tensor"))
+    hybrid.set_states(copy.deepcopy(initial))
+    hybrid.set_dof_targets(targets)
+    synchronize = hybrid._push_to_renderer
+    calls = []
+
+    def record(state):
+        calls.append(1)
+        return synchronize(state)
+
+    monkeypatch.setattr(hybrid, "_push_to_renderer", record)
+    for _ in range(3):
+        hybrid.simulate_steps(steps=4)
+    actual = hybrid.physics_handler.get_states(mode="tensor")
+    assert len(calls) == 3
+    for name in expected.objects:
+        assert torch.allclose(expected.objects[name].root_state, actual.objects[name].root_state, atol=1e-6, rtol=0)
+    for field in ("root_state", "joint_pos", "joint_vel"):
+        assert torch.allclose(
+            getattr(expected.robots["franka"], field), getattr(actual.robots["franka"], field), atol=1e-6, rtol=0
+        )
+    assert torch.equal(actual.robots["franka"].joint_pos_target, targets)
 
 
 def test_many_env_rendering(hybrid):

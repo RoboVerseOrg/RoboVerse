@@ -25,7 +25,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim.sim_context import HandlerContext
 from metasim.test.test_utils import get_test_parameters
 
-_SUPPORTED_SIMS = {"isaacgym", "isaacsim", "mujoco", "mjx", "newton", "sapien3", "superdex"}
+_SUPPORTED_SIMS = {"isaacgym", "isaacsim", "mujoco", "mjx", "newton", "sapien3", "superdex", "blender"}
 _SINGLE_ACTIVE_HANDLER_SIMS = {"isaacgym", "isaacsim"}
 
 # pkg_prefix -> scenario_fn
@@ -104,6 +104,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc):
         return
 
     params = get_test_parameters()
+    # Blender is render-only: opt in explicitly, never add it to physics suites.
+    if "blender" in sims:
+        params = [*params, ("blender", 1)]
     if sims:
         params = [p for p in params if p[0] in sims]
     if not params:

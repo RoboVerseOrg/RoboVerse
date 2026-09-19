@@ -87,3 +87,51 @@ def test_both_physics_handler_passes_tensorstate_through():
     h = _make_hybrid(physics_input_type="both", render_input_type="both")
     h._set_states(_tensor_state())
     assert h.physics_handler.received_type == "TensorState"
+
+
+@pytest.mark.general
+def test_batched_steps_advance_every_interval_and_sync_only_final_state():
+    from types import SimpleNamespace
+
+    h = _make_hybrid("both", "both")
+    intervals, rendered = [], []
+    h.physics_handler = SimpleNamespace(
+        simulate=lambda: intervals.append(len(intervals) + 1),
+        get_states=lambda **kwargs: len(intervals),
+    )
+    h._for_renderer = lambda state: state
+    h._push_to_renderer = rendered.append
+    h._tensor_state_cache = "stale"
+    h.simulate_steps(steps=4)
+    assert intervals == [1, 2, 3, 4]
+    assert rendered == [4]
+    assert h._tensor_state_cache is None
+    for invalid in (0, -1, True, 1.5):
+        with pytest.raises(ValueError):
+            h.simulate_steps(steps=invalid)
+    assert intervals == [1, 2, 3, 4]
+    # Recorded actions are applied one per interval, through the hybrid's own set_dof_targets.
+    applied = []
+    h.set_dof_targets = applied.append
+    h.simulate_steps(steps=3, actions=("a", "b", "c"))
+    assert applied == ["a", "b", "c"]
+    assert intervals == [1, 2, 3, 4, 5, 6, 7]
+    assert rendered == [4, 7]
+    with pytest.raises(ValueError, match="one entry per step"):
+        h.simulate_steps(steps=2, actions=["only"])
+    assert intervals == [1, 2, 3, 4, 5, 6, 7]
+
+
+@pytest.mark.general
+def test_batched_step_failure_invalidates_cached_state():
+    from types import SimpleNamespace
+
+    def broken():
+        raise RuntimeError("physics failed")
+
+    h = _make_hybrid("both", "both")
+    h.physics_handler = SimpleNamespace(simulate=broken)
+    h._tensor_state_cache = "stale"
+    with pytest.raises(RuntimeError, match="physics failed"):
+        h.simulate_steps(steps=2)
+    assert h._tensor_state_cache is None
