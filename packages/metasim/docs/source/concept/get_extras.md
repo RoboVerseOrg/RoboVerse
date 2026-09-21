@@ -53,8 +53,8 @@ Implement the `_extra_spec` method inside your task definition:
 ```python
 def _extra_spec(self) -> dict:
     return {
-        "imu_pos": SitePos("imu"),   # World position of IMU sensor site
-        "head_vel": BodyVel("head"), # Velocity of the robot's head
+        "imu_pos": SitePos("imu"),  # World position of IMU sensor site
+        "head_vel": BodyVel("head"),  # Velocity of the robot's head
     }
 ```
 
@@ -90,10 +90,7 @@ extras = handler.get_extra()
 This returns a dictionary containing your custom observations:
 
 ```python
-{
-    "imu_pos": tensor([[0.1, 0.2, 0.3], [...]]),
-    "head_vel": tensor([[0.01, 0.02, 0.03], [...]])
-}
+{"imu_pos": tensor([[0.1, 0.2, 0.3], [...]]), "head_vel": tensor([[0.01, 0.02, 0.03], [...]])}
 ```
 
 You can directly use this data for:
@@ -134,6 +131,7 @@ Example:
 from metasim.queries.base import BaseQueryType
 import torch
 
+
 class BodyMassQuery(BaseQueryType):
     def bind_handler(self, handler):
         # Store the handler for later use
@@ -158,7 +156,7 @@ After defining your custom query class, simply instantiate and use it directly i
 ```python
 def _extra_spec(self) -> dict:
     return {
-        "body_mass": BodyMassQuery(), # Your custom query
+        "body_mass": BodyMassQuery(),  # Your custom query
         "imu_pos": SitePos("imu"),
     }
 ```

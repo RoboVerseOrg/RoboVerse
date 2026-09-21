@@ -16,7 +16,7 @@ demos; each demo carries `init_state`, `actions`, and optional `states`:
 
 ```python
 {
-    "franka_left":  [{"init_state": {...}, "actions": [...], "states": None}, ...],
+    "franka_left": [{"init_state": {...}, "actions": [...], "states": None}, ...],
     "franka_right": [{"init_state": {...}, "actions": [...], "states": None}, ...],
     "metadata": {"num_agents": 2, "agents": ["franka_left", "franka_right"]},
 }
