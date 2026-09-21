@@ -136,6 +136,7 @@ from roboverse_learn.base.base_runner import BaseRunner
 abs_config_path = str(pathlib.Path(__file__).resolve().parent.joinpath("configs").absolute())
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
+
 @hydra.main(config_path=abs_config_path, version_base=None)
 def main(cfg):
     OmegaConf.resolve(cfg)
@@ -144,6 +145,7 @@ def main(cfg):
 
     runner: BaseRunner = cls(cfg)
     runner.run()
+
 
 if __name__ == "__main__":
     main()
