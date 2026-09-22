@@ -13,8 +13,6 @@ Architecture:
 - Hybrid simulation support (automatic handler dispatch)
 """
 
-from metasim.randomization import *
-
 # Randomizers
 from .camera_randomizer import (
     CameraIntrinsicsRandomCfg,
@@ -69,6 +67,19 @@ from .scene_randomizer import (
     USDAssetPoolCfg,
     WorkspaceLayerCfg,
 )
+from .visual import (
+    EnvironmentRandomCfg,
+    LightingRandomCfg,
+    SensorCapture,
+    SensorRandomCfg,
+    SurfaceRandomCfg,
+    TextureSetCfg,
+    ViewRandomCfg,
+    VisualRandomizationCfg,
+    VisualRandomizer,
+    VisualRecipe,
+    color_temperature_to_rgb,
+)
 
 __all__ = [
     "AssetRepository",
@@ -82,6 +93,7 @@ __all__ = [
     "DRConfig",
     "DomainRandomizationManager",
     "EnvironmentLayerCfg",
+    "EnvironmentRandomCfg",
     "IsaacSimAdapter",
     "LightColorRandomCfg",
     "LightColorRanges",
@@ -95,6 +107,7 @@ __all__ = [
     "LightRandomCfg",
     "LightRandomizer",
     "LightScenarios",
+    "LightingRandomCfg",
     "MDLMaterialCfg",
     "ManualGeometryCfg",
     "MaterialPresets",
@@ -116,8 +129,17 @@ __all__ = [
     "SceneRandomCfg",
     "SceneRandomizer",
     "SceneUSDCollections",
+    "SensorCapture",
+    "SensorRandomCfg",
+    "SurfaceRandomCfg",
+    "TextureSetCfg",
     "USDAssetCfg",
     "USDAssetPoolCfg",
     "USDCollections",
+    "ViewRandomCfg",
+    "VisualRandomizationCfg",
+    "VisualRandomizer",
+    "VisualRecipe",
     "WorkspaceLayerCfg",
+    "color_temperature_to_rgb",
 ]

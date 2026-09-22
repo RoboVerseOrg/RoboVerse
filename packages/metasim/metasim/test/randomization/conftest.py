@@ -64,3 +64,35 @@ def get_randomization_scenario(sim: str, num_envs: int) -> ScenarioCfg:
 
 # Register this suite with the shared handler machinery in metasim/test/conftest.py
 register_shared_suite("metasim.test.randomization", get_randomization_scenario)
+
+
+def get_visual_render_scenario(sim: str, num_envs: int) -> ScenarioCfg:
+    """Asset-free scene for portable visual recipe integration tests."""
+    from metasim.scenario.cameras import PinholeCameraCfg
+    from metasim.scenario.lights import SphereLightCfg
+    from metasim.scenario.objects import PrimitiveCubeCfg
+    from metasim.scenario.render import RenderCfg
+
+    return ScenarioCfg(
+        simulator=sim,
+        num_envs=num_envs,
+        headless=True,
+        robots=[],
+        objects=[
+            PrimitiveCubeCfg(name="cube", color=[0.6, 0.2, 0.1], size=(0.4, 0.4, 0.4), default_position=(0, 0, 0.25)),
+            PrimitiveCubeCfg(
+                name="block", color=[0.2, 0.5, 0.2], size=(0.2, 0.2, 0.2), default_position=(0.5, 0.3, 0.15)
+            ),
+        ],
+        lights=[SphereLightCfg(name="key", intensity=1000, pos=(0, -1, 2))],
+        cameras=[
+            PinholeCameraCfg(
+                name="view", width=64, height=64, pos=(1.4, -1.4, 1.2), look_at=(0, 0, 0.2), data_types=["rgb"]
+            )
+        ],
+        render=RenderCfg(mode="pathtracing", samples=32, device="CPU" if sim == "blender" else "AUTO"),
+        add_default_ground=False,
+    )
+
+
+register_shared_suite("metasim.test.randomization.test_visual_render", get_visual_render_scenario)

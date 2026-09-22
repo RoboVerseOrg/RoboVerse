@@ -66,3 +66,104 @@ def test_example_runs_headless_on_mujoco(script, args):
     assert "Traceback" not in proc.stderr and "Exception ignored" not in proc.stderr, (
         f"{script} printed a traceback:\n{tail}"
     )
+
+
+def test_visual_example_sampling_replay_and_failed_output_are_atomic(tmp_path):
+    """Recipe-only mode exercises the real CLI without launching a renderer."""
+    import json
+
+    def run(*args):
+        return subprocess.run(
+            [sys.executable, "examples/6_advanced_rendering.py", "--recipes-only", *args],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        )
+
+    output = tmp_path / "sampled"
+    proc = run("--variants", "3", "--output", str(output))
+    assert proc.returncode == 0, proc.stderr
+    dirs = sorted(output.glob("sample_*"))
+    assert len(dirs) == 3
+    recipe = dirs[1] / "recipe.json"
+    saved = recipe.read_text()
+    manifest = json.loads((dirs[1] / "manifest.json").read_text())
+    assert manifest["status"] == "sampled"
+    assert not list(output.glob(".*"))
+
+    replay = tmp_path / "replay"
+    proc = run("--recipe", str(recipe), "--output", str(replay))
+    assert proc.returncode == 0, proc.stderr
+    assert (replay / dirs[1].name / "recipe.json").read_text() == saved
+    proc = run("--output", str(output))
+    assert proc.returncode != 0 and "Output already exists" in proc.stderr
+    assert recipe.read_text() == saved
+    assert not list(output.glob(".*"))
+    data = json.loads(saved)
+    data["materials"]["cube"]["roughness"] = 0.1
+    recipe.write_text(json.dumps(data))
+    rejected = tmp_path / "rejected"
+    proc = run("--recipe", str(recipe), "--output", str(rejected))
+    assert proc.returncode != 0 and "recipe hash differs" in proc.stderr
+    assert not rejected.exists()
+
+
+@pytest.mark.parametrize("scene", ["primitives", "assets"])
+def test_visual_example_constructs_scene_without_optional_backends(scene):
+    """Recipe export must not hide invalid primitive configs in the rendering path."""
+    import runpy
+
+    example = runpy.run_path(str(ROOT / "examples/6_advanced_rendering.py"))
+    args = example["Args"](scene=scene, multiview=True)
+    scenario = example["_scenario"](args)
+    assert {obj.name for obj in scenario.objects} >= {"cube", "sphere", "backdrop"}
+    assert [camera.name for camera in scenario.cameras] == ["front", "side"]
+    assert not scenario.add_default_ground
+    floor = next(obj for obj in scenario.objects if obj.name == "floor")
+    assert floor.default_position[2] + floor.size[2] / 2 == 0
+
+
+def test_visual_example_background_scene_resolves_for_both_renderers():
+    """Interior scene configs must expose a Blender file type; the pack lacked it and raised KeyError."""
+    import runpy
+
+    example = runpy.run_path(str(ROOT / "examples/6_advanced_rendering.py"))
+    for sim in ("blender", "isaacsim"):
+        scenario = example["_scenario"](example["Args"](sim=sim, background="kujiale_scene_0009"))
+        assert scenario.scene.file_name(sim).endswith("kujiale_0009/009.usda")
+        assert not scenario.add_default_ground
+        assert {obj.name for obj in scenario.objects} == {"cube", "sphere"}
+        assert [light.name for light in scenario.lights] == ["key", "fill"]
+
+
+def test_visual_replay_rejects_changed_texture_and_image_metrics_detect_extremes(tmp_path):
+    import hashlib
+    import json
+    import runpy
+
+    import numpy as np
+
+    from metasim.randomization import SurfaceRandomCfg, TextureSetCfg, VisualRandomizationCfg, VisualRandomizer
+
+    example = runpy.run_path(str(ROOT / "examples/6_advanced_rendering.py"))
+    texture = tmp_path / "texture.png"
+    texture.write_bytes(b"original")
+    recipe = VisualRandomizer(
+        VisualRandomizationCfg(materials={"cube": SurfaceRandomCfg(textures=(TextureSetCfg(base_color=str(texture)),))})
+    ).sample(sample_id=0)
+    recipe_path = tmp_path / "recipe.json"
+    recipe_path.write_text(recipe.to_json())
+    (tmp_path / "manifest.json").write_text(
+        json.dumps({
+            "recipe_sha256": hashlib.sha256(recipe.to_json().encode()).hexdigest(),
+            "asset_sha256": example["_asset_hashes"](recipe),
+        })
+    )
+    example["_verify_replay"](recipe_path, recipe)
+    texture.write_bytes(b"modified")
+    with pytest.raises(ValueError, match="asset hash differs"):
+        example["_verify_replay"](recipe_path, recipe)
+    assert example["_image_metrics"](np.zeros((4, 4, 3), np.uint8))["dark_fraction"] == 1
+    assert example["_image_metrics"](np.full((4, 4, 3), 255, np.uint8))["clipped_fraction"] == 1

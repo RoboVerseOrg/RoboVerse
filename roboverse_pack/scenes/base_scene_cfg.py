@@ -5,6 +5,7 @@ from metasim.utils.configclass import configclass
 _DEFAULT_FILE_TYPE = {
     "isaaclab": "usd",
     "isaacsim": "usd",
+    "blender": "usd",
     "pybullet": "urdf",
     "sapien2": "urdf",
     "sapien3": "urdf",

@@ -320,8 +320,21 @@ TEST_FUNCTIONS = [
 @pytest.mark.parametrize("test_func", TEST_FUNCTIONS, ids=[f.__name__ for f in TEST_FUNCTIONS])
 def test_material_randomizers(handler, test_func, distribution):
     """Run material randomizer checks inside the shared handler process."""
+    import torch
+
     common_range = (1e-8, 1.0)
-    test_func(handler, distribution=distribution, common_range=common_range)
+    # The shared handler outlives tests. Reusing seed 789 after a previous test
+    # otherwise reproduces its material exactly and invalidates change assertions.
+    snapshots = [
+        (obj.root_physx_view, obj.root_physx_view.get_material_properties().clone())
+        for obj in handler.scene.rigid_objects.values()
+    ]
+    try:
+        test_func(handler, distribution=distribution, common_range=common_range)
+    finally:
+        env_ids = torch.arange(handler.num_envs, dtype=torch.int32, device="cpu")
+        for view, material in snapshots:
+            view.set_material_properties(material, env_ids)
 
 
 def _get_object_instance(handler, obj_name):

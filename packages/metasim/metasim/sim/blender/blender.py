@@ -1717,14 +1717,16 @@ class BlenderHandler(BaseSimHandler):
         scene.render.image_settings.file_format = _BLENDER_RGB_READBACK_FORMAT
         scene.render.image_settings.color_mode = "RGB"
         scene.render.image_settings.color_depth = "8"
-        scene.cycles.use_denoising = True
+        scene.cycles.use_denoising = getattr(render_cfg, "denoise", True)
+        scene.cycles.seed = getattr(render_cfg, "seed", 0) % (2**31)
+        scene.cycles.use_animated_seed = False
         if hasattr(scene.cycles, "denoising_use_gpu"):
             scene.cycles.denoising_use_gpu = selected_device != "CPU"
         for attr in ("denoising_prefilter", "denoising_quality"):
             if hasattr(scene.cycles, attr):
                 setattr(scene.cycles, attr, settings[attr])
         for attr, value in (
-            ("max_bounces", settings["max_bounces"]),
+            ("max_bounces", getattr(render_cfg, "max_bounces", None) or settings["max_bounces"]),
             ("diffuse_bounces", settings["diffuse_bounces"]),
             ("glossy_bounces", settings["glossy_bounces"]),
             ("transmission_bounces", settings["transmission_bounces"]),
@@ -1735,11 +1737,8 @@ class BlenderHandler(BaseSimHandler):
         ):
             if hasattr(scene.cycles, attr):
                 setattr(scene.cycles, attr, value)
-        try:
-            scene.view_settings.view_transform = "Standard"
-        except TypeError:
-            pass
-        scene.view_settings.exposure = -0.55
+        scene.view_settings.view_transform = getattr(render_cfg, "view_transform", "Standard")
+        scene.view_settings.exposure = getattr(render_cfg, "exposure", -0.55)
         scene.view_settings.gamma = 1.0
         scene.render.film_transparent = False
 
@@ -1865,11 +1864,12 @@ class BlenderHandler(BaseSimHandler):
         if path.is_dir():
             for ext in (".hdr", ".exr", ".HDR", ".EXR"):
                 candidates.extend(path.rglob(f"*{ext}"))
-        elif path.is_file():
+        elif path.is_file() and path.suffix.lower() in {".hdr", ".exr"}:
             candidates = [path]
         if not candidates:
-            return False
-        chosen = _random.choice(sorted(candidates))
+            raise FileNotFoundError(f"No HDRI .hdr/.exr files found at {hdri_path!r}")
+        rng = _random.Random(getattr(self.scenario.render, "seed", 0))
+        chosen = rng.choice(sorted(candidates))
 
         scene.world.use_nodes = True
         nt = scene.world.node_tree
@@ -1884,7 +1884,7 @@ class BlenderHandler(BaseSimHandler):
         env.image = bpy.data.images.load(str(chosen), check_existing=True)
         mapping = nt.nodes.new("ShaderNodeMapping")
         mapping.location = (-300, 0)
-        mapping.inputs["Rotation"].default_value[2] = _random.uniform(-3.14159, 3.14159)
+        mapping.inputs["Rotation"].default_value[2] = rng.uniform(-3.14159, 3.14159)
         tex_coord = nt.nodes.new("ShaderNodeTexCoord")
         tex_coord.location = (-500, 0)
         nt.links.new(tex_coord.outputs["Generated"], mapping.inputs["Vector"])
@@ -1898,7 +1898,7 @@ class BlenderHandler(BaseSimHandler):
         floor instead of objects floating in a void. The slight downward
         offset avoids z-fighting when callers add their own ground at z=0
         (e.g. ``scene_aug.add_ground_plane`` in the photoreal demo). To opt
-        out: delete the ``metasim_ground`` object after handler.launch().
+        out: set ``ScenarioCfg.add_default_ground=False`` before launch.
 
         Also adds a ``metasim_table`` plane at z=0 — a smaller, warmer
         tabletop where manipulation tasks place their objects (most
@@ -1906,6 +1906,8 @@ class BlenderHandler(BaseSimHandler):
         floor). The floor stays underneath to fill out the periphery and
         give HDRI lighting something to bounce off.
         """
+        if not self.scenario.add_default_ground:
+            return
         if bpy.data.objects.get("metasim_ground") is None:
             bpy.ops.mesh.primitive_plane_add(size=4.0, location=(0.0, 0.0, -0.011))
             plane = bpy.context.object
@@ -2102,6 +2104,7 @@ class BlenderHandler(BaseSimHandler):
         obj.data.name = f"{camera.name}_data"
         obj.data.lens = float(camera.focal_length)
         obj.data.sensor_width = float(camera.horizontal_aperture)
+        obj.data.sensor_fit = "HORIZONTAL"
         obj.data.clip_start = float(camera.clipping_range[0])
         obj.data.clip_end = float(camera.clipping_range[1])
         direction = Vector(camera.look_at) - Vector(camera.pos)
@@ -2245,11 +2248,20 @@ class BlenderHandler(BaseSimHandler):
         bpy.ops.render.render(write_still=True)
         rgb_np = np.asarray(iio.imread(image_path))[..., :3].copy()
         rgb = torch.from_numpy(rgb_np).to(torch.uint8).unsqueeze(0)
+        from metasim.utils.camera_util import camera_quat_world_from_opengl
+
+        # Read the realized camera, including visual augmentation, rather than config defaults.
+        camera_obj = self._camera_objs[camera.name]
+        fx = camera.width * camera_obj.data.lens / camera_obj.data.sensor_width
+        intrinsic = [[fx, 0.0, camera.width / 2], [0.0, fx, camera.height / 2], [0.0, 0.0, 1.0]]
         return CameraState(
             rgb=rgb,
             depth=None,
-            pos=torch.tensor([camera.pos], dtype=torch.float32),
-            intrinsics=torch.tensor([camera.intrinsics], dtype=torch.float32),
+            pos=torch.tensor([tuple(camera_obj.matrix_world.translation)], dtype=torch.float32),
+            quat_world=camera_quat_world_from_opengl(
+                torch.tensor([list(row) for row in camera_obj.matrix_world.to_3x3()], dtype=torch.float32)
+            ).unsqueeze(0),
+            intrinsics=torch.tensor([intrinsic], dtype=torch.float32),
         )
 
     def _simulate(self):

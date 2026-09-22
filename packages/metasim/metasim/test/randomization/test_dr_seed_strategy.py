@@ -19,7 +19,11 @@ After the fix, all randomizer seeds come from
 
 from __future__ import annotations
 
+import pytest
+
 from metasim.randomization.dr_manager import _derive_seed
+
+pytestmark = pytest.mark.general
 
 # ---- Direct unit tests for the derivation helper ---------------------------
 
@@ -147,3 +151,100 @@ def test_no_truthy_seed_check():
     # Forbid the truthy form ``if seed else``; require ``if seed is not None else``.
     bad = re.findall(r"if\s+seed\s+else", no_comments)
     assert bad == [], f"truthy seed check still present: {bad}"
+
+
+def test_manager_batch_restores_flags_and_propagates_errors():
+    from types import SimpleNamespace
+
+    import pytest
+
+    from metasim.randomization import DomainRandomizationManager, DRConfig
+
+    events = []
+    renderer = SimpleNamespace(
+        _defer_all_visual_flushes=False,
+        flush_visual_updates=lambda **kw: events.append("flush"),
+        _invalidate_state_caches=lambda: events.append("invalidate"),
+    )
+    manager = DomainRandomizationManager.__new__(DomainRandomizationManager)
+    manager.handler = SimpleNamespace(
+        render_handler=renderer, _invalidate_state_caches=lambda: events.append("invalidate_hybrid")
+    )
+    manager.config = DRConfig(level=1)
+
+    class Scene:
+        cfg = SimpleNamespace(auto_flush_visuals=True)
+        fail = True
+
+        def __call__(self):
+            assert renderer._defer_all_visual_flushes
+            assert not self.cfg.auto_flush_visuals
+            if self.fail:
+                raise RuntimeError("scene failure")
+
+    scene = Scene()
+    manager.randomizers = {"scene": scene, "material_dynamic": []}
+    with pytest.raises(RuntimeError, match="scene failure"):
+        manager.apply_randomization()
+    assert scene.cfg.auto_flush_visuals
+    assert not renderer._defer_all_visual_flushes
+    assert events == []
+    scene.fail = False
+    manager.apply_randomization()
+    # Flush, then invalidate the renderer's and the wrapping hybrid's state caches.
+    assert events == ["flush", "invalidate", "invalidate_hybrid"]
+    renderer._defer_all_visual_flushes = True
+    manager.apply_randomization()
+    assert renderer._defer_all_visual_flushes
+    # Inside an outer batch nothing flushes, but caches still go stale.
+    assert events == ["flush", "invalidate", "invalidate_hybrid", "invalidate", "invalidate_hybrid"]
+    renderer._defer_all_visual_flushes = False
+
+    def failed_flush(**kwargs):
+        raise RuntimeError("flush failure")
+
+    renderer.flush_visual_updates = failed_flush
+    with pytest.raises(RuntimeError, match="flush failure"):
+        manager.apply_randomization()
+
+
+def test_enabled_legacy_manager_rejects_non_isaac_renderer():
+    from types import SimpleNamespace
+
+    import pytest
+
+    from metasim.randomization import DomainRandomizationManager, DRConfig
+
+    handler = SimpleNamespace(cameras=[])
+    with pytest.raises(NotImplementedError, match="VisualRandomizer"):
+        DomainRandomizationManager(DRConfig(level=1), SimpleNamespace(), handler)
+    # Level zero remains usable on every backend.
+    manager = DomainRandomizationManager(DRConfig(), SimpleNamespace(), handler)
+    assert manager.randomizers == {}
+
+
+def test_legacy_manager_never_reseeds_global_rngs():
+    """The manager derives per-randomizer seeds; it must not touch the caller's global generators.
+
+    Level >= 1 needs a live Isaac Sim stage, so the guard is on the source: no global
+    seeding call may return to dr_manager (the removed ``_setup_reproducibility``).
+    """
+    import inspect
+    import re
+
+    from metasim.randomization import dr_manager
+
+    source = inspect.getsource(dr_manager)
+    forbidden = re.findall(r"\b(random\.seed|np\.random\.seed|numpy\.random\.seed|torch\.manual_seed)\s*\(", source)
+    assert forbidden == [], f"global RNG reseeding returned to dr_manager: {forbidden}"
+    assert "_setup_reproducibility" not in source
+
+
+def test_legacy_config_rejects_invalid_levels_and_modes():
+    import pytest
+
+    from metasim.randomization import DRConfig
+
+    for kwargs in ({"level": 4}, {"level": True}, {"scene_mode": -1}, {"scene_mode": 1.5}):
+        with pytest.raises(ValueError):
+            DRConfig(**kwargs)

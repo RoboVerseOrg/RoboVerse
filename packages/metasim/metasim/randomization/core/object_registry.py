@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
+from weakref import WeakValueDictionary
 
 if TYPE_CHECKING:
     from metasim.sim.base import BaseSimHandler
@@ -44,7 +45,7 @@ class ObjectMetadata:
 class ObjectRegistry:
     """Central registry for all simulation objects.
 
-    This singleton class maintains metadata for all objects in the simulation,
+    This handler-scoped registry maintains metadata for all objects in the simulation,
     enabling unified access regardless of creation method.
 
     Usage:
@@ -66,10 +67,11 @@ class ObjectRegistry:
     """
 
     _instance: ObjectRegistry | None = None
+    _instances: WeakValueDictionary = WeakValueDictionary()
 
     @classmethod
     def get_instance(cls, handler: BaseSimHandler | None = None) -> ObjectRegistry:
-        """Get or create the singleton ObjectRegistry instance.
+        """Get or create the registry for a handler (no argument returns the last bound).
 
         Args:
             handler: SimHandler instance (required for first call)
@@ -77,11 +79,18 @@ class ObjectRegistry:
         Returns:
             ObjectRegistry singleton instance
         """
-        if cls._instance is None:
-            if handler is None:
+        if handler is None:
+            if cls._instance is None:
                 raise RuntimeError("First call to ObjectRegistry.get_instance() must provide a handler")
-            cls._instance = cls(handler)
-        return cls._instance
+            return cls._instance
+        key = id(handler)
+        registry = cls._instances.get(key)
+        if registry is None:
+            registry = cls(handler)
+            cls._instances[key] = registry
+            handler._randomization_registry = registry  # Keep metadata alive for the handler lifetime.
+        cls._instance = registry  # Backward-compatible no-argument lookup: last bound handler.
+        return registry
 
     @classmethod
     def reset(cls):
@@ -89,7 +98,11 @@ class ObjectRegistry:
 
         This is useful when switching between different handlers or in testing.
         """
+        for registry in list(cls._instances.values()):
+            if getattr(registry.handler, "_randomization_registry", None) is registry:
+                del registry.handler._randomization_registry
         cls._instance = None
+        cls._instances.clear()
 
     def __init__(self, handler: BaseSimHandler):
         """Initialize ObjectRegistry (internal, use get_instance() instead)."""
@@ -145,19 +158,26 @@ class ObjectRegistry:
         if not obj:
             raise ValueError(f"Object '{name}' not found in registry. Available objects: {list(self._registry.keys())}")
 
+        if env_ids is not None:
+            if isinstance(env_ids, torch.Tensor):
+                env_ids = env_ids.cpu().tolist()
+            if not isinstance(env_ids, list | tuple):
+                raise ValueError("env_ids must be a sequence of integer indices")
+            if not env_ids:
+                return []
+            count = getattr(self.handler, "num_envs", None) or len(obj.prim_paths)
+            if any(isinstance(i, bool) or not isinstance(i, int) or not 0 <= i < count for i in env_ids):
+                raise ValueError(f"env_ids must be integer indices in [0, {count}), got {env_ids}")
         if obj.shared:
             # Shared object: only one prim path
             return [obj.prim_paths[0]]
-        else:
-            # Per-env object: filter by env_ids
-            if env_ids is None:
-                return obj.prim_paths
-
-            # Convert tensor to list if needed
-            if isinstance(env_ids, torch.Tensor):
-                env_ids = env_ids.cpu().tolist()
-
-            return [obj.prim_paths[i] for i in env_ids if i < len(obj.prim_paths)]
+        if env_ids is None:
+            return obj.prim_paths
+        # A per-env object may exist in a subset of envs (SceneRandomizer registers only the
+        # envs it created); requested envs without a prim are skipped, not an error.
+        if any("/env_" in path for path in obj.prim_paths):
+            return [path for i in env_ids for path in obj.prim_paths if f"/env_{i}/" in path]
+        return [obj.prim_paths[i] for i in env_ids if i < len(obj.prim_paths)]
 
     def has_physics(self, name: str) -> bool:
         """Check if an object has physics properties.

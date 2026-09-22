@@ -30,24 +30,6 @@ from ..light_randomizer import (
 )
 
 
-def kelvin_to_rgb(kelvin: float) -> tuple[float, float, float]:
-    """Convert color temperature in Kelvin to RGB values (0-1 range)."""
-    temp = kelvin / 100
-
-    if temp <= 66:
-        red = 1.0
-        green = min(1.0, max(0.0, (99.4708025861 * (temp**0.1981) - 161.1195681661) / 255))
-        blue = (
-            0.0 if temp < 19 else min(1.0, max(0.0, (138.5177312231 * ((temp - 10) ** 0.1981) - 305.0447927307) / 255))
-        )
-    else:
-        red = min(1.0, max(0.0, (329.698727446 * ((temp - 60) ** -0.1332047592)) / 255))
-        green = min(1.0, max(0.0, (288.1221695283 * ((temp - 60) ** -0.0755148492)) / 255))
-        blue = 1.0
-
-    return (red, green, blue)
-
-
 class LightIntensityRanges:
     """Common intensity ranges for different scenarios (in candela or nits)."""
 

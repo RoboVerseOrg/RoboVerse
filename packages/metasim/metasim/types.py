@@ -260,7 +260,7 @@ class CameraState:
     """
 
     ## Camera parameters — Optional because not every backend populates them: MuJoCo and Isaac Sim fill all
-    ## three, Blender pos and intrinsics, Newton intrinsics; the rest report None.
+    ## three, as does Blender; Newton fills intrinsics; the rest report None.
     pos: CameraPosTensor | None = None
     """Position of the camera. Shape is (num_envs, 3)."""
     quat_world: CameraQuatTensor | None = None
