@@ -559,32 +559,49 @@ def test_isaac_camera_refresh_retains_per_env_episode_jitter():
 
     cfg = PinholeCameraCfg(name="cam", pos=(1, 1, 1), look_at=(0, 0, 0))
     poses = []
+    subset = []
     origins = torch.tensor([[0.0, 0, 0], [10.0, 0, 0]])
-    position = torch.tensor([[1.0, 1, 1], [2.0, 3, 4]])
-    look_at = torch.tensor([[0.0, 0, 0], [0.2, 0.1, 0]])
+    sensor = SimpleNamespace(
+        set_world_poses_from_view=lambda p, t, env_ids=None: (poses if env_ids is None else subset).append((
+            p.clone(),
+            t.clone(),
+            env_ids,
+        ))
+    )
     h = SimpleNamespace(
-        scene=SimpleNamespace(
-            env_origins=origins,
-            sensors={
-                "cam": SimpleNamespace(set_world_poses_from_view=lambda p, t: poses.append((p.clone(), t.clone())))
-            },
-        ),
+        scene=SimpleNamespace(env_origins=origins, sensors={"cam": sensor}),
         num_envs=2,
         device="cpu",
         cameras=[cfg],
-        _visual_camera_poses={"cam": (position, look_at)},
+        _camera_poses={},
     )
-    refresh = _render_method(
-        "sim/isaacsim/isaacsim.py",
-        "IsaacsimHandler",
-        "_update_camera_pose",
-        {
-            "torch": torch,
-            "PinholeCameraCfg": PinholeCameraCfg,
-        },
-    )
+    namespace = {"torch": torch, "PinholeCameraCfg": PinholeCameraCfg}
+    for name in ("_env_origins", "set_camera_pose", "_update_camera_pose"):
+        namespace[name] = _render_method("sim/isaacsim/isaacsim.py", "IsaacsimHandler", name, namespace)
+    h._env_origins = lambda: namespace["_env_origins"](h)
+    refresh = namespace["_update_camera_pose"]
+
+    # No remembered pose: the scenario configuration is what gets re-asserted.
+    refresh(h)
+    assert torch.equal(poses[-1][0], torch.tensor([[1.0, 1, 1], [1.0, 1, 1]]) + origins)
+
+    # One environment is jittered; the other keeps the configured pose, across repeated refreshes.
+    namespace["set_camera_pose"](h, "cam", (2.0, 3, 4), (0.2, 0.1, 0), env_ids=[1])
+    assert subset[-1][2] == [1]
     for _ in range(3):
         refresh(h)
-        assert torch.equal(poses[-1][0], position + origins)
-        assert torch.equal(poses[-1][1], look_at + origins)
+        assert torch.equal(poses[-1][0], torch.tensor([[1.0, 1, 1], [2.0, 3, 4]]) + origins)
+        assert torch.equal(poses[-1][1], torch.tensor([[0.0, 0, 0], [0.2, 0.1, 0]]) + origins)
+
+    # A later writer (legacy randomizer / DR manager) wins over the earlier jitter, and sticks.
+    namespace["set_camera_pose"](h, "cam", (5.0, 5, 5), (1.0, 0, 0))
+    for _ in range(2):
+        refresh(h)
+        assert torch.equal(poses[-1][0], torch.tensor([[5.0, 5, 5], [5.0, 5, 5]]) + origins)
+        assert torch.equal(poses[-1][1], torch.tensor([[1.0, 0, 0], [1.0, 0, 0]]) + origins)
     assert cfg.pos == (1, 1, 1)
+    for bad in ({"name": "missing"}, {"env_ids": [2]}):
+        with pytest.raises((ValueError, KeyError)):
+            namespace["set_camera_pose"](
+                h, bad.get("name", "cam"), (0, 0, 0), (1, 0, 0), **{k: v for k, v in bad.items() if k != "name"}
+            )

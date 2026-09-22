@@ -136,6 +136,10 @@ class IsaacsimHandler(BaseSimHandler):
             self.physics_dt = 0.015 / self.scenario.decimation
         self._physics_step_counter = 0
         self._render_current = False  # set by refresh_render, cleared by _simulate
+        self._visual_refresh_pending = False  # a visual editor changed the scene since the last render
+        # Per-env camera poses this handler re-asserts, env-local (no env origin). One owner for
+        # every writer (visual recipes, legacy randomizers, the DR manager): see set_camera_pose.
+        self._camera_poses: dict[str, tuple[torch.Tensor, torch.Tensor]] = {}
         self._is_closed = False
         self.render_interval = self.scenario.decimation  # TODO: fix hardcode
         self._manual_pd_on = []
@@ -246,33 +250,74 @@ class IsaacsimHandler(BaseSimHandler):
             lambda event, *args: obj_proxy._on_keyboard_event(event, *args),
         )
 
+    def _env_origins(self) -> torch.Tensor:
+        origins = getattr(self.scene, "env_origins", None)
+        if origins is None:
+            return torch.zeros((self.num_envs, 3), device=self.device)
+        return origins.to(self.device)
+
+    def set_camera_pose(
+        self,
+        name: str,
+        pos,
+        look_at,
+        *,
+        env_ids: list[int] | None = None,
+    ) -> None:
+        """Move an unmounted camera and remember the pose across state pushes.
+
+        ``pos`` and ``look_at`` are env-local (the env origin is added here) and may be a
+        single point or one row per selected environment. The handler re-asserts camera
+        poses on reset, state writes and the first simulation steps; poses written here
+        survive that, so every writer (visual recipes, legacy randomizers, the DR manager)
+        must use this method instead of calling the sensor directly.
+
+        Args:
+            name: Camera name from the scenario.
+            pos: Camera position(s), shape (3,) or (len(env_ids), 3).
+            look_at: Look-at point(s), same shape rules as ``pos``.
+            env_ids: Environments to move; all of them by default.
+        """
+        camera = next((cam for cam in self.cameras if cam.name == name), None)
+        if camera is None or name not in getattr(self.scene, "sensors", {}):
+            raise ValueError(f"Unknown camera: {name!r}")
+        if camera.mount_to is not None:
+            raise NotImplementedError(f"Camera {name!r} is mounted; its pose follows the mount, not this call")
+        ids = list(range(self.num_envs)) if env_ids is None else list(env_ids)
+        if any(not 0 <= int(i) < self.num_envs for i in ids):
+            raise ValueError(f"env_ids must be indices in [0, {self.num_envs})")
+        if not ids:
+            return
+        positions, targets = self._camera_poses.get(name, (None, None))
+        if positions is None:
+            positions = torch.as_tensor(camera.pos, device=self.device, dtype=torch.float32).repeat(self.num_envs, 1)
+            targets = torch.as_tensor(camera.look_at, device=self.device, dtype=torch.float32).repeat(self.num_envs, 1)
+            self._camera_poses[name] = (positions, targets)
+        index = torch.as_tensor(ids, device=self.device, dtype=torch.long)
+        positions[index] = torch.as_tensor(pos, device=self.device, dtype=torch.float32).reshape(-1, 3)
+        targets[index] = torch.as_tensor(look_at, device=self.device, dtype=torch.float32).reshape(-1, 3)
+        origins = self._env_origins()[index]
+        self.scene.sensors[name].set_world_poses_from_view(
+            positions[index] + origins, targets[index] + origins, env_ids=ids
+        )
+
     def _update_camera_pose(self) -> None:
-        env_origins = getattr(self.scene, "env_origins", None)
-        if env_origins is None:
-            env_origins = torch.zeros((self.num_envs, 3), device=self.device)
-        else:
-            env_origins = env_origins.to(self.device)
+        """Re-assert every unmounted camera: remembered poses first, scenario config otherwise."""
+        env_origins = self._env_origins()
 
         for camera in self.cameras:
-            if isinstance(camera, PinholeCameraCfg):
-                # set look at position using isaaclab's api
-                if camera.mount_to is None:
-                    camera_inst = self.scene.sensors[camera.name]
-                    visual_pose = getattr(self, "_visual_camera_poses", {}).get(camera.name)
-                    if visual_pose is None:
-                        position_tensor = torch.as_tensor(camera.pos, device=self.device).expand(self.num_envs, -1)
-                        camera_lookat_tensor = torch.as_tensor(camera.look_at, device=self.device).expand(
-                            self.num_envs, -1
-                        )
-                    else:
-                        # Keep per-env episode jitter when hybrid state replay refreshes cameras.
-                        position_tensor, camera_lookat_tensor = (value.to(self.device) for value in visual_pose)
-                    position_tensor = position_tensor + env_origins
-                    camera_lookat_tensor = camera_lookat_tensor + env_origins
-                    camera_inst.set_world_poses_from_view(position_tensor, camera_lookat_tensor)
-                    # log.debug(f"Updated camera {camera.name} pose: pos={camera.pos}, look_at={camera.look_at}")
-            else:
+            if not isinstance(camera, PinholeCameraCfg):
                 raise ValueError(f"Unsupported camera type: {type(camera)}")
+            if camera.mount_to is not None:
+                continue
+            camera_inst = self.scene.sensors[camera.name]
+            remembered = self._camera_poses.get(camera.name)
+            if remembered is None:
+                position_tensor = torch.as_tensor(camera.pos, device=self.device).expand(self.num_envs, -1)
+                camera_lookat_tensor = torch.as_tensor(camera.look_at, device=self.device).expand(self.num_envs, -1)
+            else:
+                position_tensor, camera_lookat_tensor = (value.to(self.device) for value in remembered)
+            camera_inst.set_world_poses_from_view(position_tensor + env_origins, camera_lookat_tensor + env_origins)
 
     def _apply_robot_default_joint_positions(self) -> None:
         env_ids = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)

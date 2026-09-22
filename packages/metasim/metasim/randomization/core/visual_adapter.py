@@ -37,6 +37,8 @@ def _focus(values, pos, target):
 # f-number opens Isaac's aperture 100x wider. Measured: Isaac f/140 matches Blender f/1.4.
 ISAAC_FSTOP_SCALE = 100.0
 BOX_UV_LAYER = "metasim_box"
+IDLE_IMAGE_POOL = 8
+"""Unused Blender image datablocks kept loaded, so alternating recipes do not re-decode them."""
 
 
 def _box_uv(point, axis):
@@ -117,8 +119,10 @@ class BlenderVisualAdapter:
             # Own the datablock: never change colorspace on an imported asset's image.
             image = self.bpy.data.images.load(path, check_existing=False)
             image.colorspace_settings.name = color_space
-            self.images[key] = image
-        return self.images[key]
+        else:
+            image = self.images.pop(key)
+        self.images[key] = image  # re-inserted: the mapping is ordered oldest-used first
+        return image
 
     def _box_uvs(self, obj):
         if obj.data.users > 1:
@@ -274,11 +278,12 @@ class BlenderVisualAdapter:
         if recipe.environment is not None:
             self._environment(recipe.environment)
         # Removing only our unused image datablocks bounds memory even when replaying
-        # recipes from an unbounded stream of different texture paths.
-        for key, image in list(self.images.items()):
-            if image.users == 0:
-                self.bpy.data.images.remove(image)
-                del self.images[key]
+        # recipes from an unbounded stream of different texture paths. A small pool of
+        # recently used ones survives, so alternating recipes do not reload and decode
+        # the same 4K HDRI every time.
+        idle = [key for key, image in self.images.items() if image.users == 0]
+        for key in idle[: max(0, len(idle) - IDLE_IMAGE_POOL)]:
+            self.bpy.data.images.remove(self.images.pop(key))
         self.bpy.context.view_layer.update()
 
     def invalidate(self):
@@ -309,6 +314,8 @@ class IsaacSimVisualAdapter:
         self.scope = "/World/MetaSimVisual"
         if self.stage.GetPrimAtPath(self.scope):
             raise RuntimeError("Only one visual adapter may own an Isaac Sim stage")
+        # Claim the scope at bind time; the guard above is what makes a second adapter fail.
+        UsdGeom.Scope.Define(self.stage, self.scope)
         self.scene_domes = []
         for prim in self.stage.Traverse():
             if prim.IsA(UsdLux.DomeLight):
@@ -595,24 +602,10 @@ class IsaacSimVisualAdapter:
             cfg = self.cameras[name]
             sensor = self.handler.scene.sensors[name]
             pos, target = _camera_pose(cfg, values)
-            origins = self.handler.scene.env_origins[env_ids]
-            if not hasattr(self.handler, "_visual_camera_poses"):
-                self.handler._visual_camera_poses = {}
-            poses = self.handler._visual_camera_poses
-            if name not in poses:
-                poses[name] = (
-                    torch.tensor(cfg.pos, device=origins.device, dtype=torch.float32).repeat(self.handler.num_envs, 1),
-                    torch.tensor(cfg.look_at, device=origins.device, dtype=torch.float32).repeat(
-                        self.handler.num_envs, 1
-                    ),
-                )
-            positions, look_at = poses[name]
-            positions[env_ids] = torch.tensor(pos, device=origins.device, dtype=torch.float32)
-            look_at[env_ids] = torch.tensor(target, device=origins.device, dtype=torch.float32)
-            eyes = positions[env_ids] + origins
-            targets = look_at[env_ids] + origins
-            sensor.set_world_poses_from_view(eyes, targets, env_ids=env_ids)
-            intrinsic = torch.tensor(cfg.intrinsics, device=origins.device).repeat(len(env_ids), 1, 1)
+            device = self.handler.device
+            # The handler owns camera poses: it re-asserts them on every state push.
+            self.handler.set_camera_pose(name, pos, target, env_ids=env_ids)
+            intrinsic = torch.tensor(cfg.intrinsics, device=device).repeat(len(env_ids), 1, 1)
             intrinsic[:, 0, 0] *= values["focal_scale"]
             intrinsic[:, 1, 1] *= values["focal_scale"]
             # Keep the authored physical focal length: without it Isaac Lab rewrites focalLength

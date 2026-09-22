@@ -489,6 +489,10 @@ class DomainRandomizationManager:
 
             camera.pos = new_pos
             camera.look_at = new_look_at
+            # The renderer owns camera poses; a hybrid wrapper has no camera of its own.
+            renderer = getattr(self.handler, "render_handler", self.handler)
+            if hasattr(renderer, "set_camera_pose"):
+                renderer.set_camera_pose(camera.name, new_pos, new_look_at)
 
             # Update camera randomizer's baseline position
             if self.config.level >= 3 and camera.name in self.randomizers.get("camera_originals", {}):
@@ -496,8 +500,9 @@ class DomainRandomizationManager:
                     if cam_rand.cfg.camera_name == camera.name:
                         cam_rand._original_positions[camera.name] = new_pos
 
-        if hasattr(self.handler, "_update_camera_pose"):
-            self.handler._update_camera_pose()
+        renderer = getattr(self.handler, "render_handler", self.handler)
+        if hasattr(renderer, "_update_camera_pose"):
+            renderer._update_camera_pose()
 
     def apply_camera_randomization(self):
         """Apply camera randomization after camera baseline has been adjusted."""

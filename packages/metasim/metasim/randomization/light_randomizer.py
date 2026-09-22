@@ -356,38 +356,11 @@ class LightRandomizer(BaseRandomizerType):
         Returns:
             RGB tuple (0-1 range)
         """
-        # Clamp temperature
-        temp = max(1000, min(40000, temp_kelvin)) / 100.0
+        from .visual import color_temperature_to_rgb
 
-        # Calculate red
-        if temp <= 66:
-            red = 1.0
-        else:
-            red = temp - 60
-            red = 329.698727446 * (red**-0.1332047592)
-            red = max(0, min(255, red)) / 255.0
-
-        # Calculate green
-        if temp <= 66:
-            green = temp
-            green = 99.4708025861 * math.log(green) - 161.1195681661
-            green = max(0, min(255, green)) / 255.0
-        else:
-            green = temp - 60
-            green = 288.1221695283 * (green**-0.0755148492)
-            green = max(0, min(255, green)) / 255.0
-
-        # Calculate blue
-        if temp >= 66:
-            blue = 1.0
-        elif temp <= 19:
-            blue = 0.0
-        else:
-            blue = temp - 10
-            blue = 138.5177312231 * math.log(blue) - 305.0447927307
-            blue = max(0, min(255, blue)) / 255.0
-
-        return (red, green, blue)
+        # One converter for the whole package, so a Kelvin value means the same colour here
+        # and in a visual recipe. Values outside the fit's validity clamp instead of raising.
+        return color_temperature_to_rgb(max(1667.0, min(25000.0, float(temp_kelvin))))
 
     def _euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> tuple:
         """Convert Euler angles to quaternion."""

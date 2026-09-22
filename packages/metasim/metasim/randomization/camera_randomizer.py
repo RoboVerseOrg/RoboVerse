@@ -277,13 +277,8 @@ class CameraRandomizer(BaseRandomizerType):
         # Update camera configuration
         camera_cfg.pos = new_pos
 
-        # Update camera instance
-        position_tensor = torch.tensor(new_pos, device=self._actual_handler.device).unsqueeze(0)
-        position_tensor = position_tensor.repeat(self._actual_handler.num_envs, 1)
-        look_at_tensor = torch.tensor(camera_cfg.look_at, device=self._actual_handler.device).unsqueeze(0)
-        look_at_tensor = look_at_tensor.repeat(self._actual_handler.num_envs, 1)
-
-        camera_inst.set_world_poses_from_view(position_tensor, look_at_tensor)
+        # Through the handler: it re-asserts camera poses on resets and state writes.
+        self._actual_handler.set_camera_pose(camera_cfg.name, new_pos, camera_cfg.look_at)
 
     def _randomize_orientation(self, camera_cfg, camera_inst):
         """Randomize camera orientation.
@@ -368,14 +363,8 @@ class CameraRandomizer(BaseRandomizerType):
         # Update camera configuration
         camera_cfg.look_at = new_look_at
 
-        # Get current position
-        current_pos = camera_inst.data.pos_w[:1]
-
-        # Apply new look-at
-        look_at_tensor = torch.tensor(new_look_at, device=self._actual_handler.device).unsqueeze(0)
-        look_at_tensor = look_at_tensor.repeat(self._actual_handler.num_envs, 1)
-
-        camera_inst.set_world_poses_from_view(current_pos.repeat(self._actual_handler.num_envs, 1), look_at_tensor)
+        # Through the handler: it re-asserts camera poses on resets and state writes.
+        self._actual_handler.set_camera_pose(camera_cfg.name, camera_cfg.pos, new_look_at)
 
     def _randomize_intrinsics(self, camera_cfg):
         """Randomize camera intrinsics.

@@ -361,14 +361,22 @@ def _launch(args, scenario):
     return handler
 
 
+_HASHES: dict[tuple[str, int, int], str] = {}
+
+
 def _hash_files(paths):
+    """SHA-256 per path, reusing digests of files unchanged since this process hashed them."""
     result = {}
     for path in sorted(paths):
-        digest = hashlib.sha256()
-        with open(path, "rb") as stream:
-            for block in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(block)
-        result[path] = digest.hexdigest()
+        stat = os.stat(path)
+        key = (path, stat.st_size, stat.st_mtime_ns)
+        if key not in _HASHES:
+            digest = hashlib.sha256()
+            with open(path, "rb") as stream:
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(block)
+            _HASHES[key] = digest.hexdigest()
+        result[path] = _HASHES[key]
     return result
 
 

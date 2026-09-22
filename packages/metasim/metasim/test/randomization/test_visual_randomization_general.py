@@ -179,6 +179,18 @@ def test_color_temperature_realizes_planckian_light_color():
         LightingRandomCfg(color_temperature=(500, 3000))
 
 
+def test_one_kelvin_converter_serves_recipes_and_legacy_randomizers():
+    """A Kelvin value must mean the same colour in a recipe and in the legacy light randomizer."""
+    from metasim.randomization.light_randomizer import LightRandomizer
+
+    convert = LightRandomizer._temperature_to_rgb
+    for kelvin in (2700, 3000, 5000, 6500, 12000):
+        assert convert(None, kelvin) == pytest.approx(color_temperature_to_rgb(kelvin))
+    # The legacy API accepted 1000..40000 K; out-of-range values clamp instead of raising.
+    assert convert(None, 500) == pytest.approx(color_temperature_to_rgb(1667))
+    assert convert(None, 40000) == pytest.approx(color_temperature_to_rgb(25000))
+
+
 def test_depth_of_field_and_projection_are_sampled_and_validated():
     cfg = _cfg()
     cfg.cameras["view"] = ViewRandomCfg(f_stop=(2.8, 5.6), focus_scale=(0.9, 1.1))
