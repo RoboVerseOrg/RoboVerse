@@ -84,8 +84,11 @@ is missing locally, prepare it with the existing helper:
 
 ```python
 from roboverse_pack.asset.setup_interior_agent_assets import (
-    download_roboverse_usd, copy_usd_assets, ensure_kujiale_scene,
+    download_roboverse_usd,
+    copy_usd_assets,
+    ensure_kujiale_scene,
 )
+
 download_roboverse_usd()
 copy_usd_assets(scene_ids=["0021", "0022", "0024", "0025", "0031"])
 for sid in ["0021", "0022", "0024", "0025", "0031"]:
