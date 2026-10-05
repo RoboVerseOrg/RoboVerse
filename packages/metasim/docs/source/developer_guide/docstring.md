@@ -61,6 +61,7 @@ class RigidObjMetaCfg(BaseObjMetaCfg):
     mesh_path: str | None = None
     physics: PhysicStateType = MISSING
 
+
 @configclass
 class PrimitiveCubeMetaCfg(RigidObjMetaCfg):
     """Primitive cube object cfg.
@@ -86,7 +87,6 @@ class PrimitiveCubeMetaCfg(RigidObjMetaCfg):
     def density(self) -> float:
         """Object density, for SAPIEN usage."""
         return self.mass / (self.size[0] * self.size[1] * self.size[2])
-
 ```
 
 

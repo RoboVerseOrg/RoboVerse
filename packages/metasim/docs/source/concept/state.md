@@ -139,6 +139,7 @@ field the backend did not report is an empty list.
 ```python
 Dof = Dict[str, float]
 
+
 class DictObjectState(TypedDict):
     """State of the object."""
 
@@ -160,13 +161,14 @@ class DictRobotState(DictObjectState):
     dof_vel_target: Dof | None
     dof_torque: Dof | None
 
+
 class DictEnvState(TypedDict):
     """State of the environment."""
 
     objects: dict[str, DictObjectState]
     robots: dict[str, DictRobotState]
     cameras: dict[str, dict[str, torch.Tensor]]
-    extras: dict[str, Any]      # States of Extra information
+    extras: dict[str, Any]  # States of Extra information
 ```
 
 To obtain the `DictEnvState` from a handler, one can use `handler.get_state(mode="dict")` method. The return value will be a `DictEnvState` describing the current simulation status.
@@ -213,21 +215,23 @@ Here's a concrete example of controlling a Franka Panda robot. The Franka has 7 
 
 ```python
 # Example 1: Set Franka to home position, num_envs=1
-actions = [{
-    "franka": {
-        "dof_pos_target": {
-            "panda_joint1": 0.0,
-            "panda_joint2": -0.785398,
-            "panda_joint3": 0.0,
-            "panda_joint4": -2.356194,
-            "panda_joint5": 0.0,
-            "panda_joint6": 1.570796,
-            "panda_joint7": 0.785398,
-            "panda_finger_joint1": 0.04,
-            "panda_finger_joint2": 0.04,
+actions = [
+    {
+        "franka": {
+            "dof_pos_target": {
+                "panda_joint1": 0.0,
+                "panda_joint2": -0.785398,
+                "panda_joint3": 0.0,
+                "panda_joint4": -2.356194,
+                "panda_joint5": 0.0,
+                "panda_joint6": 1.570796,
+                "panda_joint7": 0.785398,
+                "panda_finger_joint1": 0.04,
+                "panda_finger_joint2": 0.04,
+            }
         }
     }
-}]
+]
 handler.set_dof_target(actions)
 ```
 
@@ -235,18 +239,19 @@ handler.set_dof_target(actions)
 # Example 2: Random joint positions within joint limits, num_envs=1
 import torch
 
-actions = [{
-    "franka": {
-        "dof_pos_target": {
-            joint_name: (
-                torch.rand(1).item()
-                * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
-                + robot.joint_limits[joint_name][0]
-            )
-            for joint_name in robot.joint_limits.keys()
+actions = [
+    {
+        "franka": {
+            "dof_pos_target": {
+                joint_name: (
+                    torch.rand(1).item() * (robot.joint_limits[joint_name][1] - robot.joint_limits[joint_name][0])
+                    + robot.joint_limits[joint_name][0]
+                )
+                for joint_name in robot.joint_limits.keys()
+            }
         }
     }
-}]
+]
 handler.set_dof_target(actions)
 ```
 
@@ -354,11 +359,7 @@ Where `DictTraj` is a dict with the following structure:
 ```python
 dict_traj = {
     "actions": List[Dict[str, np.ndarray]],  # List of actions
-    "states": [
-        DictTrajState1,
-        DictTrajState2,
-        ...
-    ]
+    "states": [DictTrajState1, DictTrajState2, ...],
 }
 ```
 
