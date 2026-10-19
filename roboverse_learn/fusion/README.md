@@ -86,9 +86,9 @@ import torch
 from rsl_rl.modules import ActorCritic
 from roboverse_learn.fusion import load_bc_into_actor_critic
 
-ac = ActorCritic(...)                       # fresh RL actor-critic
-bc_sd = torch.load("bc_policy.pt")          # a state-MLP BC policy
-n = load_bc_into_actor_critic(ac, bc_sd)    # actor now == BC; fine-tune with PPO
+ac = ActorCritic(...)  # fresh RL actor-critic
+bc_sd = torch.load("bc_policy.pt")  # a state-MLP BC policy
+n = load_bc_into_actor_critic(ac, bc_sd)  # actor now == BC; fine-tune with PPO
 ```
 
 ## Tests

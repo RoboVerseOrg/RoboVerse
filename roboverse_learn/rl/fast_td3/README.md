@@ -198,12 +198,11 @@ Add the following code in the standalone MetaSim checkout at `metasim/sim/isaacg
 
 ```python
 # eg RigidObjCfg after line 395
-asset_options.vhacd_enabled = True 
-asset_options.vhacd_params.resolution = 500000  # 
-asset_options.vhacd_params.max_convex_hulls = 64 # 
+asset_options.vhacd_enabled = True
+asset_options.vhacd_params.resolution = 500000  #
+asset_options.vhacd_params.max_convex_hulls = 64  #
 asset_options.vhacd_params.max_num_vertices_per_ch = 64
 asset_options.thickness = 0.001
-
 ```
 
 
