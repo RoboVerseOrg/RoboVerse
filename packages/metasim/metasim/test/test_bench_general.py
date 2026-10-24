@@ -230,7 +230,9 @@ class _ScriptedEnv:
         for k, i in enumerate(env_ids):
             self.steps[i] = 0
             if states is not None:
-                self.slot_instance[i] = int(states[k]["objects"]["cube"]["pos"][0].item())
+                # the backends' rule: a full batch is indexed by env id, a partial one by position
+                row = states[i] if len(states) == self.num_envs else states[k]
+                self.slot_instance[i] = int(row["objects"]["cube"]["pos"][0].item())
             else:
                 self.slot_instance[i] = 0
         return "obs", {}
@@ -275,14 +277,15 @@ def test_evaluate_scores_each_planned_instance_once_in_order():
     assert [e.terminated for e in result.episodes] == [True, False, True, False]
     assert [e.time_out for e in result.episodes] == [False, True, False, True]
     assert [e.first_success_step for e in result.episodes] == [3, None, 3, None]
-    assert [e.seed for e in result.episodes] == [100, 101, 102, 103]
+    # episodes 0 and 1 started in one batched reset and share its seed (the handler RNG is global);
+    # instance 1 is shorter, so episode 2 lands on env 1 and episode 3 on env 0, each seeded on its own
+    assert [e.seed for e in result.episodes] == [100, 100, 102, 103]
     assert result.summary["success_rate"] == 0.5 and result.notes["instance_pool"] == 2
     assert result.notes["instruction"] == "do the thing"
-    # every episode was reset on its own slot with its own seed and state (instance 1 is shorter, so
-    # episode 2 lands on env 1 and episode 3 on env 0)
-    assert [(ids, seed) for ids, _, seed in env.resets] == [([0], 100), ([1], 101), ([1], 102), ([0], 103)]
+    assert [(ids, seed) for ids, _, seed in env.resets] == [([0, 1], 100), ([1], 102), ([0], 103)]
     assert [e.env_id for e in result.episodes] == [0, 1, 1, 0]
-    assert all(states is not None and len(states) == 1 for _, states, _ in env.resets)
+    # explicit states always travel as a full batch (row k = env k), whatever subset is written
+    assert all(states is not None and len(states) == 2 for _, states, _ in env.resets)
     # every hold action covered both env slots with the default joint positions
     assert all(a.shape == (2, 2) and torch.equal(a[0], torch.tensor([0.5, 1.0])) for a in env.actions)
 
@@ -310,10 +313,11 @@ def test_evaluate_auto_reset_env_episodes_are_seeded_by_the_evaluator():
     env.auto_reset = True
     result = evaluate(env, HoldPolicy(), EvalProtocol(episodes=4, seed=10))
     assert all(e.success for e in result.episodes) and len(result.episodes) == 4
-    assert [e.seed for e in result.episodes] == [10, 11, 12, 13]
-    # the env's own auto-resets carry no seed; the evaluator re-seeds every started episode
+    # both slots finish on the same step, so each pair of episodes starts in one seeded reset
+    assert [e.seed for e in result.episodes] == [10, 10, 12, 12]
+    # the env's own auto-resets carry no seed; the evaluator re-seeds every batch of started episodes
     seeded = [(ids, seed) for ids, _, seed in env.resets if seed is not None]
-    assert seeded == [([0], 10), ([1], 11), ([0], 12), ([1], 13)]
+    assert seeded == [([0, 1], 10), ([0, 1], 12)]
 
 
 def test_evaluate_auto_reset_env_gets_explicit_instance_state_after_its_own_reset():
@@ -322,7 +326,7 @@ def test_evaluate_auto_reset_env_gets_explicit_instance_state_after_its_own_rese
     result = evaluate(env, HoldPolicy(), EvalProtocol(episodes=2))
     assert [e.instance_index for e in result.episodes] == [0, 1]
     assert [e.success for e in result.episodes] == [True, False]
-    # the second instance's state was written after the env's auto-reset
+    # the second instance's state was written after the env's auto-reset, seeded with its episode seed
     explicit = [r for r in env.resets if r[1] is not None]
     assert len(explicit) == 2 and explicit[1][0] == [0] and explicit[1][2] == 1
 
@@ -349,11 +353,11 @@ def test_evaluate_idle_slots_get_default_resets_and_are_not_scored():
     env = _ScriptedEnv(num_envs=4, schedule=[(1, 2, True), (None, 3, False)], pool_size=2)
     result = evaluate(env, HoldPolicy(), EvalProtocol(episodes=2))
     assert [e.instance_index for e in result.episodes] == [0, 1]
-    first = env.resets[:4]
-    assert [ids for ids, _, _ in first] == [[0], [1], [2], [3]]
-    assert [states is not None for _, states, _ in first] == [True, True, False, False]  # idle slots: default
+    first, second = env.resets[0], env.resets[1]
+    assert first[0] == [0, 1] and len(first[1]) == 4  # the two planned slots, from a full 4-row batch
+    assert second[0] == [2, 3] and second[1] is None  # idle slots: default reset, same call sequence
     # a slot that finishes with nothing left to run is put back to the default state, not left mid-episode
-    assert all(states is None for _, states, _ in env.resets[4:])
+    assert all(states is None for _, states, _ in env.resets[2:])
 
 
 def test_context_uses_the_env_action_space_when_it_declares_a_finite_one():
@@ -460,6 +464,78 @@ def test_instance_pool_dedupes_tiled_initial_states():
     pool = instance_pool(env)
     assert [p.index for p in pool] == [0, 1] and len({p.state_hash for p in pool}) == 2
     assert instance_pool(env) == pool  # cached on the env
+
+
+def test_evaluate_broadcasts_a_scalar_reward_and_terminated():
+    class _ScalarAll(_ScriptedEnv):
+        def step(self, actions):
+            obs, r, t, to, info = super().step(actions)
+            return obs, 1.0, bool(t[0]), bool(to[0]), {"success": bool(info["success"][0])}
+
+    env = _ScalarAll(num_envs=1, schedule=[(2, 3, True)], pool_size=1)
+    result = evaluate(env, HoldPolicy(), EvalProtocol(episodes=1))
+    assert result.episodes[0].success and result.episodes[0].return_sum == 3.0 and result.episodes[0].terminated
+
+
+def test_context_prefers_joint_limits_unless_the_env_maps_actions_itself():
+    import gymnasium as gym
+    import numpy as np
+
+    from metasim.bench import build_context
+    from metasim.bench.evaluator import _maps_its_own_actions
+    from metasim.task.base import BaseTaskEnv
+    from metasim.task.rl_task import RLTaskEnv
+
+    assert not _maps_its_own_actions(RLTaskEnv.__new__(RLTaskEnv))
+    assert not _maps_its_own_actions(BaseTaskEnv.__new__(BaseTaskEnv))
+
+    class _Delta(RLTaskEnv):
+        def _process_action(self, actions):
+            return actions
+
+    class _OwnStep(BaseTaskEnv):
+        def step(self, actions):
+            return None
+
+    assert _maps_its_own_actions(_Delta.__new__(_Delta)) and _maps_its_own_actions(_OwnStep.__new__(_OwnStep))
+
+    # the scripted env overrides step, so its finite box is the contract; a plain base env would keep joint limits
+    env = _ScriptedEnv(num_envs=1, schedule=[(None, 2, False)])
+    env.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
+    ctx = build_context(env, EvalProtocol())
+    assert ctx.action_dim == 1 and ctx.default_joint_positions == {"bot": {"j0": 0.5, "j1": 1.0}}
+
+
+def test_hold_dict_action_uses_joint_defaults_even_with_a_reduced_action_box():
+    from metasim.bench.policy import _hold_dict_action
+
+    ctx = PolicyContext(
+        task="t",
+        simulator="fake",
+        robots=["bot"],
+        num_envs=1,
+        device=torch.device("cpu"),
+        seed=0,
+        max_episode_steps=1,
+        action_joint_names={"bot": ["j0", "j1"]},
+        action_low=torch.tensor([-1.0]),
+        action_high=torch.tensor([1.0]),
+        default_action=torch.tensor([0.0]),
+        default_joint_positions={"bot": {"j0": 0.5, "j1": 1.0}},
+    )
+    assert _hold_dict_action(ctx) == {"bot": {"dof_pos_target": {"j0": 0.5, "j1": 1.0}}}
+
+
+def test_reset_kwargs_come_from_the_signature_not_the_error_text():
+    from metasim.bench.evaluator import _reset
+
+    class _Buggy(_ScriptedEnv):
+        def reset(self, states=None, env_ids=None, seed=None):
+            raise TypeError("unsupported operand for states and seed")  # a real bug inside reset
+
+    env = _Buggy(num_envs=1, schedule=[(1, 2, True)], pool_size=1)
+    with pytest.raises(TypeError, match="unsupported operand"):
+        _reset(env, [0], [_state(0)], 0)
 
 
 def test_evaluate_without_success_info_falls_back_to_the_termination_reading():

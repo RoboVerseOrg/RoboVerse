@@ -35,10 +35,14 @@ python -m metasim bench validate results/*.json
 
 `bench run` builds the task from its registry name, applies `--sim`, `--robot`, `--num-envs`
 and headless mode to a copy of the task's scenario, plans `--episodes` instances round-robin from
-the task's instance pool (seed `--seed + i` for episode `i`), and refuses nothing silently: a task
-without a class-level scenario, an unknown policy spec or an instance index outside the pool is an
-error. Results from different seeds or machines are comparable when task, robots, simulator and
-protocol agree; `summarize` pools exactly those.
+the task's instance pool, and refuses nothing silently: a task without a class-level scenario, an
+unknown policy spec, an instance index outside the pool or a robot the demo file has no entry for
+is an error. Episode `i` is planned with seed `--seed + i`; because a simulator's RNG is one per
+handler, the episodes that start in the same reset call share the lowest of their seeds, and every
+`EpisodeResult.seed` records the seed that reset was actually given (with `--num-envs 1` that is
+exactly `seed + i`). Results from different seeds or machines are comparable when task, robots,
+simulator and protocol agree; `summarize` pools exactly those and keeps hand-picked `--instance`
+runs apart.
 
 ## Scoring rules
 

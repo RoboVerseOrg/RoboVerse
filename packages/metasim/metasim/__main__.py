@@ -99,7 +99,6 @@ def _parse_kv(items: list[str] | None) -> dict:
 
 
 def _bench_run(args: argparse.Namespace) -> int:
-    import copy
     import re
     import time
 
@@ -109,13 +108,12 @@ def _bench_run(args: argparse.Namespace) -> int:
     from metasim.task.registry import get_task_class
 
     task_cls = get_task_class(args.task)
-    scenario = copy.deepcopy(task_cls.scenario)
-    if scenario is None:
+    if task_cls.scenario is None:
         raise SystemExit(f"{args.task} has no class-level scenario; it cannot be built from the command line")
     updates = {"simulator": args.sim, "num_envs": args.num_envs, "headless": not args.gui}
     if args.robot:
         updates["robots"] = list(args.robot)
-    scenario = scenario.update(**updates)
+    scenario = task_cls.scenario.replace(**updates)
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     protocol = EvalProtocol(
         episodes=args.episodes,
@@ -127,8 +125,8 @@ def _bench_run(args: argparse.Namespace) -> int:
         name=args.protocol_name,
     )
     policy_kwargs = _parse_kv(args.policy_arg)
-    if args.checkpoint:
-        policy_kwargs.setdefault("checkpoint", args.checkpoint)
+    if args.checkpoint and ":" in args.policy:
+        policy_kwargs.setdefault("checkpoint", args.checkpoint)  # a user policy takes it; the baselines have none
     policy = load_policy(args.policy, **policy_kwargs)
     policy_info = {"spec": args.policy, "args": policy_kwargs}
     if args.checkpoint:

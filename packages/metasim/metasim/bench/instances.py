@@ -93,7 +93,15 @@ def _build_instance_pool(env) -> list[TaskInstance]:
         from metasim.utils.demo_util import get_traj
 
         robot = robots[0] if len(robots) == 1 else robots
-        init_states, all_actions, _ = get_traj(traj, robot, getattr(env, "handler", None))
+        try:
+            init_states, all_actions, _ = get_traj(traj, robot, getattr(env, "handler", None))
+        except (FileNotFoundError, KeyError, ValueError) as err:
+            names = [r.name for r in robots]
+            raise ValueError(
+                f"{type(env).__name__}: cannot build the instance pool for robot(s) {names} from {traj}: {err}. "
+                "The demo file has no entry for this robot, so there are no recorded instances to evaluate on; "
+                "pick a robot the task ships demos for."
+            ) from err
         actions = list(all_actions) + [None] * len(init_states)
         return [
             TaskInstance(index=i, seed=0, state=s, actions=list(a) if a is not None else None, state_hash=hash_state(s))

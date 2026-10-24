@@ -40,6 +40,8 @@ class PolicyContext:
     default_action: torch.Tensor
     """The "do nothing" action, shape ``(action_dim,)``: the robots' default joint positions in action order,
     or the middle of the declared action box."""
+    default_joint_positions: dict[str, dict[str, float]] = field(default_factory=dict)
+    """``robot -> {joint: default position}`` for every action joint, whatever the action bounds describe."""
     instruction: str | None = None
     """The task's language instruction (``task_desc``) when it has one."""
     extras: dict[str, Any] = field(default_factory=dict)
@@ -150,7 +152,9 @@ class ReplayPolicy:
 
 
 def _hold_dict_action(ctx: PolicyContext) -> dict:
-    """The default joint positions as a ``{robot: {"dof_pos_target": {...}}}`` action."""
+    """The robots' default joint positions as a ``{robot: {"dof_pos_target": {...}}}`` action."""
+    if ctx.default_joint_positions:
+        return {robot: {"dof_pos_target": dict(q)} for robot, q in ctx.default_joint_positions.items()}
     out, offset = {}, 0
     values = ctx.default_action.tolist()
     for robot, joints in ctx.action_joint_names.items():

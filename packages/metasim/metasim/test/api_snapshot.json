@@ -23,6 +23,22 @@
    ],
    "signature": "(env, protocol: 'EvalProtocol') -> 'PolicyContext'"
   },
+  "episode_of": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "inst"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "plan"
+    }
+   ],
+   "signature": "(inst: 'TaskInstance', plan: 'list[TaskInstance]') -> 'int'"
+  },
   "evaluate": {
    "kind": "function",
    "params": [
@@ -302,6 +318,7 @@
     "action_low",
     "action_high",
     "default_action",
+    "default_joint_positions",
     "instruction",
     "extras"
    ],
@@ -372,6 +389,11 @@
       {
        "default": true,
        "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "default_joint_positions"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
        "name": "instruction"
       },
       {
@@ -380,7 +402,7 @@
        "name": "extras"
       }
      ],
-     "signature": "(self, task: 'str', simulator: 'str', robots: 'list[str]', num_envs: 'int', device: 'torch.device', seed: 'int', max_episode_steps: 'int', action_joint_names: 'dict[str, list[str]]', action_low: 'torch.Tensor', action_high: 'torch.Tensor', default_action: 'torch.Tensor', instruction: 'str | None' = None, extras: 'dict[str, Any]' = <factory>) -> None"
+     "signature": "(self, task: 'str', simulator: 'str', robots: 'list[str]', num_envs: 'int', device: 'torch.device', seed: 'int', max_episode_steps: 'int', action_joint_names: 'dict[str, list[str]]', action_low: 'torch.Tensor', action_high: 'torch.Tensor', default_action: 'torch.Tensor', default_joint_positions: 'dict[str, dict[str, float]]' = <factory>, instruction: 'str | None' = None, extras: 'dict[str, Any]' = <factory>) -> None"
     },
     "action_dim": {
      "params": null,
