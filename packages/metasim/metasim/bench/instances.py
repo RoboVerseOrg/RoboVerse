@@ -68,9 +68,24 @@ class TaskInstance:
 def instance_pool(env) -> list[TaskInstance]:
     """Every distinct initial condition the task ships, in file order, with their demo actions.
 
-    Reads the demo file directly (``get_traj``) rather than ``env._initial_states``, because the task
-    bases tile that list to ``num_envs`` and the distinct instances are lost in the process.
+    Reads the demo file (``get_traj``) rather than ``env._initial_states``, because the task bases tile
+    that list to ``num_envs`` and the distinct instances are lost in the process; a task without a demo
+    file falls back to ``_initial_states`` de-duplicated by content, so the pool does not change with
+    ``num_envs``. The pool is cached on the env (``_bench_instance_pool``): the demo file is read once
+    per env, however many times it is evaluated (the task's own ``__init__`` read it once more already).
     """
+    cached = getattr(env, "_bench_instance_pool", None)
+    if cached is not None:
+        return list(cached)
+    pool = _build_instance_pool(env)
+    try:
+        env._bench_instance_pool = tuple(pool)
+    except AttributeError:
+        pass  # an env that forbids new attributes is simply not cached
+    return pool
+
+
+def _build_instance_pool(env) -> list[TaskInstance]:
     traj = getattr(env, "traj_filepath", None)
     scenario = getattr(env, "scenario", None)
     robots = list(getattr(scenario, "robots", []) or [])
@@ -79,13 +94,21 @@ def instance_pool(env) -> list[TaskInstance]:
 
         robot = robots[0] if len(robots) == 1 else robots
         init_states, all_actions, _ = get_traj(traj, robot, getattr(env, "handler", None))
+        actions = list(all_actions) + [None] * len(init_states)
         return [
             TaskInstance(index=i, seed=0, state=s, actions=list(a) if a is not None else None, state_hash=hash_state(s))
-            for i, (s, a) in enumerate(zip(init_states, list(all_actions) + [None] * len(init_states), strict=False))
+            for i, (s, a) in enumerate(zip(init_states, actions, strict=False))
         ]
     states = getattr(env, "_initial_states", None)
     if isinstance(states, list) and states:
-        return [TaskInstance(index=i, seed=0, state=s, state_hash=hash_state(s)) for i, s in enumerate(states)]
+        pool, seen = [], set()
+        for s in states:
+            h = hash_state(s)
+            if h in seen:
+                continue
+            seen.add(h)
+            pool.append(TaskInstance(index=len(pool), seed=0, state=s, state_hash=h))
+        return pool
     return []
 
 

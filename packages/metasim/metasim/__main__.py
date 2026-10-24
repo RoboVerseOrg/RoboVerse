@@ -196,9 +196,13 @@ def _bench_validate(args: argparse.Namespace) -> int:
     return 1 if bad else 0
 
 
-def _add_bench(sub) -> None:
-    from metasim.bench import BUILTIN_POLICIES, SUCCESS_RULES
+#: Mirrors ``metasim.bench.protocol.SUCCESS_RULES`` / ``metasim.bench.policy.BUILTIN_POLICIES`` (pinned by a test)
+#: so building the parser does not import the bench package, and with it torch, for ``doctor``.
+_SUCCESS_RULES = ("first", "final", "held")
+_BUILTIN_POLICIES = ("hold", "random", "replay")
 
+
+def _add_bench(sub) -> None:
     b = sub.add_parser("bench", help="benchmark protocol: list tasks, run an evaluation, summarize results")
     bs = b.add_subparsers(dest="bench_command", required=True)
     ls = bs.add_parser("list", help="registered task names (static index, no simulator import)")
@@ -211,10 +215,10 @@ def _add_bench(sub) -> None:
     r.add_argument("--robot", action="append", help="robot config name(s) to evaluate with (repeatable)")
     r.add_argument("--num-envs", type=int, default=1)
     r.add_argument("--episodes", type=int, default=10)
-    r.add_argument("--policy", default="hold", help=f"one of {sorted(BUILTIN_POLICIES)} or 'pkg.module:attr'")
+    r.add_argument("--policy", default="hold", help=f"one of {list(_BUILTIN_POLICIES)} or 'pkg.module:attr'")
     r.add_argument("--policy-arg", action="append", metavar="KEY=VALUE", help="constructor argument (repeatable)")
     r.add_argument("--checkpoint", help="checkpoint path; passed to the policy and hashed into the result")
-    r.add_argument("--success-rule", choices=SUCCESS_RULES, default="first")
+    r.add_argument("--success-rule", choices=_SUCCESS_RULES, default="first")
     r.add_argument("--hold-steps", type=int, default=1)
     r.add_argument("--max-steps", type=int, help="evaluator-side episode cap (default: the task's)")
     r.add_argument("--seed", type=int, default=0)

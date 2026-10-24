@@ -160,6 +160,7 @@ def validate_result(data: dict[str, Any]) -> None:
 def result_key(result: BenchmarkResult) -> tuple:
     """What makes two results comparable: task, robots, simulator and the scoring protocol."""
     protocol = result.protocol
+    instances = protocol.get("instances")
     return (
         result.task,
         tuple(result.robots),
@@ -167,6 +168,7 @@ def result_key(result: BenchmarkResult) -> tuple:
         protocol.get("success_rule"),
         protocol.get("hold_steps"),
         protocol.get("max_episode_steps"),
+        tuple(instances) if instances is not None else None,  # hand-picked instances are their own key
     )
 
 
@@ -186,12 +188,14 @@ def summarize(results: list[BenchmarkResult]) -> str:
     ]
     for key in sorted(groups, key=lambda k: tuple(str(x) for x in k)):
         runs = groups[key]
-        task, robots, simulator, rule, hold, cap, policy = key
+        task, robots, simulator, rule, hold, cap, instances, policy = key
         episodes = [e for r in runs for e in r.episodes]
         n = len(episodes)
         k = sum(1 for e in episodes if e.success)
         low, high = wilson_interval(k, n)
         rule_label = f"{rule}" + (f" x{hold}" if rule == "held" else "") + (f", cap {cap}" if cap else "")
+        if instances is not None:
+            rule_label += f", instances {list(instances)}"
         mean_steps = sum(e.steps for e in episodes) / n if n else 0.0
         lines.append(
             f"| {task} | {', '.join(robots)} | {simulator} | {rule_label} | {policy} | {len(runs)} | {n} | "

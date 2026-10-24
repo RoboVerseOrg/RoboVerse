@@ -212,7 +212,7 @@ class BaseTaskEnv:
     def _step_success(self, env_states: Obs, terminated: torch.Tensor) -> torch.Tensor:
         """The ``info["success"]`` tensor of a step: ``terminated`` or :meth:`_success` by the class flag."""
         if type(self).success_is_termination:
-            return terminated
+            return terminated.clone()  # a caller that folds time-outs into `terminated` in place must not edit this
         return self._as_step_tensor(self._success(env_states), dtype=torch.bool, hook="_success")
 
     def _as_step_tensor(self, value, *, dtype: torch.dtype, hook: str) -> torch.Tensor:

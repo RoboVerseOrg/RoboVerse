@@ -55,6 +55,12 @@ def build_context(env, protocol: EvalProtocol) -> PolicyContext:
             default.append(float(defaults.get(j, 0.0)))
     device = torch.device(getattr(env, "device", None) or handler.device)
     cap = protocol.max_episode_steps or int(getattr(env, "max_episode_steps", 0) or 0)
+    box = _declared_action_box(env)
+    if box is not None:
+        # an RL env declares its own (normalised, possibly reduced) action space: that is the contract the
+        # policy must meet, not the robots' joint limits; "hold" is then the middle of the box
+        low, high = box
+        default = [(lo + hi) / 2.0 for lo, hi in zip(low, high, strict=True)]
     return PolicyContext(
         task=type(env).__name__,
         simulator=str(getattr(scenario, "simulator", "")),
@@ -71,24 +77,67 @@ def build_context(env, protocol: EvalProtocol) -> PolicyContext:
     )
 
 
-def _reset(env, env_ids: list[int], instances: list[TaskInstance], seed: int):
-    """``env.reset`` for ``env_ids``, with the instances' states when they have one."""
-    states = [inst.state for inst in instances]
-    if any(s is None for s in states):
-        if any(s is not None for s in states):
-            # a mixed batch would need two resets; keep the explicit ones and default the rest
-            with_state = [i for i, s in enumerate(states) if s is not None]
-            without = [i for i, s in enumerate(states) if s is None]
-            _reset(env, [env_ids[i] for i in with_state], [instances[i] for i in with_state], seed)
-            return _reset(env, [env_ids[i] for i in without], [instances[i] for i in without], seed)
-        states = None
+def _declared_action_box(env) -> tuple[list[float], list[float]] | None:
+    """``env.action_space`` as ``(low, high)`` lists when it is a non-empty, finite 1-D Box; else None.
+
+    ``BaseTaskEnv`` declares an empty Box by default (its actions are joint targets in handler order,
+    bounded by the joint limits); ``RLTaskEnv`` and the manager-based env declare the normalised box the
+    learner acts in, which may have fewer slots than the robot has joints (one actuator of two).
+    """
     try:
-        return env.reset(states=states, env_ids=env_ids, seed=seed)
+        space = env.action_space
+    except Exception:  # a task whose space needs a live property the stub lacks: fall back to joint limits
+        return None
+    low = getattr(space, "low", None)
+    high = getattr(space, "high", None)
+    shape = getattr(space, "shape", None)
+    if low is None or high is None or not shape or len(shape) != 1 or shape[0] == 0:
+        return None
+    low_l = [float(v) for v in low.reshape(-1)]
+    high_l = [float(v) for v in high.reshape(-1)]
+    if any(v in (float("inf"), float("-inf")) for v in low_l + high_l):
+        return None
+    return low_l, high_l
+
+
+def _reset(env, env_ids: list[int], instances: list[TaskInstance], seed: int):
+    """``env.reset`` for ``env_ids``, with the instances' states when they have one.
+
+    ``states`` is only passed when an instance carries one, so an env whose ``reset`` takes no
+    ``states`` (the manager-based RL env) still evaluates from its default reset; a ``seed`` the env
+    does not accept is dropped with a one-shot warning. Returns what ``env.reset`` returned.
+    """
+    states = [inst.state for inst in instances]
+    if any(s is None for s in states) and any(s is not None for s in states):
+        # a mixed batch needs two resets: the explicit ones, then the defaults
+        with_state = [i for i, s in enumerate(states) if s is not None]
+        without = [i for i, s in enumerate(states) if s is None]
+        _reset(env, [env_ids[i] for i in with_state], [instances[i] for i in with_state], seed)
+        return _reset(env, [env_ids[i] for i in without], [instances[i] for i in without], seed)
+    kwargs = {"env_ids": env_ids, "seed": seed}
+    if states[0] is not None:
+        kwargs["states"] = states
+    try:
+        return env.reset(**kwargs)
     except TypeError as err:
-        if "seed" not in str(err):
+        message = str(err)
+        if "states" in message and "states" in kwargs:
+            raise TypeError(
+                f"{type(env).__name__}.reset() takes no `states`, so it cannot start from an explicit task "
+                "instance; evaluate it with an empty instance pool (default resets) or add `states` to its reset"
+            ) from err
+        if "seed" not in message:
             raise
         warn_once(("bench.reset_no_seed", type(env)), f"{type(env).__name__}.reset() takes no seed; seeding skipped")
-        return env.reset(states=states, env_ids=env_ids)
+        kwargs.pop("seed")
+        return env.reset(**kwargs)
+
+
+def _obs_after_reset(env, returned):
+    """The full observation after a reset: what ``reset`` returned when it covers every env, else re-read."""
+    if getattr(env, "auto_reset", False) and isinstance(returned, tuple) and returned:
+        return returned[0]  # RLTaskEnv-style reset reads and returns the whole batch
+    return _fresh_obs(env)
 
 
 def _fresh_obs(env):
@@ -97,9 +146,14 @@ def _fresh_obs(env):
 
 
 def _as_bools(value, num_envs: int) -> list[bool]:
+    """``value`` as one bool per env; a scalar (a native env's ``{"success": True}``) is broadcast."""
     if isinstance(value, torch.Tensor):
         value = value.reshape(-1).tolist()
+    elif isinstance(value, (bool, int, float)) or value is None:
+        value = [bool(value)] * num_envs
     out = [bool(v) for v in value]
+    if len(out) == 1 and num_envs > 1:
+        out = out * num_envs
     if len(out) != num_envs:
         raise ValueError(f"expected one value per env ({num_envs}), got {len(out)}")
     return out
@@ -185,15 +239,21 @@ def evaluate(
             policy.reset(started_ids, instances, ctx)
         return started_ids
 
-    # first episodes: one explicit reset for every slot, so idle slots also sit in a known state
-    first_ids = list(range(num_envs))
-    first = start(first_ids)
-    instances = [running[i].instance for i in first]
-    idle = [i for i in first_ids if i not in running]
-    _reset(env, first, instances, protocol.seed)
-    if idle:
-        _reset(env, idle, [TaskInstance(index=-1, seed=protocol.seed)] * len(idle), protocol.seed)
-    obs = _fresh_obs(env)
+    def reset_slots(env_ids: list[int]):
+        """Reset each slot on its own, with its episode's seed, so ``EpisodeResult.seed`` is the seed applied.
+
+        A slot with nothing left to run is put back to the task's default state (its seed is the
+        protocol's) rather than left mid-episode; it is never scored. One call per slot costs one
+        reset per episode, which is what makes "episode ``i`` used ``seed + i``" true.
+        """
+        returned = None
+        for env_id in env_ids:
+            inst = running[env_id].instance if env_id in running else TaskInstance(index=-1, seed=protocol.seed)
+            returned = _reset(env, [env_id], [inst], inst.seed)
+        return _obs_after_reset(env, returned)
+
+    start(list(range(num_envs)))
+    obs = reset_slots(list(range(num_envs)))
 
     while running:
         actions = policy.act(obs, ctx)
@@ -231,29 +291,12 @@ def evaluate(
                 finished.append(env_id)
 
         if finished:
-            started_ids = start(finished)
+            start(finished)
             if not running:
                 break  # the plan is exhausted; nothing left to put the finished slots back into
-            # an auto-resetting env already reset the envs it marked done, to the task's own initial
-            # state; a planned instance with an explicit state, or a cap the env did not see, still
-            # needs our reset. A non-auto-resetting env needs it always.
-            need_reset = [
-                i
-                for i in finished
-                if not auto_reset
-                or (i in running and running[i].instance.state is not None)
-                or not (term[i] or tout[i])
-            ]
-            if need_reset:
-                insts = [
-                    running[i].instance if i in running else TaskInstance(index=-1, seed=protocol.seed)
-                    for i in need_reset
-                ]
-                seed = min(inst.seed for inst in insts)
-                _reset(env, need_reset, insts, seed)
-                obs = _fresh_obs(env)
-            if started_ids and not need_reset and not auto_reset:
-                obs = _fresh_obs(env)
+            # every started episode is reset here with its own seed and state, whether or not the env
+            # auto-reset the slot already (RLTaskEnv did, to the task's default state, unseeded by us)
+            obs = reset_slots(finished)
 
     results.sort(key=lambda e: e.index)
     policy_record = {"name": getattr(policy, "name", type(policy).__name__), "kind": type(policy).__qualname__}

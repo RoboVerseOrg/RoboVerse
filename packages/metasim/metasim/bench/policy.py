@@ -34,10 +34,12 @@ class PolicyContext:
     action_joint_names: dict[str, list[str]]
     """``robot -> joint names`` in the handler's action order (``handler.get_action_joint_names()``)."""
     action_low: torch.Tensor
-    """Joint lower limits in action order, shape ``(action_dim,)``."""
+    """Lower bound of each action slot, shape ``(action_dim,)``: the env's declared ``action_space`` when it
+    has a finite, non-empty one (RL envs, normalised), else the joint limits in action order."""
     action_high: torch.Tensor
     default_action: torch.Tensor
-    """The robots' default joint positions in action order, shape ``(action_dim,)``."""
+    """The "do nothing" action, shape ``(action_dim,)``: the robots' default joint positions in action order,
+    or the middle of the declared action box."""
     instruction: str | None = None
     """The task's language instruction (``task_desc``) when it has one."""
     extras: dict[str, Any] = field(default_factory=dict)
@@ -99,8 +101,14 @@ class RandomPolicy:
         """Independent uniform draws per env and joint."""
         if self._generator is None:
             raise RuntimeError("RandomPolicy.act called before reset")
-        u = torch.rand((ctx.num_envs, ctx.action_dim), generator=self._generator)
         low, high = ctx.action_low.cpu(), ctx.action_high.cpu()
+        if not (torch.isfinite(low).all() and torch.isfinite(high).all()):
+            bad = [i for i in range(ctx.action_dim) if not (torch.isfinite(low[i]) and torch.isfinite(high[i]))]
+            raise ValueError(
+                f"RandomPolicy needs finite action bounds; slots {bad} are unbounded (a robot without joint_limits, "
+                "or an env whose action_space is infinite). Give the robot limits or use another baseline."
+            )
+        u = torch.rand((ctx.num_envs, ctx.action_dim), generator=self._generator)
         return (low + u * (high - low)).to(ctx.device)
 
 
