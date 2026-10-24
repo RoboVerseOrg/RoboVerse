@@ -6,6 +6,7 @@
    "signature": "() -> 'None'"
   }
  },
+ "metasim.bench": {},
  "metasim.constants": {
   "PhysicStateType": {
    "attributes": {
@@ -5954,7 +5955,9 @@
  "metasim.task.base": {
   "BaseTaskEnv": {
    "attributes": {
+    "auto_reset": "bool",
     "max_episode_steps": "int",
+    "success_is_termination": "bool",
     "supported_simulators": "NoneType",
     "traj_filepath": "NoneType"
    },
@@ -5994,6 +5997,10 @@
       }
      ],
      "signature": "(self) -> 'None'"
+    },
+    "defines_success": {
+     "params": null,
+     "signature": "<property>"
     },
     "extra_spec": {
      "params": null,
@@ -6078,7 +6085,10 @@
  "metasim.task.rl_task": {
   "RLTaskEnv": {
    "attributes": {
-    "max_episode_steps": "int"
+    "auto_reset": "bool",
+    "max_episode_steps": "int",
+    "record_terminal_states": "bool",
+    "success_is_termination": "bool"
    },
    "bases": [
     "BaseTaskEnv"

@@ -273,3 +273,42 @@ def test_constructor_reports_worker_construction_error():
     with pytest.raises(RuntimeError, match=r"asset missing: boom\.urdf") as excinfo:
         ParallelSimWrapper(_BoomHandler)(scenario)
     assert "EOFError" not in str(excinfo.value)
+
+
+@pytest.mark.general
+def test_worker_answers_set_states_refreshes():
+    """The wrapper's ``set_states_refreshes`` property asks worker 0; the worker must know the command.
+
+    Regression: MuJoCo answers the flag per instance (a property), so every multi-env MuJoCo
+    ``BaseTaskEnv.reset`` sent ``("set_states_refreshes", ...)`` to a worker that raised
+    ``NotImplementedError`` for it.
+    """
+    import multiprocessing as mp
+    import threading
+
+    from metasim.sim.parallel import _worker
+
+    class _Refreshing:
+        def __init__(self):
+            self.closed = False
+
+        @property
+        def set_states_refreshes(self) -> bool:
+            return True
+
+        def close(self):
+            self.closed = True
+
+    parent, child = mp.Pipe()
+    _, dead_end = mp.Pipe()
+    errors = _SyncQueue()
+    thread = threading.Thread(target=_worker, args=(0, child, dead_end, errors, _Refreshing), daemon=True)
+    thread.start()
+    try:
+        parent.send(("set_states_refreshes", (None,)))
+        assert parent.poll(5), "worker did not answer set_states_refreshes"
+        assert parent.recv() is True
+    finally:
+        parent.send(("close", None))
+        thread.join(5)
+    assert errors.empty(), f"worker reported an error: {errors.get()}"

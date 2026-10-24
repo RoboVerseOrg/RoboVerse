@@ -44,6 +44,7 @@ PUBLIC_MODULES: tuple[str, ...] = (
     "metasim.task.base",
     "metasim.task.rl_task",
     "metasim.task.registry",
+    "metasim.bench",
     "metasim.queries.base",
     "metasim.utils.state",
     "metasim.utils.replay",

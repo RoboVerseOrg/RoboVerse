@@ -76,6 +76,9 @@ def _worker(
                 remote.send(env.physics_dt)
             elif cmd == "env_step_s":
                 remote.send(env.env_step_s)
+            elif cmd == "set_states_refreshes":
+                # asked once by the wrapper's property when the backend answers it per instance (MuJoCo: no viewer)
+                remote.send(bool(env.set_states_refreshes))
             else:
                 raise NotImplementedError(f"Command {cmd} not implemented")
     except KeyboardInterrupt:

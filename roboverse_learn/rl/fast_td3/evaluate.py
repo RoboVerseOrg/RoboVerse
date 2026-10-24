@@ -221,8 +221,9 @@ def evaluate(
                 episode_returns.append(current_returns[i].item())
                 episode_lengths.append(current_lengths[i].item())
 
-                # Check for success if available in info
-                if "success" in infos:
+                # Check for success if the task defines one (RLTaskEnv always reports info["success"],
+                # all False for a task without a success signal -- that is "undefined", not 0 %)
+                if "success" in infos and getattr(env, "defines_success", True):
                     episode_successes.append(infos["success"][i].item())
 
                 # Save individual episode video if enabled

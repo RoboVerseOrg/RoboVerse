@@ -12,6 +12,9 @@ release.
 
 ## [Unreleased]
 
+### Added
+- Benchmark protocol docs (`docs/source/dataset_benchmark/benchmark/usage.md`): how a policy is scored on RoboVerse with `python -m metasim bench` — the success contract (`info["success"]`), task instances, the `first` / `final` / `held` scoring rules, the result JSON, and the `replay` / `hold` / `random` baselines every task should be checked against. The page replaces a description of a `RandomizationCfg` / `ScenarioCfg(task=, robot=, randomization=)` API that no longer exists; domain randomization is documented against `metasim.randomization.dr_manager.DRConfig` as it is.
+
 ### Changed
 - The parity / consistency probes moved from `scripts/` to `tools/parity/` (import path `tools.parity.*`) and the asset helpers to `tools/assets/`; `scripts/` keeps the developer scripts (data collection, teleop, replay, conversion, mesh tools, OSC, Unitree deployment).
 - The wiki build (`scripts/docs/build_roboverse_wiki.sh`, `deploy-docs.yml`) renders the MetaSim docs from `packages/metasim/docs` instead of cloning the standalone repository; `METASIM_REPO` still forces a clone for pre-monorepo versions.

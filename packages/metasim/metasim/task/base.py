@@ -48,6 +48,23 @@ class BaseTaskEnv:
 
     max_episode_steps = 100
     traj_filepath = None
+    auto_reset: bool = False
+    """Whether ``step`` resets the envs that finished an episode before returning.
+
+    ``BaseTaskEnv.step`` does not: the caller sees the terminal observation and calls ``reset``
+    itself. ``RLTaskEnv.step`` does (and publishes the terminal state in ``info``). An evaluator
+    reads this flag instead of guessing from the class hierarchy.
+    """
+    success_is_termination: bool = True
+    """Whether ``_terminated`` *is* the task's success signal.
+
+    Historically the third value ``step`` returns is typed ``Success`` and every manipulation
+    task computes it in ``_terminated`` (a checker, a bounding box, a joint threshold), so the
+    default keeps that reading and ``info["success"]`` mirrors ``terminated``. A task where an
+    early termination means *failure* (a fall, leaving the workspace) or that succeeds without
+    ending the episode sets this to ``False`` and overrides :meth:`_success`; ``RLTaskEnv`` does
+    so by default.
+    """
     supported_simulators: tuple[str, ...] | None = None
     """Backends this task is known to run on (e.g. ``("mujoco", "newton")``).
 
@@ -170,6 +187,34 @@ class BaseTaskEnv:
         """Get the terminated of the environment."""
         return torch.zeros(self.handler.num_envs, dtype=torch.bool, device=self.device)
 
+    def _success(self, env_states: Obs) -> Success:
+        """Per-env success flags for *this* step, when success is not the termination signal.
+
+        Only consulted when ``success_is_termination`` is ``False``; the default says no env has
+        succeeded. Return the instantaneous predicate (the cube is in the box *now*); whether a
+        task counts as solved on the first hit, at the end, or after holding it for N steps is
+        decided by the evaluation protocol (``metasim.bench.EvalProtocol``), not here.
+        """
+        return torch.zeros(self.handler.num_envs, dtype=torch.bool, device=self.device)
+
+    @property
+    def defines_success(self) -> bool:
+        """Whether this task has a success signal at all.
+
+        True when ``_terminated`` is read as success (``success_is_termination``) or the task overrides
+        :meth:`_success`. False for an ``RLTaskEnv`` that never defined one: its ``info["success"]`` is
+        all ``False`` by construction, and an evaluator should say "no success defined" rather than
+        report a 0% success rate.
+        """
+        cls = type(self)
+        return bool(cls.success_is_termination) or cls._success is not BaseTaskEnv._success
+
+    def _step_success(self, env_states: Obs, terminated: torch.Tensor) -> torch.Tensor:
+        """The ``info["success"]`` tensor of a step: ``terminated`` or :meth:`_success` by the class flag."""
+        if type(self).success_is_termination:
+            return terminated
+        return self._as_step_tensor(self._success(env_states), dtype=torch.bool, hook="_success")
+
     def _as_step_tensor(self, value, *, dtype: torch.dtype, hook: str) -> torch.Tensor:
         """``value`` as a ``(num_envs,)`` tensor of ``dtype`` on the env device: the type every ``step()`` field has.
 
@@ -269,7 +314,10 @@ class BaseTaskEnv:
             rewards,
             terminated,
             timeout,
-            {"privileged_observation": self._privileged_observation(env_states)},
+            {
+                "privileged_observation": self._privileged_observation(env_states),
+                "success": self._step_success(env_states, terminated),
+            },
         )
 
     def reset(

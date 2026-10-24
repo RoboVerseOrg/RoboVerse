@@ -24,6 +24,11 @@ class RLTaskEnv(BaseTaskEnv):
     """Common utilities for RL tasks."""
 
     max_episode_steps = 1000
+    auto_reset = True
+    success_is_termination = False
+    """An RL episode that ends early has usually *failed* (a fall, a limit), so ``terminated`` is
+    not success here; a task reports success through :meth:`_success` and it reaches
+    ``info["success"]`` (all ``False`` until a subclass overrides it)."""
 
     def __init__(
         self,
@@ -321,6 +326,9 @@ class RLTaskEnv(BaseTaskEnv):
         info = {
             "privileged_observation": priv_obs,
             "episode_steps": self._episode_steps.clone(),
+            # success of *this* step, read before the auto-reset below so a done env reports the
+            # state its episode ended in (see ``BaseTaskEnv.success_is_termination``)
+            "success": self._step_success(states, terminated),
             # The terminal observation, snapshotted before the auto-reset below overwrites `obs`
             # in place for the done envs. Off-policy learners bootstrap truncated episodes from
             # this (V(s_T) for a time-out is a real value; V(reset state) is not), so it must be
