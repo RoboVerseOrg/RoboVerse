@@ -4,7 +4,18 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-__version__ = "0.1.17"
+
+def _project_version() -> str:
+    """The version from the package's ``pyproject.toml``, so the docs and the distributions never disagree."""
+    import pathlib
+
+    import tomllib
+
+    pyproject = pathlib.Path(__file__).resolve().parents[2] / "pyproject.toml"
+    return tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+
+
+__version__ = _project_version()
 
 project = "MetaSim"
 copyright = "2025, MetaSim Developers"
