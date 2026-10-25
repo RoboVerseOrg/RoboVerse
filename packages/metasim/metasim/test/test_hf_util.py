@@ -320,3 +320,40 @@ def test_companion_files_travel_with_a_fetched_description(monkeypatch, tmp_path
     assert got == ["LICENSE", "README.md", "hand.xml"], (
         "the licence and notes come along; absent companions are skipped"
     )
+
+
+@pytest.mark.general
+def test_a_demo_directory_is_fetched_as_a_folder(monkeypatch, tmp_path):
+    """A task's ``traj_filepath`` may be a folder (``trajs/<task>/v2``): its files are fetched, not a file of that name."""
+    from types import SimpleNamespace
+
+    local_dir = tmp_path / "roboverse_data"
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(local_dir))
+    monkeypatch.setattr(hf_util, "_fetch_companions", lambda filepath: None)
+    monkeypatch.setattr(
+        hf_util.hf_api, "file_exists", lambda *a, **k: pytest.fail("a folder is not looked up as a file")
+    )
+
+    def fake_tree(repo_id, path_in_repo, repo_type, recursive):
+        if repo_id != "RoboVerseOrg/roboverse_data":
+            raise FileNotFoundError(path_in_repo)
+        return [
+            SimpleNamespace(path=f"{path_in_repo}/franka_v2.pkl.gz", size=10),
+            SimpleNamespace(path=f"{path_in_repo}/README.md", size=1),
+        ]
+
+    downloads = []
+    monkeypatch.setattr(hf_util.hf_api, "list_repo_tree", fake_tree)
+    monkeypatch.setattr(hf_util, "hf_hub_download", lambda **kw: downloads.append(kw["filename"]))
+
+    check_and_download_single(str(local_dir / "trajs" / "maniskill" / "pull_cube" / "v2"))
+
+    assert downloads == ["trajs/maniskill/pull_cube/v2/franka_v2.pkl.gz", "trajs/maniskill/pull_cube/v2/README.md"]
+
+
+@pytest.mark.general
+def test_absolute_path_from_another_machine_is_explained(monkeypatch, tmp_path):
+    local_dir = tmp_path / "roboverse_data"
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(local_dir))
+    with pytest.raises(ValueError, match="belongs to the machine the asset was authored on"):
+        check_and_download_single("/home/someone/RoboVerse/roboverse_data/assets/x/mjcf/bin.stl")

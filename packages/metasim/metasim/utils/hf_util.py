@@ -226,14 +226,47 @@ def _outside_local_dir_message(filepath: str, relpath: str) -> str:
             f"Run from the repository root, or symlink ./roboverse_data to LOCAL_DIR "
             f"(ROBOVERSE_DATA_DIR only changes where downloads are stored)."
         )
+    if os.path.isabs(filepath) and _RELATIVE_DATA_PREFIX in filepath:
+        inner = filepath.split(_RELATIVE_DATA_PREFIX, 1)[1]
+        return (
+            f"Cannot fetch {filepath!r}: an asset file references this absolute path, which belongs to the machine "
+            f"the asset was authored on. Make the reference relative to the asset file (the file is "
+            f"roboverse_data/{inner} in the data repository) and re-upload it."
+        )
     return (
         f"Refusing to fetch {filepath!r}: resolves outside LOCAL_DIR ({LOCAL_DIR}) via relative-path "
         f"traversal ({relpath!r})."
     )
 
 
+def _download_tree(relpath_posix: str) -> bool:
+    """Fetch every file under the data-repo folder ``relpath_posix`` into ``LOCAL_DIR``; False if no repo has it.
+
+    Tasks may point at a demo *directory* (``trajs/<task>/v2``, resolved to the robot's file by
+    ``metasim.utils.demo_util``); a folder is not a file the single-file path can fetch.
+    """
+    for repo_id in DATA_REPO_IDS:
+        try:
+            entries = list(
+                hf_api.list_repo_tree(repo_id, path_in_repo=relpath_posix, repo_type="dataset", recursive=True)
+            )
+        except Exception as exc:  # the folder is absent from this repo, or the repo is unreachable: try the next
+            log.debug(f"{repo_id} has no folder {relpath_posix}: {exc}")
+            continue
+        files = [e.path for e in entries if getattr(e, "size", None) is not None or type(e).__name__ == "RepoFile"]
+        if not files:
+            continue
+        for path in files:
+            hf_hub_download(repo_id=repo_id, filename=path, repo_type="dataset", local_dir=LOCAL_DIR)
+        log.info(f"Folder {relpath_posix} ({len(files)} file(s)) downloaded from the HuggingFace dataset {repo_id}.")
+        return True
+    return False
+
+
 def check_and_download_single(filepath: str):
     """Check if the file exists in the local directory, and download it from the huggingface dataset if it doesn't exist.
+
+    A path without a file suffix is taken to be a folder (a demo directory) and its files are fetched.
 
     Args:
         filepath: the filepath to check and download.
@@ -263,6 +296,8 @@ def check_and_download_single(filepath: str):
                 return
             raise ValueError(msg)
         relpath_posix = relpath.replace(os.sep, "/")
+        if not os.path.splitext(filepath)[1] and _download_tree(relpath_posix):
+            return
         repo_id = _find_data_repo(relpath_posix, is_optional_file=is_optional_file)
 
         if repo_id is None:

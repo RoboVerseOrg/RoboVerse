@@ -221,7 +221,10 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
             row.update(success_rate=rate, status="ok" if rate >= args.threshold else "low")
         return row
     except Exception as err:  # one broken task must not hide the others: it is reported as a row
-        row.update(status="error", detail=f"{type(err).__name__}: {err}".splitlines()[0][:200])
+        detail = f"{type(err).__name__}: {err}".splitlines()[0][:200]
+        # an object with no description for this backend is a backend the task does not support
+        status = "unsupported" if "has no" in detail and "asset path set for the" in detail else "error"
+        row.update(status=status, detail=detail)
         return row
 
 

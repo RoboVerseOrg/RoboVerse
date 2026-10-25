@@ -69,7 +69,15 @@ first; the data model builds on it.
       classifies it (`ok` / `low` / `undefined` / `unsupported` / `no-demos` / `error`), exit 1 on `low` or
       `error`. First reading on MuJoCo (3 episodes): `stack_cube` 3/3, `pick_cube` 2/3 (**low**: its demos
       do not fully replay on the backend they target; the next task-side item), `reach_origin` ships no
-      demos. Open: run the sweep over every task with demos per release and publish the table.
+      demos. ManiSkill sweep: `lift_peg_upright` 3/3; `pick_cube` 9/10 (demo 0 never replays: a data
+      item); `draw_triangle` 0/3 (checker vs. replay to investigate); `plug_charger` has no MuJoCo asset;
+      `pull_cube` / `push_cube` 3/3 once demo folders download; `roll_ball` / `stack_pyramid` / `draw_triangle`
+      0/3: replaying demo 0 on MuJoCo the ball never moves (44-step demo), one pyramid cube is lifted but no
+      stack forms, the triangle checker never fires - demos recorded on another backend that do not transfer
+      closed-loop (re-record on MuJoCo or publish them as that backend's instances); `place_sphere` / `poke_cube` / `pull_cube_tool` MJCFs reference an absolute path
+      of the authoring machine (data items: `assets/maniskill/PlaceSphere/bin/mjcf/PlaceSphere_bin.xml`,
+      `assets/maniskill/PokeCube/peg/mjcf/stick.xml`, `assets/maniskill/PullCubeTool/tool/mjcf/tool.xml`).
+      Open: run the sweep over every task with demos per release and publish the table.
 - [ ] The task bases keep the un-tiled demo states and actions they load (one source of truth);
       `metasim.bench.instance_pool` reads them instead of parsing the demo file a second time.
 - [ ] Checkers move out of `metasim.example` into `metasim.task.success` as the public, declarative
