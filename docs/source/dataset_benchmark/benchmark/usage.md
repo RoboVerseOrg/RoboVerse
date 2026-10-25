@@ -64,6 +64,35 @@ predicate held, so a reader can re-score under another rule.
 - `hold` commands the default joint positions and must score near zero.
 - `random` draws uniform joint targets inside the limits (seeded from the protocol).
 
+## Embodiments
+
+Results are reported per robot. Three embodiments are the reference set every task family and
+every backend is measured against (`ROADMAP.md` §4):
+
+| `--robot` | Robot | Asset | Joints | Notes |
+|---|---|---|---|---|
+| `franka` | Franka Emika Panda | `roboverse_data/robots/franka` (MJCF, URDF, USD) | 9 | two finger joints, both driven |
+| `yam` | I2RT YAM arm + parallel-jaw gripper | `roboverse_data/robots/Yet_Another_Manipulator_YAM/mjcf` (Menagerie `i2rt_yam`, MIT) | 8 | `left_finger` driven, `right_finger` passive (equality-coupled) |
+| `sharpa_wave_right` / `sharpa_wave_left` | Sharpa Wave tactile hand | `roboverse_data/robots/sharpa_wave/mjcf` (Menagerie `sharpa_wave`, Apache-2.0) | 22 | one servo per joint; fetched from the pinned Menagerie revision until mirrored |
+
+What a robot config promises, and what the MuJoCo and Newton handlers enforce:
+
+- **Joints.** `joint_limits` and `default_joint_positions` list every joint of the asset, in any
+  order; the handler's joint vector is the asset's joints sorted by name, and that is the layout of
+  `joint_pos`, `joint_pos_target` and the action tensor.
+- **Actuators are named after their joint.** `RobotCfg.actuators` is keyed by joint name. A joint the
+  MJCF actuates keeps the asset's servo unless the config sets `stiffness` / `damping`; a joint the
+  MJCF does not actuate gets a servo synthesized from the config (so Menagerie and mjlab files that
+  ship no `<actuator>` block work as-is). A joint in neither place is **passive**: it is observed, it
+  owns a column of the action tensor that is ignored, and its target reports its position.
+- **Gripper.** `gripper_open_q` / `gripper_close_q` give the driven finger joint(s) their open and
+  closed targets; `ee_body_name` (+ `curobo_tcp_rel_pos`) names the grasp frame for the IK helpers.
+- **Assets.** Paths are `roboverse_data/...`; missing files are fetched from the HuggingFace data
+  repos, or from an upstream a pack registered with `metasim.utils.hf_util.register_upstream_mirror`.
+
+`tests/test_embodiments.py` runs this contract for the three robots on MuJoCo (single env and the
+parallel wrapper) and evaluates the `hold` baseline on YAM through `metasim.bench.evaluate`.
+
 ## From Python
 
 ```python

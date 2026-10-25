@@ -44,7 +44,7 @@ from roboverse_learn.managers import (
     RewTerm,
 )
 
-from ._locator import lazy_scenario, mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset, single_process_mujoco
 from .cartpole import _CARTPOLE_XML
 from .mdp import (
     SceneEntityCfg,
@@ -228,6 +228,7 @@ class _CartpoleTaskBase(ManagerBasedRVEnv):
         #           (user passes --robot mjlab_cartpole).
         sim = getattr(scenario, "simulator", None) if scenario else None
         if scenario is not None and sim == "mujoco":
+            single_process_mujoco(scenario, type(self).__name__)
             scenario.robots = []
         elif scenario is not None and sim == "newton":
             # mjlab cartpole disables contacts (cart-on-rail; contact adds spurious

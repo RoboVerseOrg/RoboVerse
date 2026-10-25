@@ -281,7 +281,7 @@ def test_parallel_wrapper_forwards_only_a_class_level_guarantee():
     assert instance.set_states_refreshes is True and len(instance.remotes[0].sent) == 1  # asked once
 
 
-def _reset_with(flag: bool) -> list[str]:
+def _reset_with(flag: bool, initial_states=({}, {})) -> list[str]:
     """Drive ``BaseTaskEnv.reset`` with a stub handler that records its calls."""
     import torch
 
@@ -306,7 +306,7 @@ def _reset_with(flag: bool) -> list[str]:
     env = BaseTaskEnv.__new__(BaseTaskEnv)
     env.handler = _Stub()
     env.reset_callback = []
-    env._initial_states = None
+    env._initial_states = list(initial_states) if initial_states is not None else None
     env._episode_steps = torch.zeros(2, dtype=torch.long)
     env.device = torch.device("cpu")
     env._privileged_observation = lambda states: None
@@ -319,6 +319,11 @@ def test_task_reset_refreshes_render_only_when_the_backend_did_not():
     """``BaseTaskEnv.reset`` consults the backend's capability flag instead of guessing the backend."""
     assert _reset_with(False) == ["set_states", "refresh_render", "get_states"]
     assert _reset_with(True) == ["set_states", "get_states"]
+
+
+def test_task_reset_without_initial_states_writes_nothing():
+    """A task whose ``_get_initial_states`` returns None keeps the simulator where it is (no ``set_states(None)``)."""
+    assert _reset_with(False, initial_states=None) == ["get_states"]
 
 
 def test_capability_flags_match_the_backends_that_implement_them():

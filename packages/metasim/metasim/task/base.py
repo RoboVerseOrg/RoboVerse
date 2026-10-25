@@ -374,7 +374,10 @@ class BaseTaskEnv:
 
         self._run_reset_callbacks(env_ids)
         states_to_set = self._initial_states if states is None else states
-        self._write_reset_states(states_to_set, env_ids)
+        if states_to_set is not None:
+            self._write_reset_states(states_to_set, env_ids)
+        # A task without initial states (``_get_initial_states`` returns None) resets its counters and keeps
+        # the simulator where it is: the handler put every robot in its default pose at launch.
         env_states = self.handler.get_states(env_ids=env_ids, mode="tensor")
         info = {
             "privileged_observation": self._privileged_observation(env_states),

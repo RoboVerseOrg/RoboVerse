@@ -222,3 +222,59 @@ def test_mixed_scenario_aggregates_all_files():
     )
     dl = FileDownloader(scenario)
     assert set(dl.files_to_download) == {"scene.xml", "obj.xml", "t.png"}
+
+
+@pytest.mark.general
+def test_registered_upstream_mirror_serves_files_no_data_repo_has(monkeypatch, tmp_path):
+    """A file absent locally and from every HF data repo is fetched from its registered upstream."""
+    local_dir = tmp_path / "roboverse_data"
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(local_dir))
+    monkeypatch.setattr(hf_util, "_UPSTREAM_MIRRORS", {})
+    monkeypatch.setattr(hf_util.hf_api, "file_exists", lambda repo_id, filename, repo_type: False)
+    monkeypatch.setattr(hf_util, "hf_hub_download", lambda **kwargs: pytest.fail("HF download must not be used"))
+
+    fetched = []
+
+    def fake_download(url, filepath):
+        fetched.append(url)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, "w") as f:
+            f.write("<mujoco/>")
+
+    monkeypatch.setattr(hf_util, "_download_from_upstream", fake_download)
+    hf_util.register_upstream_mirror("robots/some_hand/mjcf", "https://example.org/menagerie/some_hand/")
+
+    target = local_dir / "robots" / "some_hand" / "mjcf" / "assets" / "palm.STL"
+    check_and_download_single(str(target))
+
+    assert fetched == ["https://example.org/menagerie/some_hand/assets/palm.STL"]
+    assert target.read_text() == "<mujoco/>"
+
+
+@pytest.mark.general
+def test_upstream_mirror_is_not_consulted_when_a_data_repo_has_the_file(monkeypatch, tmp_path):
+    local_dir = tmp_path / "roboverse_data"
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(local_dir))
+    monkeypatch.setattr(hf_util, "_UPSTREAM_MIRRORS", {})
+    monkeypatch.setattr(hf_util.hf_api, "file_exists", lambda repo_id, filename, repo_type: True)
+    hf_calls = []
+    monkeypatch.setattr(hf_util, "hf_hub_download", lambda **kwargs: hf_calls.append(kwargs))
+    monkeypatch.setattr(
+        hf_util, "_download_from_upstream", lambda url, filepath: pytest.fail("upstream must not be used")
+    )
+    hf_util.register_upstream_mirror("robots/some_hand/mjcf", "https://example.org/menagerie/some_hand")
+
+    check_and_download_single(str(local_dir / "robots" / "some_hand" / "mjcf" / "hand.xml"))
+
+    assert [c["filename"] for c in hf_calls] == ["robots/some_hand/mjcf/hand.xml"]
+
+
+@pytest.mark.general
+def test_unmirrored_missing_file_still_reports_the_data_repos(monkeypatch, tmp_path):
+    local_dir = tmp_path / "roboverse_data"
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(local_dir))
+    monkeypatch.setattr(hf_util, "_UPSTREAM_MIRRORS", {})
+    monkeypatch.setattr(hf_util.hf_api, "file_exists", lambda repo_id, filename, repo_type: False)
+
+    with pytest.raises(Exception, match="neither exists in the local directory nor exists in the HuggingFace"):
+        check_and_download_single(str(local_dir / "robots" / "other" / "x.xml"))

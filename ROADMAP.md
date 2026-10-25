@@ -88,17 +88,27 @@ first; the data model builds on it.
 
 Three robots are the reference embodiments every piece of infrastructure must support and every
 benchmark table must report by: **Franka** (`franka`), **YAM** (`yam`) and **Sharpa Wave**
-(dexterous hand, asset and config pending). "Support" means: a verified `RobotCfg` per backend
+(`sharpa_wave_right` / `sharpa_wave_left`). "Support" means: a verified `RobotCfg` per backend
 asset format, demos that replay on the recording backend, the replay / hold baselines published,
 IK and teleop profiles, and a row in the task-by-robot-by-simulator matrix.
 
+- [x] `YamCfg` rebuilt on the Menagerie `i2rt_yam` asset (8 joints, asset gains and home pose, passive
+      coupled finger); `SharpaWaveRightCfg` / `SharpaWaveLeftCfg` from Menagerie `sharpa_wave` (pinned
+      revision, fetched through `register_upstream_mirror` until mirrored into `roboverse_data`).
+      Verified on MuJoCo (1 env + parallel wrapper) and Newton: hold, tracking, gripper coupling,
+      a `metasim.bench` evaluation (`tests/test_embodiments.py`, `docs/.../benchmark/usage.md`).
+- [x] Handler contract for real assets: passive joints and cfg-synthesized actuators on MuJoCo (the
+      Newton handler already drove from the config), so one `RobotCfg` means the same thing on both.
+- [ ] Upload `robots/sharpa_wave/mjcf` to the `roboverse_data` dataset (the mirror then becomes a
+      fallback) and `urdf`/`usd` descriptions of YAM and Sharpa Wave for the Isaac backends and the
+      IK helpers (`get_pyroki_model` reads a URDF).
 - [ ] Robot capability matrix generated from the configs (asset formats present, control modes,
       `supported_simulators` of the tasks that use it) and published in the docs.
 - [ ] `bench run --robot` for every task family that is robot-agnostic (ManiSkill ports, pick-place,
-      benchmark scenes), with per-robot instance pools.
-- [ ] Sharpa Wave: asset in `roboverse_data` (MJCF from the manufacturer / Menagerie, licence
-      recorded), `SharpaWaveCfg`, a mounted-hand variant on Franka and YAM, and a first dexterous
-      task family.
+      benchmark scenes), with per-robot instance pools; a first YAM demo set recorded with the
+      collection pipeline so `replay` has a ceiling to report.
+- [ ] Sharpa Wave: a mounted-hand variant on Franka and YAM, and a first dexterous task family;
+      a Newton default for `njmax` that fits a 22-DoF hand (the solver warns `nefc overflow` today).
 
 ### 5. Simulator infrastructure (from the Isaac Lab 3.0 comparison)
 

@@ -262,3 +262,179 @@ def test_inner_freejoint_is_promoted_to_wrapper(tmp_path):
         assert free_parent == 0, f"freejoint body {free_body} parented to {free_parent}, not world; promotion failed"
     finally:
         handler.close()
+
+
+# ---------------------------------------------------------------------------
+# Actuation contract: cfg-synthesized actuators and passive (unactuated) joints
+# ---------------------------------------------------------------------------
+
+
+_TWO_JOINT_ARM = """
+<mujoco model="two_joint_arm">
+  <compiler angle="radian"/>
+  <option integrator="implicitfast"/>
+  <worldbody>
+    <body name="base" pos="0 0 0.5">
+      <geom name="base_g" type="box" size="0.05 0.05 0.05" mass="1"/>
+      <body name="link1" pos="0 0 0.05">
+        <joint name="shoulder" type="hinge" axis="0 1 0" range="-1.5 1.5"/>
+        <geom name="link1_g" type="capsule" fromto="0 0 0 0 0 0.2" size="0.02" mass="0.2"/>
+        <body name="link2" pos="0 0 0.2">
+          <joint name="elbow" type="hinge" axis="0 1 0" range="-1.5 1.5"/>
+          <geom name="link2_g" type="capsule" fromto="0 0 0 0 0 0.2" size="0.02" mass="0.2"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  {actuators}
+</mujoco>
+"""
+
+
+def _arm_scenario(tmp_path, actuators_xml: str, **robot_kwargs):
+    from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.scenario.simulator_params import SimParamCfg
+
+    robot_xml = _write_xml(tmp_path, "arm.xml", _TWO_JOINT_ARM.format(actuators=actuators_xml))
+    defaults = dict(
+        name="arm",
+        num_joints=2,
+        fix_base_link=True,
+        mjcf_path=str(robot_xml),
+        enabled_gravity=False,
+        enabled_self_collisions=False,
+        actuators={
+            "shoulder": BaseActuatorCfg(stiffness=50.0, damping=5.0, effort_limit_sim=20.0),
+            "elbow": BaseActuatorCfg(stiffness=50.0, damping=5.0, effort_limit_sim=20.0),
+        },
+        joint_limits={"shoulder": (-1.5, 1.5), "elbow": (-1.5, 1.5)},
+        default_joint_positions={"shoulder": 0.0, "elbow": 0.0},
+        control_type={"shoulder": "position", "elbow": "position"},
+    )
+    defaults.update(robot_kwargs)
+    robot = RobotCfg(**defaults)
+    return ScenarioCfg(
+        robots=[robot],
+        sim_params=SimParamCfg(dt=0.002),
+        simulator="mujoco",
+        num_envs=1,
+        headless=True,
+        add_default_ground=False,
+    )
+
+
+def test_cfg_actuators_are_synthesized_for_an_unactuated_mjcf(tmp_path):
+    """A robot MJCF without an ``<actuator>`` block is driven through the gains its RobotCfg declares."""
+    import torch
+
+    from metasim.sim.sim_context import HandlerContext
+
+    with HandlerContext(_arm_scenario(tmp_path, actuators_xml="")) as handler:
+        model = handler.physics.model
+        assert model.nu == 2, "one position actuator per cfg-controlled joint"
+        prefix = handler._mujoco_robot_names[0]
+        act = model.actuator(f"{prefix}elbow")
+        assert float(model.actuator_gainprm[act.id, 0]) == pytest.approx(50.0)  # kp from the cfg
+        assert float(model.actuator_biasprm[act.id, 2]) == pytest.approx(-5.0)  # kv from the cfg
+        assert list(model.actuator_ctrlrange[act.id]) == pytest.approx([-1.5, 1.5])  # the cfg joint limits
+        assert list(model.actuator_forcerange[act.id]) == pytest.approx([-20.0, 20.0])
+
+        # The synthesized servo tracks a target like an asset-authored one would.
+        target = torch.tensor([[0.3, -0.4]])  # sorted joints: elbow, shoulder
+        for _ in range(400):
+            handler.set_dof_targets(target)
+            handler.simulate()
+        state = handler.get_states(mode="tensor").robots["arm"]
+        assert torch.allclose(state.joint_pos, target, atol=0.02)
+        assert torch.allclose(state.joint_pos_target, target)
+
+
+def test_cfg_actuator_without_gains_or_mjcf_actuator_is_rejected(tmp_path):
+    """Nothing can drive a cfg-controlled joint with neither gains nor an asset actuator: fail at construction."""
+    from metasim.scenario.robot import BaseActuatorCfg
+    from metasim.sim.mujoco import MujocoHandler
+
+    scenario = _arm_scenario(
+        tmp_path,
+        actuators_xml="",
+        actuators={"shoulder": BaseActuatorCfg(), "elbow": BaseActuatorCfg()},
+    )
+    with pytest.raises(ValueError, match="ships no actuator for joint 'shoulder'"):
+        MujocoHandler(scenario).launch()
+
+
+def test_cfg_actuator_for_a_joint_the_mjcf_lacks_is_rejected(tmp_path):
+    from metasim.scenario.robot import BaseActuatorCfg
+    from metasim.sim.mujoco import MujocoHandler
+
+    scenario = _arm_scenario(
+        tmp_path,
+        actuators_xml="",
+        actuators={"shoulder": BaseActuatorCfg(stiffness=1.0), "wrist": BaseActuatorCfg(stiffness=1.0)},
+        joint_limits={"shoulder": (-1.5, 1.5), "elbow": (-1.5, 1.5), "wrist": (-1.0, 1.0)},
+        control_type={"shoulder": "position", "wrist": "position"},
+    )
+    with pytest.raises(ValueError, match="names joint 'wrist', which the MJCF"):
+        MujocoHandler(scenario).launch()
+
+
+def test_passive_joint_is_in_the_state_and_takes_no_target(tmp_path):
+    """A joint without an actuator (and without a cfg actuator) is passive.
+
+    It keeps its slot in ``joint_pos`` / ``joint_vel`` / the action tensor, no ctrl is written for it, and
+    its ``joint_pos_target`` reports the position it has.
+    """
+    import torch
+
+    from metasim.scenario.robot import BaseActuatorCfg
+    from metasim.sim.sim_context import HandlerContext
+
+    scenario = _arm_scenario(
+        tmp_path,
+        actuators_xml='<actuator><position name="shoulder" joint="shoulder" kp="50" kv="5"/></actuator>',
+        actuators={"shoulder": BaseActuatorCfg(stiffness=50.0, damping=5.0)},
+        control_type={"shoulder": "position"},
+        enabled_gravity=True,
+    )
+    with HandlerContext(scenario) as handler:
+        assert handler.get_joint_names("arm", sort=True) == ["elbow", "shoulder"]
+        assert handler._passive_joint_names("arm") == ["elbow"]
+        assert handler.physics.model.nu == 1
+
+        # Action tensor keeps one column per joint; the passive column is ignored.
+        target = torch.tensor([[1.0, 0.5]])  # elbow (passive), shoulder
+        for _ in range(300):
+            handler.set_dof_targets(target)
+            handler.simulate()
+        state = handler.get_states(mode="tensor").robots["arm"]
+        assert state.joint_pos.shape == (1, 2)
+        assert float(state.joint_pos[0, 1]) == pytest.approx(0.5, abs=0.02), "the actuated joint tracks"
+        assert float(state.joint_pos[0, 0]) != pytest.approx(1.0, abs=0.1), "the passive joint received no target"
+        assert float(state.joint_pos_target[0, 0]) == pytest.approx(float(state.joint_pos[0, 0]))
+        assert float(state.joint_pos_target[0, 1]) == pytest.approx(0.5)
+        assert float(state.joint_effort_target[0, 0]) == 0.0
+
+        dict_state = handler.get_states(mode="dict")[0]["robots"]["arm"]
+        assert set(dict_state["dof_pos_target"]) == {"elbow", "shoulder"}
+        assert dict_state["dof_pos_target"]["elbow"] == pytest.approx(float(state.joint_pos[0, 0]))
+
+
+def test_actuator_not_named_after_a_joint_is_rejected(tmp_path):
+    """RoboVerse drives joints through same-named actuators; a stray actuator name is a config error."""
+    from metasim.sim.mujoco import MujocoHandler
+
+    scenario = _arm_scenario(
+        tmp_path,
+        actuators_xml=(
+            '<actuator><position name="shoulder" joint="shoulder" kp="50"/>'
+            '<position name="elbow_drive" joint="elbow" kp="50"/></actuator>'
+        ),
+    )
+    handler = MujocoHandler(scenario)
+    handler.launch()
+    try:
+        with pytest.raises(ValueError, match=r"actuators \['elbow_drive'\] are not named after a joint"):
+            handler.get_states(mode="tensor")
+    finally:
+        handler.close()

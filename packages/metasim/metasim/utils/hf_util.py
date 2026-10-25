@@ -33,6 +33,53 @@ DOWNLOAD_LOCK_TIMEOUT_S = 3600.0
 """How long a process waits for another process's in-flight download of the same asset tree."""
 DATA_REPO_IDS = (REPO_ID, "SomaStacksOrg/roboverse_data")
 
+_UPSTREAM_MIRRORS: dict[str, str] = {}
+"""``roboverse_data``-relative prefix -> URL base of the upstream that publishes the files under it.
+
+A content pack registers the upstream of an asset it vendors by reference (a Menagerie robot, a mesh set a
+manufacturer hosts) with :func:`register_upstream_mirror`. A file missing locally and from every HuggingFace
+data repo is then fetched from ``url_base + relpath[len(prefix):]`` into the same place the HuggingFace copy
+would land, so a fresh checkout works before (and after) the asset is mirrored into the data repo.
+"""
+
+
+def register_upstream_mirror(prefix: str, url_base: str) -> None:
+    """Fetch files under ``roboverse_data/<prefix>`` from ``url_base`` when no data repo has them.
+
+    Args:
+        prefix: Directory under ``roboverse_data`` the mirror covers, e.g. ``robots/sharpa_wave/mjcf``.
+        url_base: URL that serves the same tree, e.g. a pinned-commit ``raw.githubusercontent.com`` path.
+            Pin the upstream revision in the URL so a checkout keeps fetching the bytes the config was
+            written against.
+    """
+    prefix = prefix.strip("/") + "/"
+    _UPSTREAM_MIRRORS[prefix] = url_base.rstrip("/") + "/"
+
+
+def _upstream_url(relpath_posix: str) -> str | None:
+    """The upstream URL of ``relpath_posix`` when a registered mirror covers it (the longest prefix wins)."""
+    for prefix in sorted(_UPSTREAM_MIRRORS, key=len, reverse=True):
+        if relpath_posix.startswith(prefix):
+            return _UPSTREAM_MIRRORS[prefix] + relpath_posix[len(prefix) :]
+    return None
+
+
+def _download_from_upstream(url: str, filepath: str) -> None:
+    """Stream ``url`` into ``filepath`` (written next to it first, so a failed fetch leaves no partial file)."""
+    import shutil
+    import urllib.request
+
+    os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
+    tmp_path = filepath + ".part"
+    try:
+        with urllib.request.urlopen(url, timeout=120) as response, open(tmp_path, "wb") as out:
+            shutil.copyfileobj(response, out)
+        os.replace(tmp_path, filepath)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
 
 def _resolve_local_dir() -> str:
     """Resolve the asset-cache root to an absolute path.
@@ -181,6 +228,22 @@ def check_and_download_single(filepath: str):
         repo_id = _find_data_repo(relpath_posix, is_optional_file=is_optional_file)
 
         if repo_id is None:
+            upstream_url = _upstream_url(relpath_posix)
+            if upstream_url is not None:
+                try:
+                    _download_from_upstream(upstream_url, os.path.join(LOCAL_DIR, relpath))
+                except Exception as exc:
+                    if is_optional_file:
+                        log.warning(
+                            f"Optional file {filepath} could not be fetched from {upstream_url} ({exc}), skipping."
+                        )
+                        return
+                    raise Exception(
+                        f"File {filepath} is in none of the HuggingFace data sources {DATA_REPO_IDS} and fetching it "
+                        f"from its registered upstream {upstream_url} failed: {exc}"
+                    ) from exc
+                log.info(f"File {filepath} downloaded from its upstream {upstream_url}.")
+                return
             if is_optional_file:
                 log.warning(f"Optional file {filepath} not found in HuggingFace data sources, skipping.")
                 return
