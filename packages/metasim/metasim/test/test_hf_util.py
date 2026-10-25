@@ -58,6 +58,9 @@ def test_check_and_download_single_falls_back_to_private_roboverse_data(monkeypa
     monkeypatch.setattr(hf_util.os.path, "exists", lambda path: False)
     monkeypatch.setattr(hf_util.hf_api, "file_exists", fake_file_exists)
     monkeypatch.setattr(hf_util, "hf_hub_download", fake_hf_hub_download)
+    monkeypatch.setattr(
+        hf_util, "_fetch_companions", lambda filepath: None
+    )  # the licence/readme fetch has its own test
 
     check_and_download_single(filepath)
 
@@ -242,6 +245,7 @@ def test_registered_upstream_mirror_serves_files_no_data_repo_has(monkeypatch, t
             f.write("<mujoco/>")
 
     monkeypatch.setattr(hf_util, "_download_from_upstream", fake_download)
+    monkeypatch.setattr(hf_util, "_fetch_companions", lambda filepath: None)
     hf_util.register_upstream_mirror("robots/some_hand/mjcf", "https://example.org/menagerie/some_hand/")
 
     target = local_dir / "robots" / "some_hand" / "mjcf" / "assets" / "palm.STL"
@@ -262,6 +266,7 @@ def test_upstream_mirror_is_not_consulted_when_a_data_repo_has_the_file(monkeypa
     monkeypatch.setattr(
         hf_util, "_download_from_upstream", lambda url, filepath: pytest.fail("upstream must not be used")
     )
+    monkeypatch.setattr(hf_util, "_fetch_companions", lambda filepath: None)
     hf_util.register_upstream_mirror("robots/some_hand/mjcf", "https://example.org/menagerie/some_hand")
 
     check_and_download_single(str(local_dir / "robots" / "some_hand" / "mjcf" / "hand.xml"))
@@ -278,3 +283,40 @@ def test_unmirrored_missing_file_still_reports_the_data_repos(monkeypatch, tmp_p
 
     with pytest.raises(Exception, match="neither exists in the local directory nor exists in the HuggingFace"):
         check_and_download_single(str(local_dir / "robots" / "other" / "x.xml"))
+
+
+@pytest.mark.general
+def test_download_from_upstream_publishes_atomically_from_a_file_url(tmp_path):
+    """The real fetch: a ``file://`` upstream lands as the target with no stray temp file; a bad URL leaves nothing."""
+    src = tmp_path / "src.xml"
+    src.write_text("<mujoco/>")
+    target = tmp_path / "data" / "robots" / "x" / "hand.xml"
+    hf_util._download_from_upstream(src.as_uri(), str(target))
+    assert target.read_text() == "<mujoco/>"
+    assert [p.name for p in target.parent.iterdir()] == ["hand.xml"], "no .part file is left behind"
+    with pytest.raises(Exception):  # noqa: B017 - urllib's error type depends on the scheme
+        hf_util._download_from_upstream((tmp_path / "missing.xml").as_uri(), str(target.parent / "other.xml"))
+    assert sorted(p.name for p in target.parent.iterdir()) == ["hand.xml"]
+
+
+@pytest.mark.general
+def test_companion_files_travel_with_a_fetched_description(monkeypatch, tmp_path):
+    """A LICENSE / README next to a robot description is fetched with it, from the mirror or the data repo."""
+    local_dir = tmp_path / "roboverse_data"
+    upstream = tmp_path / "upstream"
+    (upstream / "assets").mkdir(parents=True)
+    (upstream / "hand.xml").write_text("<mujoco/>")
+    (upstream / "LICENSE").write_text("Apache-2.0")
+    (upstream / "README.md").write_text("# hand")
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(local_dir))
+    monkeypatch.setattr(hf_util, "_UPSTREAM_MIRRORS", {})
+    monkeypatch.setattr(hf_util.hf_api, "file_exists", lambda repo_id, filename, repo_type: False)
+    monkeypatch.setattr(hf_util, "hf_hub_download", lambda **kwargs: pytest.fail("HF download must not be used"))
+    hf_util.register_upstream_mirror("robots/some_hand/mjcf", upstream.as_uri())
+
+    check_and_download_single(str(local_dir / "robots" / "some_hand" / "mjcf" / "hand.xml"))
+
+    got = sorted(p.name for p in (local_dir / "robots" / "some_hand" / "mjcf").iterdir())
+    assert got == ["LICENSE", "README.md", "hand.xml"], (
+        "the licence and notes come along; absent companions are skipped"
+    )

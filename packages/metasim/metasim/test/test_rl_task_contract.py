@@ -608,23 +608,30 @@ def test_a_dict_action_is_clamped_like_the_tensor_of_the_same_numbers():
     assert torch.allclose(captured["applied"], torch.tensor([[1.0, 0.04]]))
     assert float(captured["applied"][0, 1]) == applied["arm"]["dof_pos_target"]["gripper"]
 
-    # in bounds, an unknown joint, an unknown robot, and NaN: nothing is rewritten or copied
+    # in bounds, an unknown joint, an unknown robot, NaN, and None (a demo's unactuated joint): nothing is
+    # rewritten or copied
     for passthrough in (
         [{"arm": {"dof_pos_target": {"j1": 0.5, "typo": 7.0}}, "other": {"dof_pos_target": {"j": 9.0}}}],
         [{"arm": {"dof_pos_target": {"j1": float("nan")}}}],
+        [{"arm": {"dof_pos_target": {"j1": None, "gripper": 0.02}}}],
     ):
         RLTaskEnv.step(env, passthrough)
         assert captured["applied"] is passthrough and captured["applied"][0] is passthrough[0]
 
+    # a pickled demo keeps NumPy scalars and a recorder may hand over 0-d tensors: both clamp like floats
+    import numpy as np
+
+    RLTaskEnv.step(env, [{"arm": {"dof_pos_target": {"j1": np.float32(5.0), "gripper": torch.tensor(-1.0)}}}])
+    applied = captured["applied"][0]["arm"]["dof_pos_target"]
+    assert applied == {"j1": 1.0, "gripper": 0.0}
+    assert all(isinstance(v, float) for v in applied.values())
+
 
 @pytest.mark.general
 def test_clamp_bounds_cover_the_robots_whose_slots_the_joint_limits_describe():
-    """The dict-path bounds are the config's joint limits, in float32, for the robots every backend drives by
-    position. A robot with an effort-driven joint takes torques in some or all of those slots depending on
-    the backend, so it is left out and keeps the behaviour it has; so is every robot if the handler cannot
-    answer."""
-    from types import SimpleNamespace
-
+    """The dict-path bounds are the slices of the tensor bounds the robot's joints occupy, for the robots every
+    backend drives by position. A robot with an effort-driven joint (``control_type``) takes torques in some
+    or all of those slots depending on the backend, so it is left out and keeps the behaviour it has."""
     arm = RobotCfg(name="arm")
     arm.joint_limits = {"j0": (-1.0, 1.0), "j1": (-0.04, 2.0)}
     cart = RobotCfg(name="cart")
@@ -635,12 +642,14 @@ def test_clamp_bounds_cover_the_robots_whose_slots_the_joint_limits_describe():
     env.device = torch.device("cpu")
     env.robots = [arm, cart]
     env.joint_names_by_robot = {"arm": ["j0", "j1"], "cart": ["pole", "slider"]}
-    env.handler = SimpleNamespace(_robot_reports_position_target=lambda name: name == "arm")
+    env._action_low = torch.tensor([-1.0, -0.04, -3.14, -4.0], dtype=torch.float32)
+    env._action_high = torch.tensor([1.0, 2.0, 3.14, 4.0], dtype=torch.float32)
     env._build_clamp_bounds()
     assert env._clamp_limits_by_robot == {"arm": {"j0": (-1.0, 1.0), "j1": (float(torch.tensor(-0.04)), 2.0)}}, (
-        "float32, as the tensor bounds are; the effort-driven robot is not settled here"
+        "the tensor bounds' own float32 numbers; the effort-driven robot is not settled here"
     )
 
-    env.handler = SimpleNamespace()  # a handler that does not answer the predicate
+    cart.control_type = {}
     env._build_clamp_bounds()
-    assert env._clamp_limits_by_robot == {}
+    assert set(env._clamp_limits_by_robot) == {"arm", "cart"}, "a robot without an effort joint is position-driven"
+    assert env._clamp_limits_by_robot["cart"]["slider"] == (-4.0, 4.0), "the second robot reads its own slice"

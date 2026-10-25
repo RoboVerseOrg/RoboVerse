@@ -1253,6 +1253,22 @@ class NewtonHandler(BaseSimHandler):
         obj_map = self._get_obj_joint_name_map(env_id, obj_name)
         return obj_map.get(joint_name)
 
+    def _passive_joint_mask(self, robot_name: str, joint_names: list[str]) -> torch.Tensor | None:
+        """``(num_joints,)`` bool mask of the joints of ``robot_name`` that no cfg actuator drives, or None if all are driven.
+
+        On Newton the config is the only source of actuation (asset actuators for cfg-controlled joints are
+        stripped, the rest import as drives nothing writes), so a joint absent from ``RobotCfg.actuators`` is
+        passive when the config declares any actuator at all.
+        """
+        cfg = self.object_dict.get(robot_name)
+        actuators = getattr(cfg, "actuators", None)
+        if not actuators:
+            return None
+        flags = [name not in actuators for name in joint_names]
+        if not any(flags):
+            return None
+        return torch.tensor(flags, dtype=torch.bool, device=self._device).unsqueeze(0)
+
     def _collect_joint_names(self, env_id: int, obj_name: str) -> list[str]:
         """Collect 1-DoF joint names for an object in a given env.
 
@@ -1790,6 +1806,13 @@ class NewtonHandler(BaseSimHandler):
                 body_states.append(self._pack_body_state(body_q, body_qd, sorted_body_ids))
             if body_states and body_states[0] is not None:
                 body_state = torch.stack(body_states, dim=0)
+
+        if joint_pos_target is not None:
+            # A passive joint (no cfg actuator, hence no PD) has no target: its column reports the position it
+            # has, as the MuJoCo handler does, instead of whatever its ignored action slot carried.
+            passive = self._passive_joint_mask(robot_name, joint_names)
+            if passive is not None:
+                joint_pos_target = torch.where(passive, joint_pos, joint_pos_target)
 
         return RobotState(
             root_state=root_state,

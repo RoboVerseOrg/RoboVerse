@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from metasim.constants import SimType
@@ -168,6 +169,110 @@ def _bench_run(args: argparse.Namespace) -> int:
     return 0
 
 
+HEALTH_STATUSES = ("ok", "low", "undefined", "unsupported", "no-demos", "error")
+"""Outcomes of ``bench health`` for one task, in the order the table sorts them."""
+
+
+def _health_task(name: str, args: argparse.Namespace) -> dict:
+    """Replay one task's demos under the protocol and classify the outcome.
+
+    Returns ``{"task", "status", "success_rate", "episodes", "result", "detail"}``: ``ok`` at or above the
+    threshold, ``low`` below it, ``undefined`` when the task declares no success signal, ``unsupported`` when
+    it does not run on the backend, ``no-demos`` when it ships no demo file, ``error`` with the exception text.
+    """
+    import torch
+
+    from metasim.bench import EvalProtocol, ReplayPolicy, evaluate
+    from metasim.task.registry import get_task_class
+
+    row = {"task": name, "status": "error", "success_rate": None, "episodes": 0, "result": None, "detail": ""}
+    try:
+        task_cls = get_task_class(name)
+        if getattr(task_cls, "scenario", None) is None:
+            row.update(status="unsupported", detail="no class-level scenario")
+            return row
+        supported = getattr(task_cls, "supported_simulators", None)
+        if supported is not None and args.sim not in supported:
+            row.update(status="unsupported", detail=f"supported_simulators={tuple(supported)}")
+            return row
+        updates = {"simulator": args.sim, "num_envs": args.num_envs, "headless": True}
+        if args.robot:
+            updates["robots"] = list(args.robot)
+        scenario = task_cls.scenario.replace(**updates)
+        device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+        protocol = EvalProtocol(episodes=args.episodes, max_episode_steps=args.max_steps, seed=args.seed, name="health")
+        env = task_cls(scenario, device)
+        try:
+            # the demo file is a property of the built task: some tasks pick it per robot or in __init__
+            if getattr(env, "traj_filepath", None) is None:
+                row.update(status="no-demos")
+                return row
+            result = evaluate(env, ReplayPolicy(), protocol, policy_info={"spec": "replay"}, task_name=name)
+        finally:
+            env.close()
+        robots = "+".join(result.robots) or "norobot"
+        path = result.save(os.path.join(args.out_dir, f"{name}__{robots}__{args.sim}__replay.json"))
+        summary = result.summary
+        row.update(episodes=summary["episodes"], result=str(path))
+        if not summary["success_defined"]:
+            row.update(status="undefined")
+        else:
+            rate = float(summary["success_rate"])
+            row.update(success_rate=rate, status="ok" if rate >= args.threshold else "low")
+        return row
+    except Exception as err:  # one broken task must not hide the others: it is reported as a row
+        row.update(status="error", detail=f"{type(err).__name__}: {err}".splitlines()[0][:200])
+        return row
+
+
+def _health_table(rows: list[dict], threshold: float) -> str:
+    order = {status: i for i, status in enumerate(HEALTH_STATUSES)}
+    lines = [
+        "| task | status | replay success | episodes | detail |",
+        "|---|---|---|---|---|",
+    ]
+    for row in sorted(rows, key=lambda r: (order.get(r["status"], 99), r["task"])):
+        rate = "" if row["success_rate"] is None else f"{row['success_rate']:.3f}"
+        lines.append(f"| {row['task']} | {row['status']} | {rate} | {row['episodes']} | {row['detail']} |")
+    counts = {status: sum(r["status"] == status for r in rows) for status in HEALTH_STATUSES}
+    lines.append("")
+    lines.append(
+        f"{len(rows)} task(s), threshold {threshold:.2f}: "
+        + ", ".join(f"{n} {status}" for status, n in counts.items() if n)
+    )
+    return "\n".join(lines)
+
+
+def _bench_health(args: argparse.Namespace) -> int:
+    """The task health gate: the replay baseline on every task that ships demos, one row per task.
+
+    A task whose own demos do not replay to the threshold on the backend they were recorded on is
+    broken (asset, checker or physics), not hard; the gate exits 1 when any task is ``low`` or
+    ``error`` so it can guard a release. Results go to ``--out-dir`` as ordinary result files plus a
+    ``health.json`` with the rows.
+    """
+    from metasim.task.registry import list_tasks
+
+    names = list(args.task) if args.task else list_tasks()
+    os.makedirs(args.out_dir, exist_ok=True)
+    rows = []
+    for name in names:
+        row = _health_task(name, args)
+        if row["status"] == "no-demos" and not args.task:
+            continue  # the default sweep is over tasks with demos; an explicit --task is always reported
+        rows.append(row)
+        print(f"{row['task']:48s} {row['status']:12s} {row['detail']}", file=sys.stderr)
+    table = _health_table(rows, args.threshold)
+    with open(os.path.join(args.out_dir, "health.json"), "w") as f:
+        json.dump(
+            {"simulator": args.sim, "threshold": args.threshold, "episodes": args.episodes, "rows": rows}, f, indent=2
+        )
+    with open(os.path.join(args.out_dir, "health.md"), "w") as f:
+        f.write(table + "\n")
+    print(table)
+    return 1 if any(r["status"] in ("low", "error") for r in rows) else 0
+
+
 def _bench_summarize(args: argparse.Namespace) -> int:
     from pathlib import Path
 
@@ -238,6 +343,18 @@ def _add_bench(sub) -> None:
     r.add_argument("--gui", action="store_true", help="run with the simulator viewer (default headless)")
     r.add_argument("--out", help="result path (default: bench_results/<task>__<robot>__<sim>__<policy>__<time>.json)")
     r.set_defaults(func=_bench_run)
+    h = bs.add_parser("health", help="task health gate: the replay baseline on every task that ships demos")
+    h.add_argument("--sim", required=True, help="simulator backend the demos were recorded on, e.g. mujoco")
+    h.add_argument("--task", action="append", help="task(s) to check (repeatable; default: every task with demos)")
+    h.add_argument("--robot", action="append", help="robot config name(s) (repeatable; default: the task's)")
+    h.add_argument("--num-envs", type=int, default=1)
+    h.add_argument("--episodes", type=int, default=5)
+    h.add_argument("--max-steps", type=int, help="evaluator-side episode cap (default: the task's)")
+    h.add_argument("--seed", type=int, default=0)
+    h.add_argument("--threshold", type=float, default=0.8, help="replay success rate a healthy task reaches")
+    h.add_argument("--device", help="torch device (default: cuda if available)")
+    h.add_argument("--out-dir", default="bench_results/health", help="result files, health.json and health.md")
+    h.set_defaults(func=_bench_health)
     s = bs.add_parser("summarize", help="pool result files / directories into a Markdown table")
     s.add_argument("paths", nargs="+")
     s.set_defaults(func=_bench_summarize)

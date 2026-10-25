@@ -17,6 +17,7 @@ from typing import Any
 import torch
 
 from metasim.bench import PolicyContext, TaskInstance
+from metasim.utils.log import warn_once
 
 
 class ILPolicy:
@@ -48,6 +49,7 @@ class ILPolicy:
         self.robot = robot
         self.device = device
         self.task_name = task_name
+        self._used = False
 
     def _build_runner(self, ctx: PolicyContext) -> Any:
         import dill
@@ -61,7 +63,7 @@ class ILPolicy:
         with open(self.checkpoint, "rb") as f:
             payload = torch.load(f, pickle_module=dill, map_location="cpu", weights_only=False)
         workspace = DefaultRunner(payload["cfg"])
-        device = self.device or ("cuda:0" if ctx.device.type == "cuda" else str(ctx.device))
+        device = self.device or str(ctx.device)
         return DefaultEvalRunner(
             workspace,
             scenario=scenario,
@@ -77,6 +79,14 @@ class ILPolicy:
             self.runner = self._build_runner(ctx)
         if self.robot is None:
             self.robot = ctx.robots[0]
+        if self._used and len(env_ids) < ctx.num_envs:
+            warn_once(
+                ("il_policy.partial_reset", id(self)),
+                f"ILPolicy: resetting env slots {env_ids} clears the runner's action chunk and observation history "
+                f"for all {ctx.num_envs} envs (the IL runners are batched); evaluate with episodes that end together "
+                "or with num_envs=1 for exact per-env behaviour.",
+            )
+        self._used = True
         self.runner.reset()
 
     def act(self, obs: Any, ctx: PolicyContext) -> Any:

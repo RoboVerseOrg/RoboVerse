@@ -12,12 +12,16 @@ release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-25
+
 ### Added
 - Bench adapters for trained policies: `roboverse_learn.rl.fast_td3.bench_policy:FastTD3Policy` (a FastTD3 checkpoint, built on the first observation so it runs with any `num_envs`; refuses a checkpoint whose widths do not fit the task) and `roboverse_learn.il.runners.bench_policy:ILPolicy` (any `BaseEvalRunner`, or the diffusion-policy `DefaultEvalRunner` built from the training config stored in the checkpoint; feeds it `{rgb, joint_qpos}` like `DefaultRunner.eval`). Both satisfy `metasim.bench.Policy`, so `python -m metasim bench run --policy <import path> --checkpoint <file>` scores them under the benchmark protocol and result schema (`tests/test_bench_policies.py`).
 - Reference embodiments (`ROADMAP.md` §4): `YamCfg` (`--robot yam`) is the I2RT YAM arm with its parallel-jaw gripper from the Menagerie-derived MJCF in `roboverse_data/robots/Yet_Another_Manipulator_YAM` — eight joints, the asset's servo gains and home pose, `left_finger` driven and `right_finger` passive through the asset's equality constraint, gripper open/close targets for the IK helpers — verified holding, tracking and closing the gripper on MuJoCo (1 and 2 envs) and Newton. `SharpaWaveRightCfg` / `SharpaWaveLeftCfg` (`--robot sharpa_wave_right|left`) are the Sharpa Wave 22-DoF tactile hands from MuJoCo Menagerie `sharpa_wave` (Apache-2.0, pinned revision in the config): one servo per joint with the asset's compiled gains written into the config so Newton drives them identically; the asset is fetched from the pinned Menagerie revision until it is mirrored into `roboverse_data`. On Newton the hand needs `SimParamCfg(njmax=...)` raised once it touches objects (the solver warns `nefc overflow`). `tests/test_embodiments.py` pins the contract for Franka, YAM and both hands (name resolution, joints = asset joints, hold, tracking, YAM gripper coupling, parallel wrapper, a `metasim.bench` evaluation).
 - Benchmark protocol docs (`docs/source/dataset_benchmark/benchmark/usage.md`): how a policy is scored on RoboVerse with `python -m metasim bench` — the success contract (`info["success"]`), task instances, the `first` / `final` / `held` scoring rules, the result JSON, and the `replay` / `hold` / `random` baselines every task should be checked against. The page replaces a description of a `RandomizationCfg` / `ScenarioCfg(task=, robot=, randomization=)` API that no longer exists; domain randomization is documented against `metasim.randomization.dr_manager.DRConfig` as it is.
 
 ### Changed
+- `MjlabYamCfg` (`mjlab_yam`) lists the asset's eight joints: the six driven arm joints plus the two gripper joints as passive, so its joint / action vector is 8 wide on MuJoCo and Newton alike (it was 8 on MuJoCo and 6 on Newton). The mjlab lift-cube ports already pad their six policy actions to the full width.
+- Release `1.0.0`: both packages leave beta (`roboverse-py` depends on `roboverse-metasim>=1.0.0,<1.1`); the Sphinx configs read the version from `pyproject.toml` instead of a stale literal.
 - The parity / consistency probes moved from `scripts/` to `tools/parity/` (import path `tools.parity.*`) and the asset helpers to `tools/assets/`; `scripts/` keeps the developer scripts (data collection, teleop, replay, conversion, mesh tools, OSC, Unitree deployment).
 - The wiki build (`scripts/docs/build_roboverse_wiki.sh`, `deploy-docs.yml`) renders the MetaSim docs from `packages/metasim/docs` instead of cloning the standalone repository; `METASIM_REPO` still forces a clone for pre-monorepo versions.
 - The three per-policy `requirements.txt` files under `roboverse_learn/il/policies/{dp,vita,fm}` are removed; their runtime dependencies (`av`, `dill`, `moviepy`, `numba`, `termcolor`, `huggingface-hub`) join the `[learn]` extra, which is now the single install path (`pip install -e ".[learn]"`). The files pinned `hydra-core`, `zarr`, `einops` and `dill` to 2022 versions and were the source of the Dependabot alerts.
@@ -29,6 +33,7 @@ release.
 - MetaSim now lives in this repository under `packages/metasim` (imported with `git subtree`, history preserved) and is released in lockstep as `roboverse-metasim`; `roboverse-py` depends on `roboverse-metasim>=1.0.0b0,<1.1` instead of a git `@main` URL. Install with `pip install -e "packages/metasim[mujoco]" -e ".[mujoco]"` (MetaSim first). CI runs MetaSim's simulator-free suite on 3.10/3.11 alongside the RoboVerse suite; `changelog.yml` guards one CHANGELOG per package; `release.yml` builds and publishes both from one tag.
 
 ### Fixed
+- mjlab ports: the patched-MJCF cache (`_mjcf_patch.patch_mjcf_with_pd_actuators`) was keyed on the relative asset path while the patched file pins `meshdir` to an absolute directory, so two checkouts sharing a temp dir served each other's meshes (`Refusing to fetch ... outside LOCAL_DIR`); the key is the absolute path.
 - `YamCfg` (previously unexported) described a UR5e, pointed `ee_body_name` at a body the asset lacks, listed seven of the asset's eight joints and spawned outside its joint limits (Franka home pose copied in); the `test_roboverse_robot_cfg_validation` gap entry for it is gone.
 - `mjlab_yam` as a standalone robot (`--robot mjlab_yam` in any scene) failed in the MuJoCo handler with `Invalid name 'yam_v0/joint1'`: mjlab's MJCF ships no actuators. The handler now synthesizes them from the config (see the MetaSim changelog).
 - The mjlab ports (`mjlab.cartpole_*_v2`, `mjlab.velocity_*_v2`, `mjlab.lift_cube_yam*_v2`, `cartpole_train`) read the MuJoCo model directly, so on `--sim mujoco` they run one env per process. With `--num-envs 2` they died in a parallel worker (`KeyError: 'cartpole'` from the scene-entity probe); they now refuse `num_envs > 1` on MuJoCo at construction and point at `--num-envs 1` or `--sim newton`. The probe for "is this entity a registered robot" reads the handler's `object_dict` instead of catching a `KeyError` across the worker pipe.
@@ -177,5 +182,6 @@ flagged `default_joint_positions` mismatches before they trip in CI.
 
 ---
 
-[Unreleased]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0-beta...HEAD
+[Unreleased]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0-beta...v1.0.0
 [1.0.0b0]: https://github.com/RoboVerseOrg/RoboVerse/compare/v1.0.0-alpha...v1.0.0-beta

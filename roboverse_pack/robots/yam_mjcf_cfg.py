@@ -32,11 +32,11 @@ class YamCfg(RobotCfg):
     """I2RT YAM arm with its parallel-jaw gripper.
 
     Asset: ``roboverse_data/robots/Yet_Another_Manipulator_YAM/mjcf`` (MuJoCo Menagerie ``i2rt_yam``, MIT,
-    derived from the manufacturer's URDF; ``README.md`` and ``LICENSE`` ship next to the XML). The gripper
+    derived from the manufacturer's URDF; ``README.md`` and ``LICENSE`` are fetched next to the XML). The gripper
     has two slide joints coupled by an MJCF ``<equality>``: ``left_finger`` is driven and ``right_finger``
     mirrors it, so ``right_finger`` is a *passive* joint, present in the state and action vectors but
-    never written as a target. The home pose is the asset's ``home`` keyframe (``joint2 = joint3 = 60°``,
-    arm raised) with the gripper open. Gravity stays on: the asset compensates it per link
+    never written as a target. The home pose is the ``home`` keyframe the Menagerie model documents
+    (``joint2 = joint3 = 60°``, arm raised; the XML keeps it as a comment) with the gripper open. Gravity stays on: the asset compensates it per link
     (``gravcomp="1"``).
 
     The task-side ``mjlab_yam`` config (``MjlabYamCfg``) drives mjlab's bare copy of the same arm for the

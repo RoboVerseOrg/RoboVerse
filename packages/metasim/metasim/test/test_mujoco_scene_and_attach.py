@@ -168,7 +168,7 @@ def test_robot_without_root_inertial_loads_cleanly(tmp_path):
             </body>
           </worldbody>
           <actuator>
-            <motor name="m1" joint="j1" gear="1"/>
+            <motor name="j1" joint="j1" gear="1"/>
           </actuator>
         </mujoco>
         """,
@@ -431,10 +431,5 @@ def test_actuator_not_named_after_a_joint_is_rejected(tmp_path):
             '<position name="elbow_drive" joint="elbow" kp="50"/></actuator>'
         ),
     )
-    handler = MujocoHandler(scenario)
-    handler.launch()
-    try:
-        with pytest.raises(ValueError, match=r"actuators \['elbow_drive'\] are not named after a joint"):
-            handler.get_states(mode="tensor")
-    finally:
-        handler.close()
+    with pytest.raises(ValueError, match=r"actuators \['elbow_drive'\] are not named after a joint"):
+        MujocoHandler(scenario).launch()  # checked at launch, when the passive joints are listed

@@ -321,9 +321,53 @@ def test_task_reset_refreshes_render_only_when_the_backend_did_not():
     assert _reset_with(True) == ["set_states", "get_states"]
 
 
-def test_task_reset_without_initial_states_writes_nothing():
-    """A task whose ``_get_initial_states`` returns None keeps the simulator where it is (no ``set_states(None)``)."""
-    assert _reset_with(False, initial_states=None) == ["get_states"]
+def test_task_without_initial_states_resets_to_the_launch_pose():
+    """``_get_initial_states`` returning None means "the pose the handler launched in": ``__init__`` captures it
+    once and every reset writes it back, so an episode never starts where the previous one ended."""
+    import torch
+
+    from metasim.sim.base import BaseSimHandler
+    from metasim.task.base import BaseTaskEnv
+
+    launch_state = object()
+    calls: list[tuple] = []
+
+    class _Stub(BaseSimHandler):  # a handler stand-in: BaseTaskEnv takes a built handler in place of a scenario
+        num_envs = 1
+        device = torch.device("cpu")
+        set_states_refreshes = True
+
+        def __init__(self):
+            pass
+
+        def get_states(self, env_ids=None, mode="tensor"):
+            calls.append(("get_states", env_ids))
+            return launch_state
+
+        def set_states(self, states=None, env_ids=None):
+            calls.append(("set_states", states, env_ids))
+
+        def _get_states(self, env_ids=None, mode="tensor"):
+            return self.get_states(env_ids, mode)
+
+        def _set_states(self, states, env_ids=None):
+            return self.set_states(states, env_ids)
+
+        def _set_dof_targets(self, actions):
+            return None
+
+        def _simulate(self):
+            return None
+
+    class _NoStates(BaseTaskEnv):
+        def _get_initial_states(self):
+            return None
+
+    env = _NoStates(_Stub())  # no simulator is built
+    assert env._initial_states is launch_state
+    calls.clear()
+    env.reset()
+    assert calls[0] == ("set_states", launch_state, [0])
 
 
 def test_capability_flags_match_the_backends_that_implement_them():

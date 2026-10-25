@@ -203,6 +203,13 @@ class MujocoHandler(BaseSimHandler):
 
         self._init_torque_control()
         self._apply_default_joint_positions()
+        for robot in self.robots:
+            passive = self._passive_joint_names(robot.name)
+            if passive:
+                log.info(
+                    f"MuJoCo: robot {robot.name!r} has passive joints {passive} (no actuator): observed, never "
+                    "driven; their action slots are ignored."
+                )
 
         if not self.headless:
             self.viewer = mujoco.viewer.launch_passive(self.physics.model.ptr, self.physics.data.ptr)
@@ -1233,8 +1240,19 @@ class MujocoHandler(BaseSimHandler):
             actuator_ids = self._joint_actuator_ids(robot.name)
             for i in range(self._robot_num_dofs[robot_idx]):
                 jn = jnames[i]
-                if jn in joint_targets and actuator_ids[i] is not None:  # a passive joint takes no target
-                    self.physics.data.ctrl[actuator_ids[i]] = joint_targets[jn]
+                if jn not in joint_targets:
+                    continue
+                if actuator_ids[i] is None:  # a passive joint takes no target
+                    if not isinstance(self._actions_cache, (list, tuple)):
+                        continue  # a tensor action carries one slot per joint; the passive slot is documented as ignored
+                    warn_once(
+                        ("mujoco.passive_joint_target", robot.name, jn),
+                        f"MuJoCo: joint {jn!r} of robot {robot.name!r} has no actuator (passive, e.g. a coupled "
+                        f"gripper finger), so the dof_pos_target written for it is ignored. Drive its actuated "
+                        "partner, or give the joint an actuator in the MJCF / gains in RobotCfg.actuators. Warned once.",
+                    )
+                    continue
+                self.physics.data.ctrl[actuator_ids[i]] = joint_targets[jn]
 
     def refresh_render(self) -> None:
         self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.
@@ -1362,7 +1380,13 @@ class MujocoHandler(BaseSimHandler):
         return [name for name in self._get_joint_names(robot_name, sort=True) if name not in actuated]
 
     def _joint_actuator_ids(self, robot_name: str) -> list[int | None]:
-        """The MuJoCo actuator id driving each of ``robot_name``'s sorted joints; ``None`` for a passive joint."""
+        """The MuJoCo actuator id driving each of ``robot_name``'s sorted joints; ``None`` for a passive joint.
+
+        The model is fixed after ``launch``, so the map is built once per robot and cached.
+        """
+        cache = self.__dict__.setdefault("_joint_actuator_ids_cache", {})
+        if robot_name in cache:
+            return cache[robot_name]
         assert isinstance(self.object_dict[robot_name], RobotCfg)
         robot_idx = next(i for i, robot in enumerate(self.robots) if robot.name == robot_name)
         prefix = self._mujoco_robot_names[robot_idx]
@@ -1370,7 +1394,9 @@ class MujocoHandler(BaseSimHandler):
             self.physics.model.actuator(i).name: i for i in range(self.physics.model.nu)
         }  # actuators are global; a robot's are the ones under its prefix
         self._get_actuator_names(robot_name)  # validates that every actuator under the prefix names a joint
-        return [by_name.get(f"{prefix}{jn}") for jn in self._get_joint_names(robot_name, sort=True)]
+        ids = [by_name.get(f"{prefix}{jn}") for jn in self._get_joint_names(robot_name, sort=True)]
+        cache[robot_name] = ids
+        return ids
 
     def _get_actuator_reindex(self, robot_name: str) -> list[int]:
         """Global actuator ids of the robot's *actuated* joints in sorted-joint order (passive joints skipped)."""

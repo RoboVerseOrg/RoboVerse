@@ -68,8 +68,7 @@ class SharpaWaveRightCfg(RobotCfg):
     """Sharpa Wave right hand: thumb 5 DoF, index / middle / ring 4 DoF each, pinky 5 DoF, one servo per joint.
 
     Asset: ``roboverse_data/robots/sharpa_wave/mjcf/right_hand.xml`` (MuJoCo Menagerie ``sharpa_wave``,
-    Apache-2.0, derived from the manufacturer's URDF; ``README.md``, ``LICENSE`` and ``UPSTREAM.txt`` ship
-    next to it). The palm is the root body ``right_hand_C_MC`` with a ``wrist_site`` at its base for mounting
+    Apache-2.0, derived from the manufacturer's URDF; ``README.md`` and ``LICENSE`` are fetched next to it). The palm is the root body ``right_hand_C_MC`` with a ``wrist_site`` at its base for mounting
     on an arm; the tactile pads are the ``*_fingertip`` sites. Joints are zero with the hand open, which is the
     default pose. Needs MuJoCo >= 3.1.6.
     """

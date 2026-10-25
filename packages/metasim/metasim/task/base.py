@@ -112,6 +112,10 @@ class BaseTaskEnv:
             check_and_download_single(self.traj_filepath)
 
         self._initial_states = self._get_initial_states()
+        if self._initial_states is None:
+            # A task without initial states resets to the pose the handler launched in (every robot in its
+            # default pose), captured once here; without this a reset would leave the robot mid-episode.
+            self._initial_states = self.handler.get_states(mode="tensor")
         self.device = self.handler.device
         self._prepare_callbacks()
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
@@ -374,10 +378,7 @@ class BaseTaskEnv:
 
         self._run_reset_callbacks(env_ids)
         states_to_set = self._initial_states if states is None else states
-        if states_to_set is not None:
-            self._write_reset_states(states_to_set, env_ids)
-        # A task without initial states (``_get_initial_states`` returns None) resets its counters and keeps
-        # the simulator where it is: the handler put every robot in its default pose at launch.
+        self._write_reset_states(states_to_set, env_ids)
         env_states = self.handler.get_states(env_ids=env_ids, mode="tensor")
         info = {
             "privileged_observation": self._privileged_observation(env_states),

@@ -12,7 +12,7 @@ in `CONTRIBUTING.md` and `RELEASING.md`.
 | Backends | MuJoCo, MJX, Newton, SuperDex, SAPIEN 2/3, PyBullet, Isaac Sim, Isaac Gym, Genesis, Blender behind one `BaseSimHandler` contract. MuJoCo, Newton and SuperDex are exercised by the record → replay contracts (L0 action replay, L1 state round-trip); the others are not yet. |
 | Tasks | ~6,000 registered tasks across LIBERO, ManiSkill, RLBench, mjlab, humanoid, robosuite, RoboTwin and more; `supported_simulators` is declared per task as it is verified (mjlab v2 first). |
 | CI | Lint, MetaSim simulator-free suite (3.10 / 3.11), RoboVerse suite, release dry-run on every PR; GPU backends run in the merge-queue workflow. |
-| Releases | `1.0.0b0` in both packages; PyPI trusted publishing wired, first lockstep release pending. |
+| Releases | `1.0.0` in both packages (this release); PyPI trusted publishing wired, released in lockstep from one tag. |
 
 ## Roadmap
 
@@ -65,10 +65,11 @@ first; the data model builds on it.
       --checkpoint`. Open: ACT, the three VLA evals (they run inside their own environments; a thin HTTP
       or subprocess adapter is the likely shape) and rsl_rl, then retiring the legacy loops once their
       extras (domain randomisation, videos) live in the harness.
-- [ ] Task health gate: `bench run --policy replay` on every task that ships demos, on the backend
-      the demos were recorded on, published as the task's ceiling; a task below threshold is
-      marked, not scored. `success_status ∈ {native, ported, proxy, none}` declared per task and
-      refused by the benchmark unless `native` / `ported`.
+- [x] Task health gate: `python -m metasim bench health --sim <backend>` replays every task's demos and
+      classifies it (`ok` / `low` / `undefined` / `unsupported` / `no-demos` / `error`), exit 1 on `low` or
+      `error`. First reading on MuJoCo (3 episodes): `stack_cube` 3/3, `pick_cube` 2/3 (**low**: its demos
+      do not fully replay on the backend they target; the next task-side item), `reach_origin` ships no
+      demos. Open: run the sweep over every task with demos per release and publish the table.
 - [ ] The task bases keep the un-tiled demo states and actions they load (one source of truth);
       `metasim.bench.instance_pool` reads them instead of parsing the demo file a second time.
 - [ ] Checkers move out of `metasim.example` into `metasim.task.success` as the public, declarative

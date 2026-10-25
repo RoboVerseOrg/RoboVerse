@@ -87,6 +87,24 @@ predicate held, so a reader can re-score under another rule.
 - `hold` commands the default joint positions and must score near zero.
 - `random` draws uniform joint targets inside the limits (seeded from the protocol).
 
+The health gate runs the replay baseline over every task that ships demos and classifies each one:
+
+```bash
+python -m metasim bench health --sim mujoco --episodes 5 --threshold 0.8      # every task with demos
+python -m metasim bench health --sim mujoco --task stack_cube --task pick_cube  # a few tasks
+```
+
+| status | meaning |
+|---|---|
+| `ok` / `low` | replay success at / below `--threshold` |
+| `undefined` | the task declares no success signal |
+| `unsupported` | the task does not run on `--sim` (`supported_simulators`) or has no class-level scenario |
+| `no-demos` | no demo file (skipped in the default sweep, reported for an explicit `--task`) |
+| `error` | construction or evaluation raised; the first line of the error is the detail |
+
+It writes the ordinary result files, `health.json` and `health.md` to `--out-dir` and exits 1 when any
+task is `low` or `error`, so it can guard a release.
+
 ## Embodiments
 
 Results are reported per robot. Three embodiments are the reference set every task family and

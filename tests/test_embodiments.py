@@ -170,3 +170,34 @@ def test_yam_drives_through_the_parallel_wrapper():
         assert float(state.joint_pos[1, names.index("joint1")]) == pytest.approx(0.5, abs=0.02)
         assert float(state.joint_pos[0, names.index("joint1")]) == pytest.approx(0.0, abs=0.02)
         assert state.joint_pos_target.shape == (2, cfg.num_joints)
+
+
+def test_yam_task_without_initial_states_resets_to_its_launch_pose():
+    """A plain task on YAM: after an episode that moved the arm, ``reset`` puts it back where it launched."""
+    _skip_without_asset(YAM_MJCF)
+    import torch
+
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.task.base import BaseTaskEnv
+
+    class Plain(BaseTaskEnv):
+        max_episode_steps = 1000
+
+        def _get_initial_states(self):
+            return None
+
+    scenario = ScenarioCfg(simulator="mujoco", num_envs=1, headless=True, robots=[YamCfg()])
+    env = Plain(scenario, device="cpu")
+    try:
+        obs, _ = env.reset()
+        launch = obs.robots["yam"].joint_pos.clone()
+        names = env.handler.get_joint_names("yam", sort=True)
+        target = launch.clone()
+        target[0, names.index("joint1")] = 1.5
+        for _ in range(200):
+            obs, *_ = env.step(target)
+        assert float(obs.robots["yam"].joint_pos[0, names.index("joint1")]) == pytest.approx(1.5, abs=0.05)
+        obs, _ = env.reset()
+        assert torch.allclose(obs.robots["yam"].joint_pos, launch, atol=1e-6), "reset restores the launch pose"
+    finally:
+        env.close()

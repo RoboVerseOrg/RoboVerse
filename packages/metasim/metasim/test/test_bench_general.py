@@ -703,3 +703,109 @@ def test_summarize_keeps_hand_picked_instances_apart():
     )
     rows = [line for line in summarize([pooled, picked]).splitlines() if line.startswith("| t ")]
     assert len(rows) == 2 and any("instances [0]" in r for r in rows)
+
+
+def test_health_task_classifies_outcomes(monkeypatch, tmp_path):
+    """One row per task: ok / low / undefined by replay success, unsupported, no-demos, and error for a crash."""
+    from types import SimpleNamespace
+
+    import metasim.__main__ as cli
+    from metasim.task import registry
+
+    args = SimpleNamespace(
+        sim="mujoco",
+        task=None,
+        robot=None,
+        num_envs=1,
+        episodes=2,
+        max_steps=None,
+        seed=0,
+        threshold=0.8,
+        device="cpu",
+        out_dir=str(tmp_path),
+    )
+
+    class _Env(_ScriptedEnv):
+        def __init__(self, scenario, device):
+            super().__init__(num_envs=1, schedule=[(None, 2, False)], pool_size=0)
+            self.scenario = scenario
+
+        def close(self):
+            return None
+
+    def task_class(name):
+        cls = type(name, (_Env,), {"scenario": SimpleNamespace(replace=lambda **kw: SimpleNamespace(**kw))})
+        if name == "fresh":
+            cls.traj_filepath = None
+        else:
+            cls.traj_filepath = "demo.pkl"
+        if name == "newton_only":
+            cls.supported_simulators = ("newton",)
+        if name == "broken":
+            cls.__init__ = lambda self, scenario, device: (_ for _ in ()).throw(RuntimeError("asset missing"))
+        return cls
+
+    monkeypatch.setattr(registry, "get_task_class", task_class)
+
+    results = {
+        "healthy": [_episode(0, True), _episode(1, True)],
+        "sick": [_episode(0, False), _episode(1, True)],
+        "mute": [_episode(0, False), _episode(1, False)],
+    }
+
+    def fake_evaluate(env, policy, protocol, policy_info=None, on_episode=None, task_name=None):
+        return BenchmarkResult(
+            task=task_name,
+            simulator="mujoco",
+            robots=["bot"],
+            num_envs=1,
+            protocol=protocol.to_dict(),
+            policy={"name": policy.name},
+            episodes=results[task_name],
+            notes={"success_defined": task_name != "mute"},
+        )
+
+    import metasim.bench as bench
+
+    monkeypatch.setattr(bench, "evaluate", fake_evaluate)
+
+    rows = {
+        name: cli._health_task(name, args) for name in ("healthy", "sick", "mute", "newton_only", "fresh", "broken")
+    }
+    assert rows["healthy"]["status"] == "ok" and rows["healthy"]["success_rate"] == 1.0
+    assert rows["sick"]["status"] == "low" and rows["sick"]["success_rate"] == 0.5
+    assert rows["mute"]["status"] == "undefined" and rows["mute"]["success_rate"] is None
+    assert rows["newton_only"]["status"] == "unsupported" and "newton" in rows["newton_only"]["detail"]
+    assert rows["fresh"]["status"] == "no-demos"
+    assert rows["broken"]["status"] == "error" and "asset missing" in rows["broken"]["detail"]
+    assert (tmp_path / "healthy__bot__mujoco__replay.json").exists(), "a health run leaves ordinary result files"
+
+    table = cli._health_table(list(rows.values()), 0.8)
+    lines = table.splitlines()
+    assert lines[2].startswith("| healthy | ok | 1.000 |") and lines[3].startswith("| sick | low | 0.500 |")
+    assert "1 ok, 1 low, 1 undefined, 1 unsupported, 1 no-demos, 1 error" in lines[-1]
+
+
+def test_bench_health_gates_on_low_and_error(monkeypatch, tmp_path):
+    import metasim.__main__ as cli
+    from metasim.task import registry
+
+    monkeypatch.setattr(registry, "list_tasks", lambda: ["a", "b", "c"])
+    canned = {
+        "a": {"task": "a", "status": "ok", "success_rate": 1.0, "episodes": 2, "result": None, "detail": ""},
+        "b": {"task": "b", "status": "no-demos", "success_rate": None, "episodes": 0, "result": None, "detail": ""},
+        "c": {"task": "c", "status": "low", "success_rate": 0.0, "episodes": 2, "result": None, "detail": ""},
+    }
+    monkeypatch.setattr(cli, "_health_task", lambda name, args: canned[name])
+
+    out = tmp_path / "health"
+    code = cli.main(["bench", "health", "--sim", "mujoco", "--out-dir", str(out), "--episodes", "2"])
+    assert code == 1, "a low task fails the gate"
+    data = json.loads((out / "health.json").read_text())
+    assert [r["task"] for r in data["rows"]] == ["a", "c"], "the default sweep skips tasks without demos"
+    assert (out / "health.md").read_text().startswith("| task | status |")
+
+    canned["c"]["status"] = "ok"
+    assert cli.main(["bench", "health", "--sim", "mujoco", "--task", "b", "--task", "c", "--out-dir", str(out)]) == 0
+    data = json.loads((out / "health.json").read_text())
+    assert [r["task"] for r in data["rows"]] == ["b", "c"], "an explicit --task is always reported"

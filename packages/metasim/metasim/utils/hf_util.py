@@ -65,20 +65,58 @@ def _upstream_url(relpath_posix: str) -> str | None:
 
 
 def _download_from_upstream(url: str, filepath: str) -> None:
-    """Stream ``url`` into ``filepath`` (written next to it first, so a failed fetch leaves no partial file)."""
+    """Stream ``url`` into ``filepath`` through a private temp file in the same directory, published atomically.
+
+    A failed fetch leaves no partial file, and two unlocked callers fetching the same file (``check_and_download_single``
+    is also called directly, outside ``download.lock``) cannot interleave their writes.
+    """
     import shutil
+    import tempfile
     import urllib.request
 
-    os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
-    tmp_path = filepath + ".part"
+    directory = os.path.dirname(os.path.abspath(filepath))
+    os.makedirs(directory, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(prefix=os.path.basename(filepath) + ".", suffix=".part", dir=directory)
     try:
-        with urllib.request.urlopen(url, timeout=120) as response, open(tmp_path, "wb") as out:
+        with urllib.request.urlopen(url, timeout=120) as response, os.fdopen(fd, "wb") as out:
             shutil.copyfileobj(response, out)
         os.replace(tmp_path, filepath)
     except Exception:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
         raise
+
+
+_DESCRIPTION_SUFFIXES = (".xml", ".urdf", ".usd", ".usda", ".usdc")
+_COMPANION_FILES = ("LICENSE", "LICENSE.txt", "LICENSE.md", "README.md")
+"""Files fetched, when they exist, next to a robot / object description: the asset's licence and notes travel with it."""
+
+
+def _fetch_companions(filepath: str) -> None:
+    """Fetch the licence / README that sit next to a freshly downloaded description file, from wherever it came.
+
+    Each companion is optional: absent upstream, or unreachable, it is skipped without a word beyond debug.
+    """
+    if not filepath.endswith(_DESCRIPTION_SUFFIXES):
+        return
+    directory = os.path.dirname(filepath)
+    for name in _COMPANION_FILES:
+        companion = os.path.join(directory, name)
+        if os.path.exists(companion):
+            continue
+        try:
+            relpath_posix = os.path.relpath(os.path.realpath(companion), os.path.realpath(LOCAL_DIR)).replace(
+                os.sep, "/"
+            )
+            repo_id = _find_data_repo(relpath_posix, is_optional_file=True)
+            if repo_id is not None:
+                hf_hub_download(repo_id=repo_id, filename=relpath_posix, repo_type="dataset", local_dir=LOCAL_DIR)
+                continue
+            upstream_url = _upstream_url(relpath_posix)
+            if upstream_url is not None:
+                _download_from_upstream(upstream_url, companion)
+        except Exception as exc:  # the asset itself is already in place; its paperwork is best effort
+            log.debug(f"companion {name} of {filepath} not fetched: {exc}")
 
 
 def _resolve_local_dir() -> str:
@@ -243,6 +281,7 @@ def check_and_download_single(filepath: str):
                         f"from its registered upstream {upstream_url} failed: {exc}"
                     ) from exc
                 log.info(f"File {filepath} downloaded from its upstream {upstream_url}.")
+                _fetch_companions(filepath)
                 return
             if is_optional_file:
                 log.warning(f"Optional file {filepath} not found in HuggingFace data sources, skipping.")
@@ -273,6 +312,7 @@ def check_and_download_single(filepath: str):
             log.info(f"File {filepath} downloaded from the HuggingFace dataset {repo_id}.")
         except Exception as e:
             raise e
+        _fetch_companions(filepath)
 
 
 def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):
