@@ -59,9 +59,12 @@ first; the data model builds on it.
       instances), content-addressed `TaskInstance` pool drawn from the task's demos, the `Policy`
       contract with `hold` / `random` / `replay` baselines, the harness-owned `evaluate` loop and
       the versioned `BenchmarkResult` JSON with provenance; `python -m metasim bench`.
-- [ ] Every evaluator in `roboverse_learn` (IL runners, ACT, the three VLA evals, FastTD3,
-      rsl-rl) becomes a `Policy` adapter and calls `metasim.bench.evaluate`; the per-script
-      success counting and text/JSON outputs go away.
+- [~] Every evaluator in `roboverse_learn` converges on `metasim.bench.evaluate`. Done: FastTD3 checkpoints
+      (`roboverse_learn.rl.fast_td3.bench_policy:FastTD3Policy`) and IL runners / diffusion-policy checkpoints
+      (`roboverse_learn.il.runners.bench_policy:ILPolicy`) score through `bench run --policy <import path>
+      --checkpoint`. Open: ACT, the three VLA evals (they run inside their own environments; a thin HTTP
+      or subprocess adapter is the likely shape) and rsl_rl, then retiring the legacy loops once their
+      extras (domain randomisation, videos) live in the harness.
 - [ ] Task health gate: `bench run --policy replay` on every task that ships demos, on the backend
       the demos were recorded on, published as the task's ceiling; a task below threshold is
       marked, not scored. `success_status ∈ {native, ported, proxy, none}` declared per task and

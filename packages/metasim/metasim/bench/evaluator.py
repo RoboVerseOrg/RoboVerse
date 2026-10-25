@@ -106,6 +106,7 @@ def build_context(env, protocol: EvalProtocol) -> PolicyContext:
         default_action=torch.tensor(default, dtype=torch.float32, device=device),
         default_joint_positions=default_joint_positions,
         instruction=getattr(env, "task_desc", None) or None,
+        extras={"scenario": scenario},  # for adapters that need the robot configs or the camera set-up
     )
 
 

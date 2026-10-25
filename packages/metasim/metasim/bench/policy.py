@@ -45,6 +45,7 @@ class PolicyContext:
     instruction: str | None = None
     """The task's language instruction (``task_desc``) when it has one."""
     extras: dict[str, Any] = field(default_factory=dict)
+    """Harness-provided objects a policy adapter may need: ``"scenario"`` is the env's ``ScenarioCfg``."""
 
     @property
     def action_dim(self) -> int:

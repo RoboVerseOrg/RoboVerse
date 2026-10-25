@@ -44,6 +44,29 @@ exactly `seed + i`). Results from different seeds or machines are comparable whe
 simulator and protocol agree; `summarize` pools exactly those and keeps hand-picked `--instance`
 runs apart.
 
+## Trained policies
+
+The learning stacks ship adapters that satisfy `metasim.bench.Policy`, so a checkpoint is scored by
+the same harness, protocol and result schema as the baselines:
+
+```bash
+# a FastTD3 actor (roboverse_learn/rl/fast_td3): the checkpoint carries its training config
+python -m metasim bench run --task <rl_task> --sim mujoco --num-envs 16 \
+    --policy roboverse_learn.rl.fast_td3.bench_policy:FastTD3Policy --checkpoint runs/<task>/final.pt
+
+# a diffusion-policy checkpoint (roboverse_learn/il): the runner is built from the config stored in it
+python -m metasim bench run --task stack_cube --sim mujoco --robot franka \
+    --policy roboverse_learn.il.runners.bench_policy:ILPolicy --checkpoint outputs/<run>/latest.ckpt \
+    --policy-arg camera=camera0
+```
+
+`--checkpoint` reaches the adapter as its `checkpoint` argument and its SHA-256 lands in the result;
+`--policy-arg key=value` passes any other constructor argument. The adapters wrap the evaluators'
+own code paths (`actor(obs_normalizer(obs))`; `BaseEvalRunner.get_action` on `{rgb, joint_qpos}`),
+so a number here is the number the stack's evaluator would produce under the same protocol. The
+`roboverse_learn.il` and VLA evaluation scripts keep their own loops for now (domain randomisation,
+videos); they are the next to converge on the harness.
+
 ## Scoring rules
 
 - `first` (default): the episode counts as solved if the predicate held at any step.
