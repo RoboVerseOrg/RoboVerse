@@ -70,8 +70,8 @@ def instance_pool(env) -> list[TaskInstance]:
 
     Reads the demo file (``get_traj``) rather than ``env._initial_states``, because the task bases tile
     that list to ``num_envs`` and the distinct instances are lost in the process; a task without a demo
-    file falls back to ``_initial_states`` de-duplicated by content, so the pool does not change with
-    ``num_envs``. The pool is cached on the env (``_bench_instance_pool``): the demo file is read once
+    file falls back to ``_initial_states`` (a list, or RLTaskEnv's ``TensorState`` batch) de-duplicated by
+    content, so the pool does not change with ``num_envs``. The pool is cached on the env (``_bench_instance_pool``): the demo file is read once
     per env, however many times it is evaluated (the task's own ``__init__`` read it once more already).
     """
     cached = getattr(env, "_bench_instance_pool", None)
@@ -108,6 +108,14 @@ def _build_instance_pool(env) -> list[TaskInstance]:
             for i, (s, a) in enumerate(zip(init_states, actions, strict=False))
         ]
     states = getattr(env, "_initial_states", None)
+    if states is not None and not isinstance(states, list) and hasattr(states, "robots"):
+        # RLTaskEnv keeps its initial states as one TensorState batch; back to one nested dict per env.
+        # An empty batch (a scene-MJCF task with no named robot or object) has no instances to offer.
+        from metasim.utils.state import state_tensor_to_nested
+
+        if not getattr(states, "robots", None) and not getattr(states, "objects", None):
+            return []
+        states = state_tensor_to_nested(env.handler, states)
     if isinstance(states, list) and states:
         pool, seen = [], set()
         for s in states:

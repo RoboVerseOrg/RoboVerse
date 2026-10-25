@@ -23,22 +23,6 @@
    ],
    "signature": "(env, protocol: 'EvalProtocol') -> 'PolicyContext'"
   },
-  "episode_of": {
-   "kind": "function",
-   "params": [
-    {
-     "default": false,
-     "kind": "POSITIONAL_OR_KEYWORD",
-     "name": "inst"
-    },
-    {
-     "default": false,
-     "kind": "POSITIONAL_OR_KEYWORD",
-     "name": "plan"
-    }
-   ],
-   "signature": "(inst: 'TaskInstance', plan: 'list[TaskInstance]') -> 'int'"
-  },
   "evaluate": {
    "kind": "function",
    "params": [
@@ -574,7 +558,7 @@
  "metasim.bench.protocol": {
   "EvalProtocol": {
    "attributes": {
-    "episodes": "int",
+    "episodes": "NoneType",
     "hold_steps": "int",
     "instances": "NoneType",
     "max_episode_steps": "NoneType",
@@ -637,7 +621,7 @@
        "name": "name"
       }
      ],
-     "signature": "(self, episodes: 'int' = 10, success_rule: 'SuccessRule' = 'first', hold_steps: 'int' = 1, max_episode_steps: 'int | None' = None, seed: 'int' = 0, instances: 'tuple[int, ...] | None' = None, name: 'str' = 'default') -> None"
+     "signature": "(self, episodes: 'int | None' = None, success_rule: 'SuccessRule' = 'first', hold_steps: 'int' = 1, max_episode_steps: 'int | None' = None, seed: 'int' = 0, instances: 'tuple[int, ...] | None' = None, name: 'str' = 'default') -> None"
     },
     "episode_success": {
      "params": [
@@ -6933,6 +6917,7 @@
  "metasim.task.base": {
   "BaseTaskEnv": {
    "attributes": {
+    "actions_are_joint_targets": "bool",
     "auto_reset": "bool",
     "max_episode_steps": "int",
     "success_is_termination": "bool",

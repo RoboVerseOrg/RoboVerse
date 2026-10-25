@@ -65,6 +65,15 @@ class BaseTaskEnv:
     ending the episode sets this to ``False`` and overrides :meth:`_success`; ``RLTaskEnv`` does
     so by default.
     """
+    actions_are_joint_targets: bool = True
+    """Whether the action handed to ``step`` is a joint target in the handler's action order.
+
+    ``BaseTaskEnv.step`` and ``RLTaskEnv.step`` pass it to ``set_dof_targets`` as such (RLTaskEnv clips it
+    to the joint limits, whatever its declared ``[-1, 1]`` action space says), so the robots' joint
+    limits are the real bounds and the default joint positions the "do nothing" action. An env that maps
+    actions itself (an action manager, deltas, unnormalisation in ``_process_action``) sets this to
+    ``False``; its declared ``action_space`` is then the contract a policy must meet.
+    """
     supported_simulators: tuple[str, ...] | None = None
     """Backends this task is known to run on (e.g. ``("mujoco", "newton")``).
 

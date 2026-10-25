@@ -66,6 +66,8 @@ first; the data model builds on it.
       the demos were recorded on, published as the task's ceiling; a task below threshold is
       marked, not scored. `success_status ∈ {native, ported, proxy, none}` declared per task and
       refused by the benchmark unless `native` / `ported`.
+- [ ] The task bases keep the un-tiled demo states and actions they load (one source of truth);
+      `metasim.bench.instance_pool` reads them instead of parsing the demo file a second time.
 - [ ] Checkers move out of `metasim.example` into `metasim.task.success` as the public, declarative
       success predicates (position, bbox, joint, hold counters) every task family uses.
 - [ ] Frozen evaluation splits: per task a published instance list (ids + hashes) separate from

@@ -62,33 +62,12 @@ def _declared_action_box(env) -> tuple[list[float], list[float]] | None:
     return low_l, high_l
 
 
-def _maps_its_own_actions(env) -> bool:
-    """Whether the env turns the policy's action into joint targets itself.
-
-    The plain ``BaseTaskEnv.step`` / ``RLTaskEnv.step`` hand the action to ``set_dof_targets`` as joint
-    targets (RLTaskEnv clips it to the joint limits, whatever its declared ``[-1, 1]`` space says), so
-    the robots' joint limits are the real action bounds there. An env that overrides ``step`` or
-    ``_process_action`` (an action manager, deltas, unnormalisation) owns the mapping, and its declared
-    ``action_space`` is the contract the policy must meet.
-    """
-    from metasim.task.base import BaseTaskEnv
-    from metasim.task.rl_task import RLTaskEnv
-
-    cls = type(env)
-    step = getattr(cls, "step", None)
-    process = getattr(cls, "_process_action", None)
-    base_steps = {BaseTaskEnv.step, RLTaskEnv.step}
-    return (step is not None and step not in base_steps) or (
-        process is not None and process is not BaseTaskEnv._process_action
-    )
-
-
 def build_context(env, protocol: EvalProtocol) -> PolicyContext:
     """The :class:`PolicyContext` of ``env``: joint order, limits and defaults from the robot configs.
 
     The action bounds are the env's declared ``action_space`` when the env maps actions itself
-    (:func:`_maps_its_own_actions`) and declares a finite one; otherwise the joint limits in action
-    order, with the robots' default joint positions as the "hold" action.
+    (``actions_are_joint_targets`` is False) and declares a finite one; otherwise the joint limits in
+    action order, with the robots' default joint positions as the "hold" action.
     """
     handler = env.handler
     scenario = env.scenario
@@ -109,7 +88,7 @@ def build_context(env, protocol: EvalProtocol) -> PolicyContext:
             default.append(float(defaults.get(j, 0.0)))
     device = torch.device(getattr(env, "device", None) or handler.device)
     cap = protocol.max_episode_steps or int(getattr(env, "max_episode_steps", 0) or 0)
-    box = _declared_action_box(env) if _maps_its_own_actions(env) else None
+    box = None if getattr(env, "actions_are_joint_targets", True) else _declared_action_box(env)
     if box is not None:
         low, high = box
         default = [(lo + hi) / 2.0 for lo, hi in zip(low, high, strict=True)]  # "hold" = the middle of the box
@@ -173,17 +152,16 @@ def _fresh_obs(env):
     return env._observation(env.handler.get_states(mode="tensor"))
 
 
-def _obs_after_reset(env, returned, reset_ids: list[int], previous_obs):
+def _obs_after_reset(env, returned, covered_all: bool, previous_obs):
     """The full observation after a reset.
 
-    What ``reset`` returned when it covers every env (a single env, or an auto-resetting env, whose
-    ``reset`` reads the whole batch); otherwise the observation rebuilt from the handler state through
-    ``_observation``. For an env whose ``step`` returns something else than ``_observation`` does
-    (a native wrapper returning its own tensor or dict), that rebuild differs in type from the step
+    What ``reset`` returned when one call covered every env (a single env, or an auto-resetting env,
+    whose ``reset`` reads the whole batch); otherwise the observation rebuilt from the handler state
+    through ``_observation``. For an env whose ``step`` returns something else than ``_observation``
+    does (a native wrapper returning its own tensor or dict), that rebuild differs in type from the step
     observation: say so once rather than hand the policy the wrong thing silently.
     """
-    covers_all = reset_ids == list(range(env.num_envs)) or getattr(env, "auto_reset", False)
-    if covers_all and isinstance(returned, tuple) and returned:
+    if covered_all and isinstance(returned, tuple) and returned:
         return returned[0]
     fresh = _fresh_obs(env)
     if previous_obs is not None and type(previous_obs) is not type(fresh):
@@ -194,6 +172,23 @@ def _obs_after_reset(env, returned, reset_ids: list[int], previous_obs):
             "episode started mid-run has that type. Evaluate with num_envs=1 to avoid it.",
         )
     return fresh
+
+
+def _step_to_host(terminated, time_out, success, reward, num_envs: int):
+    """The four per-step vectors as host lists in one device-to-host copy when they are tensors on one device."""
+    tensors = [terminated, time_out, success, reward]
+    if (
+        all(isinstance(t, torch.Tensor) and t.numel() == num_envs for t in tensors)
+        and len({t.device for t in tensors}) == 1
+    ):
+        packed = torch.stack([t.reshape(-1).to(torch.float64) for t in tensors]).cpu().tolist()
+        return [bool(v) for v in packed[0]], [bool(v) for v in packed[1]], [bool(v) for v in packed[2]], packed[3]
+    return (
+        _as_bools(terminated, num_envs),
+        _as_bools(time_out, num_envs),
+        _as_bools(success, num_envs),
+        _as_floats(reward, num_envs),
+    )
 
 
 def _per_env(value, num_envs: int, cast, what: str) -> list:
@@ -220,10 +215,10 @@ def _as_floats(value, num_envs: int) -> list[float]:
     return _per_env(value, num_envs, lambda v: float(v), "reward")
 
 
-def _step_success(env, info: Any, terminated: list[bool]) -> list[bool]:
-    """``info["success"]`` of the step; the ``success_is_termination`` reading for envs that predate it."""
+def _step_success(env, info: Any, terminated):
+    """``info["success"]`` of the step (unconverted); the ``success_is_termination`` reading for envs that predate it."""
     if isinstance(info, dict) and "success" in info:
-        return _as_bools(info["success"], len(terminated))
+        return info["success"]
     warn_once(
         ("bench.no_success_info", type(env)),
         f"{type(env).__name__}.step() reports no info['success']; scoring "
@@ -231,8 +226,8 @@ def _step_success(env, info: Any, terminated: list[bool]) -> list[bool]:
         + " (see BaseTaskEnv.success_is_termination)",
     )
     if getattr(env, "success_is_termination", True):
-        return list(terminated)
-    return [False] * len(terminated)
+        return terminated
+    return False
 
 
 def evaluate(
@@ -291,45 +286,45 @@ def evaluate(
         auto-resetting env already did that itself) rather than left mid-episode; they are never scored.
         Returns the observation to act on next, or ``obs_before`` when nothing was reset.
         """
-        started_ids, instances = [], []
+        started: list[tuple[int, int, TaskInstance]] = []
         for env_id in env_ids:
             if not queue:
                 break
             episode, inst = queue.popleft()
-            started_ids.append(env_id)
-            instances.append(inst)
-        seed = min((inst.seed for inst in instances), default=protocol.seed)
-        for env_id, inst in zip(started_ids, instances, strict=True):
-            running[env_id] = _Running(episode=episode_of(inst, plan), instance=inst, seed=seed)
+            started.append((env_id, episode, inst))
+        seed = min((inst.seed for _, _, inst in started), default=protocol.seed)
+        for env_id, episode, inst in started:
+            running[env_id] = _Running(episode=episode, instance=inst, seed=seed)
             slot_state[env_id] = inst.state
+        started_ids = [env_id for env_id, _, _ in started]
         if started_ids:
-            policy.reset(started_ids, instances, ctx)
+            policy.reset(started_ids, [inst for _, _, inst in started], ctx)
         idle = [i for i in env_ids if i not in started_ids]
         explicit = [i for i in started_ids if slot_state[i] is not None]
         default = [i for i in started_ids if slot_state[i] is None] + ([] if auto_reset else idle)
+        calls = 0
         returned = None
-        reset_ids: list[int] = []
         if explicit:
             filler = next(s for s in slot_state if s is not None)
             batch = [s if s is not None else filler for s in slot_state]  # rows outside env_ids are not written
             returned = _reset(env, explicit, batch, seed)
-            reset_ids = explicit
+            calls += 1
         if default:
             returned = _reset(env, default, None, seed)
-            reset_ids = default if not explicit else explicit + default
-        if not reset_ids:
+            calls += 1
+        if calls == 0:
             return obs_before
-        return _obs_after_reset(env, returned, sorted(reset_ids), obs_before)
+        covered_all = calls == 1 and (sorted(explicit or default) == list(range(num_envs)) or auto_reset)
+        return _obs_after_reset(env, returned, covered_all, obs_before)
 
     obs = start(list(range(num_envs)), None)
 
     while running:
         actions = policy.act(obs, ctx)
         obs, reward, terminated, time_out, info = env.step(actions)
-        term = _as_bools(terminated, num_envs)
-        tout = _as_bools(time_out, num_envs)
-        succ = _step_success(env, info, term)
-        rew = _as_floats(reward, num_envs)
+        term, tout, succ, rew = _step_to_host(
+            terminated, time_out, _step_success(env, info, terminated), reward, num_envs
+        )
 
         finished: list[int] = []
         for env_id, run in list(running.items()):
@@ -385,14 +380,6 @@ def evaluate(
             "success_defined": success_defined,
         },
     )
-
-
-def episode_of(inst: TaskInstance, plan: list[TaskInstance]) -> int:
-    """Position of ``inst`` in the plan (instances are distinct objects per planned episode)."""
-    for i, planned in enumerate(plan):
-        if planned is inst:
-            return i
-    raise ValueError("instance is not part of the plan")
 
 
 def _provenance(env, seed: int) -> dict[str, Any]:

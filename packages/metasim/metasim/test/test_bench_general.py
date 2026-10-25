@@ -224,6 +224,8 @@ class _ScriptedEnv:
         self.resets: list[tuple[list[int], list | None, int | None]] = []
         self.actions = []
 
+    actions_are_joint_targets = True
+
     def reset(self, states=None, env_ids=None, seed=None):
         env_ids = list(range(self.num_envs)) if env_ids is None else env_ids
         self.resets.append((list(env_ids), states, seed))
@@ -235,10 +237,10 @@ class _ScriptedEnv:
                 self.slot_instance[i] = int(row["objects"]["cube"]["pos"][0].item())
             else:
                 self.slot_instance[i] = 0
-        return "obs", {}
+        return ("obs", len(env_ids)), {}  # BaseTaskEnv-style: only the reset rows
 
     def _observation(self, states):
-        return "obs"
+        return ("obs", self.num_envs)
 
     def _entry(self, i):
         return self.schedule[self.slot_instance[i] % len(self.schedule)]
@@ -262,7 +264,7 @@ class _ScriptedEnv:
         if self.auto_reset:
             for i in done.nonzero().flatten().tolist():
                 self.reset(env_ids=[i])
-        return "obs", torch.ones(n), terminated, time_out, info
+        return ("obs", n), torch.ones(n), terminated, time_out, info
 
 
 def test_evaluate_scores_each_planned_instance_once_in_order():
@@ -360,182 +362,109 @@ def test_evaluate_idle_slots_get_default_resets_and_are_not_scored():
     assert all(states is None for _, states, _ in env.resets[2:])
 
 
-def test_context_uses_the_env_action_space_when_it_declares_a_finite_one():
+def test_context_uses_the_env_action_space_only_when_the_env_maps_actions_itself():
     import gymnasium as gym
     import numpy as np
 
     from metasim.bench import build_context
-
-    env = _ScriptedEnv(num_envs=1, schedule=[(None, 2, False)])
-    ctx = build_context(env, EvalProtocol())
-    assert ctx.action_dim == 2 and ctx.default_action.tolist() == [0.5, 1.0]  # joint limits / defaults
-    env.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
-    ctx = build_context(env, EvalProtocol())
-    assert ctx.action_dim == 1 and ctx.default_action.tolist() == [0.0]
-    assert ctx.action_low.tolist() == [-1.0] and ctx.action_high.tolist() == [1.0]
-    env.action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(0,))  # BaseTaskEnv's default
-    assert build_context(env, EvalProtocol()).action_dim == 2
-
-
-def test_evaluate_broadcasts_a_scalar_success_flag():
-    """Native wrappers (robosuite, LIBERO) report ``{"success": bool}`` for their single env."""
-
-    class _Scalar(_ScriptedEnv):
-        def step(self, actions):
-            obs, r, t, to, info = super().step(actions)
-            info["success"] = bool(info["success"][0])
-            return obs, r, t, to, info
-
-    env = _Scalar(num_envs=1, schedule=[(2, 3, True)], pool_size=1)
-    result = evaluate(env, HoldPolicy(), EvalProtocol(episodes=1))
-    assert result.episodes[0].success and result.episodes[0].first_success_step == 2
-
-
-def test_random_policy_refuses_unbounded_joints():
-    ctx = PolicyContext(
-        task="t",
-        simulator="fake",
-        robots=["bot"],
-        num_envs=1,
-        device=torch.device("cpu"),
-        seed=0,
-        max_episode_steps=1,
-        action_joint_names={"bot": ["j0"]},
-        action_low=torch.tensor([-float("inf")]),
-        action_high=torch.tensor([float("inf")]),
-        default_action=torch.tensor([0.0]),
-    )
-    policy = RandomPolicy()
-    policy.reset([0], [], ctx)
-    with pytest.raises(ValueError, match="finite action bounds"):
-        policy.act(None, ctx)
-
-
-def test_cli_constants_mirror_the_bench_package():
-    from metasim import __main__ as cli
-    from metasim.bench import BUILTIN_POLICIES, SUCCESS_RULES
-
-    assert cli._SUCCESS_RULES == SUCCESS_RULES
-    assert tuple(cli._BUILTIN_POLICIES) == tuple(BUILTIN_POLICIES)
-
-
-def test_step_success_does_not_alias_terminated():
-    from metasim.task.base import BaseTaskEnv
-
-    env = BaseTaskEnv.__new__(BaseTaskEnv)
-    env.device = torch.device("cpu")
-    env.num_envs = 2
-    env.handler = SimpleNamespace(num_envs=2)
-    terminated = torch.tensor([False, False])
-    success = env._step_success("states", terminated)
-    terminated |= torch.tensor([True, True])  # a learner folding time-outs into done, in place
-    assert success.tolist() == [False, False]
-
-
-def test_summarize_keeps_hand_picked_instances_apart():
-    eps = [_episode(0, True)]
-    pooled = BenchmarkResult(
-        task="t",
-        simulator="mujoco",
-        robots=["franka"],
-        num_envs=1,
-        protocol=EvalProtocol(episodes=1).to_dict(),
-        policy={"name": "p"},
-        episodes=eps,
-    )
-    picked = BenchmarkResult(
-        task="t",
-        simulator="mujoco",
-        robots=["franka"],
-        num_envs=1,
-        protocol=EvalProtocol(instances=(0,)).to_dict(),
-        policy={"name": "p"},
-        episodes=eps,
-    )
-    rows = [line for line in summarize([pooled, picked]).splitlines() if line.startswith("| t ")]
-    assert len(rows) == 2 and any("instances [0]" in r for r in rows)
-
-
-def test_instance_pool_dedupes_tiled_initial_states():
-    from metasim.bench import instance_pool
-
-    env = _ScriptedEnv(num_envs=4, schedule=[(1, 2, True)], pool_size=0)
-    env._initial_states = [_state(0), _state(1), _state(0), _state(1)]  # a task base tiled 2 demos to 4 envs
-    pool = instance_pool(env)
-    assert [p.index for p in pool] == [0, 1] and len({p.state_hash for p in pool}) == 2
-    assert instance_pool(env) == pool  # cached on the env
-
-
-def test_evaluate_broadcasts_a_scalar_reward_and_terminated():
-    class _ScalarAll(_ScriptedEnv):
-        def step(self, actions):
-            obs, r, t, to, info = super().step(actions)
-            return obs, 1.0, bool(t[0]), bool(to[0]), {"success": bool(info["success"][0])}
-
-    env = _ScalarAll(num_envs=1, schedule=[(2, 3, True)], pool_size=1)
-    result = evaluate(env, HoldPolicy(), EvalProtocol(episodes=1))
-    assert result.episodes[0].success and result.episodes[0].return_sum == 3.0 and result.episodes[0].terminated
-
-
-def test_context_prefers_joint_limits_unless_the_env_maps_actions_itself():
-    import gymnasium as gym
-    import numpy as np
-
-    from metasim.bench import build_context
-    from metasim.bench.evaluator import _maps_its_own_actions
     from metasim.task.base import BaseTaskEnv
     from metasim.task.rl_task import RLTaskEnv
 
-    assert not _maps_its_own_actions(RLTaskEnv.__new__(RLTaskEnv))
-    assert not _maps_its_own_actions(BaseTaskEnv.__new__(BaseTaskEnv))
+    assert BaseTaskEnv.actions_are_joint_targets is True and RLTaskEnv.actions_are_joint_targets is True
 
-    class _Delta(RLTaskEnv):
-        def _process_action(self, actions):
-            return actions
-
-    class _OwnStep(BaseTaskEnv):
-        def step(self, actions):
-            return None
-
-    assert _maps_its_own_actions(_Delta.__new__(_Delta)) and _maps_its_own_actions(_OwnStep.__new__(_OwnStep))
-
-    # the scripted env overrides step, so its finite box is the contract; a plain base env would keep joint limits
     env = _ScriptedEnv(num_envs=1, schedule=[(None, 2, False)])
     env.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
+    ctx = build_context(env, EvalProtocol())  # joint targets: the declared box is ignored
+    assert ctx.action_dim == 2 and ctx.default_action.tolist() == [0.5, 1.0]
+    env.actions_are_joint_targets = False  # an action manager owns the mapping: the box is the contract
     ctx = build_context(env, EvalProtocol())
-    assert ctx.action_dim == 1 and ctx.default_joint_positions == {"bot": {"j0": 0.5, "j1": 1.0}}
+    assert ctx.action_dim == 1 and ctx.default_action.tolist() == [0.0]
+    assert ctx.action_low.tolist() == [-1.0] and ctx.action_high.tolist() == [1.0]
+    assert ctx.default_joint_positions == {"bot": {"j0": 0.5, "j1": 1.0}}
+    env.action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(0,))  # BaseTaskEnv's default: unusable
+    assert build_context(env, EvalProtocol()).action_dim == 2
 
 
-def test_hold_dict_action_uses_joint_defaults_even_with_a_reduced_action_box():
-    from metasim.bench.policy import _hold_dict_action
+def test_policy_always_sees_a_full_batch_observation():
+    """Two reset calls in one start (explicit + default slots) must not leak a partial observation."""
+    seen = []
 
-    ctx = PolicyContext(
+    class _Spy(HoldPolicy):
+        def act(self, obs, ctx):
+            seen.append(obs)
+            return super().act(obs, ctx)
+
+    # both envs time out together; the one remaining instance restarts env 0 explicitly, env 1 idles
+    env = _ScriptedEnv(num_envs=2, schedule=[(None, 2, False)], pool_size=1)
+    evaluate(env, _Spy(), EvalProtocol(episodes=3))
+    assert seen and all(obs == ("obs", 2) for obs in seen)
+
+
+def test_summary_and_table_say_undefined_without_a_success_signal():
+    eps = [_episode(0, False), _episode(1, False)]
+    r = BenchmarkResult(
         task="t",
-        simulator="fake",
-        robots=["bot"],
+        simulator="mujoco",
+        robots=[],
         num_envs=1,
-        device=torch.device("cpu"),
-        seed=0,
-        max_episode_steps=1,
-        action_joint_names={"bot": ["j0", "j1"]},
-        action_low=torch.tensor([-1.0]),
-        action_high=torch.tensor([1.0]),
-        default_action=torch.tensor([0.0]),
-        default_joint_positions={"bot": {"j0": 0.5, "j1": 1.0}},
+        protocol=EvalProtocol().to_dict(),
+        policy={"name": "random"},
+        episodes=eps,
+        notes={"success_defined": False},
     )
-    assert _hold_dict_action(ctx) == {"bot": {"dof_pos_target": {"j0": 0.5, "j1": 1.0}}}
+    assert r.summary["success_defined"] is False and r.summary["success_rate"] is None
+    row = next(line for line in summarize([r]).splitlines() if line.startswith("| t "))
+    assert "| undefined |" in row and "0.000" not in row
+    r.notes["success_defined"] = True
+    assert r.summary["success_rate"] == 0.0
 
 
-def test_reset_kwargs_come_from_the_signature_not_the_error_text():
-    from metasim.bench.evaluator import _reset
+def test_protocol_episodes_default_and_explicit_instances():
+    assert EvalProtocol().episodes == 10
+    assert EvalProtocol(instances=(3, 1)).episodes == 2
+    assert EvalProtocol(episodes=2, instances=(3, 1)).episodes == 2
+    with pytest.raises(ValueError, match="disagrees"):
+        EvalProtocol(episodes=10, instances=(0, 1))
+    assert EvalProtocol.from_dict(EvalProtocol(instances=(0,)).to_dict()).episodes == 1
 
-    class _Buggy(_ScriptedEnv):
-        def reset(self, states=None, env_ids=None, seed=None):
-            raise TypeError("unsupported operand for states and seed")  # a real bug inside reset
 
-    env = _Buggy(num_envs=1, schedule=[(1, 2, True)], pool_size=1)
-    with pytest.raises(TypeError, match="unsupported operand"):
-        _reset(env, [0], [_state(0)], 0)
+def test_validate_rejects_unknown_top_level_keys():
+    r = BenchmarkResult(
+        task="t",
+        simulator="mujoco",
+        robots=[],
+        num_envs=1,
+        protocol=EvalProtocol().to_dict(),
+        policy={"name": "p"},
+        episodes=[_episode(0, True)],
+    )
+    data = r.to_dict()
+    data["comment"] = "hand-written"
+    with pytest.raises(ValueError, match="unknown top-level keys"):
+        validate_result(data)
+
+
+def test_step_to_host_packs_tensors_and_accepts_scalars():
+    from metasim.bench.evaluator import _step_to_host
+
+    t = torch.tensor([True, False])
+    out = _step_to_host(t, ~t, t, torch.tensor([1.5, 2.5]), 2)
+    assert out == ([True, False], [False, True], [True, False], [1.5, 2.5])
+    assert _step_to_host(True, False, False, 1.0, 2) == ([True, True], [False, False], [False, False], [1.0, 1.0])
+
+
+def test_instance_pool_reads_an_rl_tensor_state_batch(monkeypatch):
+    from metasim.bench import instance_pool
+    from metasim.utils import state as state_mod
+
+    env = _ScriptedEnv(num_envs=2, schedule=[(1, 2, True)], pool_size=0)
+    env._initial_states = SimpleNamespace(robots={"bot": object()}, objects={})  # stands in for a TensorState
+    monkeypatch.setattr(state_mod, "state_tensor_to_nested", lambda handler, ts: [_state(0), _state(1), _state(0)])
+    pool = instance_pool(env)
+    assert [p.index for p in pool] == [0, 1]
+    env = _ScriptedEnv(num_envs=2, schedule=[(1, 2, True)], pool_size=0)
+    env._initial_states = SimpleNamespace(robots={}, objects={})  # a scene-only task: nothing to draw from
+    assert instance_pool(env) == []
 
 
 def test_evaluate_without_success_info_falls_back_to_the_termination_reading():
@@ -642,3 +571,135 @@ def test_evaluate_records_whether_the_task_defines_success():
     assert result.notes["success_defined"] is False
     env = _ScriptedEnv(num_envs=1, schedule=[(1, 2, True)], pool_size=1)
     assert evaluate(env, HoldPolicy(), EvalProtocol(episodes=1)).notes["success_defined"] is True
+
+
+def test_cli_constants_mirror_the_bench_package():
+    from metasim import __main__ as cli
+    from metasim.bench import BUILTIN_POLICIES, SUCCESS_RULES
+
+    assert cli._SUCCESS_RULES == SUCCESS_RULES
+    assert tuple(cli._BUILTIN_POLICIES) == tuple(BUILTIN_POLICIES)
+
+
+def test_evaluate_broadcasts_a_scalar_reward_and_terminated():
+    class _ScalarAll(_ScriptedEnv):
+        def step(self, actions):
+            obs, r, t, to, info = super().step(actions)
+            return obs, 1.0, bool(t[0]), bool(to[0]), {"success": bool(info["success"][0])}
+
+    env = _ScalarAll(num_envs=1, schedule=[(2, 3, True)], pool_size=1)
+    result = evaluate(env, HoldPolicy(), EvalProtocol(episodes=1))
+    assert result.episodes[0].success and result.episodes[0].return_sum == 3.0 and result.episodes[0].terminated
+
+
+def test_evaluate_broadcasts_a_scalar_success_flag():
+    """Native wrappers (robosuite, LIBERO) report ``{"success": bool}`` for their single env."""
+
+    class _Scalar(_ScriptedEnv):
+        def step(self, actions):
+            obs, r, t, to, info = super().step(actions)
+            info["success"] = bool(info["success"][0])
+            return obs, r, t, to, info
+
+    env = _Scalar(num_envs=1, schedule=[(2, 3, True)], pool_size=1)
+    result = evaluate(env, HoldPolicy(), EvalProtocol(episodes=1))
+    assert result.episodes[0].success and result.episodes[0].first_success_step == 2
+
+
+def test_hold_dict_action_uses_joint_defaults_even_with_a_reduced_action_box():
+    from metasim.bench.policy import _hold_dict_action
+
+    ctx = PolicyContext(
+        task="t",
+        simulator="fake",
+        robots=["bot"],
+        num_envs=1,
+        device=torch.device("cpu"),
+        seed=0,
+        max_episode_steps=1,
+        action_joint_names={"bot": ["j0", "j1"]},
+        action_low=torch.tensor([-1.0]),
+        action_high=torch.tensor([1.0]),
+        default_action=torch.tensor([0.0]),
+        default_joint_positions={"bot": {"j0": 0.5, "j1": 1.0}},
+    )
+    assert _hold_dict_action(ctx) == {"bot": {"dof_pos_target": {"j0": 0.5, "j1": 1.0}}}
+
+
+def test_instance_pool_dedupes_tiled_initial_states():
+    from metasim.bench import instance_pool
+
+    env = _ScriptedEnv(num_envs=4, schedule=[(1, 2, True)], pool_size=0)
+    env._initial_states = [_state(0), _state(1), _state(0), _state(1)]  # a task base tiled 2 demos to 4 envs
+    pool = instance_pool(env)
+    assert [p.index for p in pool] == [0, 1] and len({p.state_hash for p in pool}) == 2
+    assert instance_pool(env) == pool  # cached on the env
+
+
+def test_random_policy_refuses_unbounded_joints():
+    ctx = PolicyContext(
+        task="t",
+        simulator="fake",
+        robots=["bot"],
+        num_envs=1,
+        device=torch.device("cpu"),
+        seed=0,
+        max_episode_steps=1,
+        action_joint_names={"bot": ["j0"]},
+        action_low=torch.tensor([-float("inf")]),
+        action_high=torch.tensor([float("inf")]),
+        default_action=torch.tensor([0.0]),
+    )
+    policy = RandomPolicy()
+    policy.reset([0], [], ctx)
+    with pytest.raises(ValueError, match="finite action bounds"):
+        policy.act(None, ctx)
+
+
+def test_reset_kwargs_come_from_the_signature_not_the_error_text():
+    from metasim.bench.evaluator import _reset
+
+    class _Buggy(_ScriptedEnv):
+        def reset(self, states=None, env_ids=None, seed=None):
+            raise TypeError("unsupported operand for states and seed")  # a real bug inside reset
+
+    env = _Buggy(num_envs=1, schedule=[(1, 2, True)], pool_size=1)
+    with pytest.raises(TypeError, match="unsupported operand"):
+        _reset(env, [0], [_state(0)], 0)
+
+
+def test_step_success_does_not_alias_terminated():
+    from metasim.task.base import BaseTaskEnv
+
+    env = BaseTaskEnv.__new__(BaseTaskEnv)
+    env.device = torch.device("cpu")
+    env.num_envs = 2
+    env.handler = SimpleNamespace(num_envs=2)
+    terminated = torch.tensor([False, False])
+    success = env._step_success("states", terminated)
+    terminated |= torch.tensor([True, True])  # a learner folding time-outs into done, in place
+    assert success.tolist() == [False, False]
+
+
+def test_summarize_keeps_hand_picked_instances_apart():
+    eps = [_episode(0, True)]
+    pooled = BenchmarkResult(
+        task="t",
+        simulator="mujoco",
+        robots=["franka"],
+        num_envs=1,
+        protocol=EvalProtocol(episodes=1).to_dict(),
+        policy={"name": "p"},
+        episodes=eps,
+    )
+    picked = BenchmarkResult(
+        task="t",
+        simulator="mujoco",
+        robots=["franka"],
+        num_envs=1,
+        protocol=EvalProtocol(instances=(0,)).to_dict(),
+        policy={"name": "p"},
+        episodes=eps,
+    )
+    rows = [line for line in summarize([pooled, picked]).splitlines() if line.startswith("| t ")]
+    assert len(rows) == 2 and any("instances [0]" in r for r in rows)

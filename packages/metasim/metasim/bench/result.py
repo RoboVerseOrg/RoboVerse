@@ -82,11 +82,14 @@ class BenchmarkResult:
         n = len(self.episodes)
         successes = sum(1 for e in self.episodes if e.success)
         low, high = wilson_interval(successes, n)
+        defined = bool(self.notes.get("success_defined", True))
         return {
             "episodes": n,
             "successes": successes,
-            "success_rate": successes / n if n else 0.0,
-            "success_rate_ci95": [low, high],
+            # a task without a success signal has no success rate, not a 0 % one
+            "success_defined": defined,
+            "success_rate": (successes / n if n else 0.0) if defined else None,
+            "success_rate_ci95": [low, high] if defined else None,
             "mean_steps": sum(e.steps for e in self.episodes) / n if n else 0.0,
             "mean_return": sum(e.return_sum for e in self.episodes) / n if n else 0.0,
             "time_outs": sum(1 for e in self.episodes if e.time_out),
@@ -100,7 +103,7 @@ class BenchmarkResult:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BenchmarkResult:
-        """Build from a dict produced by :meth:`to_dict`; validates first."""
+        """Build from a dict produced by :meth:`to_dict`; validates first (unknown top-level keys are rejected)."""
         validate_result(data)
         kwargs = {k: v for k, v in data.items() if k != "summary"}
         kwargs["episodes"] = [EpisodeResult(**e) for e in kwargs["episodes"]]
@@ -140,6 +143,9 @@ def validate_result(data: dict[str, Any]) -> None:
         raise ValueError(f"schema is {data['schema']!r}, expected {SCHEMA!r}")
     if data["schema_version"] != SCHEMA_VERSION:
         raise ValueError(f"schema_version is {data['schema_version']!r}, this reader understands {SCHEMA_VERSION}")
+    unknown = set(data) - set(BenchmarkResult.__dataclass_fields__) - {"summary"}
+    if unknown:
+        raise ValueError(f"result has unknown top-level keys {sorted(unknown)}; free-form annotations go in `notes`")
     if not isinstance(data["episodes"], list):
         raise ValueError("episodes must be a list")
     fields = set(EpisodeResult.__dataclass_fields__)
@@ -193,14 +199,16 @@ def summarize(results: list[BenchmarkResult]) -> str:
         n = len(episodes)
         k = sum(1 for e in episodes if e.success)
         low, high = wilson_interval(k, n)
+        defined = all(r.notes.get("success_defined", True) for r in runs)
         rule_label = f"{rule}" + (f" x{hold}" if rule == "held" else "") + (f", cap {cap}" if cap else "")
         if instances is not None:
             rule_label += f", instances {list(instances)}"
         mean_steps = sum(e.steps for e in episodes) / n if n else 0.0
-        lines.append(
-            f"| {task} | {', '.join(robots)} | {simulator} | {rule_label} | {policy} | {len(runs)} | {n} | "
-            f"{k / n:.3f} | [{low:.3f}, {high:.3f}] | {mean_steps:.1f} |"
-            if n
-            else f"| {task} | {', '.join(robots)} | {simulator} | {rule_label} | {policy} | {len(runs)} | 0 | - | - | - |"
-        )
+        head = f"| {task} | {', '.join(robots)} | {simulator} | {rule_label} | {policy} | {len(runs)} | {n} |"
+        if not n:
+            lines.append(f"{head} - | - | - |")
+        elif not defined:
+            lines.append(f"{head} undefined | - | {mean_steps:.1f} |")
+        else:
+            lines.append(f"{head} {k / n:.3f} | [{low:.3f}, {high:.3f}] | {mean_steps:.1f} |")
     return "\n".join(lines)

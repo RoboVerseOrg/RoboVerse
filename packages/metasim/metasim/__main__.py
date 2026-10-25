@@ -108,22 +108,25 @@ def _bench_run(args: argparse.Namespace) -> int:
     from metasim.task.registry import get_task_class
 
     task_cls = get_task_class(args.task)
-    if task_cls.scenario is None:
+    if getattr(task_cls, "scenario", None) is None:
         raise SystemExit(f"{args.task} has no class-level scenario; it cannot be built from the command line")
     updates = {"simulator": args.sim, "num_envs": args.num_envs, "headless": not args.gui}
     if args.robot:
         updates["robots"] = list(args.robot)
     scenario = task_cls.scenario.replace(**updates)
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
-    protocol = EvalProtocol(
-        episodes=args.episodes,
-        success_rule=args.success_rule,
-        hold_steps=args.hold_steps,
-        max_episode_steps=args.max_steps,
-        seed=args.seed,
-        instances=tuple(args.instance) if args.instance else None,
-        name=args.protocol_name,
-    )
+    try:
+        protocol = EvalProtocol(
+            episodes=args.episodes,
+            success_rule=args.success_rule,
+            hold_steps=args.hold_steps,
+            max_episode_steps=args.max_steps,
+            seed=args.seed,
+            instances=tuple(args.instance) if args.instance else None,
+            name=args.protocol_name,
+        )
+    except ValueError as err:
+        raise SystemExit(f"invalid protocol: {err}") from err
     policy_kwargs = _parse_kv(args.policy_arg)
     if args.checkpoint and ":" in args.policy:
         policy_kwargs.setdefault("checkpoint", args.checkpoint)  # a user policy takes it; the baselines have none
@@ -153,11 +156,14 @@ def _bench_run(args: argparse.Namespace) -> int:
         slug = re.sub(r"[^A-Za-z0-9_.+-]+", "_", f"{args.task}__{robots}__{args.sim}__{policy.name}__{stamp}")
         out = f"bench_results/{slug}.json"
     path = result.save(out)
-    low, high = summary["success_rate_ci95"]
+    if summary["success_defined"]:
+        low, high = summary["success_rate_ci95"]
+        score = f"{summary['successes']}/{summary['episodes']} = {summary['success_rate']:.3f} (95% CI {low:.3f}-{high:.3f})"
+    else:
+        score = f"{summary['episodes']} episode(s), success undefined (the task declares no success signal)"
     print(
-        f"{args.task} [{', '.join(result.robots)} @ {args.sim}] {policy.name}: "
-        f"{summary['successes']}/{summary['episodes']} = {summary['success_rate']:.3f} "
-        f"(95% CI {low:.3f}-{high:.3f}), mean {summary['mean_steps']:.1f} steps -> {path}"
+        f"{args.task} [{', '.join(result.robots)} @ {args.sim}] {policy.name}: {score}, "
+        f"mean {summary['mean_steps']:.1f} steps -> {path}"
     )
     return 0
 
@@ -171,12 +177,18 @@ def _bench_summarize(args: argparse.Namespace) -> int:
     for p in args.paths:
         p = Path(p)
         paths.extend(sorted(p.glob("*.json")) if p.is_dir() else [p])
-    results = [BenchmarkResult.load(p) for p in paths]
+    results, bad = [], 0
+    for p in paths:
+        try:
+            results.append(BenchmarkResult.load(p))
+        except (OSError, ValueError, json.JSONDecodeError) as err:
+            bad += 1
+            print(f"skipping {p}: {err}", file=sys.stderr)
     if not results:
         print("no result files found", file=sys.stderr)
         return 1
     print(summarize(results))
-    return 0
+    return 1 if bad else 0
 
 
 def _bench_validate(args: argparse.Namespace) -> int:
@@ -212,7 +224,7 @@ def _add_bench(sub) -> None:
     r.add_argument("--sim", required=True, help="simulator backend, e.g. mujoco")
     r.add_argument("--robot", action="append", help="robot config name(s) to evaluate with (repeatable)")
     r.add_argument("--num-envs", type=int, default=1)
-    r.add_argument("--episodes", type=int, default=10)
+    r.add_argument("--episodes", type=int, help="default 10, or the number of --instance values given")
     r.add_argument("--policy", default="hold", help=f"one of {list(_BUILTIN_POLICIES)} or 'pkg.module:attr'")
     r.add_argument("--policy-arg", action="append", metavar="KEY=VALUE", help="constructor argument (repeatable)")
     r.add_argument("--checkpoint", help="checkpoint path; passed to the policy and hashed into the result")

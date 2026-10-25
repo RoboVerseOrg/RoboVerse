@@ -15,6 +15,7 @@ from typing import Literal
 
 SuccessRule = Literal["first", "final", "held"]
 SUCCESS_RULES: tuple[str, ...] = ("first", "final", "held")
+DEFAULT_EPISODES = 10
 
 
 @dataclass(frozen=True)
@@ -22,8 +23,9 @@ class EvalProtocol:
     """What an evaluation run consists of and how it is scored.
 
     Attributes:
-        episodes: Number of episodes to score. Instances are drawn round-robin from the task's
-            instance pool (``metasim.bench.instances``) unless ``instances`` names them.
+        episodes: Number of episodes to score (default 10). Instances are drawn round-robin from the
+            task's instance pool (``metasim.bench.instances``) unless ``instances`` names them, in which
+            case the count is theirs.
         success_rule: ``"first"`` — solved if the predicate held at any step; ``"final"`` — solved if
             it held at the last step of the episode; ``"held"`` — solved if it held for
             ``hold_steps`` consecutive steps at some point.
@@ -38,7 +40,8 @@ class EvalProtocol:
         name: Free label written into the result (e.g. ``"libero-50x3"``).
     """
 
-    episodes: int = 10
+    episodes: int | None = None
+    """``None`` means 10, or the length of ``instances`` when those are given."""
     success_rule: SuccessRule = "first"
     hold_steps: int = 1
     max_episode_steps: int | None = None
@@ -60,13 +63,14 @@ class EvalProtocol:
             if any(i < 0 for i in instances):
                 raise ValueError(f"instance indices must be >= 0, got {instances}")
             object.__setattr__(self, "instances", instances)
-            if self.episodes != len(instances):
-                # ``episodes`` follows the explicit list; a disagreeing value is a configuration error
-                if self.episodes != EvalProtocol.__dataclass_fields__["episodes"].default:
-                    raise ValueError(
-                        f"episodes={self.episodes} disagrees with {len(instances)} explicit instances; drop one"
-                    )
+            if self.episodes is None:
                 object.__setattr__(self, "episodes", len(instances))
+            elif self.episodes != len(instances):
+                raise ValueError(
+                    f"episodes={self.episodes} disagrees with {len(instances)} explicit instances; drop one"
+                )
+        elif self.episodes is None:
+            object.__setattr__(self, "episodes", DEFAULT_EPISODES)
         if self.episodes < 1:
             raise ValueError(f"episodes must be >= 1, got {self.episodes}")
 
