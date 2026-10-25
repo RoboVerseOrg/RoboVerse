@@ -217,10 +217,11 @@ class NewtonHandler(BaseSimHandler):
         if getattr(sim_params, "newton_mujoco_disable_contacts", False):
             _iter_kw["disable_contacts"] = True
 
+        njmax = self._resolve_njmax(sim_params.njmax)
         if use_mujoco_contacts:
             self._solver = SolverMuJoCo(
                 self._model,
-                njmax=sim_params.njmax,
+                njmax=njmax,
                 nconmax=sim_params.nconmax,
                 use_mujoco_contacts=use_mujoco_contacts,
                 **_iter_kw,
@@ -228,7 +229,7 @@ class NewtonHandler(BaseSimHandler):
         else:  # A weird bug that if passes use_mujoco_contacts=False the contact number would be super large causing bugs
             self._solver = SolverMuJoCo(
                 self._model,
-                njmax=sim_params.njmax,
+                njmax=njmax,
                 nconmax=sim_params.nconmax,
                 **_iter_kw,
             )
@@ -2606,6 +2607,21 @@ class NewtonHandler(BaseSimHandler):
             include_total=True,
         )
         log.info(f"Initialized Newton contact sensor for {robot_name} with {len(body_names)} bodies")
+
+    # Constraint rows per world when ``njmax`` is unset. MuJoCo-Warp sizes the buffer from the
+    # initial state, which for a hand in free space is far below what a closed fist needs
+    # (Sharpa Wave: 64 estimated, 91 used), and overflowing rows are silently dropped.
+    # A larger buffer only costs memory: it changes nothing unless rows were being dropped.
+    NJMAX_FLOOR = 256
+    NJMAX_ROWS_PER_DOF = 8
+
+    def _resolve_njmax(self, requested: int | None) -> int | None:
+        """The ``njmax`` passed to SolverMuJoCo: the user's value, else a floor scaled by DoFs per world."""
+        if requested is not None:
+            return requested
+        num_envs = max(1, int(self.scenario.num_envs))
+        dofs_per_world = int(getattr(self._model, "joint_dof_count", 0) or 0) // num_envs
+        return max(self.NJMAX_FLOOR, self.NJMAX_ROWS_PER_DOF * dofs_per_world)
 
     def _resolve_contact_capacity(self, fallback: int | None) -> int:
         if self._solver is None:

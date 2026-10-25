@@ -119,8 +119,9 @@ IK and teleop profiles, and a row in the task-by-robot-by-simulator matrix.
 - [ ] `bench run --robot` for every task family that is robot-agnostic (ManiSkill ports, pick-place,
       benchmark scenes), with per-robot instance pools; a first YAM demo set recorded with the
       collection pipeline so `replay` has a ceiling to report.
-- [ ] Sharpa Wave: a mounted-hand variant on Franka and YAM, and a first dexterous task family;
-      a Newton default for `njmax` that fits a 22-DoF hand (the solver warns `nefc overflow` today).
+- [ ] Sharpa Wave: a mounted-hand variant on Franka and YAM, and a first dexterous task family.
+- [x] A Newton default for `njmax` that fits a 22-DoF hand (a closed fist uses 137 rows; the
+      initial-state estimate was 64 and the overflow was dropped).
 
 ### 5. Simulator infrastructure (from the Isaac Lab 3.0 comparison)
 
