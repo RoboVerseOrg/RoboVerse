@@ -21,7 +21,7 @@ from metasim.scenario.objects import ArticulationObjCfg
 from metasim.utils.math import matrix_from_quat, quat_apply, quat_mul
 from metasim.utils.xml_safe import ET
 
-__all__ = ["SitePose", "site_pose"]
+__all__ = ["SitePose", "site_pose", "site_sizes"]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -49,6 +49,8 @@ class _SiteOffset:
     root_pos: tuple[float, float, float]  # relative to the asset root
     root_quat: tuple[float, float, float, float]
     size: tuple[float, ...] | None
+    moves_from_anchor: bool  # an unnamed body with a joint lies between ``body`` and the site
+    moves_from_root: bool  # a joint lies between the asset root and the site
 
 
 def _quat_mul(a, b):
@@ -126,7 +128,10 @@ def _site_offsets(mjcf_path: str, scale: tuple[float, float, float]) -> dict[str
 
     identity = ((0.0, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0))
 
-    def walk(el, anchor: str | None, rel, root):
+    def jointed(body) -> bool:
+        return any(j.tag == "joint" and j.get("type", "hinge") != "free" for j in body)
+
+    def walk(el, anchor: str | None, rel, root, moves_rel: bool, moves_root: bool):
         for child in el:
             if child.tag not in ("body", "site"):
                 continue
@@ -143,17 +148,31 @@ def _site_offsets(mjcf_path: str, scale: tuple[float, float, float]) -> dict[str
                             if len(vals) == 3
                             else tuple(v * max(scale) for v in vals)
                         )
-                    offsets[name] = _SiteOffset(anchor, *child_rel, *child_root, size)
-            elif child.get("name"):
-                walk(child, child.get("name"), identity, child_root)
+                    offsets[name] = _SiteOffset(anchor, *child_rel, *child_root, size, moves_rel, moves_root)
+                continue
+            moves = jointed(child)
+            if child.get("name"):
+                walk(child, child.get("name"), identity, child_root, False, moves_root or moves)
             else:
-                walk(child, anchor, child_rel, child_root)
+                walk(child, anchor, child_rel, child_root, moves_rel or moves, moves_root or moves)
 
-    walk(worldbody, None, identity, identity)
+    walk(worldbody, None, identity, identity, False, False)
     return offsets
 
 
-def site_pose(states, obj, site: str) -> SitePose:
+def _scale(obj) -> tuple[float, float, float]:
+    scale = getattr(obj, "scale", 1.0)
+    return tuple(float(v) for v in scale) if isinstance(scale, (tuple, list)) else (float(scale),) * 3
+
+
+def site_sizes(*, obj) -> dict[str, tuple[float, ...] | None]:
+    """The named sites ``obj``'s MJCF declares, each with its ``size`` (scaled as in :class:`SitePose`)."""
+    if obj.mjcf_path is None:
+        raise ValueError(f"site_sizes: object {obj.name!r} has no mjcf_path")
+    return {name: off.size for name, off in _site_offsets(obj.mjcf_path, _scale(obj)).items()}
+
+
+def site_pose(states, *, obj, site: str) -> SitePose:
     """World pose of ``site`` on object ``obj`` (its config), from ``states``.
 
     Args:
@@ -164,17 +183,24 @@ def site_pose(states, obj, site: str) -> SitePose:
     Raises:
         KeyError: the MJCF declares no such site, or an articulation's state does not report the body
             the site is fixed to.
+        ValueError: a joint moves the site relative to the frame its offset is taken from (a jointed
+            body without a name, or any joint above the site of a rigid object).
     """
     if obj.mjcf_path is None:
         raise ValueError(f"site_pose: object {obj.name!r} has no mjcf_path to read site {site!r} from")
-    scale = tuple(getattr(obj, "scale", (1.0, 1.0, 1.0)))
-    offsets = _site_offsets(obj.mjcf_path, scale)
+    offsets = _site_offsets(obj.mjcf_path, _scale(obj))
     if site not in offsets:
         raise KeyError(f"site_pose: {obj.mjcf_path} declares no site {site!r}; it has {sorted(offsets)}")
     off = offsets[site]
     state = states.objects[obj.name]
     frame, pos, quat = state.root_state[:, :7], off.root_pos, off.root_quat
-    if off.body is not None and isinstance(obj, ArticulationObjCfg):
+    articulated = off.body is not None and isinstance(obj, ArticulationObjCfg)
+    if off.moves_from_anchor if articulated else off.moves_from_root:
+        raise ValueError(
+            f"site_pose: a joint in {obj.mjcf_path} moves site {site!r} relative to "
+            + (f"body {off.body!r} (name the jointed body it hangs from)" if articulated else "the object's root")
+        )
+    if articulated:
         names = list(state.body_names or [])
         if off.body not in names:
             raise KeyError(

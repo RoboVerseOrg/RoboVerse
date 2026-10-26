@@ -350,7 +350,9 @@ class MujocoHandler(BaseSimHandler):
 
             if hasattr(site, "size") and site.size is not None:
                 size = list(site.size)
-                if len(size) >= 1:
+                if len(size) == 3:  # a box site's half-extents scale per axis, like its pos
+                    site.size = [size[0] * scale_x, size[1] * scale_y, size[2] * scale_z]
+                elif len(size) >= 1:
                     site.size = [size[0] * max(scale_x, scale_y, scale_z)]
 
         for joint in mjcf_model.find_all("joint"):

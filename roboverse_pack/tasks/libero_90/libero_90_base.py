@@ -28,8 +28,8 @@ class Libero90BaseTask(BaseTaskEnv):
     A task's success is its BDDL goal, declared as data (``goal``, see ``_goal``) and evaluated with LIBERO's own
     ``In`` / ``On`` / ``Open`` / ``Close`` / ``Turnon`` predicates. The site regions they name (a basket's
     ``contain_region``, a drawer's ``top_region``) are read with :meth:`_site_pose`, which composes the site's
-    fixed offset from the object's MJCF with the pose in the state, so a goal reads the same frame on every
-    backend. Writing LIBERO's demos into MuJoCo, the goal holds at the last state of every demo on 61 of 62
+    fixed offset from the object's MJCF with the pose in the state rather than reading MuJoCo, so a goal can run on
+    any backend that reports the bodies; it is verified on MuJoCo only. Writing LIBERO's demos into MuJoCo, the goal holds at the last state of every demo on 61 of 62
     tasks (the other misses a wine-rack region by 0.2 mm in one demo); the hand-written checkers it replaced
     held on 54.
     """
@@ -51,9 +51,9 @@ class Libero90BaseTask(BaseTaskEnv):
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         check_and_download_single(self.traj_filepath)
         # update objects and robots defined by task, must before super()._init_ because handler init
-        if self.goal is not None:
-            check_goal(self.goal, {obj.name for obj in scenario.objects})
         super().__init__(scenario, device)
+        if self.goal is not None:  # after the handler fetched the assets the check reads
+            check_goal(self.goal, {obj.name: obj for obj in self.scenario.objects})
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Success when the task's goal (or, for a task without one, its checker) holds."""
@@ -65,7 +65,7 @@ class Libero90BaseTask(BaseTaskEnv):
         """World pose of ``site`` on the scenario object ``obj_name``, from ``states``."""
         for obj in self.scenario.objects:
             if obj.name == obj_name:
-                return site_pose(states, obj, site)
+                return site_pose(states, obj=obj, site=site)
         raise KeyError(f"{type(self).__name__}: no object {obj_name!r} in the scenario")
 
     def _on_reset(self, env_ids: list[int]) -> None:

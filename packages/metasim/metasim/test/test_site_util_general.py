@@ -78,8 +78,11 @@ def test_site_pose_matches_mujoco(tmp_path, angle, articulated):
     cls = ArticulationObjCfg if articulated else RigidObjCfg
     obj = cls(name="box", mjcf_path=str(path))
     states = _state(model, data, name="box", body_names=["lid", "object"])
-    for site in ("on_object", "on_lid"):
-        got = site_pose(states, obj, site)
+    if not articulated:
+        with pytest.raises(ValueError, match="moves site 'on_lid'"):  # the lid's hinge moves it off the root
+            site_pose(states, obj=obj, site="on_lid")
+    for site in ("on_object", "on_lid") if articulated else ("on_object",):
+        got = site_pose(states, obj=obj, site=site)
         pos, quat = _site_world(model, data, site)
         np.testing.assert_allclose(got.pos[0].numpy(), pos, atol=1e-9)
         sign = 1.0 if float(np.dot(got.quat[0].numpy(), quat)) >= 0 else -1.0
@@ -102,10 +105,10 @@ def test_site_pose_follows_scale(tmp_path):
     data = mujoco.MjData(model)
     mujoco.mj_forward(model, data)
     states = _state(model, data, name="box", body_names=["lid", "object"])
-    got = site_pose(states, RigidObjCfg(name="box", mjcf_path=str(path), scale=scale), "on_lid")
+    got = site_pose(states, obj=ArticulationObjCfg(name="box", mjcf_path=str(path), scale=scale), site="on_lid")
     np.testing.assert_allclose(got.pos[0].numpy(), _site_world(model, data, "on_lid")[0], atol=1e-9)
     assert got.size == pytest.approx((0.02, 0.01, 0.045))  # declared half-extents, per axis
-    assert site_pose(states, RigidObjCfg(name="box", mjcf_path=str(path)), "on_object").size is None
+    assert site_pose(states, obj=RigidObjCfg(name="box", mjcf_path=str(path)), site="on_object").size is None
 
 
 def test_site_pose_names_what_is_missing(tmp_path):
@@ -116,6 +119,34 @@ def test_site_pose_names_what_is_missing(tmp_path):
     )
     states = types.SimpleNamespace(objects={"box": state})
     with pytest.raises(KeyError, match="declares no site 'nope'"):
-        site_pose(states, RigidObjCfg(name="box", mjcf_path=str(path)), "nope")
+        site_pose(states, obj=RigidObjCfg(name="box", mjcf_path=str(path)), site="nope")
     with pytest.raises(KeyError, match="fixed to body 'lid'"):
-        site_pose(states, ArticulationObjCfg(name="box", mjcf_path=str(path)), "on_lid")
+        site_pose(states, obj=ArticulationObjCfg(name="box", mjcf_path=str(path)), site="on_lid")
+
+
+def test_a_jointed_unnamed_body_between_anchor_and_site_is_an_error(tmp_path):
+    """The offset from ``lid`` would ignore the unnamed body's hinge, so the pose would be stale."""
+    path = tmp_path / "asset.xml"
+    path.write_text(
+        '<mujoco><worldbody><body name="lid"><geom size="0.1" mass="1"/>'
+        '<body pos="0 0 0.1"><joint type="hinge" axis="1 0 0"/><geom size="0.05" mass="0.1"/>'
+        '<site name="tip" pos="0 0.1 0"/></body></body></worldbody></mujoco>'
+    )
+    state = types.SimpleNamespace(root_state=torch.zeros(1, 13), body_names=["lid"], body_state=torch.zeros(1, 1, 13))
+    with pytest.raises(ValueError, match="moves site 'tip' relative to body 'lid'"):
+        site_pose(
+            types.SimpleNamespace(objects={"box": state}),
+            obj=ArticulationObjCfg(name="box", mjcf_path=str(path)),
+            site="tip",
+        )
+
+
+def test_integer_scale_is_accepted(tmp_path):
+    path = tmp_path / "asset.xml"
+    path.write_text('<mujoco><worldbody><body><site name="s" pos="0.1 0.2 0.3"/></body></worldbody></mujoco>')
+    obj = RigidObjCfg(name="box", mjcf_path=str(path))
+    obj.scale = 2  # an int slips past BaseObjCfg's float normalisation
+    states = types.SimpleNamespace(
+        objects={"box": types.SimpleNamespace(root_state=torch.tensor([[0.0, 0, 0, 1, 0, 0, 0] + [0.0] * 6]))}
+    )
+    assert site_pose(states, obj=obj, site="s").pos[0].tolist() == pytest.approx([0.2, 0.4, 0.6])

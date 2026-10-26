@@ -38,8 +38,6 @@ the parallel implementations, then build the benchmark data model on top.
       evaluated with LIBERO's predicates (62 tasks). Left on hand-written checkers: two goals on table regions
       BDDL defines (not asset sites) and `living_room_scene4_stack_the_right_bowl…` (its demo file is missing).
 - [ ] LIBERO `On`'s contact clause (the object touches the region's parent) needs a contact query.
-- [ ] MuJoCo handler: scaling an object collapses a box site's 3-number `size` to one number
-      (`_apply_scale_to_mjcf` treats every site as a sphere).
 - [ ] Upload the LIBERO MJCFs missing from the HF dataset (wooden_tray, wooden_two_layer_shelf,
       porcelain_mug, white_yellow_mug, white_bowl, stable_scanned basket, microwave): 31 of 66 LIBERO-90
       tasks cannot load on MuJoCo from a fresh download. Local copies (upstream LIBERO 8f1084e, verbatim except

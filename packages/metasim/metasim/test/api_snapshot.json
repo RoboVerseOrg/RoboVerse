@@ -10291,16 +10291,27 @@
     },
     {
      "default": false,
-     "kind": "POSITIONAL_OR_KEYWORD",
+     "kind": "KEYWORD_ONLY",
      "name": "obj"
     },
     {
      "default": false,
-     "kind": "POSITIONAL_OR_KEYWORD",
+     "kind": "KEYWORD_ONLY",
      "name": "site"
     }
    ],
-   "signature": "(states, obj, site: 'str') -> 'SitePose'"
+   "signature": "(states, *, obj, site: 'str') -> 'SitePose'"
+  },
+  "site_sizes": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "KEYWORD_ONLY",
+     "name": "obj"
+    }
+   ],
+   "signature": "(*, obj) -> 'dict[str, tuple[float, ...] | None]'"
   }
  },
  "metasim.utils.state": {

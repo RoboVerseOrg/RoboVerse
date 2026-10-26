@@ -83,24 +83,42 @@ def test_every_libero_90_goal_names_objects_its_scenario_has():
         for obj in vars(mod).values():
             if isinstance(obj, type) and issubclass(obj, Libero90BaseTask) and obj.__module__ == mod.__name__:
                 if obj.goal is not None:
-                    check_goal(obj.goal, {o.name for o in obj.scenario.objects})
+                    objects = {o.name: o for o in obj.scenario.objects}
+                    local = all(o.mjcf_path and pathlib.Path(o.mjcf_path).exists() for o in objects.values())
+                    check_goal(obj.goal, objects, read_assets=local)  # CI has no roboverse_data
                     goals += 1
                 else:
                     assert obj.checker is not None or "_terminated" in vars(obj), f"{obj.__name__} defines no success"
     assert goals >= 62
 
 
-def test_goal_terms_are_validated():
+def test_goal_terms_are_validated(tmp_path):
+    from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
     from roboverse_pack.tasks.libero_90._goal import check_goal
 
-    names = {"bowl", "wooden_cabinet", "flat_stove"}
-    check_goal((("Close", "wooden_cabinet", "top_level"), ("On", "bowl", "wooden_cabinet", "top_side")), names)
-    with pytest.raises(ValueError, match="not in the scenario"):
-        check_goal((("In", "cup", "wooden_cabinet", "top_region"),), names)
-    with pytest.raises(ValueError, match="thresholds are known for"):
-        check_goal((("Turnon", "wooden_cabinet", "top_level"),), names)
-    with pytest.raises(ValueError, match="expected one of the forms"):
-        check_goal((("Under", "bowl", "flat_stove"),), names)
+    cabinet = tmp_path / "cabinet.xml"
+    cabinet.write_text(
+        '<mujoco><worldbody><body name="base"><geom size="0.1" mass="1"/>'
+        '<site name="top_side" type="box" size="0.1 0.1 0.01"/><site name="marker" size="0.01"/>'
+        '<body name="drawer"><joint name="top_level" type="slide"/><geom size="0.05" mass="0.1"/></body>'
+        "</body></worldbody></mujoco>"
+    )
+    objects = {
+        "bowl": RigidObjCfg(name="bowl", mjcf_path=str(cabinet)),
+        "wooden_cabinet": ArticulationObjCfg(name="wooden_cabinet", mjcf_path=str(cabinet)),
+    }
+    check_goal((("Close", "wooden_cabinet", "top_level"), ("On", "bowl", "wooden_cabinet", "top_side")), objects)
+    for goal, message in [
+        ((), "empty goal"),
+        ((("In", "cup", "wooden_cabinet", "top_side"),), "not in the scenario"),
+        ((("In", "bowl", "wooden_cabinet", "top_regoin"),), "declares no site 'top_regoin'"),
+        ((("In", "bowl", "wooden_cabinet", "marker"),), "is not a box"),
+        ((("Close", "wooden_cabinet", "middle_level"),), "has no joint 'middle_level'"),
+        ((("Turnon", "wooden_cabinet", "top_level"),), "thresholds are known for"),
+        ((("Under", "bowl", "wooden_cabinet"),), "expected one of the forms"),
+    ]:
+        with pytest.raises(ValueError, match=message):
+            check_goal(goal, objects)
 
 
 def test_goal_is_the_conjunction_per_env():

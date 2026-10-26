@@ -3,7 +3,8 @@
 1. An attached asset that declares the legacy ``<size njmax=...>`` (LIBERO's stove and cabinets do) used to
    fail compilation: dm_control merges it into the root, which already sizes the arena with ``memory``, and
    MuJoCo rejects a model with both.
-2. ``set_states`` with a joint value stored as a 1-element array (LIBERO demo initial states) raised
+2. Scaling an object collapsed a box site's three half-extents to one number.
+3. ``set_states`` with a joint value stored as a 1-element array (LIBERO demo initial states) raised
    "setting an array element with a sequence" when writing the joint's actuator ``ctrl``.
 """
 
@@ -82,3 +83,27 @@ def _write_one_element_state(handler):
     state = handler.get_states(mode="tensor").objects["drawer"]
     assert float(state.joint_pos[0, 0]) == pytest.approx(0.05)
     assert float(handler.physics.data.ctrl[0]) == pytest.approx(0.05)
+
+
+def test_scaling_keeps_a_box_site_box_shaped(tmp_path):
+    from metasim.scenario.objects import RigidObjCfg
+    from metasim.scenario.scenario import ScenarioCfg
+    from metasim.sim.mujoco import MujocoHandler
+
+    path = tmp_path / "tray.xml"
+    path.write_text(
+        '<mujoco model="tray"><worldbody><body name="object"><geom type="box" size="0.1 0.1 0.01" mass="1"/>'
+        '<site name="contain_region" type="box" pos="0 0 0.02" size="0.04 0.08 0.01"/></body></worldbody></mujoco>'
+    )
+    obj = RigidObjCfg(name="tray", mjcf_path=str(path), scale=(2.0, 0.5, 3.0))
+    handler = MujocoHandler(ScenarioCfg(objects=[obj], robots=[], simulator="mujoco", num_envs=1, headless=True))
+    handler.launch()
+    try:
+        size = handler.physics.named.model.site_size["tray/contain_region"]
+        np.testing.assert_allclose(size, [0.08, 0.04, 0.03])
+        from metasim.utils.site_util import site_pose
+
+        states = handler.get_states(mode="tensor")
+        assert site_pose(states, obj=obj, site="contain_region").size == pytest.approx(tuple(size))
+    finally:
+        handler.close()
