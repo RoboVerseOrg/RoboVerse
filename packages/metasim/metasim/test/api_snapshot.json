@@ -19,9 +19,14 @@
      "default": false,
      "kind": "POSITIONAL_OR_KEYWORD",
      "name": "protocol"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "max_episode_steps"
     }
    ],
-   "signature": "(env, protocol: 'EvalProtocol') -> 'PolicyContext'"
+   "signature": "(env, protocol: 'EvalProtocol', *, max_episode_steps: 'int | None' = None) -> 'PolicyContext'"
   },
   "evaluate": {
    "kind": "function",
@@ -64,6 +69,8 @@
   "TaskInstance": {
    "attributes": {
     "actions": "NoneType",
+    "prompt": "NoneType",
+    "prompt_variant": "NoneType",
     "state": "NoneType",
     "state_hash": "str"
    },
@@ -73,7 +80,9 @@
     "seed",
     "state",
     "actions",
-    "state_hash"
+    "state_hash",
+    "prompt",
+    "prompt_variant"
    ],
    "kind": "class",
    "methods": {
@@ -108,15 +117,46 @@
        "default": true,
        "kind": "POSITIONAL_OR_KEYWORD",
        "name": "state_hash"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prompt"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prompt_variant"
       }
      ],
-     "signature": "(self, index: 'int', seed: 'int', state: 'Any | None' = None, actions: 'list | None' = None, state_hash: 'str' = '') -> None"
+     "signature": "(self, index: 'int', seed: 'int', state: 'Any | None' = None, actions: 'list | None' = None, state_hash: 'str' = '', prompt: 'str | None' = None, prompt_variant: 'str | None' = None) -> None"
     },
     "instance_id": {
      "params": null,
      "signature": "<property>"
     }
    }
+  },
+  "demo_budget": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "pool"
+    },
+    {
+     "default": false,
+     "kind": "KEYWORD_ONLY",
+     "name": "factor"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "quantile"
+    }
+   ],
+   "signature": "(pool: 'list[TaskInstance]', *, factor: 'float', quantile: 'float' = 0.75) -> 'int | None'"
   },
   "hash_state": {
    "kind": "function",
@@ -152,9 +192,19 @@
      "default": false,
      "kind": "POSITIONAL_OR_KEYWORD",
      "name": "protocol"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "prompts"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "task"
     }
    ],
-   "signature": "(pool: 'list[TaskInstance]', protocol: 'EvalProtocol') -> 'list[TaskInstance]'"
+   "signature": "(pool: 'list[TaskInstance]', protocol: 'EvalProtocol', *, prompts: 'PromptBank | None' = None, task: 'str' = '') -> 'list[TaskInstance]'"
   }
  },
  "metasim.bench.policy": {
@@ -555,14 +605,143 @@
    "signature": "(spec: 'str', **kwargs: 'Any') -> 'Policy'"
   }
  },
+ "metasim.bench.prompts": {
+  "PromptBank": {
+   "attributes": {
+    "canonical_probability": "float",
+    "heldout": "tuple",
+    "train": "tuple"
+   },
+   "bases": [],
+   "fields": [
+    "canonical",
+    "train",
+    "heldout",
+    "canonical_probability"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "canonical"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "train"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "heldout"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "canonical_probability"
+      }
+     ],
+     "signature": "(self, canonical: 'str', train: 'tuple[str, ...]' = (), heldout: 'tuple[str, ...]' = (), canonical_probability: 'float' = 0.2) -> None"
+    },
+    "draw": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "KEYWORD_ONLY",
+       "name": "task"
+      },
+      {
+       "default": false,
+       "kind": "KEYWORD_ONLY",
+       "name": "episode"
+      },
+      {
+       "default": false,
+       "kind": "KEYWORD_ONLY",
+       "name": "seed"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "split"
+      }
+     ],
+     "signature": "(self, *, task: 'str', episode: 'int', seed: 'int', split: 'str' = 'canonical') -> 'PromptDraw'"
+    }
+   }
+  },
+  "PromptDraw": {
+   "bases": [],
+   "fields": [
+    "prompt",
+    "variant",
+    "split"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prompt"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "variant"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "split"
+      }
+     ],
+     "signature": "(self, prompt: 'str', variant: 'str', split: 'str') -> None"
+    }
+   }
+  },
+  "task_prompt_bank": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "env"
+    }
+   ],
+   "signature": "(env) -> 'PromptBank | None'"
+  }
+ },
  "metasim.bench.protocol": {
   "EvalProtocol": {
    "attributes": {
+    "demo_budget_factor": "NoneType",
+    "demo_budget_quantile": "float",
     "episodes": "NoneType",
     "hold_steps": "int",
     "instances": "NoneType",
     "max_episode_steps": "NoneType",
     "name": "str",
+    "prompt_split": "str",
     "seed": "int",
     "success_rule": "str"
    },
@@ -574,7 +753,10 @@
     "max_episode_steps",
     "seed",
     "instances",
-    "name"
+    "name",
+    "demo_budget_factor",
+    "demo_budget_quantile",
+    "prompt_split"
    ],
    "kind": "class",
    "methods": {
@@ -619,9 +801,24 @@
        "default": true,
        "kind": "POSITIONAL_OR_KEYWORD",
        "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "demo_budget_factor"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "demo_budget_quantile"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prompt_split"
       }
      ],
-     "signature": "(self, episodes: 'int | None' = None, success_rule: 'SuccessRule' = 'first', hold_steps: 'int' = 1, max_episode_steps: 'int | None' = None, seed: 'int' = 0, instances: 'tuple[int, ...] | None' = None, name: 'str' = 'default') -> None"
+     "signature": "(self, episodes: 'int | None' = None, success_rule: 'SuccessRule' = 'first', hold_steps: 'int' = 1, max_episode_steps: 'int | None' = None, seed: 'int' = 0, instances: 'tuple[int, ...] | None' = None, name: 'str' = 'default', demo_budget_factor: 'float | None' = None, demo_budget_quantile: 'float' = 0.75, prompt_split: 'PromptSplit' = 'canonical') -> None"
     },
     "episode_success": {
      "params": [
@@ -664,6 +861,259 @@
      "signature": "(self) -> 'dict'"
     }
    }
+  }
+ },
+ "metasim.bench.remote": {
+  "ObsTree": {
+   "bases": [
+    "dict"
+   ],
+   "kind": "class",
+   "methods": {}
+  },
+  "PolicyServer": {
+   "bases": [],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "policy"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "host"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "port"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "device"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "metadata"
+      }
+     ],
+     "signature": "(self, policy: 'Policy', *, host: 'str' = '127.0.0.1', port: 'int' = 8000, device: 'str' = 'cpu', metadata: 'dict[str, Any] | None' = None) -> 'None'"
+    },
+    "handle_act": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "body"
+      }
+     ],
+     "signature": "(self, body: 'bytes') -> 'dict[str, Any]'"
+    },
+    "handle_reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "payload"
+      }
+     ],
+     "signature": "(self, payload: 'dict[str, Any]') -> 'dict[str, Any]'"
+    },
+    "serve_forever": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "shutdown": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'None'"
+    },
+    "url": {
+     "params": null,
+     "signature": "<property>"
+    }
+   }
+  },
+  "RemotePolicy": {
+   "bases": [],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "url"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "required_metadata"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "obs_keys"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "timeout"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "retries"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "retry_wait_s"
+      }
+     ],
+     "signature": "(self, url: 'str', *, required_metadata: 'dict[str, Any] | None' = None, obs_keys: 'tuple[str, ...] | list[str] | None' = None, timeout: 'float' = 180.0, retries: 'int' = 3, retry_wait_s: 'float' = 2.0) -> 'None'"
+    },
+    "act": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obs"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "ctx"
+      }
+     ],
+     "signature": "(self, obs: 'Any', ctx: 'PolicyContext') -> 'torch.Tensor'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "instances"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "ctx"
+      }
+     ],
+     "signature": "(self, env_ids: 'list[int]', instances: 'list[TaskInstance]', ctx: 'PolicyContext') -> 'None'"
+    }
+   }
+  },
+  "actions_to_array": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "actions"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "ctx"
+    }
+   ],
+   "signature": "(actions: 'Any', ctx: 'PolicyContext') -> 'np.ndarray'"
+  },
+  "flatten_observation": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "obs"
+    },
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "prefix"
+    },
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "keys"
+    }
+   ],
+   "signature": "(obs: 'Any', prefix: 'str' = 'obs', keys: 'tuple[str, ...] | None' = None) -> 'dict[str, np.ndarray]'"
+  },
+  "unflatten_observation": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "arrays"
+    },
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "prefix"
+    },
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "device"
+    }
+   ],
+   "signature": "(arrays: 'dict[str, np.ndarray]', prefix: 'str' = 'obs', device: 'str' = 'cpu') -> 'Any'"
   }
  },
  "metasim.bench.result": {
@@ -829,7 +1279,9 @@
   },
   "EpisodeResult": {
    "attributes": {
-    "first_success_step": "NoneType"
+    "first_success_step": "NoneType",
+    "prompt": "NoneType",
+    "prompt_variant": "NoneType"
    },
    "bases": [],
    "fields": [
@@ -843,7 +1295,9 @@
     "terminated",
     "time_out",
     "return_sum",
-    "first_success_step"
+    "first_success_step",
+    "prompt",
+    "prompt_variant"
    ],
    "kind": "class",
    "methods": {
@@ -908,9 +1362,19 @@
        "default": true,
        "kind": "POSITIONAL_OR_KEYWORD",
        "name": "first_success_step"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prompt"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prompt_variant"
       }
      ],
-     "signature": "(self, index: 'int', env_id: 'int', instance_index: 'int', instance_id: 'str', seed: 'int', success: 'bool', steps: 'int', terminated: 'bool', time_out: 'bool', return_sum: 'float', first_success_step: 'int | None' = None) -> None"
+     "signature": "(self, index: 'int', env_id: 'int', instance_index: 'int', instance_id: 'str', seed: 'int', success: 'bool', steps: 'int', terminated: 'bool', time_out: 'bool', return_sum: 'float', first_success_step: 'int | None' = None, prompt: 'str | None' = None, prompt_variant: 'str | None' = None) -> None"
     }
    }
   },
@@ -967,6 +1431,188 @@
     }
    ],
    "signature": "(successes: 'int', trials: 'int', z: 'float' = 1.959964) -> 'tuple[float, float]'"
+  }
+ },
+ "metasim.bench.suite": {
+  "BenchmarkSuite": {
+   "attributes": {
+    "description": "str",
+    "simulator": "NoneType"
+   },
+   "bases": [],
+   "fields": [
+    "name",
+    "splits",
+    "protocol",
+    "simulator",
+    "description"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "splits"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "protocol"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "simulator"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "description"
+      }
+     ],
+     "signature": "(self, name: 'str', splits: 'Mapping[str, tuple[SuiteTask | str, ...]]', protocol: 'EvalProtocol' = <factory>, simulator: 'str | None' = None, description: 'str' = '') -> None"
+    },
+    "entries": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "split"
+      }
+     ],
+     "signature": "(self, split: 'str | None' = None) -> 'list[tuple[str, SuiteTask]]'"
+    },
+    "protocol_for": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "entry"
+      }
+     ],
+     "signature": "(self, entry: 'SuiteTask') -> 'EvalProtocol'"
+    }
+   }
+  },
+  "SuiteTask": {
+   "attributes": {
+    "robots": "tuple"
+   },
+   "bases": [],
+   "fields": [
+    "task",
+    "robots",
+    "protocol"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "task"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "robots"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "protocol"
+      }
+     ],
+     "signature": "(self, task: 'str', robots: 'tuple[str, ...]' = (), protocol: 'Mapping[str, Any]' = <factory>) -> None"
+    }
+   }
+  },
+  "get_suite": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "name"
+    }
+   ],
+   "signature": "(name: 'str') -> 'BenchmarkSuite'"
+  },
+  "list_suites": {
+   "kind": "function",
+   "params": [],
+   "signature": "() -> 'list[str]'"
+  },
+  "register_suite": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "suite"
+    }
+   ],
+   "signature": "(suite: 'BenchmarkSuite') -> 'BenchmarkSuite'"
+  },
+  "suite_report": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "suite"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "results"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "split"
+    }
+   ],
+   "signature": "(suite: 'BenchmarkSuite', results: 'Iterable[BenchmarkResult]', *, split: 'str | None' = None) -> 'dict[str, Any]'"
+  },
+  "suite_table": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "report"
+    }
+   ],
+   "signature": "(report: 'dict[str, Any]') -> 'str'"
   }
  },
  "metasim.constants": {

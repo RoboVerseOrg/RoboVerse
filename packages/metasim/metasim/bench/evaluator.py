@@ -20,8 +20,9 @@ from loguru import logger as log
 
 from metasim.utils.log import warn_once
 
-from .instances import TaskInstance, instance_pool, plan_instances
+from .instances import TaskInstance, demo_budget, instance_pool, plan_instances
 from .policy import Policy, PolicyContext
+from .prompts import DRAW_REVISION, task_prompt_bank
 from .protocol import EvalProtocol
 from .result import BenchmarkResult, EpisodeResult
 
@@ -62,8 +63,11 @@ def _declared_action_box(env) -> tuple[list[float], list[float]] | None:
     return low_l, high_l
 
 
-def build_context(env, protocol: EvalProtocol) -> PolicyContext:
+def build_context(env, protocol: EvalProtocol, *, max_episode_steps: int | None = None) -> PolicyContext:
     """The :class:`PolicyContext` of ``env``: joint order, limits and defaults from the robot configs.
+
+    ``max_episode_steps`` is the cap the evaluator applies when it differs from the protocol's own
+    (a demo-derived budget); by default the protocol's cap, else the task's.
 
     The action bounds are the env's declared ``action_space`` when the env maps actions itself
     (``actions_are_joint_targets`` is False) and declares a finite one; otherwise the joint limits in
@@ -87,7 +91,7 @@ def build_context(env, protocol: EvalProtocol) -> PolicyContext:
             high.append(float(hi))
             default.append(float(defaults.get(j, 0.0)))
     device = torch.device(getattr(env, "device", None) or handler.device)
-    cap = protocol.max_episode_steps or int(getattr(env, "max_episode_steps", 0) or 0)
+    cap = max_episode_steps or protocol.max_episode_steps or int(getattr(env, "max_episode_steps", 0) or 0)
     box = None if getattr(env, "actions_are_joint_targets", True) else _declared_action_box(env)
     if box is not None:
         low, high = box
@@ -270,9 +274,24 @@ def evaluate(
             "_success is not overridden); every episode will score as not succeeded"
         )
     pool = instance_pool(env)
-    plan = plan_instances(pool, protocol)
-    ctx = build_context(env, protocol)
-    cap = protocol.max_episode_steps
+    name = task_name or type(env).__name__
+    bank = task_prompt_bank(env)
+    plan = plan_instances(pool, protocol, prompts=bank, task=name)
+    cap, cap_source = protocol.max_episode_steps, "protocol" if protocol.max_episode_steps else "task"
+    if protocol.demo_budget_factor is not None:
+        cap = demo_budget(pool, factor=protocol.demo_budget_factor, quantile=protocol.demo_budget_quantile)
+        cap_source = "demos" if cap is not None else "task"
+        if cap is None:
+            log.warning(f"bench: {name} has no demo actions to derive a budget from; the task's own cap applies")
+        task_cap = int(getattr(env, "max_episode_steps", 0) or 0)
+        if cap is not None and task_cap and cap > task_cap:
+            warn_once(
+                ("bench.budget_over_task_cap", name),
+                f"bench: {name}'s demo budget ({cap} steps) exceeds the task's own time-out ({task_cap}); the task "
+                f"ends episodes first, so the effective cap is {task_cap}",
+            )
+            cap, cap_source = task_cap, "task (below the demo budget)"
+    ctx = build_context(env, protocol, max_episode_steps=cap)
     auto_reset = bool(getattr(env, "auto_reset", False))
 
     queue: deque[tuple[int, TaskInstance]] = deque(enumerate(plan))
@@ -347,6 +366,8 @@ def evaluate(
                     time_out=tout[env_id] or (capped and not term[env_id]),
                     return_sum=run.return_sum,
                     first_success_step=first_hit,
+                    prompt=run.instance.prompt,
+                    prompt_variant=run.instance.prompt_variant,
                 )
                 results.append(episode)
                 if on_episode is not None:
@@ -365,7 +386,7 @@ def evaluate(
     provenance = _provenance(env, protocol.seed)
     scenario = env.scenario
     return BenchmarkResult(
-        task=task_name or type(env).__name__,
+        task=name,
         simulator=str(getattr(scenario, "simulator", "")),
         robots=ctx.robots,
         num_envs=num_envs,
@@ -379,6 +400,9 @@ def evaluate(
             "instruction": ctx.instruction,
             "task_class": type(env).__qualname__,
             "success_defined": success_defined,
+            "episode_cap": cap or (ctx.max_episode_steps or None),
+            "episode_cap_source": cap_source,
+            **({"prompt_draw_revision": DRAW_REVISION} if protocol.prompt_split != "canonical" else {}),
         },
     )
 

@@ -105,6 +105,85 @@ python -m metasim bench health --sim mujoco --task stack_cube --task pick_cube  
 It writes the ordinary result files, `health.json` and `health.md` to `--out-dir` and exits 1 when any
 task is `low` or `error`, so it can guard a release.
 
+## Suites
+
+A suite fixes a task list, in splits, under one protocol, and scores it **task-macro**: the mean of
+the per-task success rates, so a task with many episodes does not drown out the others. A split
+with a task that has no score, because it crashed or was not run, is reported as `INCOMPLETE` rather
+than averaged over the tasks that happened to run.
+
+```bash
+python -m metasim bench suite list
+python -m metasim bench suite run --suite tabletop-mujoco --policy replay            # every split
+python -m metasim bench suite run --suite tabletop-mujoco --policy-url http://127.0.0.1:8000 --split core
+python -m metasim bench suite report --suite tabletop-mujoco bench_results/suites/tabletop-mujoco/mujoco
+```
+
+`suite run` writes one result file per task plus `suite.json` / `suite.md`, and exits 1 unless every
+task scored. Suites are content. RoboVerse registers them in `roboverse_pack/suites/`, and another
+pack does the same in its own `<root>.suites` package, through the `metasim.suites` entry point
+group or `METASIM_SUITE_PACKAGES`:
+
+```python
+from metasim.bench import BenchmarkSuite, EvalProtocol, SuiteTask, register_suite
+
+register_suite(BenchmarkSuite(
+    name="my-suite",
+    simulator="mujoco",
+    splits={"core": ("stack_cube", "pick_cube"), "heldout": (SuiteTask(task="push_cube", robots=("yam",)),)},
+    protocol=EvalProtocol(episodes=50, demo_budget_factor=3.0),
+))
+```
+
+| suite | backend | splits | tasks | replay baseline (3 episodes per task, 2026-10-26) |
+|---|---|---|---|---|
+| `tabletop-mujoco` | MuJoCo | `core` | pick_cube, stack_cube, push_cube, pull_cube, lift_peg_upright | task-macro 0.933 (pick_cube 2/3: its demo 0 fails on MuJoCo) |
+
+Only tasks whose demos replay on the suite's backend belong in a suite; `bench health` is the gate.
+
+## Episode budgets and instructions
+
+- **Demo budget.** `--demo-budget 3` (`EvalProtocol.demo_budget_factor`) caps each episode at 3x the
+  75th-percentile demo length of the task (`--demo-budget-quantile`). Long tasks get the time a
+  demonstrator needed, and short ones are not padded. The budget never lengthens a task's own time-out:
+  when it is longer, the task's cap applies, and the result's `notes.episode_cap_source` says which one
+  ended the episodes. A task without demos keeps its own cap.
+- **Instructions.** A task may declare a `prompt_bank`
+  (`metasim.bench.PromptBank(canonical=..., train=(...), heldout=(...))`). `--prompt-split` picks one
+  of three modes. `canonical` (the default) uses the task's own text. `train` uses the canonical text
+  20% of the time and a training paraphrase otherwise. `heldout` uses a paraphrase that `train` never
+  produces. The draw is a hash of the task, episode and seed, so it is reproducible and independent
+  of the simulator. A policy reads it as `instance.prompt` in `reset`, and the result records
+  `prompt` / `prompt_variant` per episode. A task with only `task_desc` supports `canonical` and
+  `train`, and refuses `heldout`.
+
+## Served policies
+
+A policy whose dependencies do not install next to the simulator (a VLA pinned to its own torch or
+jax) runs in its own environment behind `bench serve`, and the evaluator scores it over HTTP:
+
+```bash
+# in the policy's environment
+python -m metasim bench serve --policy my_pkg.policy:MyPolicy --checkpoint ckpt.pt --port 8000
+# in the simulator's environment
+python -m metasim bench run --task stack_cube --sim mujoco --policy-url http://127.0.0.1:8000 \
+    --require-metadata checkpoint=ckpt.pt --obs-key robots --obs-key cameras/front/rgb
+```
+
+The wire protocol (`roboverse.bench.remote/1`) is plain HTTP with NumPy NPZ packets, loaded without
+pickle. `GET /metadata` is a handshake whose fields go into the result's policy record.
+`--require-metadata` fails the run before the first episode when they differ. `POST /reset` carries
+the `PolicyContext` and the starting instances, with their prompts. `POST /act` sends every array leaf
+of the observation and gets back actions of shape `(num_envs, action_dim)`, or
+`(num_envs, horizon, action_dim)` for an action chunk, which the client executes step by step. The
+server binds `127.0.0.1` unless `--host` says otherwise. It answers one request at a time, and the
+policy sees observations as nested mappings of tensors with attribute access. The simulator's
+scenario does not cross the wire, so `ctx.extras` is empty on the server.
+
+The suite and split structure, the demo-length budget and the held-out instruction split follow the
+evaluation design of [HandsOn](https://github.com/TsinghuaC3I/HandsOn) (MIT). They are reimplemented
+on RoboVerse's own protocol; see `THIRD_PARTY_NOTICES.md`.
+
 ## Embodiments
 
 Results are reported per robot. Three embodiments are the reference set every task family and

@@ -12,12 +12,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import torch
 
+from .prompts import PromptBank
 from .protocol import EvalProtocol
 
 
@@ -58,6 +60,10 @@ class TaskInstance:
     actions: list | None = None
     """Demo actions recorded from ``state`` (the replay baseline consumes them); ``None`` when unknown."""
     state_hash: str = ""
+    prompt: str | None = None
+    """The instruction this episode is given (``EvalProtocol.prompt_split``); ``None`` for a task without one."""
+    prompt_variant: str | None = None
+    """Which entry of the task's prompt bank ``prompt`` is (``"canonical"``, ``"train_03"``, ``"heldout_01"``)."""
 
     @property
     def instance_id(self) -> str:
@@ -128,13 +134,29 @@ def _build_instance_pool(env) -> list[TaskInstance]:
     return []
 
 
-def plan_instances(pool: list[TaskInstance], protocol: EvalProtocol) -> list[TaskInstance]:
-    """The instances of one run, in episode order, each with its episode seed.
+def demo_budget(pool: list[TaskInstance], *, factor: float, quantile: float = 0.75) -> int | None:
+    """``ceil(factor x quantile(demo lengths))`` over the pool's instances that carry demo actions.
+
+    ``None`` when no instance has demo actions (the caller then keeps the task's own cap).
+    """
+    lengths = [len(inst.actions) for inst in pool if inst.actions]
+    if not lengths:
+        return None
+    return max(1, math.ceil(factor * float(np.quantile(np.asarray(lengths, dtype=np.float64), quantile))))
+
+
+def plan_instances(
+    pool: list[TaskInstance], protocol: EvalProtocol, *, prompts: PromptBank | None = None, task: str = ""
+) -> list[TaskInstance]:
+    """The instances of one run, in episode order, each with its episode seed and instruction.
 
     Explicit ``protocol.instances`` are taken as given (and must exist in the pool); otherwise the
     pool is cycled from index 0 so ``episodes <= len(pool)`` sees every instance once. An empty pool
-    yields seed-only instances.
+    yields seed-only instances. With a prompt bank, episode ``i`` gets ``prompts.draw(task=task,
+    episode=i, seed=seed + i, split=protocol.prompt_split)``; a held-out split without a bank is refused.
     """
+    if prompts is None and protocol.prompt_split == "heldout":
+        raise ValueError(f"{task or 'the task'} has no prompt bank; prompt_split='heldout' has nothing to draw from")
     planned: list[TaskInstance] = []
     if protocol.instances is not None:
         if not pool:
@@ -148,13 +170,17 @@ def plan_instances(pool: list[TaskInstance], protocol: EvalProtocol) -> list[Tas
     else:
         chosen = [TaskInstance(index=i, seed=0) for i in range(protocol.episodes)]
     for episode, inst in enumerate(chosen):
+        seed = protocol.seed + episode
+        drawn = prompts.draw(task=task, episode=episode, seed=seed, split=protocol.prompt_split) if prompts else None
         planned.append(
             TaskInstance(
                 index=inst.index,
-                seed=protocol.seed + episode,
+                seed=seed,
                 state=inst.state,
                 actions=inst.actions,
                 state_hash=inst.state_hash,
+                prompt=drawn.prompt if drawn else None,
+                prompt_variant=drawn.variant if drawn else None,
             )
         )
     return planned

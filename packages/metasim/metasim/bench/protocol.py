@@ -15,6 +15,8 @@ from typing import Literal
 
 SuccessRule = Literal["first", "final", "held"]
 SUCCESS_RULES: tuple[str, ...] = ("first", "final", "held")
+PromptSplit = Literal["canonical", "train", "heldout"]
+PROMPT_SPLITS: tuple[str, ...] = ("canonical", "train", "heldout")
 DEFAULT_EPISODES = 10
 
 
@@ -38,6 +40,18 @@ class EvalProtocol:
         instances: Explicit instance indices into the task's pool, one per episode (overrides the
             round-robin draw and ``episodes`` must equal its length when both are given).
         name: Free label written into the result (e.g. ``"libero-50x3"``).
+        demo_budget_factor: Derive the episode cap from the task's demos: ``ceil(factor x`` the
+            ``demo_budget_quantile`` quantile of the demo lengths ``)``. A budget that scales with how long
+            the task takes a demonstrator keeps a slow-but-correct policy from timing out on long tasks
+            and a dithering one from being given 10x the time on short ones. ``None`` (default) leaves the
+            cap to ``max_episode_steps`` / the task; the two cannot both be set. A task without demos
+            falls back to its own cap, and the result's notes say which cap was applied.
+        demo_budget_quantile: Quantile of the demo lengths the budget is scaled from (default 0.75).
+        prompt_split: Which instruction each episode gets from the task's prompt bank
+            (``metasim.bench.prompts``): ``"canonical"`` (default) the task's own instruction,
+            ``"train"`` the canonical one or a training paraphrase drawn per episode, ``"heldout"`` a
+            paraphrase reserved for evaluation, so language generalisation is measured on text a
+            policy was not trained on.
     """
 
     episodes: int | None = None
@@ -48,10 +62,22 @@ class EvalProtocol:
     seed: int = 0
     instances: tuple[int, ...] | None = None
     name: str = "default"
+    demo_budget_factor: float | None = None
+    demo_budget_quantile: float = 0.75
+    prompt_split: PromptSplit = "canonical"
 
     def __post_init__(self) -> None:
         if self.success_rule not in SUCCESS_RULES:
             raise ValueError(f"success_rule must be one of {SUCCESS_RULES}, got {self.success_rule!r}")
+        if self.prompt_split not in PROMPT_SPLITS:
+            raise ValueError(f"prompt_split must be one of {PROMPT_SPLITS}, got {self.prompt_split!r}")
+        if self.demo_budget_factor is not None:
+            if not self.demo_budget_factor > 0:
+                raise ValueError(f"demo_budget_factor must be > 0 or None, got {self.demo_budget_factor}")
+            if self.max_episode_steps is not None:
+                raise ValueError("set either max_episode_steps or demo_budget_factor, not both")
+        if not 0.0 < self.demo_budget_quantile <= 1.0:
+            raise ValueError(f"demo_budget_quantile must be in (0, 1], got {self.demo_budget_quantile}")
         if self.hold_steps < 1:
             raise ValueError(f"hold_steps must be >= 1, got {self.hold_steps}")
         if self.max_episode_steps is not None and self.max_episode_steps < 1:

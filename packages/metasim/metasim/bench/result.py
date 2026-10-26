@@ -20,6 +20,8 @@ from typing import Any
 SCHEMA = "roboverse.bench.result"
 SCHEMA_VERSION = 1
 
+_EPISODE_OPTIONAL = ("first_success_step", "prompt", "prompt_variant")
+"""Episode fields a reader accepts as absent (results written before they existed)."""
 _REQUIRED = ("schema", "schema_version", "task", "simulator", "robots", "num_envs", "protocol", "policy", "episodes")
 
 
@@ -44,6 +46,13 @@ class EpisodeResult:
     return_sum: float
     first_success_step: int | None = None
     """First step (1-based) at which the task's success predicate held; ``None`` if never."""
+    prompt: str | None = None
+    """The instruction the episode was given (``EvalProtocol.prompt_split``); ``None`` for a task without one."""
+    prompt_variant: str | None = None
+    """Which entry of the task's prompt bank ``prompt`` is."""
+
+
+_EPISODE_REQUIRED = tuple(f for f in EpisodeResult.__dataclass_fields__ if f not in _EPISODE_OPTIONAL)
 
 
 def wilson_interval(successes: int, trials: int, z: float = 1.959964) -> tuple[float, float]:
@@ -153,7 +162,7 @@ def validate_result(data: dict[str, Any]) -> None:
         if not isinstance(episode, dict):
             raise ValueError(f"episodes[{i}] is not an object")
         unknown = set(episode) - fields
-        absent = {f for f in fields if f != "first_success_step"} - set(episode)
+        absent = set(_EPISODE_REQUIRED) - set(episode)
         if unknown or absent:
             raise ValueError(f"episodes[{i}] has unknown fields {sorted(unknown)} / missing {sorted(absent)}")
     policy = data["policy"]
@@ -175,6 +184,9 @@ def result_key(result: BenchmarkResult) -> tuple:
         protocol.get("hold_steps"),
         protocol.get("max_episode_steps"),
         tuple(instances) if instances is not None else None,  # hand-picked instances are their own key
+        protocol.get("demo_budget_factor"),
+        protocol.get("demo_budget_quantile", 0.75) if protocol.get("demo_budget_factor") is not None else None,
+        protocol.get("prompt_split", "canonical"),
     )
 
 
@@ -194,7 +206,7 @@ def summarize(results: list[BenchmarkResult]) -> str:
     ]
     for key in sorted(groups, key=lambda k: tuple(str(x) for x in k)):
         runs = groups[key]
-        task, robots, simulator, rule, hold, cap, instances, policy = key
+        task, robots, simulator, rule, hold, cap, instances, budget, quantile, prompt_split, policy = key
         episodes = [e for r in runs for e in r.episodes]
         n = len(episodes)
         k = sum(1 for e in episodes if e.success)
@@ -203,6 +215,10 @@ def summarize(results: list[BenchmarkResult]) -> str:
         rule_label = f"{rule}" + (f" x{hold}" if rule == "held" else "") + (f", cap {cap}" if cap else "")
         if instances is not None:
             rule_label += f", instances {list(instances)}"
+        if budget is not None:
+            rule_label += f", budget {budget:g}x p{round(100 * quantile)}"
+        if prompt_split != "canonical":
+            rule_label += f", prompts {prompt_split}"
         mean_steps = sum(e.steps for e in episodes) / n if n else 0.0
         head = f"| {task} | {', '.join(robots)} | {simulator} | {rule_label} | {policy} | {len(runs)} | {n} |"
         if not n:
