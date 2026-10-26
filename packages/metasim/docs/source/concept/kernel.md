@@ -68,11 +68,10 @@ MuJoCo, `handler.gym` / `_envs` on Isaac Gym, `handler.scene` on Isaac Sim, `obj
 ties a task to one backend, which is how a task that declares two simulators ends up working on one.
 
 `tests/test_kernel_boundary.py` counts those reach-ins per content area and holds each area to a
-budget that only goes down. As of 1.0.0:
+budget that only goes down. As of 1.0.0 (LIBERO-90's 63 site reads are gone; see below):
 
 | Area | Reach-ins | Mostly |
 |---|---:|---|
-| `tasks/libero_90` | 63 | `physics.named.data.site_xpos` / `site_xmat` in success checks |
 | `tasks/mjlab` | 59 | `physics` (MuJoCo-native ports for mjlab parity) |
 | `tasks/beyondmimic` | 55 | `scene`, `gym`, `_envs` (per-backend randomization) |
 | `roboverse_pack/randomization` | 49 | `scene`, `gym`, `physics` (mass and friction per backend) |
@@ -81,10 +80,31 @@ budget that only goes down. As of 1.0.0:
 | `tasks/libero` | 21 | `physics` in the native replay port |
 | others | 28 | |
 
-The two largest recurring gaps are kernel capabilities still to add: a per-body **physical property**
-interface (mass, friction, restitution per env) that today is written four times over, once per
-backend, in two content packs; and **site and frame poses** by name, which LIBERO-90 reads from MuJoCo
-directly. Each, once on the handler, removes a family's reach-ins and makes its tasks portable.
+The largest recurring gap still open is a per-body **physical property** interface (mass, friction,
+restitution per env), which today is written four times over, once per backend, in two content packs.
+
+## Sites: frames derived from the state
+
+LIBERO's success predicates are defined on MJCF *sites*: a basket's `contain_region`, a drawer's
+`top_region`, a stove's `cook_region`. A site is fixed to one body, so its world pose is that body's
+pose composed with a constant offset. `metasim.utils.site_util.site_pose(states, obj, site)` computes it
+from the `TensorState` and the offset parsed once from the object's MJCF: the root pose for a rigid
+object, the pose of the site's nearest named body (from `body_names` / `body_state`) for an
+articulation, with the object's `scale` applied as the MuJoCo handler applies it.
+
+```python
+from metasim.utils.site_util import site_pose
+
+region = site_pose(states, basket_cfg, "contain_region")  # SitePose: pos (N, 3), quat (N, 4), rot (N, 3, 3)
+local = (region.rot.transpose(1, 2) @ (obj_pos - region.pos).unsqueeze(-1)).squeeze(-1)
+```
+
+It needs no handler query, so a site check runs on every backend that reports the body. Against
+MuJoCo's own `site_xpos` / `site_xmat` it agrees to 1e-16 on the LIBERO assets (float64 offsets), and
+to 1.4e-8 (position) / 2.3e-7 (rotation) on 1149 LIBERO-90 demo states, the float32 rounding of the
+state; the LIBERO-90 checkers give the same verdict on all of those states as the `physics` reads they
+replaced. `include`, `frame`, default classes and `xyaxes` / `zaxis` frames are rejected with an error
+rather than misread.
 
 ## What a port needs, measured
 

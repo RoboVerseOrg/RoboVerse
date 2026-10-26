@@ -92,18 +92,12 @@ class LiberoKitchenScene9PutTheFryingPanUnderTheCabinetShelfTask(Libero90BaseTas
         - Uses the site's position and orientation from physics data
         """
         frypan_pos = states.objects["chefmate_8_frypan"].root_state[:, :3]  # (N,3)
-        N = frypan_pos.shape[0]
 
-        # Get shelf bottom_region site pose and expand to N environments
-        shelf_bottom_mat = self.handler.physics.named.data.site_xmat["wooden_two_layer_shelf/bottom_region"]  # (9,)
-        shelf_bottom_pos = self.handler.physics.named.data.site_xpos["wooden_two_layer_shelf/bottom_region"]  # (3,)
+        # Get shelf bottom_region site pose
+        shelf_bottom_site = self._site_pose(states, "wooden_two_layer_shelf", "bottom_region")
 
-        shelf_bottom_R = (
-            torch.from_numpy(shelf_bottom_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(frypan_pos.device)
-        )  # (N,3,3)
-        shelf_bottom_t = (
-            torch.from_numpy(shelf_bottom_pos).float().unsqueeze(0).expand(N, 3).to(frypan_pos.device)
-        )  # (N,3)
+        shelf_bottom_R = shelf_bottom_site.rot  # (N,3,3)
+        shelf_bottom_t = shelf_bottom_site.pos  # (N,3)
 
         # bottom_region site half-size from wooden_two_layer_shelf.xml: size="0.03272 0.05000 0.11027"
         bbox_lower = torch.tensor([-0.03272, -0.05000, -0.11027], device=frypan_pos.device)

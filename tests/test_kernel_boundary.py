@@ -26,7 +26,6 @@ _ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 #: Reach-ins past the kernel handler surface, per content area, as of 1.0.0.
 BUDGET = {
-    "tasks/libero_90": 63,
     "tasks/mjlab": 59,
     "tasks/beyondmimic": 55,
     "roboverse_pack/randomization": 49,

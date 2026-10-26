@@ -98,12 +98,10 @@ class LiberoLivingRoomScene4StackLeftBowlOnRightBowlTask(Libero90BaseTask):
         """
         bowl1_pos = states.objects["akita_black_bowl_1"].root_state[:, :3]  # (N,3)
         bowl2_pos = states.objects["akita_black_bowl_2"].root_state[:, :3]  # (N,3)
-        N = bowl1_pos.shape[0]
 
-        region_mat = self.handler.physics.named.data.site_xmat["wooden_tray/contain_region"]
-        region_pos = self.handler.physics.named.data.site_xpos["wooden_tray/contain_region"]
-        region_R = torch.from_numpy(region_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(bowl1_pos.device)
-        region_t = torch.from_numpy(region_pos).float().unsqueeze(0).expand(N, 3).to(bowl1_pos.device)
+        region_site = self._site_pose(states, "wooden_tray", "contain_region")
+        region_R = region_site.rot
+        region_t = region_site.pos
         half_size = torch.tensor([0.04038, 0.07839, 0.13549], device=bowl1_pos.device)
 
         # Check if bowl2 is inside tray

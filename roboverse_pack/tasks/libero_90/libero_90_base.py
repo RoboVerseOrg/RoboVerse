@@ -8,6 +8,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
+from metasim.utils.site_util import SitePose, site_pose
 from metasim.utils.state import TensorState
 
 
@@ -16,6 +17,15 @@ class Libero90BaseTask(BaseTaskEnv):
 
     This base class handles the common functionality for LIBERO 90 tasks,
     which are more complex than LIBERO Object tasks.
+
+    Like ``LiberoBaseTask``, these are **config ports**: a MetaSim scenario that runs on any backend, not a
+    reproduction of LIBERO's robosuite physics, so the official demos are not expected to replay to success
+    (on MuJoCo they do not: there is no table, and objects settle ~2 cm below where the demos hold them).
+    For 1:1 replay use the native ids (``native_libero.py``).
+
+    Success predicates read LIBERO's sites (a basket's ``contain_region``, a drawer's ``top_region``) with
+    :meth:`_site_pose`, which composes the site's fixed offset from the object's MJCF with the pose in the
+    state, so a checker reads the same frame on every backend.
     """
 
     scenario = None
@@ -38,6 +48,13 @@ class Libero90BaseTask(BaseTaskEnv):
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Success when task conditions are met."""
         return self.checker.check(self.handler, states)
+
+    def _site_pose(self, states: TensorState, obj_name: str, site: str) -> SitePose:
+        """World pose of ``site`` on the scenario object ``obj_name``, from ``states``."""
+        for obj in self.scenario.objects:
+            if obj.name == obj_name:
+                return site_pose(states, obj, site)
+        raise KeyError(f"{type(self).__name__}: no object {obj_name!r} in the scenario")
 
     def _on_reset(self, env_ids: list[int]) -> None:
         """Reset the checker for ``env_ids`` unless ``skip_checker_reset`` is set."""

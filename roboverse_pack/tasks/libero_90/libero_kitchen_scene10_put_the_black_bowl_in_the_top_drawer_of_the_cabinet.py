@@ -93,16 +93,11 @@ class LiberoKitchenScene10PutBlackBowlInTopDrawerTask(Libero90BaseTask):
         # top drawer bbox (adjusted for wooden_cabinet structure) 0.02993 0.07561 0.10224
         # check if the bowl is in top region
         bowl_pos = states.objects["akita_black_bowl"].root_state[:, :3]  # (N,3)
-        N = bowl_pos.shape[0]
-        # Get drawer top_region site pose and expand to N environments
-        drawer_top_mat = self.handler.physics.named.data.site_xmat["wooden_cabinet/top_region"]  # (9,)
-        drawer_top_pos = self.handler.physics.named.data.site_xpos["wooden_cabinet/top_region"]  # (3,)
+        # Get drawer top_region site pose
+        drawer_top_site = self._site_pose(states, "wooden_cabinet", "top_region")
 
-        # Expand to (N,3,3) and (N,3)
-        drawer_top_R = (
-            torch.from_numpy(drawer_top_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(bowl_pos.device)
-        )  # (N,3,3)
-        drawer_top_t = torch.from_numpy(drawer_top_pos).float().unsqueeze(0).expand(N, 3).to(bowl_pos.device)  # (N,3)
+        drawer_top_R = drawer_top_site.rot  # (N,3,3)
+        drawer_top_t = drawer_top_site.pos  # (N,3)
 
         # top_region site half-size from wooden_cabinet.xml: size="0.029, 0.075, 0.102"
         bbox_lower = torch.tensor([-0.029, -0.075, -0.102], device=bowl_pos.device)

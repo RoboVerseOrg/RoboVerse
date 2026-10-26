@@ -94,16 +94,12 @@ class LiberoKitchenScene9PutTheWhiteBowlOnTopOfTheCabinetTask(Libero90BaseTask):
         - Uses the site's position and orientation from physics data
         """
         bowl_pos = states.objects["white_bowl"].root_state[:, :3]  # (N,3)
-        N = bowl_pos.shape[0]
 
-        # Get shelf top_side site pose and expand to N environments
-        shelf_top_mat = self.handler.physics.named.data.site_xmat["wooden_two_layer_shelf/top_side"]  # (9,)
-        shelf_top_pos = self.handler.physics.named.data.site_xpos["wooden_two_layer_shelf/top_side"]  # (3,)
+        # Get shelf top_side site pose
+        shelf_top_site = self._site_pose(states, "wooden_two_layer_shelf", "top_side")
 
-        shelf_top_R = (
-            torch.from_numpy(shelf_top_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(bowl_pos.device)
-        )  # (N,3,3)
-        shelf_top_t = torch.from_numpy(shelf_top_pos).float().unsqueeze(0).expand(N, 3).to(bowl_pos.device)  # (N,3)
+        shelf_top_R = shelf_top_site.rot  # (N,3,3)
+        shelf_top_t = shelf_top_site.pos  # (N,3)
 
         # top_side site half-size from wooden_two_layer_shelf.xml: size="0.12534 0.09438 0.00147"
         bbox_lower = torch.tensor([-0.12534, -0.09438, 0], device=bowl_pos.device)

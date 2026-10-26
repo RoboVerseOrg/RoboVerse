@@ -87,17 +87,12 @@ class LiberoKitchenScene4PutWineBottleOnWineRackTask(Libero90BaseTask):
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Task success checker: wine bottle is on top of the wine rack."""
         bottle_pos = states.objects["wine_bottle"].root_state[:, :3]  # (N,3)
-        N = bottle_pos.shape[0]
 
         # Get rack top pose and expand to N environments
-        rack_top_mat = self.handler.physics.named.data.site_xmat["wine_rack_stand/top_region"]  # (9,)
-        rack_top_pos = self.handler.physics.named.data.site_xpos["wine_rack_stand/top_region"]  # (3,)
+        rack_top_site = self._site_pose(states, "wine_rack", "top_region")
 
-        # Expand to (N,3,3) and (N,3)
-        rack_top_R = (
-            torch.from_numpy(rack_top_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(bottle_pos.device)
-        )  # (N,3,3)
-        rack_top_t = torch.from_numpy(rack_top_pos).float().unsqueeze(0).expand(N, 3).to(bottle_pos.device)  # (N,3)
+        rack_top_R = rack_top_site.rot  # (N,3,3)
+        rack_top_t = rack_top_site.pos  # (N,3)
 
         # wine rack top region (size found in wine_rack.xml)
         bbox_lower = torch.tensor([-0.4, -0.07894, -0.13438], device=bottle_pos.device)

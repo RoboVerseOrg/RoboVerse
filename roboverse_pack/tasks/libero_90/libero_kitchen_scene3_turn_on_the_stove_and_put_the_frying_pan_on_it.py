@@ -91,11 +91,8 @@ class LiberoKitchenScene3TurnOnStoveAndPutFryingPanTask(Libero90BaseTask):
 
         # 2. check if the frying pan is on the stove
         frypan_pos = states.objects["chefmate_8_frypan"].root_state[:, :3]  # (N,3)
-        stove_center_single = self.handler.physics.named.data.site_xpos["flat_stove/burner"]  # (3,)
-        N = frypan_pos.shape[0]
-        stove_center_pos = (
-            torch.tensor(stove_center_single, device=frypan_pos.device).reshape(1, 3).repeat(N, 1)
-        )  # (N,3)
+        stove_center_site = self._site_pose(states, "flat_stove", "burner")
+        stove_center_pos = stove_center_site.pos  # (N,3)
         range_threshold = 0.08  # Radius of the range in xy plane
         height_threshold = 0.03  # Height threshold above the stove
         xy_distance = torch.norm(frypan_pos[:, :2] - stove_center_pos[:, :2], dim=-1)  # (N,)

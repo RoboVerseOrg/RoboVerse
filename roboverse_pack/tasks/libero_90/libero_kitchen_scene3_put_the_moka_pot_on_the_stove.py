@@ -83,11 +83,8 @@ class LiberoKitchenScene3PutMokaPotOnStoveTask(Libero90BaseTask):
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Task success checker."""
         moka_pot_pos = states.objects["moka_pot"].root_state[:, :3]  # (N,3)
-        stove_center_single = self.handler.physics.named.data.site_xpos["flat_stove/burner"]  # (3,)
-        N = moka_pot_pos.shape[0]
-        stove_center_pos = (
-            torch.tensor(stove_center_single, device=moka_pot_pos.device).reshape(1, 3).repeat(N, 1)
-        )  # (N,3)
+        stove_center_site = self._site_pose(states, "flat_stove", "burner")
+        stove_center_pos = stove_center_site.pos  # (N,3)
 
         # Check if moka pot is within a region above the stove
         range_threshold = 0.06  # Radius of the range in xy plane (smaller for moka pot)

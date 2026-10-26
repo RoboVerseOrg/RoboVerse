@@ -93,16 +93,11 @@ class LiberoKitchenScene10PutButterInTopDrawerAndCloseTask(Libero90BaseTask):
         """Task success checker: butter_2 is inside the top drawer AND top drawer is closed."""
         # 1. check if butter_2 is in the top drawer
         butter_pos = states.objects["butter_2"].root_state[:, :3]  # (N,3)
-        N = butter_pos.shape[0]
-        # Get drawer top_region site pose and expand to N environments
-        drawer_top_mat = self.handler.physics.named.data.site_xmat["wooden_cabinet/top_region"]  # (9,)
-        drawer_top_pos = self.handler.physics.named.data.site_xpos["wooden_cabinet/top_region"]  # (3,)
+        # Get drawer top_region site pose
+        drawer_top_site = self._site_pose(states, "wooden_cabinet", "top_region")
 
-        # Expand to (N,3,3) and (N,3)
-        drawer_top_R = (
-            torch.from_numpy(drawer_top_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(butter_pos.device)
-        )  # (N,3,3)
-        drawer_top_t = torch.from_numpy(drawer_top_pos).float().unsqueeze(0).expand(N, 3).to(butter_pos.device)  # (N,3)
+        drawer_top_R = drawer_top_site.rot  # (N,3,3)
+        drawer_top_t = drawer_top_site.pos  # (N,3)
 
         # top_region site half-size from wooden_cabinet.xml: size="0.02993 0.07561 0.10224"
         bbox_lower = torch.tensor([-0.02993, -0.07561, -0.10224], device=butter_pos.device)

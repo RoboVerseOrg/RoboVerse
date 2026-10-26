@@ -32,8 +32,14 @@ the parallel implementations, then build the benchmark data model on top.
       restitution, per env, on every backend. Today the humanoid and beyondmimic packs each carry
       their own Isaac Sim / Isaac Gym / MuJoCo / Newton branches for it, and the core
       `ObjectRandomizer` covers Isaac Sim only.
-- [ ] Site and frame poses by name as a handler query, so LIBERO-90's success checks (63 direct
-      `physics.named.data.site_*` reads) and the mjlab ports run on more than MuJoCo.
+- [x] Site poses derived from the state (`metasim.utils.site_util.site_pose`): LIBERO-90's success checks
+      no longer read `physics.named.data.site_*` (63 reach-ins to 0). The mjlab ports still read `physics`.
+- [ ] LIBERO-90 config-port predicates as LIBERO defines them (`In` / `On` on a site region). Seven checks
+      are false on the demos' own final states; `put_the_frying_pan_on_the_stove` tests the moka pot.
+- [ ] Upload the LIBERO MJCFs missing from the HF dataset (wooden_tray, wooden_two_layer_shelf,
+      porcelain_mug, white_yellow_mug, white_bowl, stable_scanned basket, microwave): 31 of 66 LIBERO-90
+      tasks cannot load on MuJoCo from a fresh download. Local copies (upstream LIBERO 8f1084e, verbatim)
+      are in `roboverse_data/assets/libero/COMMON`.
 - [ ] `_set_states` accepts `TensorState` only; the dict/tensor dual paths go away.
 - [ ] Per-backend capability declaration (`BackendCapabilities`) checked against `RobotCfg` and
       `SimParamCfg` at handler creation; `SimParamCfg` split into common fields + per-backend sections.

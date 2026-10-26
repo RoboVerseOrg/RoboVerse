@@ -55,6 +55,7 @@ PUBLIC_MODULES: tuple[str, ...] = (
     "metasim.bench.suite",
     "metasim.bench.remote",
     "metasim.queries.base",
+    "metasim.utils.site_util",
     "metasim.utils.state",
     "metasim.utils.replay",
     "metasim.utils.setup_util",

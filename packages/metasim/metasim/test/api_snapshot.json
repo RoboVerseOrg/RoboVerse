@@ -10237,6 +10237,63 @@
    "signature": "(sim: 'SimType')"
   }
  },
+ "metasim.utils.site_util": {
+  "SitePose": {
+   "bases": [],
+   "fields": [
+    "pos",
+    "quat"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "pos"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "quat"
+      }
+     ],
+     "signature": "(self, pos: 'torch.Tensor', quat: 'torch.Tensor') -> None"
+    },
+    "rot": {
+     "params": null,
+     "signature": "<property>"
+    }
+   }
+  },
+  "site_pose": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "states"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "obj"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "site"
+    }
+   ],
+   "signature": "(states, obj, site: 'str') -> 'SitePose'"
+  }
+ },
  "metasim.utils.state": {
   "action_input_to_dict_batch": {
    "kind": "function",

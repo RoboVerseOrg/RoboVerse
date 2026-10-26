@@ -75,12 +75,10 @@ class LiberoLivingRoomScene1PickUpAlphabetSoupAndPutItInTheBasketTask(Libero90Ba
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Task success checker: alphabet_soup is inside basket/contain_region bounding box."""
         soup_pos = states.objects["alphabet_soup"].root_state[:, :3]  # (N,3)
-        N = soup_pos.shape[0]
         # Get site pose (xmat as a flattened 3x3, xpos as position)
-        region_mat = self.handler.physics.named.data.site_xmat["basket/contain_region"]  # (9,)
-        region_pos = self.handler.physics.named.data.site_xpos["basket/contain_region"]  # (3,)
-        region_R = torch.from_numpy(region_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(soup_pos.device)
-        region_t = torch.from_numpy(region_pos).float().unsqueeze(0).expand(N, 3).to(soup_pos.device)
+        region_site = self._site_pose(states, "basket", "contain_region")
+        region_R = region_site.rot
+        region_t = region_site.pos
         half_size = torch.tensor([0.06108, 0.06108, 0.06949], device=soup_pos.device)
         soup_local = torch.matmul(region_R.transpose(1, 2), (soup_pos - region_t).unsqueeze(-1)).squeeze(-1)
         inside = (soup_local.abs() <= (half_size + 1e-6)).all(dim=-1)

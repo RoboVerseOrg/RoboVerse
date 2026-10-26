@@ -8,10 +8,11 @@ needs five things, and this module is that set, re-exported from where each name
    its entity configs). Every entity a task reads must be declared here; an entity that only lives
    inside a scene file is invisible to the state below and to every other backend.
 2. **State** -- the one data type between simulator and content (``TensorState``: per-entity
-   root/joint/body tensors, camera frames, query extras). Content reads states, never engines.
+   root/joint/body tensors, camera frames, query extras). Content reads states, never engines;
+   a frame fixed to a body (an MJCF site) is derived from the state with ``site_pose``.
 3. **Handler** -- a backend in five verbs: ``launch``, ``set_states(states, env_ids)``,
    ``set_dof_targets(actions)``, ``simulate()``, ``get_states(env_ids)``, plus names, capability
-   flags and queries (``BaseQueryType``) for what a state does not carry (contacts, sites).
+   flags and queries (``BaseQueryType``) for what a state does not carry (contacts).
 4. **Task** -- one loop with hooks (``BaseTaskEnv``; ``RLTaskEnv`` adds joint-limit clipping and
    auto-reset): ``_process_action -> _apply_action -> simulate -> _on_step -> _reward /
    _terminated / _success / _time_out``, and ``reset -> _on_reset``. Success is a predicate over the
@@ -56,6 +57,7 @@ from metasim.task.registry import get_task_class, register_task
 from metasim.task.rl_task import RLTaskEnv
 from metasim.types import CameraState, ObjectState, RobotState, TensorState
 from metasim.utils.configclass import configclass
+from metasim.utils.site_util import SitePose, site_pose
 
 __all__ = [
     "ArticulationObjCfg",
@@ -86,6 +88,7 @@ __all__ = [
     "ScenarioCfg",
     "SimParamCfg",
     "SimType",
+    "SitePose",
     "TaskInstance",
     "TensorState",
     "configclass",
@@ -93,4 +96,5 @@ __all__ = [
     "get_task_class",
     "register_suite",
     "register_task",
+    "site_pose",
 ]

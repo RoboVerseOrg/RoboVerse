@@ -99,11 +99,9 @@ class LiberoLivingRoomScene3PickUpButterTask(Libero90BaseTask):
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Task success checker: butter is inside wooden_tray/contain_region bounding box."""
         obj_pos = states.objects["butter"].root_state[:, :3]
-        N = obj_pos.shape[0]
-        region_mat = self.handler.physics.named.data.site_xmat["wooden_tray/contain_region"]
-        region_pos = self.handler.physics.named.data.site_xpos["wooden_tray/contain_region"]
-        region_R = torch.from_numpy(region_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(obj_pos.device)
-        region_t = torch.from_numpy(region_pos).float().unsqueeze(0).expand(N, 3).to(obj_pos.device)
+        region_site = self._site_pose(states, "wooden_tray", "contain_region")
+        region_R = region_site.rot
+        region_t = region_site.pos
         half_size = torch.tensor([0.04038, 0.07839, 0.13549], device=obj_pos.device)
         obj_local = torch.matmul(region_R.transpose(1, 2), (obj_pos - region_t).unsqueeze(-1)).squeeze(-1)
         inside = (obj_local.abs() <= (half_size + 1e-6)).all(dim=-1)
