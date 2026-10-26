@@ -103,7 +103,9 @@ def test_evaluate_records_each_episode_prompt():
         def reset(self, env_ids, instances, ctx):
             seen.extend(i.prompt for i in instances)
 
+    env.task_desc = None  # the context's instruction falls back to the bank's canonical text
     result = evaluate(env, Spy(), EvalProtocol(episodes=4, prompt_split="train"), task_name="t")
+    assert result.notes["instruction"] == BANK.canonical
     assert [e.prompt for e in result.episodes] == seen
     assert all(e.prompt_variant for e in result.episodes)
     assert result.notes["prompt_draw_revision"].startswith("roboverse.bench.prompts/")

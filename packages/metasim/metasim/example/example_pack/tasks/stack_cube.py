@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 
+from metasim.bench.prompts import PromptBank
 from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
 from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
@@ -38,6 +39,26 @@ class StackCubeTask(BaseTaskEnv):
         robots=["franka"],
     )
     max_episode_steps = 250
+
+    prompt_bank = PromptBank(
+        canonical="Stack the red cube on top of the blue cube.",
+        train=(
+            "Put the red cube on the blue cube.",
+            "Place the red block on top of the blue block.",
+            "Pick up the red cube and set it on the blue one.",
+            "Stack red on blue.",
+            "Move the red cube onto the blue cube and let go.",
+            "Lay the red cube on top of the blue cube.",
+            "Set the red block down on the blue block.",
+            "Build a two-cube stack with red on top of blue.",
+        ),
+        heldout=(
+            "Balance the red box on the blue box.",
+            "Rest the crimson cube on the blue one.",
+            "Pile the red cube onto the blue cube.",
+            "Make a tower: blue at the bottom, red above it.",
+        ),
+    )
     checker = DetectedChecker(
         obj_name="cube",
         detector=RelativeBboxDetector(

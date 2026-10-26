@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 
+from metasim.bench.prompts import PromptBank
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
@@ -36,6 +37,26 @@ class LiftPegUprightTask(ManiskillBaseTask):
     traj_filepath = "roboverse_data/trajs/maniskill/lift_peg_upright/v2/franka_v2.pkl.gz"
 
     max_episode_steps = 800
+
+    prompt_bank = PromptBank(
+        canonical="Stand the red peg upright on the table.",
+        train=(
+            "Turn the peg so it stands vertically on the table.",
+            "Rotate the lying peg into an upright position.",
+            "Set the red peg on its end.",
+            "Make the peg stand up straight.",
+            "Flip the red peg upright and leave it standing.",
+            "Reorient the peg so its long axis points up.",
+            "Get the red peg standing vertically.",
+            "Lift the peg and place it upright on the table.",
+        ),
+        heldout=(
+            "Stand the red stick on its end.",
+            "Raise the fallen peg until it is vertical.",
+            "Prop the crimson rod up so it points at the ceiling.",
+            "Put the peg back on its base, standing tall.",
+        ),
+    )
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
         """Task success when the peg is upright enough (z-axis)."""

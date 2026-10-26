@@ -43,7 +43,8 @@ class PolicyContext:
     default_joint_positions: dict[str, dict[str, float]] = field(default_factory=dict)
     """``robot -> {joint: default position}`` for every action joint, whatever the action bounds describe."""
     instruction: str | None = None
-    """The task's language instruction (``task_desc``) when it has one."""
+    """The task's language instruction (``task_desc``, else its ``prompt_bank``'s canonical text) when it has one.
+    The instruction of a given episode is ``TaskInstance.prompt`` (``EvalProtocol.prompt_split``)."""
     extras: dict[str, Any] = field(default_factory=dict)
     """Harness-provided objects a policy adapter may need: ``"scenario"`` is the env's ``ScenarioCfg``."""
 

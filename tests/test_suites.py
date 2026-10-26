@@ -26,3 +26,15 @@ def test_every_suite_task_is_registered(name):
         assert entry.task in registered, f"{name}/{split}: {entry.task} is not a registered task"
         cls = get_task_class(entry.task)
         assert getattr(cls, "scenario", None) is not None, f"{entry.task} has no class-level scenario"
+
+
+@pytest.mark.parametrize("name", list_suites())
+def test_every_suite_task_supports_a_heldout_language_evaluation(name):
+    from metasim.bench import EvalProtocol, PromptBank, plan_instances
+
+    for _, entry in get_suite(name).entries():
+        bank = getattr(get_task_class(entry.task), "prompt_bank", None)
+        assert isinstance(bank, PromptBank), f"{entry.task} declares no prompt_bank"
+        assert len(bank.train) >= 8 and len(bank.heldout) >= 4, f"{entry.task}: too few paraphrases"
+        plan = plan_instances([], EvalProtocol(episodes=20, prompt_split="heldout"), prompts=bank, task=entry.task)
+        assert {p.prompt for p in plan} <= set(bank.heldout)

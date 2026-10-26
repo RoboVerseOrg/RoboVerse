@@ -16,8 +16,10 @@ TABLETOP_MUJOCO = register_suite(
         description=(
             "Single-arm Franka tabletop manipulation on MuJoCo: the ManiSkill-derived tasks whose demos "
             "replay at >= 0.9 on MuJoCo (bench health, 2026-10-25). Scored task-macro over 50 episodes "
-            "each, with the episode cap set to 3x the 75th-percentile demo length so a slow but correct "
-            "policy is not cut off and long tasks do not inflate short ones."
+            "each. The episode cap is 3x the 75th-percentile recorded demo length, clipped to the task's "
+            "own time-out: it tightens push_cube (216), pull_cube (237) and lift_peg_upright (534); pick_cube "
+            "and stack_cube keep their 250-step time-out because their recorded demos run that long. Every "
+            "task carries a prompt bank, so --prompt-split heldout measures instruction generalisation."
         ),
         splits={
             "core": ("pick_cube", "stack_cube", "push_cube", "pull_cube", "lift_peg_upright"),

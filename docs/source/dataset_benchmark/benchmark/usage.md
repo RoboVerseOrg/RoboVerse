@@ -139,7 +139,11 @@ register_suite(BenchmarkSuite(
 |---|---|---|---|---|
 | `tabletop-mujoco` | MuJoCo | `core` | pick_cube, stack_cube, push_cube, pull_cube, lift_peg_upright | task-macro 0.933 (pick_cube 2/3: its demo 0 fails on MuJoCo) |
 
-Only tasks whose demos replay on the suite's backend belong in a suite; `bench health` is the gate.
+Only tasks whose demos replay on the suite's backend belong in a suite. `bench health` is the gate.
+In `tabletop-mujoco` the demo budget tightens push_cube (216 steps), pull_cube (237) and
+lift_peg_upright (534). pick_cube and stack_cube keep their 250-step time-out, because their recorded
+demos run that long even when the task is solved by about step 120. Every task in the suite has a
+prompt bank with 8 training and 4 held-out paraphrases.
 
 ## Episode budgets and instructions
 

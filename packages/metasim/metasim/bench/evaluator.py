@@ -109,7 +109,7 @@ def build_context(env, protocol: EvalProtocol, *, max_episode_steps: int | None 
         action_high=torch.tensor(high, dtype=torch.float32, device=device),
         default_action=torch.tensor(default, dtype=torch.float32, device=device),
         default_joint_positions=default_joint_positions,
-        instruction=getattr(env, "task_desc", None) or None,
+        instruction=getattr(env, "task_desc", None) or (bank.canonical if (bank := task_prompt_bank(env)) else None),
         extras={"scenario": scenario},  # for adapters that need the robot configs or the camera set-up
     )
 

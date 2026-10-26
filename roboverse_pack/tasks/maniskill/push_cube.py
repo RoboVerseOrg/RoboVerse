@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from metasim.bench.prompts import PromptBank
 from metasim.constants import PhysicStateType
 from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
 from metasim.example.example_pack.tasks.checkers.detectors import Relative2DSphereDetector
@@ -44,6 +45,26 @@ class PushCubeCfg(ManiskillBaseTask):
     """  # noqa: D205, D415
 
     episode_length = 500
+
+    prompt_bank = PromptBank(
+        canonical="Push the red cube into the blue goal region in front of it.",
+        train=(
+            "Slide the red cube forward onto the blue target.",
+            "Push the cube until it sits in the blue circle.",
+            "Move the red block into the blue goal area by pushing it.",
+            "Nudge the red cube forward into the blue region.",
+            "Push the red cube onto the blue disc ahead of it.",
+            "Shove the cube forward so it ends up inside the blue target.",
+            "Slide the red block into the blue zone without lifting it.",
+            "Push the red cube to the blue goal.",
+        ),
+        heldout=(
+            "Drive the red box along the table until it reaches the blue marker.",
+            "Get the red cube over to the blue spot by sliding it.",
+            "Propel the crimson block onto the blue patch in front.",
+            "Scoot the red cube ahead into the blue target zone.",
+        ),
+    )
 
     scenario = ScenarioCfg(
         objects=[
