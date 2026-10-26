@@ -203,11 +203,11 @@ The template includes:
 3. Convert observations to `TensorState` via `get_state()`.
 4. Move sim details (assets, timestep, decimation) into `ScenarioCfg`.
 
-### 5.2 Structured Wrapper Integration
+### 5.2 Structured Integration
 
-1. Subclass `BaseTaskWrapper`.
-2. Implement `_reward()`, `_observation()`, `_terminated()`.
-3. Use hooks `pre_sim_step`, `post_sim_step`, `reset_callback`.
+1. Subclass `BaseTaskEnv` (or `RLTaskEnv` for training with auto-reset).
+2. Implement `_observation()`, `_reward()`, `_terminated()` (and `_success()` when success is not termination).
+3. Put control and bookkeeping in the loop hooks (`_process_action`, `_apply_action`, `_on_step`, `_on_reset`) instead of overriding `step` / `reset`; see [The MetaSim kernel](kernel.md).
 4. Reuse `Handler` + `ScenarioCfg` separation.
 
 ---
@@ -219,21 +219,22 @@ The template includes:
 * **Initialization**: accepts a `ScenarioCfg` or a pre‑built `BaseSimHandler`. Internally resolves the handler and calls `launch()`.
 * **Callbacks**: `pre_physics_step_callback`, `post_physics_step_callback`, `reset_callback`, `close_callback`.
 * **Episode control**: per‑env step counter `self._episode_steps`; timeout handled by `_time_out` (default based on `max_episode_steps`).
-* **Step flow**:
+* **Step flow** (the same sequence on both bases):
 
-  1. `pre_physics_step_callback(actions)`
-  2. `handler.set_dof_targets(actions)`
-  3. `handler.simulate()`
-  4. `env_states = handler.get_states()`
-  5. `post_physics_step_callback(env_states)`
-  6. Compute `reward`, `terminated`, `timeout` and return `(obs, reward, terminated, timeout, info)` with `privileged_observation`. The hooks may return any tensor / sequence; `step()` hands back a `(num_envs,)` float32 reward and bool `terminated` / `timeout` on the env device, and rejects a wrong shape by naming the hook.
-* **Reset flow**: can use external `states` or fall back to `_initial_states`. Calls `handler.set_states(...)`, fetches `env_states`, and resets episode counters.
-* **Flexible override**: You can also override `step()` and `reset()` functions directly, bypassing the callback system entirely.
+  1. `_episode_steps += 1`
+  2. `actions = _process_action(actions)`: delta control, unnormalisation, IK
+  3. `pre_physics_step_callback(actions)`
+  4. `_apply_action(actions)`: default `handler.set_dof_targets(actions)`; `RLTaskEnv` clips to the joint limits here
+  5. `handler.simulate()`, then `env_states = handler.get_states()`
+  6. `post_physics_step_callback(env_states)`, then `_on_step(env_states)` for per-step bookkeeping
+  7. Compute `reward`, `terminated`, `timeout` and return `(obs, reward, terminated, timeout, info)` with `privileged_observation`. The hooks may return any tensor / sequence; `step()` hands back a `(num_envs,)` float32 reward and bool `terminated` / `timeout` on the env device, and rejects a wrong shape by naming the hook.
+* **Reset flow**: seeds the handler, zeroes the episode counters of `env_ids`, runs `reset_callback`, writes the external `states` or `_initial_states`, then calls `_on_reset(env_ids)` (reset checkers, latches and per-env buffers there) and returns the observation. `RLTaskEnv`'s auto-reset goes through the same `reset`, so `_on_reset` runs for envs that finish mid-rollout too.
+* **Overriding `step()` / `reset()`**: the hooks cover action transforms, actuator writes and per-env bookkeeping; a copied loop drifts from the base (it has missed callbacks, the auto-reset and the seed contract before). `tests/test_task_reset_seed_contract.py` tracks the remaining `step` overrides and blocks new ones.
 
 ### RLTaskEnv (RL‑friendly extension)
 
 * **Observation shape**: flattens `TensorState` into a 1D tensor and builds `observation_space = Box(num_obs,)`.
-* **Action handling**: derives `action_space` from `robot.joint_limits` and `handler.get_joint_names(...)`. In `step()`, actions are clamped before being passed to `set_dof_targets`.
+* **Action handling**: derives `action_space` from `robot.joint_limits` and `handler.get_joint_names(...)`. Its `_apply_action` clamps actions to those limits before `set_dof_targets`.
 * **Auto device**: defaults to CUDA if available.
 * **Auto reset on done**: after each step, envs flagged by `terminated | time_out` are reset in-place, and their observations refreshed.
 * **Initial state acceleration**: uses `list_state_to_tensor(handler, _get_initial_states())` to convert list states to tensor states for faster resets.

@@ -4,11 +4,11 @@ import torch
 
 from metasim.bench.prompts import PromptBank
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
+from metasim.task.checkers.checkers import DetectedChecker
+from metasim.task.checkers.detectors import RelativeBboxDetector
 from metasim.task.registry import register_task
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
@@ -81,11 +81,9 @@ class StackCubeTask(BaseTaskEnv):
         """Success when cube is detected in the bbox above base."""
         return self.checker.check(self.handler, states)
 
-    def reset(self, states=None, env_ids=None):
-        """Reset the checker."""
-        states = super().reset(states, env_ids)
+    def _on_reset(self, env_ids: list[int]) -> None:
+        """Reset the checker for ``env_ids``."""
         self.checker.reset(self.handler, env_ids=env_ids)
-        return states
 
     def _get_initial_states(self) -> list[dict] | None:
         """Give the inital states from traj file."""

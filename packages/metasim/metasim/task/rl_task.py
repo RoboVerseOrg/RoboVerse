@@ -141,30 +141,13 @@ class RLTaskEnv(BaseTaskEnv):
         Returns:
             (obs, info).
         """
-        if seed is not None:
-            set_seed = getattr(self.handler, "set_seed", None)
-            if callable(set_seed):
-                set_seed(seed)
-            elif not getattr(self, "_seed_unsupported_warned", False):
-                from loguru import logger as _log
-
-                _log.warning(
-                    f"{type(self).__name__}: handler "
-                    f"{type(self.handler).__name__} does not implement set_seed; "
-                    f"reset(seed={seed}) is a no-op on the simulator side."
-                )
-                self._seed_unsupported_warned = True
-        if env_ids is None:
-            env_ids = list(range(self.num_envs))
-
-        self._episode_steps[env_ids] = 0
-        raw_states = self._initial_states if states is None else states
-        self._run_reset_callbacks(env_ids)  # before the states are materialised, as BaseTaskEnv does
+        env_ids, raw_states = self._begin_reset(states, env_ids, seed)
         states_to_set = self._prepare_states(raw_states, env_ids)
         # the auto-reset inside step() fires on nearly every training step; a render refresh there is
         # only worth paying when the observation actually contains a camera frame
         has_cameras = bool(getattr(getattr(self.handler, "scenario", None), "cameras", None))
         self._write_reset_states(states_to_set, env_ids, refresh=has_cameras)
+        self._on_reset(env_ids)
 
         states = self.handler.get_states(mode="tensor")
         first_obs = self._observation(states).to(self.device)
@@ -288,41 +271,34 @@ class RLTaskEnv(BaseTaskEnv):
                 changed = True
         return clamped if changed else actions
 
-    def step(
-        self,
-        actions: CompatActionInput,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]:
-        """One step with joint-space actions.
+    def _apply_action(self, actions: CompatActionInput) -> None:
+        """Clip the action to the joint limits, then hand it to the handler as joint targets.
 
         A tensor action is clipped to the joint-limit box (``_action_low`` / ``_action_high``). A dict action
         is clipped to the same limits for the robots those limits certainly describe, so the same command
         reaches the engine whichever way it was written; see ``_build_clamp_bounds``.
         """
-        self._episode_steps += 1
-
-        # Sanctioned action-transform hook (default identity). Lets tasks apply
-        # delta control / unnormalisation here instead of overriding step().
-        actions = self._process_action(actions)
-
         if isinstance(actions, (torch.Tensor, np.ndarray)):
             if not isinstance(actions, torch.Tensor):
                 actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device)
             if actions.ndim == 1:
                 actions = actions.unsqueeze(0)
-
-            real_actions = torch.maximum(torch.minimum(actions, self._action_high), self._action_low)
-            self.handler.set_dof_targets(real_actions)
+            self.handler.set_dof_targets(torch.maximum(torch.minimum(actions, self._action_high), self._action_low))
         else:
             self.handler.set_dof_targets(self._clamp_dict_actions(actions))
-        self.handler.simulate()
-        states = self.handler.get_states(mode="tensor")
+
+    def step(
+        self,
+        actions: CompatActionInput,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]:
+        """One step of the shared loop (``BaseTaskEnv``), then the auto-reset of the envs that finished.
+
+        Actions are clipped to the joint limits in ``_apply_action``.
+        """
+        states = self._advance(actions)
         obs = self._observation(states).to(self.device)
         priv_obs = self._privileged_observation(states)
-
-        # normalised to the step() contract, shared with BaseTaskEnv (see ``_as_step_tensor``)
-        reward = self._as_step_tensor(self._reward(states), dtype=torch.float32, hook="_reward")
-        terminated = self._as_step_tensor(self._terminated(states), dtype=torch.bool, hook="_terminated")
-        time_out = self._as_step_tensor(self._time_out(states), dtype=torch.bool, hook="_time_out")
+        reward, terminated, time_out = self._step_signals(states)
 
         # Cache observations for RSL-RL compatibility
         self._obs_buf = obs

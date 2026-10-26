@@ -114,6 +114,7 @@ get_started/advanced/index
 :maxdepth: 2
 :titlesonly:
 
+concept/kernel
 concept/architecture
 concept/state
 concept/config

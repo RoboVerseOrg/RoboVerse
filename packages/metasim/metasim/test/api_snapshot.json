@@ -7667,6 +7667,1711 @@
    }
   }
  },
+ "metasim.task.checkers.checkers": {
+  "DetectedChecker": {
+   "bases": [],
+   "fields": [
+    "obj_name",
+    "detector",
+    "ignore_if_first_check_success"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "detector"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "ignore_if_first_check_success"
+      }
+     ],
+     "signature": "(self, obj_name: 'str' = <factory>, detector: 'BaseDetector' = <factory>, ignore_if_first_check_success: 'bool' = <factory>) -> None"
+    },
+    "check": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', states: 'TensorState') -> 'torch.BoolTensor'"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "get_debug_viewers": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'list[BaseObjCfg]'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  },
+  "EmptyChecker": {
+   "bases": [],
+   "fields": [],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> None"
+    },
+    "check": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', states: 'TensorState') -> 'torch.BoolTensor'"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "get_debug_viewers": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'list[BaseObjCfg]'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  },
+  "JointPosChecker": {
+   "bases": [],
+   "fields": [
+    "obj_name",
+    "joint_name",
+    "mode",
+    "radian_threshold"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "mode"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "radian_threshold"
+      }
+     ],
+     "signature": "(self, obj_name: 'str' = <factory>, joint_name: 'str' = <factory>, mode: \"Literal['ge', 'le']\" = <factory>, radian_threshold: 'float' = <factory>) -> None"
+    },
+    "check": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', states: 'TensorState') -> 'torch.BoolTensor'"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "get_debug_viewers": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'list[BaseObjCfg]'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  },
+  "JointPosShiftChecker": {
+   "bases": [],
+   "fields": [
+    "obj_name",
+    "joint_name",
+    "threshold"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "joint_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "threshold"
+      }
+     ],
+     "signature": "(self, obj_name: 'str' = <factory>, joint_name: 'str' = <factory>, threshold: 'float' = <factory>) -> None"
+    },
+    "check": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', states: 'TensorState') -> 'torch.BoolTensor'"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  },
+  "PositionShiftChecker": {
+   "bases": [],
+   "fields": [
+    "obj_name",
+    "distance",
+    "bounding_distance",
+    "axis"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "distance"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "bounding_distance"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "axis"
+      }
+     ],
+     "signature": "(self, obj_name: 'str' = <factory>, distance: 'float' = <factory>, bounding_distance: 'float' = <factory>, axis: \"Literal['x', 'y', 'z']\" = <factory>) -> None"
+    },
+    "check": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', states: 'TensorState') -> 'torch.BoolTensor'"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  },
+  "RotationShiftChecker": {
+   "bases": [],
+   "fields": [
+    "obj_name",
+    "radian_threshold",
+    "axis"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "radian_threshold"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "axis"
+      }
+     ],
+     "signature": "(self, obj_name: 'str' = <factory>, radian_threshold: 'float' = <factory>, axis: \"Literal['x', 'y', 'z']\" = <factory>) -> None"
+    },
+    "check": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "states"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', states: 'TensorState') -> 'torch.BoolTensor'"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  }
+ },
+ "metasim.task.checkers.detectors": {
+  "BaseDetector": {
+   "bases": [],
+   "fields": [],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "get_debug_viewers": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'list[BaseObjCfg]'"
+    },
+    "is_detected": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', obj_name: 'str') -> 'torch.BoolTensor'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  },
+  "CombinedDetector": {
+   "bases": [
+    "BaseDetector"
+   ],
+   "fields": [
+    "detector1",
+    "detector2"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "detector1"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "detector2"
+      }
+     ],
+     "signature": "(self, detector1: 'BaseDetector' = <factory>, detector2: 'BaseDetector' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "get_debug_viewers": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'list[BaseObjCfg]'"
+    },
+    "is_detected": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', obj_name: 'str') -> 'torch.BoolTensor'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "reset_debug_viewer": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int]')"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  },
+  "Relative2DSphereDetector": {
+   "bases": [
+    "BaseDetector"
+   ],
+   "fields": [
+    "base_obj_name",
+    "relative_pos",
+    "axis",
+    "radius",
+    "debug_vis"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "base_obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "relative_pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "axis"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "radius"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "debug_vis"
+      }
+     ],
+     "signature": "(self, base_obj_name: 'str' = <factory>, relative_pos: 'tuple[float, float, float]' = <factory>, axis: 'tuple[int, int]' = <factory>, radius: 'float' = <factory>, debug_vis: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "get_debug_viewers": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'list[BaseObjCfg]'"
+    },
+    "is_detected": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', obj_name: 'str') -> 'torch.BoolTensor'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  },
+  "Relative3DSphereDetector": {
+   "bases": [
+    "BaseDetector"
+   ],
+   "fields": [
+    "base_obj_name",
+    "relative_pos",
+    "radius",
+    "debug_vis"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "base_obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "relative_pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "radius"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "debug_vis"
+      }
+     ],
+     "signature": "(self, base_obj_name: 'str' = <factory>, relative_pos: 'tuple[float, float, float]' = <factory>, radius: 'float' = <factory>, debug_vis: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "get_debug_viewers": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'list[BaseObjCfg]'"
+    },
+    "is_detected": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', obj_name: 'str') -> 'torch.BoolTensor'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  },
+  "RelativeBboxDetector": {
+   "bases": [
+    "BaseDetector"
+   ],
+   "fields": [
+    "base_obj_name",
+    "relative_pos",
+    "relative_quat",
+    "checker_lower",
+    "checker_upper",
+    "ignore_base_ori",
+    "debug_vis",
+    "name",
+    "fixed"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "base_obj_name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "relative_pos"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "relative_quat"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "checker_lower"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "checker_upper"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "ignore_base_ori"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "debug_vis"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "fixed"
+      }
+     ],
+     "signature": "(self, base_obj_name: 'str' = <factory>, relative_pos: 'tuple[float, float, float]' = <factory>, relative_quat: 'tuple[float, float, float, float]' = <factory>, checker_lower: 'tuple[float, float, float]' = <factory>, checker_upper: 'tuple[float, float, float]' = <factory>, ignore_base_ori: 'bool' = <factory>, debug_vis: 'bool' = <factory>, name: 'str' = <factory>, fixed: 'bool' = <factory>) -> None"
+    },
+    "copy": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'object'"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(obj, data: 'dict[str, Any]') -> 'None'"
+    },
+    "get_debug_viewers": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'list[BaseObjCfg]'"
+    },
+    "is_detected": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', obj_name: 'str') -> 'torch.BoolTensor'"
+    },
+    "replace": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": false,
+       "kind": "VAR_KEYWORD",
+       "name": "kwargs"
+      }
+     ],
+     "signature": "(obj: 'object', **kwargs) -> 'object'"
+    },
+    "reset": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int] | None' = None)"
+    },
+    "reset_debug_viewer": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "handler"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, handler: 'BaseSimHandler', env_ids: 'list[int]')"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      }
+     ],
+     "signature": "(obj: 'object') -> 'dict[str, Any]'"
+    },
+    "validate": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "prefix"
+      }
+     ],
+     "signature": "(obj: 'object', prefix: 'str' = '') -> 'list[str]'"
+    }
+   }
+  }
+ },
  "metasim.task.registry": {
   "get_task_class": {
    "kind": "function",

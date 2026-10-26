@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-try:
-    import isaacgym
-except ImportError:
-    pass
-
 from collections import deque
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -16,11 +10,6 @@ from metasim.queries.base import BaseQueryType
 
 if TYPE_CHECKING:
     from metasim.sim.base import BaseSimHandler
-
-try:
-    import mujoco
-except ImportError:
-    pass
 
 
 def mujoco_net_contact_forces_world(model, data) -> np.ndarray:
@@ -34,6 +23,8 @@ def mujoco_net_contact_forces_world(model, data) -> np.ndarray:
     reaction instead of the force it feels; Isaac Sim / Isaac Gym report world-frame forces on the
     body, so this matches them. One vectorised pass, no per-contact torch dispatch.
     """
+    import mujoco  # the backend is loaded by the handler that calls this; the module stays backend-free
+
     nbody = int(model.nbody)
     ncon = int(data.ncon)
     net = np.zeros((nbody, 3), dtype=np.float64)
@@ -102,7 +93,9 @@ class ContactForces(BaseQueryType):
         """Warm-start the queue with `history_length` entries."""
         for _ in range(self.history_length):
             if self.simulator == "isaacgym":
-                self._current_contact_force = isaacgym.gymtorch.wrap_tensor(
+                from isaacgym import gymtorch  # already imported by the Isaac Gym handler
+
+                self._current_contact_force = gymtorch.wrap_tensor(
                     self.handler.gym.acquire_net_contact_force_tensor(self.handler.sim)
                 )
             elif self.simulator == "isaacsim":
