@@ -37,15 +37,15 @@ from metasim.sim import HybridSimHandler
 from metasim.utils.setup_util import get_sim_handler_class
 from metasim.constants import SimType
 
-scenario = ...                                            # cameras defined here
+scenario = ...  # cameras defined here
 physics = get_sim_handler_class(SimType.MUJOCO)(scenario.replace(simulator="mujoco", cameras=[], headless=True))
 renderer = get_sim_handler_class(SimType.ISAACSIM)(scenario.replace(simulator="isaacsim"))
 handler = HybridSimHandler(scenario, physics, renderer)
-handler.launch()                                          # starts Kit for the renderer
+handler.launch()  # starts Kit for the renderer
 
 handler.set_dof_targets(actions)
 handler.simulate()
-state = handler.get_states(mode="tensor")                 # state.cameras["cam"].rgb: (N, H, W, 3) uint8
+state = handler.get_states(mode="tensor")  # state.cameras["cam"].rgb: (N, H, W, 3) uint8
 ```
 
 If the process already hosts an Isaac Sim application (tests, notebooks, an outer `AppLauncher`),
