@@ -69,20 +69,23 @@ rendering works, no sm_120 wall.
 ## Usage
 
 ```python
-import roboverse_pack.tasks.simpler_env          # auto-registers SimplerEnv/<task> + simpler.<task>
+import roboverse_pack.tasks.simpler_env  # auto-registers SimplerEnv/<task> + simpler.<task>
 
 # (1) MetaSim-native via gym
 import gymnasium as gym
+
 env = gym.make("SimplerEnv/google_robot_pick_coke_can")
 obs, info = env.reset(seed=0)
 obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
 
 # (2) MetaSim-native via the MetaSim task registry
 from metasim.task.registry import get_task_class
+
 task = get_task_class("simpler.widowx_stack_cube")()
 
 # (3) optional upstream passthrough (requires the SimplerEnv clone)
 from roboverse_pack.tasks.simpler_env import register_simpler_env_passthrough
+
 register_simpler_env_passthrough(prefix="SimplerEnvPassthrough/")
 env = gym.make("SimplerEnvPassthrough/google_robot_pick_coke_can")
 ```

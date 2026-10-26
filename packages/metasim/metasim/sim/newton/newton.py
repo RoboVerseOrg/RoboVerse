@@ -1574,7 +1574,8 @@ class NewtonHandler(BaseSimHandler):
                             depth_tensor = depth_tensor[use_env_ids]
 
                     intrinsics = (
-                        torch.tensor(cam_cfg.intrinsics, dtype=torch.float32, device=self.device)
+                        torch
+                        .tensor(cam_cfg.intrinsics, dtype=torch.float32, device=self.device)
                         .unsqueeze(0)
                         .expand(len(use_env_ids), -1, -1)
                     )
