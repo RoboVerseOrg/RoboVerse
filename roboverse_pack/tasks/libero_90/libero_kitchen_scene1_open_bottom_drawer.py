@@ -72,9 +72,6 @@ class LiberoKitchenOpenBottomDrawerTask(Libero90BaseTask):
     workspace_offset = ((0, 0, 0),)  # kitchen_table_offset
     workspace_size = ((1.0, 1.2, 0.05),)  # kitchen_table_full_size
 
-    # Checker: bottom drawer must be open
-    # Use JointPosChecker to check if the drawer joint position exceeds threshold
-
     # Trajectory file path
     traj_filepath = (
         "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_open_the_bottom_drawer_of_the_cabinet_traj_v2.pkl"

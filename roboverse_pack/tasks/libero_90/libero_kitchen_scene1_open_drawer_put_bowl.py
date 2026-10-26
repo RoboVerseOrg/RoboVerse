@@ -102,7 +102,3 @@ class LiberoKitchenOpenDrawerPutBowlTask(Libero90BaseTask):
         ("Open", "wooden_cabinet", "top_level"),
         ("In", "akita_black_bowl", "wooden_cabinet", "top_region"),
     )
-
-    # env.handler.get_states[0]['objects']['wooden_cabinet']['dof_pos']["top_level"] 获取top
-
-    # rewrite checker

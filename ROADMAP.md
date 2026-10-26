@@ -35,8 +35,8 @@ the parallel implementations, then build the benchmark data model on top.
 - [x] Site poses derived from the state (`metasim.utils.site_util.site_pose`): LIBERO-90's success checks
       no longer read `physics.named.data.site_*` (63 reach-ins to 0). The mjlab ports still read `physics`.
 - [x] LIBERO-90 success as the BDDL goal, declared as data (`goal = (("In", obj, region_obj, site), ...)`) and
-      evaluated with LIBERO's predicates (56 tasks). Left on hand-written checkers: the microwave tasks (the asset
-      does not compile standalone), and tasks whose demo file is missing or whose BDDL could not be matched.
+      evaluated with LIBERO's predicates (59 tasks). Left on hand-written checkers: the microwave tasks (the asset
+      does not compile standalone) and `living_room_scene4_stack_the_right_bowl…` (its demo file is missing).
 - [ ] LIBERO `On`'s contact clause (the object touches the region's parent) needs a contact query.
 - [ ] MuJoCo handler: scaling an object collapses a box site's 3-number `size` to one number
       (`_apply_scale_to_mjcf` treats every site as a sphere).

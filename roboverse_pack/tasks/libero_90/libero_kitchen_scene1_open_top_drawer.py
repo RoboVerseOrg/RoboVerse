@@ -5,7 +5,6 @@ from __future__ import annotations
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.task.checkers import JointPosChecker
 from metasim.task.registry import register_task
 
 from .libero_90_base import Libero90BaseTask
@@ -74,17 +73,9 @@ class LiberoKitchenOpenTopDrawerTask(Libero90BaseTask):
     workspace_offset = ((0, 0, 0),)  # kitchen_table_offset
     workspace_size = ((1.0, 1.2, 0.05),)  # kitchen_table_full_size
 
-    # Checker: top drawer must be open
-    # Use JointPosChecker to check if the drawer joint position exceeds threshold
-    checker = JointPosChecker(
-        obj_name="wooden_cabinet",
-        joint_name="top_level",  # Assuming this is the joint name for the top drawer
-        mode="le",  # greater than or equal to
-        radian_threshold=-0.1,  # Minimum opening distance (in radians)
-    )
-
     # Trajectory file path
     traj_filepath = (
-        # "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_open_the_top_drawer_of_the_cabinet_traj_v2.pkl"
-        "roboverse_data/trajs/libero90_ground/libero_90_kitchen_scene1_open_the_top_drawer_of_the_cabinet_traj_v2.pkl"
+        "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_open_the_top_drawer_of_the_cabinet_traj_v2.pkl"
     )
+
+    goal = (("Open", "wooden_cabinet", "top_level"),)

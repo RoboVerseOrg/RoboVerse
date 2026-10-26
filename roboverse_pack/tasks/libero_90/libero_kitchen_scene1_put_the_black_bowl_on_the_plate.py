@@ -74,27 +74,7 @@ class LiberoKitchen1PutBowlOnPlateTask(Libero90BaseTask):
     workspace_offset = ((0, 0, 0),)  # kitchen_table_offset
     workspace_size = ((1.0, 1.2, 0.05),)  # kitchen_table_full_size
 
-    # Checker: bowl must be on the plate (within detection region above plate)
-    # checker = DetectedChecker(
-    #     obj_name="akita_black_bowl",
-    #     detector=RelativeBboxDetector(
-    #         base_obj_name="plate",
-    #         relative_pos=(0.0, 0.0, 0.05),  # Slightly above the plate center
-    #         relative_quat=(1.0, 0.0, 0.0, 0.0),  # Identity rotation
-    #         checker_lower=(-0.1, -0.1, -0.02),  # Detection region half-size
-    #         checker_upper=(0.1, 0.1, 0.1),
-    #         ignore_base_ori=True,
-    #         debug_vis=False,
-    #         name="plate_region",
-    #         fixed=True,
-    #     ),
-    # )
-
     # Trajectory file path
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_put_the_black_bowl_on_the_plate_traj_v2.pkl"
 
     goal = (("On", "akita_black_bowl", "plate"),)
-
-    # env.handler.get_states[0]['objects']['wooden_cabinet']['dof_pos']["top_level"] 获取top
-
-    # rewrite checker
