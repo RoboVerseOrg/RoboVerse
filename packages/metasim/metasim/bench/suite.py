@@ -117,7 +117,6 @@ def _discover() -> None:
     global _DISCOVERED
     if _DISCOVERED:
         return
-    _DISCOVERED = True
     from metasim.utils.package_discovery import get_package_candidates
 
     for package in get_package_candidates("suites"):
@@ -127,6 +126,7 @@ def _discover() -> None:
             if err.name and (package == err.name or package.startswith(err.name + ".")):
                 continue  # this root ships no suites
             raise
+    _DISCOVERED = True  # only once every package imported: a failed import is retried on the next call
 
 
 def list_suites() -> list[str]:
@@ -144,6 +144,37 @@ def get_suite(name: str) -> BenchmarkSuite:
         raise ValueError(f"no suite named {name!r}; registered: {sorted(_SUITES)}") from None
 
 
+SCORING_FIELDS = (
+    "success_rule",
+    "hold_steps",
+    "max_episode_steps",
+    "demo_budget_factor",
+    "demo_budget_quantile",
+    "prompt_split",
+    "instances",
+)
+"""Protocol fields a result must share with the suite to count for it (``episodes`` / ``seed`` / ``name`` may differ)."""
+
+
+def _protocol_mismatch(result: BenchmarkResult, expected: EvalProtocol) -> list[str]:
+    """The scoring fields on which ``result`` was not run under ``expected``."""
+    want = expected.to_dict()
+    try:
+        got = EvalProtocol.from_dict(dict(result.protocol)).to_dict()
+    except (TypeError, ValueError) as err:
+        return [f"unreadable protocol ({err})"]
+    bad = []
+    for name in SCORING_FIELDS:
+        if name == "demo_budget_quantile" and want.get("demo_budget_factor") is None:
+            continue
+        w, g = want.get(name), got.get(name)
+        if name == "instances":
+            w, g = (list(w) if w is not None else None), (list(g) if g is not None else None)
+        if w != g:
+            bad.append(f"{name}={g!r} (suite: {w!r})")
+    return bad
+
+
 def _matches(result: BenchmarkResult, split: str, entry: SuiteTask, suite: BenchmarkSuite) -> bool:
     tag = result.notes.get("suite") if isinstance(result.notes, dict) else None
     if isinstance(tag, dict) and (tag.get("name") != suite.name or tag.get("split") != split):
@@ -154,28 +185,50 @@ def _matches(result: BenchmarkResult, split: str, entry: SuiteTask, suite: Bench
 
 
 def suite_report(
-    suite: BenchmarkSuite, results: Iterable[BenchmarkResult], *, split: str | None = None
+    suite: BenchmarkSuite,
+    results: Iterable[BenchmarkResult],
+    *,
+    split: str | None = None,
+    policy: str | None = None,
 ) -> dict[str, Any]:
-    """Score ``results`` against ``suite``: per task, per split (task-macro and pooled), overall.
+    """Score ``results`` of one policy against ``suite``: per task, per split (task-macro and pooled).
 
     A result counts for a suite task when its task name (and robots, when the suite pins them)
-    match, and — for results written by ``bench suite run`` — its suite and split tags agree. Runs
-    of one task are pooled. A split's ``macro_success_rate`` is the mean over its tasks and is
-    ``None`` while any task is missing or has no defined success signal (``complete`` is False).
+    match, its protocol agrees with the suite's on every field in :data:`SCORING_FIELDS` (episode
+    count and seed may differ), and — for results written by ``bench suite run`` — its suite and split
+    tags agree. Results that match a task but not its protocol are listed under ``rejected``, not
+    scored. Runs of one task are pooled. A split's ``macro_success_rate`` is the mean over its tasks
+    and is ``None`` while any task is missing or has no defined success signal (``complete`` is False).
+
+    Results of several policies are refused unless ``policy`` names the one to score.
     """
-    results = list(results)
+    results = [r for r in results if policy is None or r.policy.get("name") == policy]
+    policies = sorted({str(r.policy.get("name")) for r in results})
+    if len(policies) > 1:
+        raise ValueError(f"results of several policies {policies}; score one at a time (policy=...)")
     simulators = sorted({r.simulator for r in results})
     if len(simulators) > 1:
         raise ValueError(f"results from several simulators {simulators}; report one backend at a time")
     report: dict[str, Any] = {
         "suite": suite.name,
         "simulator": simulators[0] if simulators else suite.simulator,
+        "policy": policies[0] if policies else policy,
         "splits": {},
+        "rejected": [],
     }
     for split_name in [split] if split else list(suite.splits):
         rows = []
         for _, entry in suite.entries(split_name):
-            runs = [r for r in results if _matches(r, split_name, entry, suite)]
+            runs = []
+            expected = suite.protocol_for(entry)
+            for r in results:
+                if not _matches(r, split_name, entry, suite):
+                    continue
+                mismatch = _protocol_mismatch(r, expected)
+                if mismatch:
+                    report["rejected"].append({"split": split_name, "task": entry.task, "mismatch": mismatch})
+                else:
+                    runs.append(r)
             episodes = [e for r in runs for e in r.episodes]
             defined = bool(runs) and all(r.notes.get("success_defined", True) for r in runs)
             k, n = sum(1 for e in episodes if e.success), len(episodes)
@@ -211,7 +264,8 @@ def suite_table(report: dict[str, Any]) -> str:
     def pct(v):
         return "-" if v is None else f"{v:.3f}"
 
-    lines = [f"## {report['suite']} ({report['simulator'] or 'any simulator'})", ""]
+    who = f", policy {report['policy']}" if report.get("policy") else ""
+    lines = [f"## {report['suite']} ({report['simulator'] or 'any simulator'}{who})", ""]
     for split, block in report["splits"].items():
         lines += [
             f"### {split}",
@@ -240,6 +294,8 @@ def suite_table(report: dict[str, Any]) -> str:
             f"{split}: {head}, pooled {pct(block['pooled_success_rate'])} over {block['episodes']} episodes",
             "",
         ]
+    for r in report.get("rejected", []):
+        lines.append(f"- not scored, protocol differs: {r['split']}/{r['task']}: {'; '.join(r['mismatch'])}")
     return "\n".join(lines).rstrip() + "\n"
 
 

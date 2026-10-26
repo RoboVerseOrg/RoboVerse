@@ -107,6 +107,11 @@ class BenchmarkResult:
     def to_dict(self) -> dict[str, Any]:
         """JSON-ready dict; the computed ``summary`` is included for readers without this module."""
         data = asdict(self)
+        for episode in data["episodes"]:
+            # unset optional fields stay out of the file, so a reader that predates them still accepts it
+            for key in ("prompt", "prompt_variant"):
+                if episode.get(key) is None:
+                    episode.pop(key, None)
         data["summary"] = self.summary
         return data
 

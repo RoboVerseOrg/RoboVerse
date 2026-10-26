@@ -18,11 +18,14 @@ Wire protocol ``roboverse.bench.remote/1`` (stdlib HTTP + NumPy, no pickle anywh
   env, ``""`` for none), ``request`` and ``task``. The response is JSON ``{"actions": ...}`` of shape
   ``(num_envs, action_dim)``, or ``(num_envs, horizon, action_dim)`` for an action chunk.
 
-Action chunks: the client executes a chunk step by step and asks again when any running env has
-run out, replacing every env's remainder (one request serves all envs; an env reset mid-chunk drops
-its own remainder). On the server, observations arrive as nested mappings of tensors with
-attribute access (``obs.robots["franka"].joint_pos``), so a policy written against ``TensorState``
-runs unchanged as long as it reads tensors only.
+Action chunks: the client executes each env's chunk step by step. When an env has run out (its
+chunk is used up, or it was reset), the client asks the server for the whole batch and hands the new
+rows only to the envs that ran out; every other env finishes the chunk it is executing. So each env
+executes every chunk it receives to the end, as it would with ``num_envs=1``. A policy that keeps
+per-env state across calls must key it by env (``reset`` names the envs that start). On the server,
+observations arrive as nested mappings of tensors with attribute access
+(``obs.robots["franka"].joint_pos``), so a policy written against ``TensorState`` runs unchanged as
+long as it reads tensors only. Mapping keys arrive as strings.
 """
 
 from __future__ import annotations
@@ -31,10 +34,11 @@ import dataclasses
 import http.client
 import io
 import json
+import threading
 import time
 import urllib.error
 import urllib.request
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 import numpy as np
@@ -55,8 +59,11 @@ MAX_BODY_BYTES = 1 << 30
 def flatten_observation(obs: Any, prefix: str = "obs", keys: tuple[str, ...] | None = None) -> dict[str, np.ndarray]:
     """Every array leaf of ``obs`` as ``{"obs/<path>": ndarray}``.
 
-    Tensors, NumPy arrays and numbers are leaves; mappings and dataclasses (``TensorState``,
-    ``RobotState``, ``CameraState``) are walked; strings, ``None`` and other objects are skipped.
+    Tensors, NumPy arrays and numbers are leaves (half and bfloat16 tensors are sent as float32);
+    mappings and dataclasses (``TensorState``, ``RobotState``, ``CameraState``) are walked; strings and
+    ``None`` are skipped, and so are lists of strings (``body_names``). A list or tuple of values, an
+    array of strings or objects and a key containing ``/`` raise ``ValueError`` rather than vanish on
+    the way to the policy.
     ``keys`` keeps only paths that start with one of the given prefixes (``("robots", "cameras/front/rgb")``),
     which is how a client avoids shipping cameras the policy does not read.
     """
@@ -72,9 +79,16 @@ def flatten_observation(obs: Any, prefix: str = "obs", keys: tuple[str, ...] | N
         if not wanted(path):
             return
         if isinstance(value, torch.Tensor):
-            out[path] = value.detach().cpu().numpy()
+            value = value.detach()
+            if value.dtype in (torch.bfloat16, torch.float16):
+                value = value.float()
+            out[path] = value.cpu().numpy()
             return
         if isinstance(value, np.ndarray):
+            if value.dtype.kind in "OUSV":
+                raise ValueError(
+                    f"observation leaf {path} is a {value.dtype} array; only numeric arrays cross the wire"
+                )
             out[path] = value
             return
         if isinstance(value, (bool, int, float, np.number)):
@@ -82,8 +96,17 @@ def flatten_observation(obs: Any, prefix: str = "obs", keys: tuple[str, ...] | N
             return
         if isinstance(value, dict):
             for k, v in value.items():
+                if "/" in str(k):
+                    raise ValueError(f"observation key {k!r} under {path} contains '/', the wire's path separator")
                 walk(v, f"{path}/{k}")
             return
+        if isinstance(value, (list, tuple)):
+            if all(isinstance(v, str) for v in value):
+                return  # names (``body_names``, ``joint_names``) are metadata, like a plain string
+            raise ValueError(
+                f"observation leaf {path} is a {type(value).__name__} of values; send a tensor or array (or filter it "
+                "out with obs_keys)"
+            )
         if dataclasses.is_dataclass(value) and not isinstance(value, type):
             for f in dataclasses.fields(value):
                 walk(getattr(value, f.name), f"{path}/{f.name}")
@@ -249,6 +272,10 @@ class RemotePolicy:
                 detail = err.read().decode(errors="replace")[:2000]
                 raise RuntimeError(f"policy server {method} {url} answered {err.code}: {detail}") from err
             except (urllib.error.URLError, ConnectionError, http.client.HTTPException, TimeoutError) as err:
+                reason = getattr(err, "reason", err)
+                if method != "GET" and not isinstance(reason, ConnectionRefusedError):
+                    # the server may already have run this reset/act; replaying it would step a stateful policy twice
+                    raise ConnectionError(f"policy server {method} {url} failed mid-request: {err}") from err
                 if attempt == self.retries:
                     raise ConnectionError(
                         f"policy server {url} unreachable after {attempt + 1} attempt(s): {err}"
@@ -272,15 +299,16 @@ class RemotePolicy:
 
     def act(self, obs: Any, ctx: PolicyContext) -> torch.Tensor:
         """The next action of every env, asking the server when a running env's chunk is used up."""
-        if any(not self._chunks.get(i) for i in self._active):
-            self._refill(obs, ctx)
+        empty = [i for i in sorted(self._active) if not self._chunks.get(i)]
+        if empty:
+            self._refill(obs, ctx, empty)
         rows = []
         for env_id in range(ctx.num_envs):
             chunk = self._chunks.get(env_id)
             rows.append(chunk.pop(0) if chunk else ctx.default_action.cpu().numpy())
         return torch.as_tensor(np.stack(rows), dtype=torch.float32, device=ctx.device)
 
-    def _refill(self, obs: Any, ctx: PolicyContext) -> None:
+    def _refill(self, obs: Any, ctx: PolicyContext, env_ids: list[int]) -> None:
         arrays = flatten_observation(obs, keys=self.obs_keys)
         arrays["prompt"] = np.asarray([self._prompts.get(i, "") for i in range(ctx.num_envs)], dtype=str)
         arrays["request"] = np.asarray(self._requests)
@@ -299,14 +327,19 @@ class RemotePolicy:
             )
         if not np.isfinite(actions).all():
             raise ValueError("policy server returned non-finite actions")
-        self._chunks = {i: list(actions[i]) for i in range(ctx.num_envs)}
+        for i in env_ids:
+            self._chunks[i] = list(actions[i])
 
 
 # --------------------------------------------------------------------------- server
 
 
 class PolicyServer:
-    """Serve ``policy`` on ``host:port`` for :class:`RemotePolicy` clients (one request at a time).
+    """Serve ``policy`` on ``host:port`` for :class:`RemotePolicy` clients.
+
+    Connections are handled on threads (a stalled client cannot block the others, and is dropped
+    after 30 s of silence), while the policy itself is called under one lock, one ``reset`` / ``act``
+    at a time.
 
     Args:
         policy: Any :class:`Policy`. It sees a :class:`PolicyContext` rebuilt from the client's (with
@@ -338,6 +371,8 @@ class PolicyServer:
         server = self
 
         class _Handler(BaseHTTPRequestHandler):
+            timeout = 30  # a client that stalls mid-request is dropped instead of holding a thread forever
+
             def log_message(self, fmt, *args):  # route through loguru at debug level
                 log.debug("bench serve: " + fmt % args)
 
@@ -346,8 +381,11 @@ class PolicyServer:
                 self.send_response(code)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
+                try:
+                    self.end_headers()
+                    self.wfile.write(body)
+                except (BrokenPipeError, ConnectionResetError):  # the client is gone; nothing to tell it
+                    self.close_connection = True
 
             def do_GET(self):
                 if self.path.rstrip("/").endswith("/metadata"):
@@ -356,23 +394,40 @@ class PolicyServer:
                     self._reply(404, {"error": f"unknown path {self.path}"})
 
             def do_POST(self):
-                length = int(self.headers.get("Content-Length") or 0)
-                if length > MAX_BODY_BYTES:
-                    self._reply(413, {"error": f"request of {length} bytes exceeds {MAX_BODY_BYTES}"})
-                    return
-                body = self.rfile.read(length)
                 try:
-                    if self.path.rstrip("/").endswith("/reset"):
-                        self._reply(200, server.handle_reset(json.loads(body.decode())))
-                    elif self.path.rstrip("/").endswith("/act"):
-                        self._reply(200, server.handle_act(body))
-                    else:
-                        self._reply(404, {"error": f"unknown path {self.path}"})
+                    length = int(self.headers["Content-Length"])
+                except (KeyError, TypeError, ValueError):
+                    self._reply(411, {"error": "POST needs a numeric Content-Length"})
+                    return
+                if length < 0 or length > MAX_BODY_BYTES:
+                    self._reply(413, {"error": f"request length {length} is outside [0, {MAX_BODY_BYTES}]"})
+                    return
+                try:
+                    body = self.rfile.read(length)
+                except (TimeoutError, OSError):  # stalled past the handler timeout, or reset
+                    self.close_connection = True
+                    return
+                if len(body) != length:  # the client closed before sending what it announced
+                    self.close_connection = True
+                    return
+                route = self.path.rstrip("/")
+                if not (route.endswith("/reset") or route.endswith("/act")):
+                    self._reply(404, {"error": f"unknown path {self.path}"})
+                    return
+                try:
+                    with server._lock:  # one policy call at a time; /metadata stays answerable meanwhile
+                        if route.endswith("/reset"):
+                            reply = server.handle_reset(json.loads(body.decode()))
+                        else:
+                            reply = server.handle_act(body)
+                    self._reply(200, reply)
                 except Exception as err:  # the client gets the reason instead of a dropped connection
                     log.exception("bench serve: request failed")
                     self._reply(500, {"error": f"{type(err).__name__}: {err}"})
 
-        self._httpd = HTTPServer((host, port), _Handler)
+        self._lock = threading.Lock()
+        self._httpd = ThreadingHTTPServer((host, port), _Handler)
+        self._httpd.daemon_threads = True
         self.host, self.port = self._httpd.server_address[:2]
 
     @property

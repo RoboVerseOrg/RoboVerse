@@ -120,7 +120,10 @@ python -m metasim bench suite report --suite tabletop-mujoco bench_results/suite
 ```
 
 `suite run` writes one result file per task plus `suite.json` / `suite.md`, and exits 1 unless every
-task scored. Suites are content. RoboVerse registers them in `roboverse_pack/suites/`, and another
+task scored. A report scores one policy at a time (`suite report --policy` picks one when a
+directory holds several). A result counts only when its scoring protocol matches the suite's: the
+success rule, cap, budget, prompt split and instances must agree, while episode count and seed may
+differ. Results that differ are listed as not scored. Suites are content. RoboVerse registers them in `roboverse_pack/suites/`, and another
 pack does the same in its own `<root>.suites` package, through the `metasim.suites` entry point
 group or `METASIM_SUITE_PACKAGES`:
 
@@ -158,7 +161,8 @@ prompt bank with 8 training and 4 held-out paraphrases.
   20% of the time and a training paraphrase otherwise. `heldout` uses a paraphrase that `train` never
   produces. The draw is a hash of the task, episode and seed, so it is reproducible and independent
   of the simulator. A policy reads it as `instance.prompt` in `reset`, and the result records
-  `prompt` / `prompt_variant` per episode. A task with only `task_desc` supports `canonical` and
+  `prompt` / `prompt_variant` per episode. Under `train` and `heldout` the context's `instruction` is
+  `None`, so a policy cannot fall back to the canonical text by accident. A task with only `task_desc` supports `canonical` and
   `train`, and refuses `heldout`.
 
 ## Served policies
@@ -179,10 +183,18 @@ pickle. `GET /metadata` is a handshake whose fields go into the result's policy 
 `--require-metadata` fails the run before the first episode when they differ. `POST /reset` carries
 the `PolicyContext` and the starting instances, with their prompts. `POST /act` sends every array leaf
 of the observation and gets back actions of shape `(num_envs, action_dim)`, or
-`(num_envs, horizon, action_dim)` for an action chunk, which the client executes step by step. The
-server binds `127.0.0.1` unless `--host` says otherwise. It answers one request at a time, and the
-policy sees observations as nested mappings of tensors with attribute access. The simulator's
-scenario does not cross the wire, so `ctx.extras` is empty on the server.
+`(num_envs, horizon, action_dim)` for an action chunk. The client executes every chunk to the end
+for each env. When some envs run out, it asks for the batch and gives the new rows only to those
+envs, so a chunked policy behaves per env as it does with `num_envs=1`.
+
+The server binds `127.0.0.1` unless `--host` says otherwise, and has no authentication. It serves
+connections on threads, drops a client that stalls for 30 seconds, and calls the policy under one
+lock. The client retries a request only when the connection was refused, so a `reset` or `act` the
+server may already have run is never sent twice. The policy sees observations as nested mappings of
+tensors with attribute access and string keys. Lists of names such as `body_names` are skipped.
+A list of values, a string array or a key containing `/` is refused on the client rather than dropped. The simulator's scenario does not cross the wire, so
+`ctx.extras` is empty on the server. `--policy-url` cannot be combined with `--policy`,
+`--policy-arg` or `--checkpoint`; give those to `bench serve` instead.
 
 The suite and split structure, the demo-length budget and the held-out instruction split follow the
 evaluation design of [HandsOn](https://github.com/TsinghuaC3I/HandsOn) (MIT). They are reimplemented

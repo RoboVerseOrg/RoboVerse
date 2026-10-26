@@ -1599,9 +1599,14 @@
      "default": true,
      "kind": "KEYWORD_ONLY",
      "name": "split"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "policy"
     }
    ],
-   "signature": "(suite: 'BenchmarkSuite', results: 'Iterable[BenchmarkResult]', *, split: 'str | None' = None) -> 'dict[str, Any]'"
+   "signature": "(suite: 'BenchmarkSuite', results: 'Iterable[BenchmarkResult]', *, split: 'str | None' = None, policy: 'str | None' = None) -> 'dict[str, Any]'"
   },
   "suite_table": {
    "kind": "function",

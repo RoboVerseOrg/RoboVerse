@@ -43,8 +43,9 @@ class PolicyContext:
     default_joint_positions: dict[str, dict[str, float]] = field(default_factory=dict)
     """``robot -> {joint: default position}`` for every action joint, whatever the action bounds describe."""
     instruction: str | None = None
-    """The task's language instruction (``task_desc``, else its ``prompt_bank``'s canonical text) when it has one.
-    The instruction of a given episode is ``TaskInstance.prompt`` (``EvalProtocol.prompt_split``)."""
+    """The task's language instruction (``task_desc``, else its ``prompt_bank``'s canonical text) under the
+    default ``prompt_split="canonical"``; ``None`` under ``"train"`` / ``"heldout"``, where each episode's
+    instruction is its ``TaskInstance.prompt`` (given to ``reset``)."""
     extras: dict[str, Any] = field(default_factory=dict)
     """Harness-provided objects a policy adapter may need: ``"scenario"`` is the env's ``ScenarioCfg``."""
 
@@ -60,7 +61,7 @@ class Policy(Protocol):
 
     ``reset`` is called before the first step of every episode with the env slots that start one
     and their instances (a replay policy reads the demo actions from them, a VLA reads the
-    instruction from the context). ``act`` returns an action for *all* ``num_envs`` slots — a tensor
+    episode's instruction from ``instance.prompt``). ``act`` returns an action for *all* ``num_envs`` slots — a tensor
     ``(num_envs, action_dim)`` in the handler's action order, or a per-env list of
     ``{robot: {"dof_pos_target": {joint: value}}}`` dicts — whatever ``env.step`` accepts.
     """

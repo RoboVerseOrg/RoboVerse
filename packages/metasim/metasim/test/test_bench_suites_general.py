@@ -169,7 +169,17 @@ def test_evaluate_applies_the_demo_budget(monkeypatch):
 # ----------------------------------------------------------------------------------------------
 # suites
 # ----------------------------------------------------------------------------------------------
-def _result(task, successes, n, *, robots=("bot",), simulator="fake", notes=None):
+SUITE = BenchmarkSuite(
+    name="toy",
+    splits={"core": ("a", "b"), "heldout": (SuiteTask(task="c", protocol={"episodes": 5}),)},
+    protocol=EvalProtocol(episodes=10, demo_budget_factor=3.0),
+    simulator="fake",
+)
+
+
+def _result(task, successes, n, *, robots=("bot",), simulator="fake", notes=None, policy="p", protocol=None):
+    from dataclasses import replace
+
     from metasim.bench import BenchmarkResult
 
     return BenchmarkResult(
@@ -177,19 +187,11 @@ def _result(task, successes, n, *, robots=("bot",), simulator="fake", notes=None
         simulator=simulator,
         robots=list(robots),
         num_envs=1,
-        protocol=EvalProtocol(episodes=n).to_dict(),
-        policy={"name": "p"},
+        protocol=(protocol or replace(SUITE.protocol, episodes=n)).to_dict(),
+        policy={"name": policy},
         episodes=[_episode(i, i < successes) for i in range(n)],
         notes=dict(notes or {}),
     )
-
-
-SUITE = BenchmarkSuite(
-    name="toy",
-    splits={"core": ("a", "b"), "heldout": (SuiteTask(task="c", protocol={"episodes": 5}),)},
-    protocol=EvalProtocol(episodes=10, demo_budget_factor=3.0),
-    simulator="fake",
-)
 
 
 def test_suite_validates_and_applies_overrides():
@@ -382,3 +384,146 @@ def test_actions_to_array_orders_dict_actions_by_joint():
     ctx = build_context(env, EvalProtocol())
     arr = actions_to_array([{"bot": {"dof_pos_target": {"j1": 1.5, "j0": -0.5}}}, {"bot": {"dof_pos_target": {}}}], ctx)
     assert arr.tolist() == [[-0.5, 1.5], [0.5, 1.0]]
+
+
+def test_suite_report_refuses_mixed_policies_and_rejects_other_protocols():
+    with pytest.raises(ValueError, match="several policies"):
+        suite_report(SUITE, [_result("a", 1, 1, policy="replay"), _result("b", 0, 1, policy="hold")])
+    only = suite_report(
+        SUITE, [_result("a", 1, 1, policy="replay"), _result("a", 0, 1, policy="hold")], policy="replay"
+    )
+    assert only["policy"] == "replay" and only["splits"]["core"]["tasks"][0]["successes"] == 1
+    other = _result("a", 10, 10, protocol=EvalProtocol(episodes=10, success_rule="final"))
+    report = suite_report(SUITE, [other, _result("b", 1, 1)], split="core")
+    rows = {r["task"]: r for r in report["splits"]["core"]["tasks"]}
+    assert rows["a"]["status"] == "missing" and not report["splits"]["core"]["complete"]
+    assert report["rejected"][0]["task"] == "a" and any("success_rule" in m for m in report["rejected"][0]["mismatch"])
+    assert "protocol differs" in suite_table(report)
+    # episode count and seed may differ (smoke runs still count)
+    smoke = _result("a", 1, 2, protocol=EvalProtocol(episodes=2, seed=5, demo_budget_factor=3.0))
+    assert suite_report(SUITE, [smoke], split="core")["splits"]["core"]["tasks"][0]["status"] == "scored"
+
+
+def test_suite_discovery_retries_after_a_failed_import(monkeypatch, tmp_path):
+    pkg = tmp_path / "flaky_suites_pkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("raise RuntimeError('broken on first import')\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.setenv("METASIM_SUITE_PACKAGES", "flaky_suites_pkg")
+    suite_mod._reset_registry_for_tests()
+    try:
+        with pytest.raises(RuntimeError, match="broken"):
+            suite_mod.list_suites()
+        (pkg / "__init__.py").write_text(
+            "from metasim.bench import BenchmarkSuite, register_suite\n"
+            "register_suite(BenchmarkSuite(name='flaky', splits={'core': ('x',)}))\n"
+        )
+        import sys
+
+        sys.modules.pop("flaky_suites_pkg", None)
+        assert "flaky" in suite_mod.list_suites()
+    finally:
+        suite_mod._reset_registry_for_tests()
+
+
+def test_remote_chunks_are_finished_per_env_across_staggered_resets(served):
+    policy = _ChunkPolicy()
+    server = served(policy)
+    # env 0's episode lasts 7 steps, env 1's 2 steps (it resets mid-chunk, twice)
+    env = _DictObsEnv(num_envs=2, schedule=[(None, 7, False), (None, 2, False)], pool_size=2)
+    evaluate(env, RemotePolicy(server.url), EvalProtocol(episodes=4), task_name="t")
+    env0 = [round(float(a[0, 0] - 0.5), 4) for a in env.actions[:7]]
+    assert env0 == [0.0, 0.01, 0.02, 0.0, 0.01, 0.02, 0.0]  # exactly as with num_envs=1
+
+
+def test_server_rejects_bad_lengths_and_survives_a_stalled_client(served):
+    import http.client
+    import socket
+
+    server = served(HoldPolicy())
+    for headers, code in (({"Content-Length": "-1"}, 413), ({}, 411)):
+        conn = http.client.HTTPConnection(server.host, server.port, timeout=5)
+        conn.putrequest("POST", "/act")
+        for k, v in headers.items():
+            conn.putheader(k, v)
+        conn.endheaders()
+        assert conn.getresponse().status == code
+        conn.close()
+    stalled = socket.create_connection((server.host, server.port))
+    stalled.sendall(b"POST /act HTTP/1.1\r\nContent-Length: 100\r\n\r\npartial")
+    try:
+        assert RemotePolicy(server.url, timeout=5, retries=0).metadata["name"] == "hold"
+    finally:
+        stalled.close()
+
+
+def test_remote_posts_are_not_replayed_after_a_mid_request_failure(served, monkeypatch):
+    import urllib.error
+
+    server = served(HoldPolicy())
+    client = RemotePolicy(server.url, retries=3, retry_wait_s=0)
+    calls = []
+
+    def flaky_open(req, timeout=None):
+        calls.append(req.get_method())
+        raise urllib.error.URLError(TimeoutError("read timed out"))
+
+    monkeypatch.setattr(client._opener, "open", flaky_open)
+    with pytest.raises(ConnectionError, match="mid-request"):
+        client._request("POST", "/act", b"x")
+    assert calls == ["POST"]
+    calls.clear()
+    with pytest.raises(ConnectionError, match="unreachable"):
+        client._request("GET", "/metadata")
+    assert calls == ["GET"] * 4
+
+
+def test_observation_codec_refuses_what_it_cannot_carry():
+    with pytest.raises(ValueError, match="list"):
+        flatten_observation({"a": [torch.ones(1)]})
+    assert flatten_observation({"body_names": ["a", "b"], "q": torch.ones(1)}).keys() == {"obs/q"}
+    with pytest.raises(ValueError, match="'/'"):
+        flatten_observation({"a/b": torch.ones(1)})
+    with pytest.raises(ValueError, match="numeric"):
+        flatten_observation({"names": np.asarray(["x", "y"])})
+    flat = flatten_observation({"h": torch.ones(2, dtype=torch.bfloat16)})
+    assert flat["obs/h"].dtype == np.float32
+
+
+def test_results_leave_unset_prompts_out_of_the_file():
+    result = _result("a", 1, 2)
+    assert all("prompt" not in e and "prompt_variant" not in e for e in result.to_dict()["episodes"])
+
+
+def test_context_instruction_is_withheld_under_a_paraphrase_split():
+    from metasim.bench import build_context
+
+    env = _ScriptedEnv(num_envs=1, schedule=[(None, 2, False)])
+    env.prompt_bank = BANK
+    assert build_context(env, EvalProtocol()).instruction == "do the thing"
+    assert build_context(env, EvalProtocol(prompt_split="heldout")).instruction is None
+
+
+def test_observation_codec_carries_a_real_tensor_state():
+    from metasim.types import CameraState, RobotState, TensorState
+
+    robot = RobotState(
+        root_state=torch.zeros(2, 13),
+        body_names=["link0", "link1"],
+        body_state=torch.zeros(2, 2, 13),
+        joint_pos=torch.ones(2, 9),
+        joint_vel=torch.zeros(2, 9),
+        joint_pos_target=torch.ones(2, 9),
+        joint_vel_target=None,
+        joint_effort_target=torch.zeros(2, 9),
+    )
+    camera = CameraState(
+        rgb=torch.zeros(2, 4, 4, 3, dtype=torch.uint8),
+        depth=None,
+        instance_id_seg=torch.zeros(2, 4, 4, dtype=torch.int32),
+        instance_id_seg_id2label={1: "cube"},
+    )
+    state = TensorState(objects={}, robots={"franka": robot}, cameras={"front": camera})
+    tree = unflatten_observation(flatten_observation(state))
+    assert torch.equal(tree.robots["franka"].joint_pos, torch.ones(2, 9))
+    assert tree.cameras["front"].rgb.shape == (2, 4, 4, 3) and "body_names" not in tree.robots["franka"]

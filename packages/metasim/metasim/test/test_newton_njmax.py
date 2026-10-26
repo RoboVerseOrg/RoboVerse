@@ -37,3 +37,16 @@ def test_unset_njmax_scales_with_dofs_per_world_not_total():
     big = NewtonHandler._resolve_njmax(_stub(1, 64), None)
     assert big == NewtonHandler.NJMAX_ROWS_PER_DOF * 64
     assert NewtonHandler._resolve_njmax(_stub(1024, 1024 * 64), None) == big
+
+
+def test_native_estimate_is_read_from_the_built_solver():
+    import mujoco
+
+    # a free body over a height field: MuJoCo-Warp asks for ~41 x nv + 53 rows, above the floor
+    xml = """<mujoco><asset><hfield name="h" nrow="4" ncol="4" size="1 1 0.1 0.1"/></asset>
+    <worldbody><geom type="hfield" hfield="h"/><body pos="0 0 1"><freejoint/><geom size="0.1"/></body></worldbody></mujoco>"""
+    model = mujoco.MjModel.from_xml_string(xml)
+    stub = SimpleNamespace(_solver=SimpleNamespace(mj_model=model, mj_data=mujoco.MjData(model)))
+    native = NewtonHandler._native_njmax_estimate(stub)
+    assert native is not None and native > NewtonHandler.NJMAX_FLOOR
+    assert NewtonHandler._native_njmax_estimate(SimpleNamespace(_solver=None)) is None

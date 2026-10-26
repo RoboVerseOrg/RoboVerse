@@ -62,8 +62,9 @@ first; the data model builds on it.
 - [~] Every evaluator in `roboverse_learn` converges on `metasim.bench.evaluate`. Done: FastTD3 checkpoints
       (`roboverse_learn.rl.fast_td3.bench_policy:FastTD3Policy`) and IL runners / diffusion-policy checkpoints
       (`roboverse_learn.il.runners.bench_policy:ILPolicy`) score through `bench run --policy <import path>
-      --checkpoint`. Open: ACT, the three VLA evals (they run inside their own environments; a thin HTTP
-      or subprocess adapter is the likely shape) and rsl_rl, then retiring the legacy loops once their
+      --checkpoint`. Any policy can also run in its own environment behind `bench serve` and be scored
+      with `bench run --policy-url` (`metasim.bench.remote`). Open: ACT, the three VLA evals (each as a
+      `Policy` served from its own environment) and rsl_rl, then retiring the legacy loops once their
       extras (domain randomisation, videos) live in the harness.
 - [x] Task health gate: `python -m metasim bench health --sim <backend>` replays every task's demos and
       classifies it (`ok` / `low` / `undefined` / `unsupported` / `no-demos` / `error`), exit 1 on `low` or
@@ -78,6 +79,18 @@ first; the data model builds on it.
       of the authoring machine (data items: `assets/maniskill/PlaceSphere/bin/mjcf/PlaceSphere_bin.xml`,
       `assets/maniskill/PokeCube/peg/mjcf/stick.xml`, `assets/maniskill/PullCubeTool/tool/mjcf/tool.xml`).
       Open: run the sweep over every task with demos per release and publish the table.
+- [x] Multi-task suites (`metasim.bench.suite`, `bench suite run|report`): splits scored task-macro,
+      incomplete splits reported as such; demo-length episode budgets; per-episode instructions from a
+      task `prompt_bank` with held-out paraphrases (`--prompt-split heldout`). First suite:
+      `tabletop-mujoco` (5 tasks, replay task-macro 0.933 at 3 episodes per task). The design follows
+      HandsOn's evaluation protocol (MIT; `THIRD_PARTY_NOTICES.md`).
+- [ ] A dexterous suite: HandsOn-style tasks (ball in bowl, fruit in bucket, peg insertion, cup
+      upright) re-authored on Sharpa Wave with a floating or arm-mounted base, on MuJoCo and Newton.
+      Needs a mounted-hand embodiment (§4), objects with settled licenses (YCB via our own asset
+      pipeline), and demos so the suite has a replay ceiling. Report it as a re-hosted variant: scores
+      do not compare to HandsOn's own platform.
+- [ ] Demo budgets from the replayed success step rather than the recorded length (pick_cube and
+      stack_cube demos run to the time-out after the task is solved).
 - [ ] The task bases keep the un-tiled demo states and actions they load (one source of truth);
       `metasim.bench.instance_pool` reads them instead of parsing the demo file a second time.
 - [ ] Checkers move out of `metasim.example` into `metasim.task.success` as the public, declarative

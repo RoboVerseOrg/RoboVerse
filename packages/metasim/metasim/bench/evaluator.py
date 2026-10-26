@@ -109,7 +109,11 @@ def build_context(env, protocol: EvalProtocol, *, max_episode_steps: int | None 
         action_high=torch.tensor(high, dtype=torch.float32, device=device),
         default_action=torch.tensor(default, dtype=torch.float32, device=device),
         default_joint_positions=default_joint_positions,
-        instruction=getattr(env, "task_desc", None) or (bank.canonical if (bank := task_prompt_bank(env)) else None),
+        # under a train / held-out split the instruction of an episode is its instance's prompt; a canonical
+        # text here would let a policy that reads the context run every episode on the training text
+        instruction=None
+        if protocol.prompt_split != "canonical"
+        else (getattr(env, "task_desc", None) or (bank.canonical if (bank := task_prompt_bank(env)) else None)),
         extras={"scenario": scenario},  # for adapters that need the robot configs or the camera set-up
     )
 
@@ -397,7 +401,7 @@ def evaluate(
         wall_time_s=time.perf_counter() - started,
         notes={
             "instance_pool": len(pool),
-            "instruction": ctx.instruction,
+            "instruction": ctx.instruction or (bank.canonical if bank else None),
             "task_class": type(env).__qualname__,
             "success_defined": success_defined,
             "episode_cap": cap or (ctx.max_episode_steps or None),

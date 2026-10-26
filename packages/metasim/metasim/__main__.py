@@ -124,6 +124,20 @@ def _make_policy(args: argparse.Namespace):
     from metasim.bench import RemotePolicy, checkpoint_sha256, load_policy
 
     if getattr(args, "policy_url", None):
+        ignored = [
+            flag
+            for flag, given in (
+                ("--policy", args.policy not in (None, "hold")),
+                ("--policy-arg", bool(args.policy_arg)),
+                ("--checkpoint", bool(args.checkpoint)),
+            )
+            if given
+        ]
+        if ignored:
+            raise SystemExit(
+                f"--policy-url scores the served policy; {', '.join(ignored)} would be ignored. Give the checkpoint to "
+                "`bench serve` and pin it here with --require-metadata checkpoint=<path>."
+            )
         policy = RemotePolicy(
             args.policy_url,
             required_metadata=_parse_kv(args.require_metadata),
@@ -242,10 +256,10 @@ def _bench_suite_list(args: argparse.Namespace) -> int:
     return 0
 
 
-def _write_suite_report(suite, results, out_dir: str) -> dict:
+def _write_suite_report(suite, results, out_dir: str, *, policy: str | None = None) -> dict:
     from metasim.bench import suite_report, suite_table
 
-    report = suite_report(suite, results)
+    report = suite_report(suite, results, policy=policy)
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "suite.json"), "w") as f:
         json.dump(report, f, indent=2)
@@ -270,11 +284,11 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
     overrides = {k: v for k, v in {"episodes": args.episodes, "seed": args.seed}.items() if v is not None}
     results, failures = [], []
     for split, entry in suite.entries(args.split):
-        protocol = suite.protocol_for(entry)
-        if overrides:
-            protocol = dataclasses.replace(protocol, **overrides)
         print(f"=== {suite.name}/{split}: {entry.task}", file=sys.stderr, flush=True)
         try:
+            protocol = suite.protocol_for(entry)
+            if overrides:
+                protocol = dataclasses.replace(protocol, **overrides)
             policy, policy_info = _make_policy(args)
             env = _make_env(
                 entry.task,
@@ -313,12 +327,16 @@ def _bench_suite_report(args: argparse.Namespace) -> int:
 
     suite = get_suite(args.suite)
     results, _ = _load_results(args.paths)
-    report = _write_suite_report(suite, results, args.out_dir) if args.out_dir else None
-    if report is None:
-        from metasim.bench import suite_report, suite_table
+    try:
+        if args.out_dir:
+            report = _write_suite_report(suite, results, args.out_dir, policy=args.policy)
+        else:
+            from metasim.bench import suite_report, suite_table
 
-        report = suite_report(suite, results)
-        print(suite_table(report))
+            report = suite_report(suite, results, policy=args.policy)
+            print(suite_table(report))
+    except ValueError as err:
+        raise SystemExit(str(err)) from err
     return 0 if all(block["complete"] for block in report["splits"].values()) else 1
 
 
@@ -569,6 +587,7 @@ def _add_bench(sub) -> None:
     sp.add_argument("--suite", required=True)
     sp.add_argument("paths", nargs="+")
     sp.add_argument("--out-dir", help="also write suite.json / suite.md here")
+    sp.add_argument("--policy", help="policy name to score when the results hold several")
     sp.set_defaults(func=_bench_suite_report)
     h = bs.add_parser("health", help="task health gate: the replay baseline on every task that ships demos")
     h.add_argument("--sim", required=True, help="simulator backend the demos were recorded on, e.g. mujoco")

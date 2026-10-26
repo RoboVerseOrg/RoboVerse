@@ -217,22 +217,29 @@ class NewtonHandler(BaseSimHandler):
         if getattr(sim_params, "newton_mujoco_disable_contacts", False):
             _iter_kw["disable_contacts"] = True
 
+        def build_solver(njmax: int | None):
+            if use_mujoco_contacts:
+                return SolverMuJoCo(
+                    self._model,
+                    njmax=njmax,
+                    nconmax=sim_params.nconmax,
+                    use_mujoco_contacts=use_mujoco_contacts,
+                    **_iter_kw,
+                )
+            # A weird bug that if passes use_mujoco_contacts=False the contact number would be super large causing bugs
+            return SolverMuJoCo(self._model, njmax=njmax, nconmax=sim_params.nconmax, **_iter_kw)
+
         njmax = self._resolve_njmax(sim_params.njmax)
-        if use_mujoco_contacts:
-            self._solver = SolverMuJoCo(
-                self._model,
-                njmax=njmax,
-                nconmax=sim_params.nconmax,
-                use_mujoco_contacts=use_mujoco_contacts,
-                **_iter_kw,
-            )
-        else:  # A weird bug that if passes use_mujoco_contacts=False the contact number would be super large causing bugs
-            self._solver = SolverMuJoCo(
-                self._model,
-                njmax=njmax,
-                nconmax=sim_params.nconmax,
-                **_iter_kw,
-            )
+        self._solver = build_solver(njmax)
+        if sim_params.njmax is None:
+            # With MuJoCo contacts Newton passes njmax through as given, so a floor below MuJoCo-Warp's own
+            # estimate (flex 512, SDF 256, ~41 x nv with a height field) would act as a cap: rebuild at that size.
+            native = self._native_njmax_estimate()
+            if native is not None and native > njmax:
+                log.info(
+                    f"Newton: njmax {njmax} is below MuJoCo-Warp's estimate {native} for this scene; using {native}"
+                )
+                self._solver = build_solver(native)
         self._use_mujoco_contacts = bool(use_mujoco_contacts)
 
         # Initialize Contacts object for contact force queries
@@ -2610,8 +2617,11 @@ class NewtonHandler(BaseSimHandler):
 
     # Constraint rows per world when ``njmax`` is unset. MuJoCo-Warp sizes the buffer from the
     # initial state, which for a hand in free space is far below what a closed fist needs
-    # (Sharpa Wave: 64 estimated, 91 used), and overflowing rows are silently dropped.
-    # A larger buffer only costs memory: it changes nothing unless rows were being dropped.
+    # (Sharpa Wave: 64 estimated, 137 used), and the overflowing rows are dropped with only a
+    # printed ``nefc overflow``. The buffer does not change the physics of a scene that fits, but it
+    # is not free: solver kernels launch over (worlds x njmax) and a dense Jacobian holds
+    # worlds x njmax x nv floats, so a many-world RL run that knows its contact load should set
+    # ``sim_params.njmax`` itself.
     NJMAX_FLOOR = 256
     NJMAX_ROWS_PER_DOF = 8
 
@@ -2622,6 +2632,21 @@ class NewtonHandler(BaseSimHandler):
         num_envs = max(1, int(self.scenario.num_envs))
         dofs_per_world = int(getattr(self._model, "joint_dof_count", 0) or 0) // num_envs
         return max(self.NJMAX_FLOOR, self.NJMAX_ROWS_PER_DOF * dofs_per_world)
+
+    def _native_njmax_estimate(self) -> int | None:
+        """MuJoCo-Warp's own njmax guess for the built solver's model, or None when it cannot be computed."""
+        mj_model = getattr(self._solver, "mj_model", None)
+        if mj_model is None:
+            return None
+        try:
+            from mujoco_warp._src.io import _default_njmax
+        except ImportError:  # a MuJoCo-Warp without the private helper: keep the floor
+            return None
+        try:
+            return int(_default_njmax(mj_model, getattr(self._solver, "mj_data", None)))
+        except Exception as err:  # an estimate failure must not stop the launch
+            log.debug(f"Newton: MuJoCo-Warp njmax estimate unavailable ({type(err).__name__}: {err})")
+            return None
 
     def _resolve_contact_capacity(self, fallback: int | None) -> int:
         if self._solver is None:
