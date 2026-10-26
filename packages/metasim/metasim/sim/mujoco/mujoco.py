@@ -418,8 +418,8 @@ class MujocoHandler(BaseSimHandler):
         # MuJoCo >= 3.x sizes its arena from `<size memory>` (the legacy njmax/nconmax hints no longer
         # grow it). The compiler default is far too small for humanoids + mesh objects: e.g. the H1 scene
         # in examples/10_mount_camera.py dies with "mj_stackAlloc: out of memory ... ncon = 286".
-        # Reserve a generous arena unless the scene MJCF already sets one.
-        if getattr(mjcf_model.size, "memory", None) is None:
+        # Reserve a generous arena unless the scene MJCF already sizes it (`memory`, or the legacy `njmax`).
+        if getattr(mjcf_model.size, "memory", None) is None and getattr(mjcf_model.size, "njmax", None) is None:
             mjcf_model.size.memory = MUJOCO_ARENA_MEMORY
 
         if self.scenario.sim_params.dt is not None:
@@ -431,10 +431,24 @@ class MujocoHandler(BaseSimHandler):
         self._add_robots_to_model(mjcf_model)
         self._add_cameras_to_model(mjcf_model)
         self._add_lights_to_model(mjcf_model)
+        self._drop_attached_size_hints(mjcf_model)
 
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
         return mjcf_model
+
+    def _drop_attached_size_hints(self, mjcf_model: mjcf.RootElement) -> None:
+        """Drop attached assets' legacy ``<size njmax/nconmax>`` once the root sizes the arena with ``memory``.
+
+        dm_control merges every attached model's ``<size>`` into the root, and MuJoCo rejects a model that
+        sets both ``memory`` and ``njmax`` (LIBERO's stove and cabinets declare ``njmax="500"``).
+        """
+        if getattr(mjcf_model.size, "memory", None) is None:
+            return
+        for attached in self.mj_objects.values():
+            for hint in ("njmax", "nconmax"):
+                if getattr(attached.size, hint, None) is not None:
+                    setattr(attached.size, hint, None)
 
     @property
     def physics_dt(self) -> float | None:  # type: ignore[override]
@@ -1172,6 +1186,8 @@ class MujocoHandler(BaseSimHandler):
             else:
                 full_joint_name = f"{obj_name}/{joint_name}"
 
+            joint_pos = np.asarray(joint_pos, dtype=float).reshape(-1)
+            joint_pos = float(joint_pos[0]) if joint_pos.size == 1 else joint_pos  # demos may store 1-element arrays
             joint = self.physics.data.joint(full_joint_name)
             joint.qpos = joint_pos
             joint.qvel = 0 if zero_vel else float(np.asarray(dof_vel.get(joint_name, 0.0)).reshape(-1)[0])
