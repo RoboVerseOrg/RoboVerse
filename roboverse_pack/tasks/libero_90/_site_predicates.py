@@ -4,7 +4,7 @@
 # Adapted from LIBERO (https://github.com/Lifelong-Robot-Learning/LIBERO), commit 8f1084e:
 # SiteObject.in_box / SiteObject.under (libero/libero/envs/objects/site_object.py), ObjectState.check_ontop
 # (libero/libero/envs/object_states/base_object_states.py) and the Open / Close / TurnOn / TurnOff thresholds
-# of WoodenCabinet and FlatStove (libero/libero/envs/objects/articulated_objects.py).
+# of WoodenCabinet, Microwave and FlatStove (libero/libero/envs/objects/articulated_objects.py).
 # Changes: batched over envs in torch; the site's pose and size come from metasim.utils.site_util.site_pose
 # (the state plus the object's MJCF) instead of MuJoCo's data; the contact clauses of ``On`` (the object must
 # touch the site's parent, or the other object) are not checked.
@@ -25,6 +25,8 @@ from metasim.utils.site_util import SitePose
 __all__ = [
     "CABINET_CLOSED_ABOVE",
     "CABINET_OPEN_BELOW",
+    "MICROWAVE_CLOSED_ABOVE",
+    "MICROWAVE_OPEN_BELOW",
     "STOVE_OFF_BELOW",
     "STOVE_ON_FROM",
     "object_on",
@@ -36,6 +38,10 @@ __all__ = [
 CABINET_OPEN_BELOW = -0.14
 #: ... and closed above this one.
 CABINET_CLOSED_ABOVE = 0.0
+#: ``Microwave``: the door hinge is open below this angle...
+MICROWAVE_OPEN_BELOW = -1.3
+#: ... and closed above this one.
+MICROWAVE_CLOSED_ABOVE = -0.005
 #: ``FlatStove``: the knob joint turns the stove on from this position...
 STOVE_ON_FROM = 0.5
 #: ... and off below this one.

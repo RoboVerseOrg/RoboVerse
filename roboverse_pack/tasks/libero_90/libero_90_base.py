@@ -29,9 +29,9 @@ class Libero90BaseTask(BaseTaskEnv):
     ``In`` / ``On`` / ``Open`` / ``Close`` / ``Turnon`` predicates. The site regions they name (a basket's
     ``contain_region``, a drawer's ``top_region``) are read with :meth:`_site_pose`, which composes the site's
     fixed offset from the object's MJCF with the pose in the state, so a goal reads the same frame on every
-    backend. Writing LIBERO's demos into MuJoCo, the goal holds at the last state of every demo on 58 of 59
+    backend. Writing LIBERO's demos into MuJoCo, the goal holds at the last state of every demo on 61 of 62
     tasks (the other misses a wine-rack region by 0.2 mm in one demo); the hand-written checkers it replaced
-    held on 51.
+    held on 54.
     """
 
     scenario = None

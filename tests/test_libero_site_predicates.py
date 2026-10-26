@@ -87,7 +87,7 @@ def test_every_libero_90_goal_names_objects_its_scenario_has():
                     goals += 1
                 else:
                     assert obj.checker is not None or "_terminated" in vars(obj), f"{obj.__name__} defines no success"
-    assert goals >= 59
+    assert goals >= 62
 
 
 def test_goal_terms_are_validated():

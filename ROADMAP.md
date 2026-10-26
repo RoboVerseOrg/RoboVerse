@@ -35,15 +35,15 @@ the parallel implementations, then build the benchmark data model on top.
 - [x] Site poses derived from the state (`metasim.utils.site_util.site_pose`): LIBERO-90's success checks
       no longer read `physics.named.data.site_*` (63 reach-ins to 0). The mjlab ports still read `physics`.
 - [x] LIBERO-90 success as the BDDL goal, declared as data (`goal = (("In", obj, region_obj, site), ...)`) and
-      evaluated with LIBERO's predicates (59 tasks). Left on hand-written checkers: the microwave tasks (the asset
-      does not compile standalone) and `living_room_scene4_stack_the_right_bowl…` (its demo file is missing).
+      evaluated with LIBERO's predicates (62 tasks). Left on hand-written checkers: two goals on table regions
+      BDDL defines (not asset sites) and `living_room_scene4_stack_the_right_bowl…` (its demo file is missing).
 - [ ] LIBERO `On`'s contact clause (the object touches the region's parent) needs a contact query.
 - [ ] MuJoCo handler: scaling an object collapses a box site's 3-number `size` to one number
       (`_apply_scale_to_mjcf` treats every site as a sphere).
 - [ ] Upload the LIBERO MJCFs missing from the HF dataset (wooden_tray, wooden_two_layer_shelf,
       porcelain_mug, white_yellow_mug, white_bowl, stable_scanned basket, microwave): 31 of 66 LIBERO-90
-      tasks cannot load on MuJoCo from a fresh download. Local copies (upstream LIBERO 8f1084e, verbatim)
-      are in `roboverse_data/assets/libero/COMMON`.
+      tasks cannot load on MuJoCo from a fresh download. Local copies (upstream LIBERO 8f1084e, verbatim except
+      the microwave's `inertiagrouprange`, see its `CHANGES.md`) are in `roboverse_data/assets/libero/COMMON`.
 - [ ] `_set_states` accepts `TensorState` only; the dict/tensor dual paths go away.
 - [ ] Per-backend capability declaration (`BackendCapabilities`) checked against `RobotCfg` and
       `SimParamCfg` at handler creation; `SimParamCfg` split into common fields + per-backend sections.

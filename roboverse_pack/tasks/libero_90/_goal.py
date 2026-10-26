@@ -12,7 +12,7 @@ predicates (``_site_predicates``) on the state. Term forms:
 
 - ``("In", obj, region_obj, site)`` / ``("On", obj, region_obj, site)``: ``obj``'s root in / on a site region;
 - ``("On", obj, base_obj)``: ``obj`` resting on another object;
-- ``("Open", obj, joint)`` / ``("Close", obj, joint)``: a cabinet drawer joint;
+- ``("Open", obj, joint)`` / ``("Close", obj, joint)``: a cabinet drawer or the microwave door;
 - ``("Turnon", obj, joint)`` / ``("Turnoff", obj, joint)``: the stove's knob joint.
 """
 
@@ -23,6 +23,8 @@ import torch
 from ._site_predicates import (
     CABINET_CLOSED_ABOVE,
     CABINET_OPEN_BELOW,
+    MICROWAVE_CLOSED_ABOVE,
+    MICROWAVE_OPEN_BELOW,
     STOVE_OFF_BELOW,
     STOVE_ON_FROM,
     object_on,
@@ -34,28 +36,34 @@ __all__ = ["GoalTerm", "check_goal", "goal_holds"]
 
 GoalTerm = tuple[str, ...]
 
-#: Joint predicates and the assets whose LIBERO thresholds they carry.
+#: LIBERO's joint thresholds, per (predicate, asset).
 _JOINT_TESTS = {
-    "Open": (("wooden_cabinet", "white_cabinet"), lambda q: q < CABINET_OPEN_BELOW),
-    "Close": (("wooden_cabinet", "white_cabinet"), lambda q: q > CABINET_CLOSED_ABOVE),
-    "Turnon": (("flat_stove",), lambda q: q >= STOVE_ON_FROM),
-    "Turnoff": (("flat_stove",), lambda q: q < STOVE_OFF_BELOW),
+    ("Open", "wooden_cabinet"): lambda q: q < CABINET_OPEN_BELOW,
+    ("Open", "white_cabinet"): lambda q: q < CABINET_OPEN_BELOW,
+    ("Open", "microwave"): lambda q: q < MICROWAVE_OPEN_BELOW,
+    ("Close", "wooden_cabinet"): lambda q: q > CABINET_CLOSED_ABOVE,
+    ("Close", "white_cabinet"): lambda q: q > CABINET_CLOSED_ABOVE,
+    ("Close", "microwave"): lambda q: q > MICROWAVE_CLOSED_ABOVE,
+    ("Turnon", "flat_stove"): lambda q: q >= STOVE_ON_FROM,
+    ("Turnoff", "flat_stove"): lambda q: q < STOVE_OFF_BELOW,
 }
+_JOINT_KINDS = {kind for kind, _ in _JOINT_TESTS}
 
 
 def check_goal(goal: tuple[GoalTerm, ...], object_names: set[str]) -> None:
     """Fail at construction on a term this module cannot evaluate or that names a missing object."""
     for term in goal:
         kind, *args = term
-        shapes = {"In": (3,), "On": (2, 3), **{k: (2,) for k in _JOINT_TESTS}}
+        shapes = {"In": (3,), "On": (2, 3), **{k: (2,) for k in _JOINT_KINDS}}
         if kind not in shapes or len(args) not in shapes[kind]:
             raise ValueError(f"goal term {term!r}: expected one of the forms in {__name__}")
         names = args[:2] if kind in ("In", "On") else args[:1]
         missing = [n for n in names if n not in object_names]
         if missing:
             raise ValueError(f"goal term {term!r} names objects not in the scenario: {missing}")
-        if kind in _JOINT_TESTS and args[0] not in _JOINT_TESTS[kind][0]:
-            raise ValueError(f"goal term {term!r}: LIBERO's {kind} thresholds are known for {_JOINT_TESTS[kind][0]}")
+        if kind in _JOINT_KINDS and (kind, args[0]) not in _JOINT_TESTS:
+            known = sorted(asset for k, asset in _JOINT_TESTS if k == kind)
+            raise ValueError(f"goal term {term!r}: LIBERO's {kind} thresholds are known for {known}")
 
 
 def goal_holds(task, states, goal: tuple[GoalTerm, ...]) -> torch.Tensor:
@@ -75,6 +83,6 @@ def goal_holds(task, states, goal: tuple[GoalTerm, ...]) -> torch.Tensor:
             names = task.handler.get_joint_names(obj, sort=True)
             if joint not in names:
                 raise KeyError(f"goal term {(kind, *args)!r}: {obj!r} has no joint {joint!r} (joints: {names})")
-            held = _JOINT_TESTS[kind][1](states.objects[obj].joint_pos[:, names.index(joint)])
+            held = _JOINT_TESTS[kind, obj](states.objects[obj].joint_pos[:, names.index(joint)])
         ok = held if ok is None else ok & held
     return ok
