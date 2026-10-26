@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -79,31 +76,7 @@ class LiberoKitchenScene8PutTheRightMokaPotOnTheStoveTask(Libero90BaseTask):
         "roboverse_data/trajs/libero90/libero_90_kitchen_scene8_put_the_right_moka_pot_on_the_stove_traj_v2.pkl"
     )
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: moka_pot_2 is on the stove.
-
-        Success condition (similar to scene3):
-        - moka_pot_2 is within xy range of stove center (< 0.06m radius)
-        - moka_pot_2 is slightly above stove (0 < height_diff < 0.05m)
-        """
-        # Get moka_pot_1 position
-        moka_pot_1_pos = states.objects["moka_pot_1"].root_state[:, :3]  # (N,3)
-
-        # Get stove center position from site
-        stove_center_site = self._site_pose(states, "flat_stove", "burner")
-        stove_center_pos = stove_center_site.pos  # (N,3)
-
-        # Check if moka_pot_1 is within a region above the stove
-        range_threshold = 0.06
-        height_threshold = 0.03
-
-        xy_distance = torch.norm(moka_pot_1_pos[:, :2] - stove_center_pos[:, :2], dim=-1)  # (N,)
-        height_diff = moka_pot_1_pos[:, 2] - stove_center_pos[:, 2]  # (N,)
-
-        # Check both conditions: xy distance < range AND 0 < height_diff < height_threshold
-        xy_close = xy_distance < range_threshold  # (N,)
-        height_valid = (height_diff > 0) & (height_diff < height_threshold)  # (N,)
-        is_on_stove = xy_close & height_valid  # (N,)
-        return is_on_stove
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (
+        ("On", "moka_pot_1", "flat_stove", "cook_region"),
+        ("Turnon", "flat_stove", "button"),
+    )

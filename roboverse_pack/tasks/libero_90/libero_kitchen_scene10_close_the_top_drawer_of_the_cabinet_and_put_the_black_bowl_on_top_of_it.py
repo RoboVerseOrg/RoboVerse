@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -88,34 +85,7 @@ class LiberoKitchenScene10CloseTopDrawerAndPutBowlOnTopTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene10_close_the_top_drawer_of_the_cabinet_and_put_the_black_bowl_on_top_of_it_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: top drawer is closed AND bowl is on top of cabinet."""
-        # 1. check if the top drawer is closed
-        cabinet_joint_pos = states.objects["wooden_cabinet"].joint_pos[:, 2]  # (N,) - top_level joint
-        drawer_closed = cabinet_joint_pos > -0.01  # (N,) - closed when joint_pos is near 0
-
-        # 2. check if the bowl is on top of the cabinet
-        bowl_pos = states.objects["akita_black_bowl"].root_state[:, :3]  # (N,3)
-        # Get shelf top_side site pose
-        shelf_top_site = self._site_pose(states, "wooden_cabinet", "top_side")
-
-        shelf_top_R = shelf_top_site.rot  # (N,3,3)
-        shelf_top_t = shelf_top_site.pos  # (N,3)
-
-        # top_side site half-size from wooden_cabinet.xml: size="0.12534 0.09438 0.00147"
-        bbox_lower = torch.tensor([-0.12534, -0.09438, 0.0], device=bowl_pos.device)
-        bbox_upper = torch.tensor([0.12534, 0.09438, 0.03], device=bowl_pos.device)
-
-        # Transform frying pan position to shelf top_side local frame
-        bowl_local = torch.matmul(shelf_top_R.transpose(1, 2), (bowl_pos - shelf_top_t).unsqueeze(-1)).squeeze(
-            -1
-        )  # (N,3)
-        ge_lower = bowl_local >= bbox_lower  # (N,3)
-        le_upper = bowl_local <= bbox_upper  # (N,3)
-        bowl_on_cabinet = (ge_lower & le_upper).all(dim=-1)
-
-        # Final success condition
-        is_success = drawer_closed & bowl_on_cabinet  # (N,)
-        return is_success
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (
+        ("Close", "wooden_cabinet", "top_level"),
+        ("On", "akita_black_bowl", "wooden_cabinet", "top_side"),
+    )

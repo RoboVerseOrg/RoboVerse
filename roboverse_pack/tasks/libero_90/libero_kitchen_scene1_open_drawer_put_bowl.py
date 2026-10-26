@@ -8,7 +8,6 @@ from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 from metasim.utils.math import matrix_from_quat
 
 from .libero_90_base import Libero90BaseTask
@@ -99,35 +98,11 @@ class LiberoKitchenOpenDrawerPutBowlTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_open_the_top_drawer_of_the_cabinet_and_put_the_bowl_in_it_traj_v2.pkl"
 
-    # env.handler.get_states[0]['objects']['wooden_cabinet']['dof_pos']["top_level"] 获取top
-    def _terminated(self, states: TensorState) -> torch.Tensor:  # 需要仔细检查一下
-        """Task success checker."""
-        # get bowl/cabinet poses
-        bowl_pos = states.objects["akita_black_bowl"].root_state[:, :3]  # (N,3)
-        cabinet_pos = states.objects["wooden_cabinet"].root_state[:, :3]  # (N,3)
-        cabinet_quat = states.objects["wooden_cabinet"].root_state[:, 3:7]  # (N,4)
-        top_idx = self.handler.get_joint_names("wooden_cabinet").index("top_level")
-        bbox_displacement = self.handler.get_states(mode="tensor").objects["wooden_cabinet"].joint_pos[:, top_idx]
-        # Build homogeneous transforms (N,4,4)
-        # bowl_T = pose_to_mat(bowl_pos, None)              # identity rotation
-        cabinet_T = pose_to_mat(cabinet_pos, cabinet_quat)
-        # get top drawer T
-        bbox_relative_pos = torch.tensor(
-            [0.00328, 0.01128 + bbox_displacement, 0.18563], device=bowl_pos.device
-        )  # relative to cabinet frame
-        bbox_relative_quat = torch.tensor([0.70711, 0.00000, 0.70711, 0.00000], device=bowl_pos.device)
-        bbox_relative_T = pose_to_mat(bbox_relative_pos.unsqueeze(0), bbox_relative_quat.unsqueeze(0))  # (1,4,4)
-        bbox_half_size = torch.tensor([0.02993, 0.07561, 0.10224], device=bowl_pos.device)  # (3,) 需要进一步确认
-        # Compose with cabinet_T to get bbox transform in world coordinates (N,4,4)
-        bbox_T_world = torch.matmul(cabinet_T, bbox_relative_T)
-        # Transform bowl position into bbox local frame and test inclusion
-        R = bbox_T_world[:, :3, :3]  # (N,3,3)
-        t = bbox_T_world[:, :3, 3]  # (N,3)
-        bowl_local = torch.matmul(R.transpose(1, 2), (bowl_pos - t).unsqueeze(-1)).squeeze(-1)  # (N,3)
-        eps = 1e-6
-        inside = (bowl_local.abs() <= (bbox_half_size.unsqueeze(0) + eps)).all(dim=-1)  # (N,)
+    goal = (
+        ("Open", "wooden_cabinet", "top_level"),
+        ("In", "akita_black_bowl", "wooden_cabinet", "top_region"),
+    )
 
-        return inside
+    # env.handler.get_states[0]['objects']['wooden_cabinet']['dof_pos']["top_level"] 获取top
 
     # rewrite checker
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset

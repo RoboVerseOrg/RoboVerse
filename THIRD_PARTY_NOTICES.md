@@ -38,6 +38,7 @@ below. If you cannot name the upstream and its license, do not merge it.
 | `examples/rl/fast_td3/` | [FastTD3](https://github.com/younggyoseo/FastTD3) © 2025 Younggyo Seo | MIT | Vendored | `examples/rl/fast_td3/LICENSE` |
 | `roboverse_learn/rl/clean_rl/` | [CleanRL](https://github.com/vwxyzjn/cleanrl) © 2019 CleanRL developers | MIT | Adapted | `roboverse_learn/rl/clean_rl/LICENSE` |
 | `roboverse_learn/rl/clean_rl/buffer.py` | [stable-baselines3](https://github.com/DLR-RM/stable-baselines3) © 2019 Antonin Raffin | MIT | Adapted | `roboverse_learn/rl/clean_rl/LICENSE.stable-baselines3` |
+| `roboverse_pack/tasks/libero_90/_site_predicates.py` | [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO) © 2023 Lifelong Robot Learning | MIT | Adapted | `roboverse_pack/tasks/libero_90/LICENSE.LIBERO` |
 | `roboverse_learn/il/policies/dp/` | [diffusion_policy](https://github.com/real-stanford/diffusion_policy) © 2023 Columbia AI & Robotics Lab | MIT | Vendored | `roboverse_learn/il/policies/dp/LICENSE` |
 | `roboverse_learn/il/policies/dp/models/bet/libraries/mingpt/` | [minGPT](https://github.com/karpathy/minGPT) © Andrej Karpathy | MIT | Vendored | `roboverse_learn/il/policies/dp/models/bet/libraries/mingpt/LICENSE` |
 | `roboverse_learn/il/policies/dp/models/bet/libraries/loss_fn.py` | [pytorch-multi-class-focal-loss](https://github.com/AdeelH/pytorch-multi-class-focal-loss) © Adeel Hassan | MIT | Adapted | `roboverse_learn/il/policies/dp/models/bet/libraries/LICENSE.focal_loss` |

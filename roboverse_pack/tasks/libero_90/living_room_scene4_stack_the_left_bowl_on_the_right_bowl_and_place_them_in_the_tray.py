@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -88,35 +85,7 @@ class LiberoLivingRoomScene4StackLeftBowlOnRightBowlTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_living_room_scene4_stack_the_left_bowl_on_the_right_bowl_and_place_them_in_the_tray_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: bowl_1 is stacked on bowl_2 and bowl_2 is inside wooden_tray/contain_region.
-
-        Site wooden_tray/contain_region half-size = 0.04038 0.07839 0.13549.
-        We verify that:
-        1. akita_black_bowl_1 is stacked on akita_black_bowl_2 (xy distance < 0.06m and 0 < height_diff < 0.05m)
-        2. akita_black_bowl_2 is inside wooden_tray/contain_region
-        """
-        bowl1_pos = states.objects["akita_black_bowl_1"].root_state[:, :3]  # (N,3)
-        bowl2_pos = states.objects["akita_black_bowl_2"].root_state[:, :3]  # (N,3)
-
-        region_site = self._site_pose(states, "wooden_tray", "contain_region")
-        region_R = region_site.rot
-        region_t = region_site.pos
-        half_size = torch.tensor([0.04038, 0.07839, 0.13549], device=bowl1_pos.device)
-
-        # Check if bowl2 is inside tray
-        bowl2_local = torch.matmul(region_R.transpose(1, 2), (bowl2_pos - region_t).unsqueeze(-1)).squeeze(-1)
-        bowl2_inside = (bowl2_local.abs() <= (half_size + 1e-6)).all(dim=-1)
-
-        # Check if bowl1 is stacked on bowl2 with xy distance and height thresholds
-        range_threshold = 0.06  # Radius of the range in xy plane
-        height_threshold = 0.05  # Height threshold above bowl_2
-        xy_distance = torch.norm(bowl1_pos[:, :2] - bowl2_pos[:, :2], dim=-1)  # (N,)
-        height_diff = bowl1_pos[:, 2] - bowl2_pos[:, 2]  # (N,)
-        xy_close = xy_distance < range_threshold  # (N,)
-        height_valid = (height_diff > 0) & (height_diff < height_threshold)  # (N,)
-        is_stacked = xy_close & height_valid  # (N,)
-
-        return bowl2_inside & is_stacked
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (
+        ("On", "akita_black_bowl_1", "akita_black_bowl_2"),
+        ("In", "akita_black_bowl_2", "wooden_tray", "contain_region"),
+    )

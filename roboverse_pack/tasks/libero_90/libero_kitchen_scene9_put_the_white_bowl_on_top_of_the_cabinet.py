@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -86,32 +83,4 @@ class LiberoKitchenScene9PutTheWhiteBowlOnTopOfTheCabinetTask(Libero90BaseTask):
         "roboverse_data/trajs/libero90/libero_90_kitchen_scene9_put_the_white_bowl_on_top_of_the_cabinet_traj_v2.pkl"
     )
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: white bowl is on top of the cabinet (top_side surface).
-
-        Success condition (similar to wine_rack in kitchen4):
-        - White bowl is within the bounding box region defined by the top_side site
-        - Uses the site's position and orientation from physics data
-        """
-        bowl_pos = states.objects["white_bowl"].root_state[:, :3]  # (N,3)
-
-        # Get shelf top_side site pose
-        shelf_top_site = self._site_pose(states, "wooden_two_layer_shelf", "top_side")
-
-        shelf_top_R = shelf_top_site.rot  # (N,3,3)
-        shelf_top_t = shelf_top_site.pos  # (N,3)
-
-        # top_side site half-size from wooden_two_layer_shelf.xml: size="0.12534 0.09438 0.00147"
-        bbox_lower = torch.tensor([-0.12534, -0.09438, 0], device=bowl_pos.device)
-        bbox_upper = torch.tensor([0.12534, 0.09438, 0.03], device=bowl_pos.device)
-
-        # Transform white bowl position to shelf top_side local frame
-        bowl_local = torch.matmul(shelf_top_R.transpose(1, 2), (bowl_pos - shelf_top_t).unsqueeze(-1)).squeeze(
-            -1
-        )  # (N,3)
-        ge_lower = bowl_local >= bbox_lower  # (N,3)
-        le_upper = bowl_local <= bbox_upper  # (N,3)
-        inside = (ge_lower & le_upper).all(dim=-1)
-        return inside
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("On", "white_bowl", "wooden_two_layer_shelf", "top_side"),)

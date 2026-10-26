@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -84,32 +81,4 @@ class LiberoKitchenScene9PutTheFryingPanUnderTheCabinetShelfTask(Libero90BaseTas
         "roboverse_data/trajs/libero90/libero_90_kitchen_scene9_put_the_frying_pan_under_the_cabinet_shelf_traj_v2.pkl"
     )
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: frying pan is in the bottom region of the cabinet shelf.
-
-        Success condition (similar to wine_rack in kitchen4):
-        - Frying pan is within the bounding box region defined by the bottom_region site
-        - Uses the site's position and orientation from physics data
-        """
-        frypan_pos = states.objects["chefmate_8_frypan"].root_state[:, :3]  # (N,3)
-
-        # Get shelf bottom_region site pose
-        shelf_bottom_site = self._site_pose(states, "wooden_two_layer_shelf", "bottom_region")
-
-        shelf_bottom_R = shelf_bottom_site.rot  # (N,3,3)
-        shelf_bottom_t = shelf_bottom_site.pos  # (N,3)
-
-        # bottom_region site half-size from wooden_two_layer_shelf.xml: size="0.03272 0.05000 0.11027"
-        bbox_lower = torch.tensor([-0.03272, -0.05000, -0.11027], device=frypan_pos.device)
-        bbox_upper = torch.tensor([0.03272, 0.05000, 0.11027], device=frypan_pos.device)
-
-        # Transform frying pan position to shelf bottom_region local frame
-        frypan_local = torch.matmul(
-            shelf_bottom_R.transpose(1, 2), (frypan_pos - shelf_bottom_t).unsqueeze(-1)
-        ).squeeze(-1)  # (N,3)
-        ge_lower = frypan_local >= bbox_lower  # (N,3)
-        le_upper = frypan_local <= bbox_upper  # (N,3)
-        inside = (ge_lower & le_upper).all(dim=-1)
-        return inside
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("In", "chefmate_8_frypan", "wooden_two_layer_shelf", "bottom_region"),)

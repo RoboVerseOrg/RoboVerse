@@ -26,7 +26,7 @@ _ASSET = """
           <joint name="hinge" type="hinge" axis="1 0 0"/>
           <geom type="box" size="0.05 0.05 0.01" mass="0.1"/>
           <body pos="0.02 0 0.01" euler="{euler2}">
-            <site name="on_lid" pos="0 0.03 0.02" euler="{euler2}"/>
+            <site name="on_lid" pos="0 0.03 0.02" euler="{euler2}" type="box" size="0.01 0.02 0.03"/>
           </body>
         </body>
       </body>
@@ -95,7 +95,7 @@ def test_site_pose_follows_scale(tmp_path):
     scale = (2.0, 0.5, 1.5)
 
     def scaled(match):
-        x, y, z = (float(v) * s for v, s in zip(match.group(1).split(), scale))
+        x, y, z = (float(v) * s for v, s in zip(match.group(1).split(), scale, strict=True))
         return f'pos="{x} {y} {z}"'
 
     model = mujoco.MjModel.from_xml_string(_wrapped(re.sub(r'pos="([^"]+)"', scaled, asset), (0, 0, 0), (1, 0, 0, 0)))
@@ -104,6 +104,8 @@ def test_site_pose_follows_scale(tmp_path):
     states = _state(model, data, name="box", body_names=["lid", "object"])
     got = site_pose(states, RigidObjCfg(name="box", mjcf_path=str(path), scale=scale), "on_lid")
     np.testing.assert_allclose(got.pos[0].numpy(), _site_world(model, data, "on_lid")[0], atol=1e-9)
+    assert got.size == pytest.approx((0.02, 0.01, 0.045))  # declared half-extents, per axis
+    assert site_pose(states, RigidObjCfg(name="box", mjcf_path=str(path)), "on_object").size is None
 
 
 def test_site_pose_names_what_is_missing(tmp_path):

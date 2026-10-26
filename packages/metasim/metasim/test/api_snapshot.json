@@ -10239,10 +10239,14 @@
  },
  "metasim.utils.site_util": {
   "SitePose": {
+   "attributes": {
+    "size": "NoneType"
+   },
    "bases": [],
    "fields": [
     "pos",
-    "quat"
+    "quat",
+    "size"
    ],
    "kind": "class",
    "methods": {
@@ -10262,9 +10266,14 @@
        "default": false,
        "kind": "POSITIONAL_OR_KEYWORD",
        "name": "quat"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "size"
       }
      ],
-     "signature": "(self, pos: 'torch.Tensor', quat: 'torch.Tensor') -> None"
+     "signature": "(self, pos: 'torch.Tensor', quat: 'torch.Tensor', size: 'tuple[float, ...] | None' = None) -> None"
     },
     "rot": {
      "params": null,

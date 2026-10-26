@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -86,31 +83,4 @@ class LiberoKitchenScene10PutBlackBowlInTopDrawerTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene10_put_the_black_bowl_in_the_top_drawer_of_the_cabinet_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: black bowl is inside the top drawer."""
-        bowl_pos = states.objects["akita_black_bowl"].root_state[:, :3]  # (N,3)
-
-        # top drawer bbox (adjusted for wooden_cabinet structure) 0.02993 0.07561 0.10224
-        # check if the bowl is in top region
-        bowl_pos = states.objects["akita_black_bowl"].root_state[:, :3]  # (N,3)
-        # Get drawer top_region site pose
-        drawer_top_site = self._site_pose(states, "wooden_cabinet", "top_region")
-
-        drawer_top_R = drawer_top_site.rot  # (N,3,3)
-        drawer_top_t = drawer_top_site.pos  # (N,3)
-
-        # top_region site half-size from wooden_cabinet.xml: size="0.029, 0.075, 0.102"
-        bbox_lower = torch.tensor([-0.029, -0.075, -0.102], device=bowl_pos.device)
-        bbox_upper = torch.tensor([0.029, 0.075, 0.102], device=bowl_pos.device)
-
-        # Transform bowl position to drawer top_region local frame
-        bowl_local = torch.matmul(drawer_top_R.transpose(1, 2), (bowl_pos - drawer_top_t).unsqueeze(-1)).squeeze(
-            -1
-        )  # (N,3)
-        ge_lower = bowl_local >= bbox_lower  # (N,3)
-        le_upper = bowl_local <= bbox_upper  # (N,3)
-        bowl_in_drawer = (ge_lower & le_upper).all(dim=-1)
-
-        return bowl_in_drawer
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("In", "akita_black_bowl", "wooden_cabinet", "top_region"),)

@@ -11,6 +11,8 @@ from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.site_util import SitePose, site_pose
 from metasim.utils.state import TensorState
 
+from ._goal import GoalTerm, check_goal, goal_holds
+
 
 class Libero90BaseTask(BaseTaskEnv):
     """Base class for LIBERO 90 tasks.
@@ -23,15 +25,21 @@ class Libero90BaseTask(BaseTaskEnv):
     (on MuJoCo they do not: there is no table, and objects settle ~2 cm below where the demos hold them).
     For 1:1 replay use the native ids (``native_libero.py``).
 
-    Success predicates read LIBERO's sites (a basket's ``contain_region``, a drawer's ``top_region``) with
-    :meth:`_site_pose`, which composes the site's fixed offset from the object's MJCF with the pose in the
-    state, so a checker reads the same frame on every backend.
+    A task's success is its BDDL goal, declared as data (``goal``, see ``_goal``) and evaluated with LIBERO's own
+    ``In`` / ``On`` / ``Open`` / ``Close`` / ``Turnon`` predicates. The site regions they name (a basket's
+    ``contain_region``, a drawer's ``top_region``) are read with :meth:`_site_pose`, which composes the site's
+    fixed offset from the object's MJCF with the pose in the state, so a goal reads the same frame on every
+    backend. Writing LIBERO's demos into MuJoCo, the goal holds at the last state of every demo on 55 of 56
+    tasks (the other misses a wine-rack region by 0.2 mm in one demo); the hand-written checkers it replaced
+    held on 48.
     """
 
     scenario = None
     max_episode_steps = 300  # LIBERO 90 tasks are more complex
     task_desc = None
     checker = None
+    goal: tuple[GoalTerm, ...] | None = None
+    """The BDDL goal's terms (see ``_goal``); when set, success is that goal and ``checker`` is unused."""
     traj_filepath = None
     decimation = 30
     # Most libero_90 leaves intentionally skip the per-reset checker reset. Setting
@@ -43,10 +51,14 @@ class Libero90BaseTask(BaseTaskEnv):
     def __init__(self, scenario: ScenarioCfg, device: str | torch.device | None = None) -> None:
         check_and_download_single(self.traj_filepath)
         # update objects and robots defined by task, must before super()._init_ because handler init
+        if self.goal is not None:
+            check_goal(self.goal, {obj.name for obj in scenario.objects})
         super().__init__(scenario, device)
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Success when task conditions are met."""
+        """Success when the task's goal (or, for a task without one, its checker) holds."""
+        if self.goal is not None:
+            return goal_holds(self, states, self.goal)
         return self.checker.check(self.handler, states)
 
     def _site_pose(self, states: TensorState, obj_name: str, site: str) -> SitePose:

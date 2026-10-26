@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -86,27 +83,7 @@ class LiberoKitchenScene9TurnOnStoveAndPutFryingPanTask(Libero90BaseTask):
     # Trajectory file path
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene9_turn_on_the_stove_and_put_the_frying_pan_on_it_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: stove is on AND frying pan is on stove."""
-        # 1.  check if the stove is turned on
-        threshold = 0.5
-        stove_joint_state = states.objects["flat_stove"].joint_pos[:, 0]  # (N,)
-        stove_on = stove_joint_state > threshold  # (N,)
-
-        # 2. check if the frying pan is on the stove
-        frypan_pos = states.objects["chefmate_8_frypan"].root_state[:, :3]  # (N,3)
-        stove_center_site = self._site_pose(states, "flat_stove", "cook_region")
-        stove_center_pos = stove_center_site.pos  # (N,3)
-        range_threshold = 0.08  # Radius of the range in xy plane
-        height_threshold = 0.03  # Height threshold above the stove
-        xy_distance = torch.norm(frypan_pos[:, :2] - stove_center_pos[:, :2], dim=-1)  # (N,)
-        height_diff = frypan_pos[:, 2] - stove_center_pos[:, 2]  # (N,)
-        xy_close = xy_distance < range_threshold  # (N,)
-        height_valid = (height_diff > 0) & (height_diff < height_threshold)  # (N,)
-        frypan_on_stove = xy_close & height_valid  # (N,)
-
-        # Final success condition
-        is_success = stove_on & frypan_on_stove  # (N,)
-        return is_success
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (
+        ("Turnon", "flat_stove", "button"),
+        ("On", "chefmate_8_frypan", "flat_stove", "cook_region"),
+    )

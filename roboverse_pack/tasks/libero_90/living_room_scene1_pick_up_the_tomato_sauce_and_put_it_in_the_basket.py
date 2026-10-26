@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -77,15 +74,4 @@ class LiberoLivingRoomScene1PickUpTomatoSauceAndPutItInTheBasketTask(Libero90Bas
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_living_room_scene1_pick_up_the_tomato_sauce_and_put_it_in_the_basket_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: tomato_sauce is inside basket/contain_region bounding box."""
-        obj_pos = states.objects["tomato_sauce"].root_state[:, :3]
-        region_site = self._site_pose(states, "basket", "contain_region")
-        region_R = region_site.rot
-        region_t = region_site.pos
-        half_size = torch.tensor([0.06108, 0.06108, 0.06949], device=obj_pos.device)
-        obj_local = torch.matmul(region_R.transpose(1, 2), (obj_pos - region_t).unsqueeze(-1)).squeeze(-1)
-        inside = (obj_local.abs() <= (half_size + 1e-6)).all(dim=-1)
-        return inside
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("In", "tomato_sauce", "basket", "contain_region"),)

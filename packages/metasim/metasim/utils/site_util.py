@@ -32,6 +32,8 @@ class SitePose:
     """(N, 3) position."""
     quat: torch.Tensor
     """(N, 4) orientation, wxyz."""
+    size: tuple[float, ...] | None = None
+    """The site's declared ``size`` (half-extents for a box), scaled per axis like ``pos``; None if unset."""
 
     @property
     def rot(self) -> torch.Tensor:
@@ -46,6 +48,7 @@ class _SiteOffset:
     quat: tuple[float, float, float, float]  # wxyz, relative to ``body``
     root_pos: tuple[float, float, float]  # relative to the asset root
     root_quat: tuple[float, float, float, float]
+    size: tuple[float, ...] | None
 
 
 def _quat_mul(a, b):
@@ -87,7 +90,7 @@ def _local_frame(el, *, path: str, degrees: bool, eulerseq: str, scale) -> tuple
     if el.get("class") is not None or el.get("childclass") is not None:
         raise ValueError(f"{path}: <{el.tag} class=...>: default classes are not supported for site offsets")
     pos = _floats(el.get("pos"), 3, path, el.tag) or (0.0, 0.0, 0.0)
-    pos = tuple(p * s for p, s in zip(pos, scale))
+    pos = tuple(p * s for p, s in zip(pos, scale, strict=True))
     quat = (1.0, 0.0, 0.0, 0.0)
     if (q := _floats(el.get("quat"), 4, path, el.tag)) is not None:
         n = math.sqrt(sum(c * c for c in q))
@@ -95,7 +98,7 @@ def _local_frame(el, *, path: str, degrees: bool, eulerseq: str, scale) -> tuple
     elif (aa := _floats(el.get("axisangle"), 4, path, el.tag)) is not None:
         quat = _axis_angle(aa[:3], math.radians(aa[3]) if degrees else aa[3])
     elif (eu := _floats(el.get("euler"), 3, path, el.tag)) is not None:
-        for axis_name, angle in zip(eulerseq, eu):
+        for axis_name, angle in zip(eulerseq, eu, strict=True):
             axis = {"x": (1.0, 0.0, 0.0), "y": (0.0, 1.0, 0.0), "z": (0.0, 0.0, 1.0)}[axis_name.lower()]
             r = _axis_angle(axis, math.radians(angle) if degrees else angle)
             # lower case: axes move with the frame (post-multiply); upper case: fixed axes (pre-multiply)
@@ -103,7 +106,7 @@ def _local_frame(el, *, path: str, degrees: bool, eulerseq: str, scale) -> tuple
     return pos, quat
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _site_offsets(mjcf_path: str, scale: tuple[float, float, float]) -> dict[str, _SiteOffset]:
     root = ET.parse(mjcf_path).getroot()
     for tag in ("include", "frame"):
@@ -119,7 +122,7 @@ def _site_offsets(mjcf_path: str, scale: tuple[float, float, float]) -> dict[str
     offsets: dict[str, _SiteOffset] = {}
 
     def compose(pos, quat, cpos, cquat):
-        return tuple(a + b for a, b in zip(pos, _rotate(quat, cpos))), _quat_mul(quat, cquat)
+        return tuple(a + b for a, b in zip(pos, _rotate(quat, cpos), strict=True)), _quat_mul(quat, cquat)
 
     identity = ((0.0, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0))
 
@@ -131,7 +134,16 @@ def _site_offsets(mjcf_path: str, scale: tuple[float, float, float]) -> dict[str
             child_rel, child_root = compose(*rel, *local), compose(*root, *local)
             if child.tag == "site":
                 if (name := child.get("name")) is not None:
-                    offsets[name] = _SiteOffset(anchor, *child_rel, *child_root)
+                    size = child.get("size")
+                    if size is not None:
+                        vals = [float(v) for v in size.split()]
+                        # a box's half-extents scale per axis; a radius-like size by the largest factor
+                        size = (
+                            tuple(v * sc for v, sc in zip(vals, scale, strict=True))
+                            if len(vals) == 3
+                            else tuple(v * max(scale) for v in vals)
+                        )
+                    offsets[name] = _SiteOffset(anchor, *child_rel, *child_root, size)
             elif child.get("name"):
                 walk(child, child.get("name"), identity, child_root)
             else:
@@ -176,4 +188,5 @@ def site_pose(states, obj, site: str) -> SitePose:
     return SitePose(
         pos=frame[:, :3] + quat_apply(frame[:, 3:7], local_pos),
         quat=quat_mul(frame[:, 3:7], local_quat),
+        size=off.size,
     )

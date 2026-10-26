@@ -34,8 +34,12 @@ the parallel implementations, then build the benchmark data model on top.
       `ObjectRandomizer` covers Isaac Sim only.
 - [x] Site poses derived from the state (`metasim.utils.site_util.site_pose`): LIBERO-90's success checks
       no longer read `physics.named.data.site_*` (63 reach-ins to 0). The mjlab ports still read `physics`.
-- [ ] LIBERO-90 config-port predicates as LIBERO defines them (`In` / `On` on a site region). Seven checks
-      are false on the demos' own final states; `put_the_frying_pan_on_the_stove` tests the moka pot.
+- [x] LIBERO-90 success as the BDDL goal, declared as data (`goal = (("In", obj, region_obj, site), ...)`) and
+      evaluated with LIBERO's predicates (56 tasks). Left on hand-written checkers: the microwave tasks (the asset
+      does not compile standalone), and tasks whose demo file is missing or whose BDDL could not be matched.
+- [ ] LIBERO `On`'s contact clause (the object touches the region's parent) needs a contact query.
+- [ ] MuJoCo handler: scaling an object collapses a box site's 3-number `size` to one number
+      (`_apply_scale_to_mjcf` treats every site as a sphere).
 - [ ] Upload the LIBERO MJCFs missing from the HF dataset (wooden_tray, wooden_two_layer_shelf,
       porcelain_mug, white_yellow_mug, white_bowl, stable_scanned basket, microwave): 31 of 66 LIBERO-90
       tasks cannot load on MuJoCo from a fresh download. Local copies (upstream LIBERO 8f1084e, verbatim)

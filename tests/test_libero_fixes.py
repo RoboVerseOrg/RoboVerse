@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import pathlib
+import types
 
 import pytest
 import torch
@@ -37,6 +38,7 @@ def test_stove_terminated_is_per_env():
         cameras={},
     )
     task = LiberoKitchenScene3TurnOnStoveTask.__new__(LiberoKitchenScene3TurnOnStoveTask)
+    task.handler = types.SimpleNamespace(get_joint_names=lambda obj, sort=True: ["button"])
     out = task._terminated(states)
     assert out.shape == (2,), f"_terminated must be per-env (2,), got {tuple(out.shape)}"
     assert out.tolist() == [True, False]

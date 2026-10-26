@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -89,34 +86,7 @@ class LiberoKitchenScene10PutChocolatePuddingInTopDrawerAndCloseTask(Libero90Bas
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene10_put_the_chocolate_pudding_in_the_top_drawer_of_the_cabinet_and_close_it_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: chocolate_pudding is inside the top drawer AND top drawer is closed."""
-        # 1. check if chocolate_pudding is in the top drawer
-        pudding_pos = states.objects["chocolate_pudding"].root_state[:, :3]  # (N,3)
-        # Get drawer top_region site pose
-        drawer_top_site = self._site_pose(states, "wooden_cabinet", "top_region")
-
-        drawer_top_R = drawer_top_site.rot  # (N,3,3)
-        drawer_top_t = drawer_top_site.pos  # (N,3)
-
-        # top_region site half-size from wooden_cabinet.xml: size="0.02993 0.07561 0.10224"
-        bbox_lower = torch.tensor([-0.02993, -0.07561, -0.10224], device=pudding_pos.device)
-        bbox_upper = torch.tensor([0.02993, 0.07561, 0.10224], device=pudding_pos.device)
-
-        # Transform pudding position to drawer top_region local frame
-        pudding_local = torch.matmul(drawer_top_R.transpose(1, 2), (pudding_pos - drawer_top_t).unsqueeze(-1)).squeeze(
-            -1
-        )  # (N,3)
-        ge_lower = pudding_local >= bbox_lower  # (N,3)
-        le_upper = pudding_local <= bbox_upper  # (N,3)
-        pudding_in_drawer = (ge_lower & le_upper).all(dim=-1)  # (N,)
-
-        # 2. check if the top drawer is closed
-        cabinet_joint_pos = states.objects["wooden_cabinet"].joint_pos[:, 2]  # (N,) - top_level joint (index 2)
-        drawer_closed = cabinet_joint_pos > -0.01  # (N,) - closed when joint_pos is near 0
-
-        # Final success condition
-        is_success = pudding_in_drawer & drawer_closed  # (N,)
-        return is_success
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (
+        ("In", "chocolate_pudding", "wooden_cabinet", "top_region"),
+        ("Close", "wooden_cabinet", "top_level"),
+    )

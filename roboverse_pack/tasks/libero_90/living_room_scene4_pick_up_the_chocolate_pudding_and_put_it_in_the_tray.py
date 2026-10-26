@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -88,19 +85,4 @@ class LiberoLivingRoomScene4PickUpChocolatePuddingTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_living_room_scene4_pick_up_the_chocolate_pudding_and_put_it_in_the_tray_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: chocolate_pudding is inside wooden_tray/contain_region bounding box.
-
-        Site wooden_tray/contain_region half-size = 0.04038 0.07839 0.13549.
-        We transform the chocolate_pudding position into the site's local frame and verify it falls within +/- half-size.
-        """
-        obj_pos = states.objects["chocolate_pudding"].root_state[:, :3]
-        region_site = self._site_pose(states, "wooden_tray", "contain_region")
-        region_R = region_site.rot
-        region_t = region_site.pos
-        half_size = torch.tensor([0.04038, 0.07839, 0.13549], device=obj_pos.device)
-        obj_local = torch.matmul(region_R.transpose(1, 2), (obj_pos - region_t).unsqueeze(-1)).squeeze(-1)
-        inside = (obj_local.abs() <= (half_size + 1e-6)).all(dim=-1)
-        return inside
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("In", "chocolate_pudding", "wooden_tray", "contain_region"),)
