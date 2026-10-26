@@ -1,9 +1,9 @@
 """The base class and derived classes for the pick up single EGAD object task from ManiSkill."""
 
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import PositionShiftChecker
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers.checkers import PositionShiftChecker
 from metasim.task.registry import register_task
 
 from .maniskill_base import ManiskillBaseTask

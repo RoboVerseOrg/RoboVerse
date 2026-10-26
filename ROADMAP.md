@@ -25,6 +25,15 @@ the parallel implementations, then build the benchmark data model on top.
 - [x] `get_states(env_ids=...)` returns exactly those envs on every backend.
 - [x] `set_states` restores velocities; L0 / L1 replay contracts pinned per backend.
 - [x] `BaseTaskEnv.supported_simulators` declared and checked at construction.
+- [x] `metasim.kernel`: the minimum a port builds on (scenario, `TensorState`, handler, task loop,
+      protocol), backend-free and API-pinned; content's reach-ins past the handler surface are counted
+      per area and only go down (`tests/test_kernel_boundary.py`, 354 at 1.0.0).
+- [ ] Handler physical-property interface: per-body mass / inertia and per-shape friction /
+      restitution, per env, on every backend. Today the humanoid and beyondmimic packs each carry
+      their own Isaac Sim / Isaac Gym / MuJoCo / Newton branches for it, and the core
+      `ObjectRandomizer` covers Isaac Sim only.
+- [ ] Site and frame poses by name as a handler query, so LIBERO-90's success checks (63 direct
+      `physics.named.data.site_*` reads) and the mjlab ports run on more than MuJoCo.
 - [ ] `_set_states` accepts `TensorState` only; the dict/tensor dual paths go away.
 - [ ] Per-backend capability declaration (`BackendCapabilities`) checked against `RobotCfg` and
       `SimParamCfg` at handler creation; `SimParamCfg` split into common fields + per-backend sections.
@@ -38,7 +47,14 @@ the parallel implementations, then build the benchmark data model on top.
 ### 2. Convergence
 
 - [ ] One environment loop: `RLTaskEnv` hooks replace the manager-based env and the two hand-written
-      locomotion loops; term configs (reward / termination / event) move into MetaSim.
+      locomotion loops; term configs (reward / termination / event) move into MetaSim. Done so far:
+      `BaseTaskEnv` and `RLTaskEnv` share one step sequence with `_apply_action` / `_on_step` /
+      `_on_reset`, and seven family bases dropped their `reset` overrides for `_on_reset`. Left: the
+      30 `step` overrides (locomotion loops with in-step PD and decimation, delta-control latches in
+      MuJoCo Playground and pick-place, native ports), which need a per-substep hook first.
+- [ ] MuJoCo Playground tasks run again: `pick` / `open_cabinet` read Menagerie Panda geoms
+      (`left_finger_pad`) the bundled Franka MJCF lacks, `handover` has no ALOHA MJCF, and
+      `handover.step` reads an `env_states` attribute nothing sets.
 - [ ] Table-driven task families (`TASK_SPECS` + registration loop) replace the generated
       ManiSkill task files.
 - [ ] `roboverse_learn/common`: one env factory, one checkpoint format, one seeding path.
@@ -93,8 +109,10 @@ first; the data model builds on it.
       stack_cube demos run to the time-out after the task is solved).
 - [ ] The task bases keep the un-tiled demo states and actions they load (one source of truth);
       `metasim.bench.instance_pool` reads them instead of parsing the demo file a second time.
-- [ ] Checkers move out of `metasim.example` into `metasim.task.success` as the public, declarative
-      success predicates (position, bbox, joint, hold counters) every task family uses.
+- [x] Checkers move out of `metasim.example` into the core (`metasim.task.checkers`; the old path is
+      an alias).
+- [ ] Declarative success predicates on top of them (position, bbox, joint, all-of / any-of), so a
+      task states its success condition as data.
 - [ ] Frozen evaluation splits: per task a published instance list (ids + hashes) separate from
       the training demos, plus a stability gate before the policy acts (an instance whose objects
       move at rest is discarded and counted, not scored).

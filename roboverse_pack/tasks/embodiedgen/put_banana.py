@@ -5,9 +5,9 @@ from __future__ import annotations
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers import DetectedChecker, RelativeBboxDetector
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers import DetectedChecker, RelativeBboxDetector
 from metasim.task.registry import register_task
 
 from .base import EmbodiedGenBaseTask

@@ -1,9 +1,9 @@
 """Configuration for the Libero pick ketchup task."""
 
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers import DetectedChecker, RelativeBboxDetector
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers import DetectedChecker, RelativeBboxDetector
 from metasim.task.registry import register_task
 
 from .libero_base import LiberoBaseTask

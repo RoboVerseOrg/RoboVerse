@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers import JointPosChecker
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers import JointPosChecker
 from metasim.task.registry import register_task
 
 from .libero_90_base import Libero90BaseTask

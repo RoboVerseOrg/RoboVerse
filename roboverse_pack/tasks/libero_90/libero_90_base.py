@@ -39,17 +39,10 @@ class Libero90BaseTask(BaseTaskEnv):
         """Success when task conditions are met."""
         return self.checker.check(self.handler, states)
 
-    def reset(self, states=None, env_ids=None, seed=None):
-        """Reset the env; reset the checker unless ``skip_checker_reset`` is set.
-
-        ``seed`` is forwarded to ``super().reset``. Leaves that set
-        ``skip_checker_reset = True`` get the old "skip checker reset" behaviour
-        without overriding ``reset`` (so the seed contract is preserved).
-        """
-        states = super().reset(states, env_ids, seed)
+    def _on_reset(self, env_ids: list[int]) -> None:
+        """Reset the checker for ``env_ids`` unless ``skip_checker_reset`` is set."""
         if self.checker is not None and not self.skip_checker_reset:
             self.checker.reset(self.handler, env_ids=env_ids)
-        return states
 
     def _get_initial_states(self) -> list[dict] | None:
         """Return per-env initial states sampled from the demo trajectory.

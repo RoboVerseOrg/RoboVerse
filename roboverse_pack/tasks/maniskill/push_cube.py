@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from metasim.bench.prompts import PromptBank
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import Relative2DSphereDetector
 from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveCylinderCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers.checkers import DetectedChecker
+from metasim.task.checkers.detectors import Relative2DSphereDetector
 from metasim.task.registry import register_task
 
 from ._dense_rl import DenseRLResetMixin

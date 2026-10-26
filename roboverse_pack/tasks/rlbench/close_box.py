@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import math
 
-from metasim.example.example_pack.tasks.checkers import JointPosChecker
 from metasim.scenario.objects import ArticulationObjCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers import JointPosChecker
 from metasim.task.registry import register_task
 
 from .rl_bench import RLBenchTask

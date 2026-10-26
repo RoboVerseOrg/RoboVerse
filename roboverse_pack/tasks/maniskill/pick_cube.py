@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from metasim.bench.prompts import PromptBank
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import PositionShiftChecker
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers.checkers import PositionShiftChecker
 from metasim.task.registry import register_task
 
 from .maniskill_base import ManiskillBaseTask
