@@ -66,8 +66,18 @@ class _FakeNewtonModel:
         self.body_inv_inertia = _WpArray([np.eye(3) for _ in range(n)])
         self.body_com = _WpArray([[0.0, 0.0, 0.0]] * n)
         self.shape_material_mu = _WpArray([1.0] * n)
-        self.shape_material_torsional_friction = _WpArray([0.005] * n)
-        self.shape_material_rolling_friction = _WpArray([0.0001] * n)
+        self.shape_material_mu_torsional = _WpArray([0.005] * n)  # newton >= 1.6 spelling
+        self.shape_material_mu_rolling = _WpArray([0.0001] * n)
+
+
+class _FakeSolver:
+    """Records ``notify_model_changed``: SolverMuJoCo ignores a model write until it is told."""
+
+    def __init__(self):
+        self.notified: list[object] = []
+
+    def notify_model_changed(self, flags) -> None:
+        self.notified.append(flags)
 
 
 class _FakeHandler:
@@ -82,7 +92,10 @@ class _FakeHandler:
         self.num_envs = NUM_ENVS
         self.device = torch.device("cpu")
         self._model = _FakeNewtonModel()
+        self._solver = _FakeSolver()
         self._robot_name = robot_name
+        self.masses = torch.full((NUM_ENVS, len(BODIES)), 5.0, dtype=torch.float64)
+        self.set_body_masses_calls: list[dict] = []
         self.set_states_calls: list[TensorState] = []
         self.set_states_error: Exception | None = None
         self.root_state = torch.zeros((NUM_ENVS, 13))
@@ -92,6 +105,22 @@ class _FakeHandler:
         if obj_name != self._robot_name:
             return []
         return [env_id * len(BODIES) + i for i in range(len(BODIES))]
+
+    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
+        return sorted(BODIES) if sort else list(BODIES)
+
+    def get_body_masses(self, obj_name: str) -> torch.Tensor:
+        if self.scenario.simulator != "newton":
+            raise NotImplementedError(f"{self.scenario.simulator} does not expose body masses.")
+        return self.masses.to(torch.float32)
+
+    def set_body_masses(self, obj_name: str, masses, *, env_ids=None, scale_inertia=True) -> None:
+        self.set_body_masses_calls.append({
+            "masses": masses.clone(),
+            "env_ids": env_ids,
+            "scale_inertia": scale_inertia,
+        })
+        self.masses = masses.clone()
 
     def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if obj_name != self._robot_name:
@@ -157,21 +186,29 @@ def test_geom_friction_writes_newton_shape_friction():
 
 
 @pytest.mark.general
-def test_body_mass_writes_newton_body_mass_and_inverse():
+def test_geom_friction_tells_the_newton_solver():
+    """SolverMuJoCo keeps its own geom_friction: a write it is not told about never reaches the contacts."""
+    env, handler = _make_env("newton")
+    geom_friction(env, asset_cfg=_foot_cfg(), ranges=(0.3, 1.2), axes=(0, 1))
+    assert len(handler._solver.notified) == 1
+    assert not np.allclose(handler._model.shape_material_mu_torsional.numpy()[[1, 2]], 0.005)
+
+
+@pytest.mark.general
+def test_body_mass_goes_through_the_handler_interface():
+    """body_mass reads and writes the asset's own bodies via get/set_body_masses, on any backend that has them."""
     env, handler = _make_env("newton")
 
-    body_mass(env, asset_cfg=_trunk_cfg(), operation="mul", ranges=(1.5, 1.6))
+    body_mass(env, asset_cfg=_trunk_cfg(), operation="mul", ranges=(1.5, 1.6), recompute_inertia=False)
 
-    mass = handler._model.body_mass.numpy()
-    inv_mass = handler._model.body_inv_mass.numpy()
-    trunk_ids = [0, 3]  # trunk of env0 / env1
-    assert np.all(mass[trunk_ids] > 5.0), "mass DR silently no-opped on Newton"
-    assert np.all((mass[trunk_ids] >= 5.0 * 1.5) & (mass[trunk_ids] <= 5.0 * 1.6))
-    assert np.allclose(inv_mass[trunk_ids], 1.0 / mass[trunk_ids])
-    assert np.allclose(mass[[1, 2, 4, 5]], 5.0), "only the selected body may change"
-    # inertia is rescaled by the mass ratio so the body stays physical.
-    inertia = handler._model.body_inertia.numpy()
-    assert np.allclose(inertia[0], np.eye(3) * (mass[0] / 5.0))
+    (call,) = handler.set_body_masses_calls
+    assert call["scale_inertia"] is False
+    trunk = sorted(BODIES).index("trunk")
+    mass = call["masses"]
+    assert torch.all((mass[:, trunk] >= 5.0 * 1.5) & (mass[:, trunk] <= 5.0 * 1.6)), "mass DR silently no-opped"
+    others = [i for i in range(len(BODIES)) if i != trunk]
+    assert torch.equal(mass[:, others], torch.full((NUM_ENVS, len(others)), 5.0, dtype=torch.float64))
+    assert mass[0, trunk] != mass[1, trunk], "envs draw their own sample"
 
 
 @pytest.mark.general
@@ -179,6 +216,7 @@ def test_body_com_offset_writes_newton_body_com():
     env, handler = _make_env("newton")
 
     body_com_offset(env, asset_cfg=_trunk_cfg(), operation="add", ranges={0: (0.02, 0.025), 2: (-0.03, -0.02)})
+    assert len(handler._solver.notified) == 1, "the solver must be told about the new COM"
 
     com = handler._model.body_com.numpy()
     assert np.all(com[[0, 3], 0] >= 0.02), "COM DR silently no-opped on Newton"

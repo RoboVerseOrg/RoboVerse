@@ -1,4 +1,10 @@
-"""MuJoCo ``set_body_masses`` changes what the engine simulates, for the named body only.
+"""MuJoCo body properties: ``set_body_masses`` and ``set_body_friction`` change what the engine simulates.
+
+Friction: a box slid across a frictionless slab stops after ``v^2 / (2 mu g)``; the coefficient lands on the
+named body's collision geoms only, a round trip leaves the model bit-identical, and restitution (which MuJoCo
+does not model) warns and changes nothing.
+
+Masses: ``set_body_masses`` changes what the engine simulates, for the named body only.
 
 Content used to write ``physics.model.body_mass[i]`` with ``i`` an index into the *object's* body list,
 which on a scene with more than one model is another body (the world body for a robot's first link),
@@ -113,5 +119,97 @@ def test_parallel_envs_are_written_one_by_one(tmp_path):
         torch.testing.assert_close(handler.get_body_masses("arm"), torch.tensor([[1.0, 0.5], [1.0, 1.5]]))
         after = _hinge_after(handler)
         assert after[0] == default[0] and abs(float(after[1])) > 1.5 * abs(float(default[1]))
+    finally:
+        handler.close()
+
+
+# a frictionless fixed slab and a free box on it; the box's "handle" body has no collision geom
+_SLAB = '<mujoco model="slab"><worldbody><body name="slab"><geom type="box" size="5 5 0.05" friction="0 0 0"/></body></worldbody></mujoco>'
+_BOX = """<mujoco model="box"><worldbody><body name="block">
+<geom type="box" size="0.1 0.1 0.1" mass="1" friction="1 0.005 0.0001"/>
+<body name="handle" pos="0 0 0.2"><geom type="sphere" size="0.01" mass="0.01" contype="0" conaffinity="0"/></body>
+</body></worldbody></mujoco>"""
+_G, _V = 9.81, 2.0
+
+
+def _slide_scenario(tmp_path, num_envs=1, simulator="mujoco"):
+    from metasim.scenario.robot import RobotCfg
+    from metasim.scenario.scenario import ScenarioCfg
+
+    (tmp_path / "slab.xml").write_text(_SLAB)
+    (tmp_path / "box.xml").write_text(_BOX)
+    return ScenarioCfg(
+        robots=[
+            RobotCfg(name="slab", mjcf_path=str(tmp_path / "slab.xml"), fix_base_link=True, actuators={}),
+            RobotCfg(
+                name="box",
+                mjcf_path=str(tmp_path / "box.xml"),
+                fix_base_link=False,
+                default_position=(0.0, 0.0, 0.152),
+                actuators={},
+            ),
+        ],
+        objects=[],
+        simulator=simulator,
+        num_envs=num_envs,
+        headless=True,
+    )
+
+
+def _slide(handler, seconds=1.5):
+    """Distance the box slides from rest-on-the-slab after a 2 m/s push along x."""
+    for _ in range(50):
+        handler.simulate()
+    states = handler.get_states(mode="tensor")
+    x0 = states.robots["box"].root_state[:, 0].clone()
+    states.robots["box"].root_state[:, 7] = _V
+    handler.set_states(states)
+    for _ in range(int(seconds / handler.physics_dt)):
+        handler.simulate()
+    return (handler.get_states(mode="tensor").robots["box"].root_state[:, 0] - x0).cpu()
+
+
+def test_friction_sets_the_stopping_distance_and_round_trips_exactly(tmp_path):
+    from metasim.utils.log import reset_warn_once
+    from metasim.utils.setup_util import get_handler
+
+    reset_warn_once()
+    handler = get_handler(_slide_scenario(tmp_path))
+    try:
+        model = handler.physics.model.ptr
+        friction = handler.get_body_friction("box")
+        assert handler.get_body_names("box") == ["block", "handle"]
+        assert friction[0, 0] == 1.0 and torch.isnan(friction[0, 1])  # handle: no collision geom
+        before = model.geom_friction.copy()
+        handler.set_body_friction("box", friction)
+        assert np.array_equal(model.geom_friction, before)
+
+        friction[0, 0] = 0.25
+        handler.set_body_friction("box", friction)
+        block = model.geom(model.body("box/block").geomadr[0]).id
+        assert model.geom_friction[block, 0] == 0.25
+        assert np.array_equal(model.geom_friction[block, 1:], before[block, 1:]), "torsion / roll keep the asset's"
+        others = np.arange(model.ngeom) != block
+        assert np.array_equal(model.geom_friction[others], before[others])
+
+        assert torch.isnan(handler.get_body_restitution("box")).all()
+        handler.set_body_restitution("box", torch.zeros(1, 2))  # MuJoCo has none: warns, writes nothing
+        assert float(_slide(handler)[0]) == pytest.approx(_V**2 / (2 * 0.25 * _G), rel=0.01)
+    finally:
+        handler.close()
+
+
+def test_friction_is_per_env_through_the_parallel_handler(tmp_path):
+    from metasim.utils.setup_util import get_handler
+
+    handler = get_handler(_slide_scenario(tmp_path, num_envs=2))
+    try:
+        friction = handler.get_body_friction("box")
+        handler.set_body_friction("box", torch.tensor([[0.5, float("nan")]]), env_ids=[1])
+        friction[1, 0] = 0.5
+        torch.testing.assert_close(handler.get_body_friction("box"), friction, equal_nan=True)
+        handler.set_body_friction("box", torch.tensor([[0.25, float("nan")]]), env_ids=[0])
+        dist = _slide(handler)
+        assert dist.tolist() == pytest.approx([_V**2 / (2 * mu * _G) for mu in (0.25, 0.5)], rel=0.01)
     finally:
         handler.close()

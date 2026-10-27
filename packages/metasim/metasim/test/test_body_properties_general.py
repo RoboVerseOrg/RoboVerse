@@ -1,8 +1,9 @@
-"""``BaseSimHandler.get_body_masses`` / ``set_body_masses``: ordering and validation, with no simulator.
+"""``BaseSimHandler`` body properties (masses, friction, restitution): ordering and validation, no simulator.
 
 Bodies are reported and accepted in ``get_body_names`` order (alphabetical, as in the state) while the
 backend hooks work in the engine's order; a column read and written back unchanged keeps the engine's
-float64 value; bad input fails before anything reaches the backend.
+float64 value; bad input fails before anything reaches the backend. A property the engine does not model
+warns and is NaN instead of raising; a body without collision shapes has NaN friction and ignores writes.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import torch
 
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg
 from metasim.sim.base import BaseSimHandler
+from metasim.utils.log import reset_warn_once
 
 pytestmark = pytest.mark.general
 
@@ -37,6 +39,18 @@ class _Handler(BaseSimHandler):
     def _set_body_masses(self, obj_name, masses, env_ids, scale_inertia):
         self.writes.append((masses.clone(), list(env_ids), scale_inertia))
         self.masses[env_ids] = masses
+
+    # shin has no collision shape
+    friction = None
+
+    def _get_body_friction(self, obj_name):
+        if self.friction is None:
+            self.friction = torch.tensor([[float("nan"), 0.8, 1.0]] * self.num_envs, dtype=torch.float64)
+        return self.friction.clone()
+
+    def _set_body_friction(self, obj_name, friction, env_ids):
+        self.writes.append((friction.clone(), list(env_ids)))
+        self.friction[env_ids] = friction
 
     def _set_states(self, states, env_ids=None):
         raise NotImplementedError
@@ -110,3 +124,66 @@ def test_a_backend_without_the_hooks_says_so():
 
     with pytest.raises(NotImplementedError, match="_Bare does not expose body masses"):
         _Bare().get_body_masses("leg")
+
+
+def test_friction_is_nan_for_a_shapeless_body_and_a_write_there_is_ignored(caplog):
+    reset_warn_once()
+    h = _Handler()
+    f = h.get_body_friction("leg")  # sorted: base, shin, thigh
+    assert torch.isnan(f[:, 1]).all() and f[0, 0] == pytest.approx(0.8)
+    h.set_body_friction("leg", f)  # round trip, NaN included: nothing is ignored, nothing changes
+    assert torch.equal(h.writes[-1][0][:, 1:], h.friction[:, 1:]) and torch.isnan(h.writes[-1][0][:, 0]).all()
+    f[:, 1] = 0.5  # shin: no collision shape
+    f[:, 2] = 0.3  # thigh
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        h.set_body_friction("leg", torch.tensor([[-1.0, 0.5, 0.3]] * 2))
+    h.set_body_friction("leg", f)
+    written = h.writes[-1][0]
+    assert torch.isnan(written[:, 0]).all(), "the shapeless body keeps NaN"
+    assert written[:, 2].tolist() == pytest.approx([0.3, 0.3])
+
+
+def test_an_engine_without_restitution_warns_instead_of_raising(caplog):
+    reset_warn_once()
+
+    class _NoBounce(_Handler):
+        unsupported_body_properties = {"restitution": "This engine has no bounce coefficient."}
+
+    h = _NoBounce()
+    assert torch.isnan(h.get_body_restitution("leg")).all()
+    h.set_body_restitution("leg", torch.zeros(2, 3))  # validated, warned, nothing written
+    assert h.writes == []
+    with pytest.raises(ValueError, match="shape"):
+        h.set_body_restitution("leg", torch.zeros(2, 2))
+    with pytest.raises(ValueError, match=r"in \[0, 1\]"):  # validated even though nothing is written
+        h.set_body_restitution("leg", torch.full((2, 3), 5.0))
+
+
+def test_an_empty_env_ids_writes_nothing():
+    h = _Handler()
+    h.set_body_masses("leg", torch.zeros(0, 3), env_ids=[])
+    h.set_body_friction("leg", torch.zeros(0, 3), env_ids=[])
+    assert h.writes == []
+
+
+def test_restitution_must_lie_in_zero_one():
+    class _Bouncy(_Handler):
+        def _get_body_restitution(self, obj_name):
+            return torch.zeros(self.num_envs, 3, dtype=torch.float64)
+
+        def _set_body_restitution(self, obj_name, restitution, env_ids):
+            self.writes.append(restitution.clone())
+
+    h = _Bouncy()
+    with pytest.raises(ValueError, match=r"in \[0, 1\]"):
+        h.set_body_restitution("leg", torch.full((2, 3), 1.5))
+    h.set_body_restitution("leg", torch.full((2, 3), 0.5))
+    assert h.writes[-1].tolist() == [[0.5] * 3] * 2
+
+
+def test_an_unimplemented_hook_raises_even_for_friction():
+    class _Bare(_Handler):
+        _get_body_friction = BaseSimHandler._get_body_friction
+
+    with pytest.raises(NotImplementedError, match="_Bare does not expose body friction"):
+        _Bare().get_body_friction("leg")

@@ -24,6 +24,29 @@ from metasim.types import CompatActionInput, DictEnvState, TensorState
 from metasim.utils.state import join_tensor_states
 
 
+def _state_keys_only(row: DictEnvState, keep: frozenset[str]) -> DictEnvState:
+    """``row`` with each object / robot reduced to the ``keep`` keys (what ``set_states`` applies).
+
+    A state read back with ``get_states`` also carries body states, joint targets and the like; the wrapper has
+    already checked the caller's input, so forwarding them only makes each worker warn about keys nobody passed.
+    """
+    out = dict(row)
+    for role in ("objects", "robots"):
+        bucket = row.get(role)
+        if isinstance(bucket, dict):
+            out[role] = {
+                name: {k: v for k, v in entity.items() if k in keep} if isinstance(entity, dict) else entity
+                for name, entity in bucket.items()
+            }
+    return out
+
+
+# the BaseSimHandler body-property hooks a worker may run for the wrapper
+_BODY_PROPERTY_HOOKS = frozenset(
+    f"_{op}_body_{prop}" for op in ("get", "set") for prop in ("masses", "friction", "restitution")
+)
+
+
 def _worker(
     rank: int,
     remote: Connection,
@@ -65,11 +88,11 @@ def _worker(
                 remote.send(names)
             elif cmd == "set_dof_targets":
                 env.set_dof_targets(data[0])
-            elif cmd == "get_body_masses":
-                remote.send(env._get_body_masses(data[0]))
-            elif cmd == "set_body_masses":
-                env._set_body_masses(data[0], data[1], [0], data[2])
-                remote.send(None)
+            elif cmd == "body_property_hook":  # (hook name, args): a BaseSimHandler body-property hook
+                hook, args = data
+                if hook not in _BODY_PROPERTY_HOOKS:
+                    raise ValueError(f"not a body-property hook: {hook!r}")
+                remote.send(getattr(env, hook)(*args))
             elif cmd == "set_seed":
                 env.set_seed(data[0])
             elif cmd == "handshake":
@@ -120,6 +143,7 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
         _set_states_input_type = "dict"
 
         get_states_honours_env_ids = True  # ``_get_states`` polls the workers in ``env_ids`` order
+        unsupported_body_properties = getattr(base_cls, "unsupported_body_properties", {})  # what the workers run
 
         @property
         def set_states_restores_velocities(self) -> bool:  # type: ignore[override]
@@ -322,8 +346,11 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
                     f"states has {len(states)} envs for env_ids {env_ids} (handler has {self.num_envs}); pass one state "
                     "(broadcast), one per env_id, or the full batch"
                 )
+            keep = (
+                self._SET_STATES_VALID_ROBOT_KEYS | self._SET_STATES_VALID_OBJECT_KEYS | self._SET_STATES_READ_ONLY_KEYS
+            )
             for env_idx, row in zip(env_ids, rows, strict=True):
-                self.remotes[env_idx].send(("set_states", ([row],)))
+                self.remotes[env_idx].send(("set_states", ([_state_keys_only(row, keep)],)))
             self._check_error()
 
         def _get_states(self, env_ids: list[int] | None = None, **kwargs) -> TensorState:
@@ -430,18 +457,38 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
             return self.get_body_names(obj_name, sort)
 
         # each worker holds one env; the base class validates and reorders, the workers read and write
-        def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+        def _gather_body_property(self, hook: str, obj_name: str) -> torch.Tensor:
             for remote in self.remotes:
-                self._send(remote, ("get_body_masses", (obj_name,)))
-            return torch.cat([self._recv_or_surface(i) for i in range(self.num_envs)])
+                self._send(remote, ("body_property_hook", (hook, (obj_name,))))
+            return torch.cat([torch.as_tensor(self._recv_or_surface(i)) for i in range(self.num_envs)])
+
+        def _scatter_body_property(self, hook: str, obj_name: str, values, env_ids, *extra) -> None:
+            for row, env_id in enumerate(env_ids):
+                self._send(
+                    self.remotes[env_id], ("body_property_hook", (hook, (obj_name, values[row : row + 1], [0], *extra)))
+                )
+            for env_id in env_ids:
+                self._recv_or_surface(env_id)
+
+        def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+            return self._gather_body_property("_get_body_masses", obj_name)
 
         def _set_body_masses(
             self, obj_name: str, masses: torch.Tensor, env_ids: list[int], scale_inertia: bool
         ) -> None:
-            for row, env_id in enumerate(env_ids):
-                self._send(self.remotes[env_id], ("set_body_masses", (obj_name, masses[row : row + 1], scale_inertia)))
-            for env_id in env_ids:
-                self._recv_or_surface(env_id)
+            self._scatter_body_property("_set_body_masses", obj_name, masses, env_ids, scale_inertia)
+
+        def _get_body_friction(self, obj_name: str) -> torch.Tensor:
+            return self._gather_body_property("_get_body_friction", obj_name)
+
+        def _set_body_friction(self, obj_name: str, friction: torch.Tensor, env_ids: list[int]) -> None:
+            self._scatter_body_property("_set_body_friction", obj_name, friction, env_ids)
+
+        def _get_body_restitution(self, obj_name: str) -> torch.Tensor:
+            return self._gather_body_property("_get_body_restitution", obj_name)
+
+        def _set_body_restitution(self, obj_name: str, restitution: torch.Tensor, env_ids: list[int]) -> None:
+            self._scatter_body_property("_set_body_restitution", obj_name, restitution, env_ids)
 
         @property
         def device(self) -> torch.device:

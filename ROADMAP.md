@@ -31,13 +31,14 @@ the parallel implementations, then build the benchmark data model on top.
 - [x] Handler body masses (`get_body_masses` / `set_body_masses`, inertia scaled with the mass) on MuJoCo,
       Newton, Isaac Sim, Isaac Gym and the parallel wrapper; one `MassRandomizer` for the humanoid and
       BeyondMimic packs. Verified on MuJoCo and Newton; the Isaac hooks still need a run.
-- [ ] Per-shape friction / restitution on the handler. `MaterialRandomizer` still branches per backend,
-      the branches disagree on what "static friction" means (MuJoCo writes it into `solimp`), the Newton
-      branch does not notify the solver, the MuJoCo branch indexes the model's geoms with the robot's own
-      body indices (off by the world body and every earlier model), and the Isaac Gym branch passes a dict
-      as the actor handle. The core `ObjectRandomizer` covers Isaac Sim only. mjlab's `body_mass` DR event
-      writes Newton / MuJoCo mass fields itself and skips the solver refresh: route it through
-      `set_body_masses`.
+- [x] Handler friction / restitution (one value per body, all its collision shapes; restitution warns on
+      MuJoCo / Newton, which have none); `MaterialRandomizer` and mjlab's `body_mass` DR on the handler
+      verbs. Verified on MuJoCo and Newton by sliding distance; the Isaac hooks still need a run.
+- [ ] The core `metasim.randomization` `ObjectRandomizer` / `MaterialRandomizer` physics paths write
+      Isaac Sim's `root_physx_view` directly (Isaac Sim only); move articulations onto the handler verbs,
+      and decide whether rigid objects get the verbs as one-body articulations.
+- [ ] Body properties for SAPIEN / PyBullet / Genesis (they have native friction and restitution; the hooks
+      are not written, so they raise `NotImplementedError`).
 - [ ] Newton drops an MJCF body with no geometry and no inertia (H1's `left_hand` / `right_hand` site
       carriers): H1 has 20 bodies on Newton, 22 on MuJoCo, so the body tensors differ in width.
 - [ ] `ParallelHandler` cannot return a state whose extras hold a query object (`ContactForces` on MuJoCo

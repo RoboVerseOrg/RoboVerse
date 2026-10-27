@@ -27,17 +27,15 @@ Currently provided:
 mjlab source: src/mjlab/envs/mdp/dr/ (geom.py, body.py, joint.py).
 
 Backend support:
-  - **mujoco** — mutates the compiled ``MjModel`` reached through
-    ``handler.physics.model`` (``geom_friction`` / ``body_ipos`` /
-    ``body_mass``). Single-env only (``MujocoHandler`` rejects
-    ``num_envs > 1``).
-  - **newton** — mutates the finalized ``newton.Model`` reached through
-    ``handler._model``: ``shape_material_{mu,torsional_friction,rolling_friction}``
-    for friction, ``body_mass`` (+ ``body_inv_mass`` and inertia rescale)
-    for mass, and ``body_com`` for the COM offset. Newton keeps one model
-    row per body *per env*, so randomization here is genuinely per-env.
-    This is the same access pattern used by
-    ``roboverse_pack/randomization/humanoid.py``.
+  - ``body_mass`` goes through ``handler.get_body_masses`` / ``set_body_masses``
+    and so runs on every backend that implements them.
+  - **mujoco** — ``geom_friction`` / ``body_com_offset`` mutate the compiled
+    ``MjModel`` reached through ``handler.physics.model`` (``geom_friction`` /
+    ``body_ipos``). Single-env only (``MujocoHandler`` rejects ``num_envs > 1``).
+  - **newton** — they mutate the finalized ``newton.Model`` reached through
+    ``handler._model`` (the shape friction arrays, ``body_com``) and notify the
+    solver. Newton keeps one model row per body *per env*, so randomization
+    here is genuinely per-env.
   - **anything else (mjx, isaacsim, …)** — raises ``NotImplementedError``.
     These backends do not expose per-env writable model fields through the
     handler, and a DR term that quietly does nothing is worse than no DR
@@ -88,12 +86,13 @@ def _sim_name(env) -> str:
     return str(name) if name else type(handler).__name__
 
 
-def _unsupported(event: str, sim: str) -> NoReturn:
+def _unsupported(event: str, sim: str, supported: str | None = None) -> NoReturn:
     """Raise for a DR event the backend cannot apply. Never return silently."""
+    supported = supported or f"'{_MUJOCO}' (num_envs=1 only) and '{_NEWTON}'"
     raise NotImplementedError(
         f"mjlab DR event '{event}' is not implemented for the '{sim}' backend: it has no writable"
         f" per-env model fields reachable from the handler. Supported backends are"
-        f" '{_MUJOCO}' (num_envs=1 only) and '{_NEWTON}'. Randomization must not silently no-op —"
+        f" {supported}. Randomization must not silently no-op —"
         f" a policy would train with none of the randomization its task cfg declares. Either run"
         f" the task on a supported backend, or remove the '{event}' EventTerm from the task's"
         f" events cfg."
@@ -115,6 +114,18 @@ def _newton_model(env, event: str):
             " (handler.launch() must run before setup events)."
         )
     return model
+
+
+def _newton_notify(env, flag: str) -> None:
+    """Tell Newton's solver that a model array changed: SolverMuJoCo keeps its own copy and ignores the write until then."""
+    from metasim.sim.newton._newton_compat import model_flag
+
+    solver = getattr(env.handler, "_solver", None)
+    if solver is None:
+        raise RuntimeError(
+            "DR event: the Newton handler has no solver yet (handler.launch() must run before setup events)."
+        )
+    solver.notify_model_changed(model_flag(flag))
 
 
 def _asset_name(env, asset_cfg) -> str:
@@ -371,13 +382,17 @@ def push_by_setting_velocity(
 # geom_friction — mjlab parity
 # ---------------------------------------------------------------------------
 
+
 # MuJoCo packs friction as (slide, torsion, roll) per geom; Newton keeps the
 # three coefficients in separate shape-material arrays.
-_NEWTON_FRICTION_FIELDS = {
-    0: "shape_material_mu",
-    1: "shape_material_torsional_friction",
-    2: "shape_material_rolling_friction",
-}
+def _newton_friction_field(model, axis: int) -> str:
+    from metasim.sim.newton._newton_compat import friction_field
+
+    if axis == 0:
+        return "shape_material_mu"
+    if axis in (1, 2):
+        return friction_field(model, "torsional" if axis == 1 else "rolling", "shape_material_")
+    raise ValueError(f"geom_friction: axis must be 0 (slide), 1 (torsion) or 2 (roll), got {axis}.")
 
 
 def geom_friction(
@@ -424,13 +439,7 @@ def geom_friction(
         shapes_by_env = _newton_shape_ids(env, "geom_friction", asset_cfg)
         arrays = {}
         for ax in axes:
-            field = _NEWTON_FRICTION_FIELDS.get(int(ax))
-            arr = getattr(model, field, None) if field else None
-            if arr is None:
-                raise NotImplementedError(
-                    f"geom_friction: the Newton model has no friction field for axis {ax}"
-                    f" (expected '{field}'). MuJoCo friction axes are (slide, torsion, roll)."
-                )
+            arr = getattr(model, _newton_friction_field(model, int(ax)))
             arrays[int(ax)] = (arr, arr.numpy())
         for shapes in shapes_by_env.values():
             shared = sample_fn((len(axes),)) if shared_random else None
@@ -441,6 +450,7 @@ def geom_friction(
                     host[sid] = _apply_op(float(host[sid]), v, operation, "geom_friction")
         for arr, host in arrays.values():
             arr.assign(host)
+        _newton_notify(env, "SHAPE_PROPERTIES")
         return
 
     _unsupported("geom_friction", sim)
@@ -480,6 +490,9 @@ def body_com_offset(
             for ax, (lo, hi) in ranges.items():
                 v = float(rng.uniform(lo, hi))
                 mp.body_ipos[bid, ax] = _apply_op(float(mp.body_ipos[bid, ax]), v, operation, "body_com_offset")
+        import mujoco
+
+        mujoco.mj_setConst(mp, mujoco.MjData(mp))  # invweight0 and friends depend on the COM
         return
 
     if sim == _NEWTON:
@@ -495,6 +508,7 @@ def body_com_offset(
                     v = float(rng.uniform(lo, hi))
                     host[bid][ax] = _apply_op(float(host[bid][ax]), v, operation, "body_com_offset")
         com.assign(host)
+        _newton_notify(env, "BODY_INERTIAL_PROPERTIES")
         return
 
     _unsupported("body_com_offset", sim)
@@ -517,64 +531,30 @@ def body_mass(
 ) -> None:
     """Mjlab ``dr.body_mass`` port — randomize per-body mass.
 
-    On Newton the derived quantities are kept consistent with the new mass:
-    ``body_inv_mass`` is rewritten and (when ``recompute_inertia``) the
-    body's inertia tensor is rescaled by the mass ratio, mirroring
-    ``roboverse_pack/randomization/humanoid.py``.
+    Backend-agnostic: reads and writes through ``handler.get_body_masses`` / ``set_body_masses``, which select
+    the asset's own bodies, scale the inertia by the mass ratio when ``recompute_inertia`` is set, and refresh the
+    engine's derived quantities (MuJoCo's ``mj_setConst``, Newton's solver copy).
 
     Raises:
-        NotImplementedError: on a backend with no writable mass field.
+        NotImplementedError: on a backend that does not expose body masses.
     """
-    sim = _sim_name(env)
     sample_fn = _make_sampler(ranges, distribution)
-
-    if sim == _MUJOCO:
-        bids = _resolve_body_ids(env, asset_cfg)
-        mp = _mujoco_model(env)
-        for bid in bids:
-            old = float(mp.body_mass[bid])
-            new = _apply_op(old, float(sample_fn((1,))[0]), operation, "body_mass")
-            mp.body_mass[bid] = new
-            if recompute_inertia and old > 0.0:
-                mp.body_inertia[bid] *= new / old
-        return
-
-    if sim == _NEWTON:
-        model = _newton_model(env, "body_mass")
-        bodies_by_env = _newton_body_ids(env, "body_mass", asset_cfg, getattr(asset_cfg, "body_names", ()))
-        mass_arr = model.body_mass
-        mass = mass_arr.numpy()
-        inv_mass_arr = getattr(model, "body_inv_mass", None)
-        inv_mass = inv_mass_arr.numpy() if inv_mass_arr is not None else None
-        inertia_arr = getattr(model, "body_inertia", None) if recompute_inertia else None
-        inertia = inertia_arr.numpy() if inertia_arr is not None else None
-        inv_inertia_arr = getattr(model, "body_inv_inertia", None) if recompute_inertia else None
-        inv_inertia = inv_inertia_arr.numpy() if inv_inertia_arr is not None else None
-
-        for bids in bodies_by_env.values():
-            for bid in bids:
-                old = float(mass[bid])
-                new = _apply_op(old, float(sample_fn((1,))[0]), operation, "body_mass")
-                mass[bid] = new
-                if inv_mass is not None:
-                    inv_mass[bid] = 1.0 / new if new > 0.0 else 0.0
-                if old > 0.0 and new > 0.0:
-                    ratio = new / old
-                    if inertia is not None:
-                        inertia[bid] = inertia[bid] * ratio
-                    if inv_inertia is not None:
-                        inv_inertia[bid] = inv_inertia[bid] / ratio
-
-        mass_arr.assign(mass)
-        if inv_mass is not None:
-            inv_mass_arr.assign(inv_mass)
-        if inertia is not None:
-            inertia_arr.assign(inertia)
-        if inv_inertia is not None:
-            inv_inertia_arr.assign(inv_inertia)
-        return
-
-    _unsupported("body_mass", sim)
+    handler = env.handler
+    name = _asset_name(env, asset_cfg)
+    cols = _match_names(getattr(asset_cfg, "body_names", None) or (), handler.get_body_names(name))
+    try:
+        current = handler.get_body_masses(name).to(torch.float64)
+    except NotImplementedError:
+        _unsupported("body_mass", _sim_name(env), "those whose handler implements get_body_masses / set_body_masses")
+    masses = current.clone()
+    for env_id in range(env.num_envs):
+        for col in cols:
+            sample = float(sample_fn((1,))[0])
+            masses[env_id, col] = _apply_op(float(masses[env_id, col]), sample, operation, "body_mass")
+    if recompute_inertia and (current == 0).any():
+        # a massless body has no inertia to scale (mjlab writes its mass and leaves the inertia)
+        handler.set_body_masses(name, torch.where(current == 0, masses, current), scale_inertia=False)
+    handler.set_body_masses(name, masses, scale_inertia=recompute_inertia)
 
 
 # ---------------------------------------------------------------------------

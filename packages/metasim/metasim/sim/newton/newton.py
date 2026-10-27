@@ -48,7 +48,7 @@ from metasim.utils.state import (
 # JointType lived under _src.sim.joints and populate_contacts was a
 # free function) AND newton >= 1.2 (public JointType, contacts
 # auto-populated by solver). See _newton_compat.py.
-from ._newton_compat import JointType, add_mjcf, body_inertial_flag, populate_contacts, set_current_world
+from ._newton_compat import JointType, add_mjcf, friction_field, model_flag, populate_contacts, set_current_world
 
 #: newton < 1.2's SensorContact (``sensing_obj_bodies`` / ``eval`` / ``get_total_force``); 1.2 renamed all three
 _SENSOR_CONTACT_LEGACY_API = "sensing_obj_bodies" in inspect.signature(SensorContact.__init__).parameters
@@ -111,6 +111,11 @@ class NewtonHandler(BaseSimHandler):
     physics engine. It uses Newton's world grouping feature for parallel environments
     and the MuJoCo Warp solver for high-fidelity articulated body dynamics.
     """
+
+    unsupported_body_properties = {
+        "restitution": "Newton's SolverMuJoCo has no coefficient of restitution (it ignores "
+        "shape_material_restitution); bounce follows the contact stiffness and damping.",
+    }
 
     get_states_honours_env_ids = True  # ``_get_states`` indexes by ``env_ids``
     set_states_restores_velocities = True  # ``_set_states`` writes body_qd / joint_qd
@@ -330,8 +335,8 @@ class NewtonHandler(BaseSimHandler):
         # Newton defaults: mu=0.5, torsional=0.25, rolling=0.0005. PhysX defaults are closer to mu=1.0 and 0 for
         # torsional/rolling friction. Update defaults to reduce cross-simulator mismatch.
         builder.default_shape_cfg.mu = 1.0
-        builder.default_shape_cfg.torsional_friction = 0.0
-        builder.default_shape_cfg.rolling_friction = 0.0
+        setattr(builder.default_shape_cfg, friction_field(builder.default_shape_cfg, "torsional"), 0.0)
+        setattr(builder.default_shape_cfg, friction_field(builder.default_shape_cfg, "rolling"), 0.0)
 
         # Use detailed inertia validation/correction to avoid MuJoCo compile errors
         # for URDFs with invalid inertia tensors.
@@ -379,16 +384,10 @@ class NewtonHandler(BaseSimHandler):
 
         mu = float(mu)
         shape_mu = self._model.shape_material_mu.numpy()
-        shape_torsion = (
-            self._model.shape_material_torsional_friction.numpy()
-            if self._model.shape_material_torsional_friction is not None
-            else None
-        )
-        shape_rolling = (
-            self._model.shape_material_rolling_friction.numpy()
-            if self._model.shape_material_rolling_friction is not None
-            else None
-        )
+        torsion_field = friction_field(self._model, "torsional", "shape_material_")
+        rolling_field = friction_field(self._model, "rolling", "shape_material_")
+        shape_torsion = getattr(self._model, torsion_field).numpy()
+        shape_rolling = getattr(self._model, rolling_field).numpy()
 
         shape_indices: set[int] = set()
         for env_id in range(self.num_envs):
@@ -409,16 +408,12 @@ class NewtonHandler(BaseSimHandler):
         for shape_idx in shape_indices:
             if 0 <= shape_idx < len(shape_mu):
                 shape_mu[shape_idx] = mu
-                if shape_torsion is not None:
-                    shape_torsion[shape_idx] = 0.0
-                if shape_rolling is not None:
-                    shape_rolling[shape_idx] = 0.0
+                shape_torsion[shape_idx] = 0.0
+                shape_rolling[shape_idx] = 0.0
 
         self._model.shape_material_mu.assign(shape_mu)
-        if shape_torsion is not None:
-            self._model.shape_material_torsional_friction.assign(shape_torsion)
-        if shape_rolling is not None:
-            self._model.shape_material_rolling_friction.assign(shape_rolling)
+        getattr(self._model, torsion_field).assign(shape_torsion)
+        getattr(self._model, rolling_field).assign(shape_rolling)
 
     def _build_model(self) -> None:
         """Build Newton model from scenario configuration."""
@@ -2646,7 +2641,38 @@ class NewtonHandler(BaseSimHandler):
         model.body_inertia.assign(inertia)
         model.body_inv_inertia.assign(inv_inertia)
         # SolverMuJoCo holds its own copy of the inertial properties; without this it keeps the old ones
-        self._solver.notify_model_changed(body_inertial_flag())
+        self._solver.notify_model_changed(model_flag("BODY_INERTIAL_PROPERTIES"))
+
+    def _collision_shapes(self, obj_name: str) -> list[list[np.ndarray]]:
+        """Collision shape ids of each body, ``[env][body]``, bodies in ``_get_body_names(sort=False)`` order."""
+        flags = self._model.shape_flags.numpy()
+        collide = int(newton.ShapeFlags.COLLIDE_SHAPES)
+        shapes_of = self._model.body_shapes
+        return [
+            [np.asarray([s for s in shapes_of.get(int(b), []) if flags[s] & collide], dtype=np.int64) for b in row]
+            for row in self._env_body_ids(obj_name)
+        ]
+
+    def _get_body_friction(self, obj_name: str) -> torch.Tensor:
+        mu = self._model.shape_material_mu.numpy()
+        rows = [[mu[g].mean() if len(g) else np.nan for g in env] for env in self._collision_shapes(obj_name)]
+        return torch.tensor(rows, dtype=torch.float64)
+
+    def _set_body_friction(self, obj_name: str, friction: torch.Tensor, env_ids: list[int]) -> None:
+        current = self._get_body_friction(obj_name)
+        shapes = self._collision_shapes(obj_name)
+        mu = self._model.shape_material_mu.numpy()
+        written = False
+        for row, env_id in enumerate(env_ids):
+            for body, new in enumerate(friction[row].tolist()):
+                geoms = shapes[env_id][body]
+                if len(geoms) and new != current[env_id, body].item():
+                    mu[geoms] = new
+                    written = True
+        if written:
+            self._model.shape_material_mu.assign(mu)
+            # SolverMuJoCo copies shape materials into its own per-world geom_friction
+            self._solver.notify_model_changed(model_flag("SHAPE_PROPERTIES"))
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
         """Get body indices for reindexing contact forces.

@@ -84,6 +84,10 @@ MUJOCO_ARENA_MEMORY = "512M"
 class MujocoHandler(BaseSimHandler):
     set_states_restores_velocities = True  # ``_set_root_state`` / ``_set_joint_state`` write qvel
     set_states_restores_dict_velocities = True  # the dict path writes them too
+    unsupported_body_properties = {
+        "restitution": "MuJoCo has no coefficient of restitution; bounce follows each geom's solref "
+        "(stiffness and damping), so set those in the asset instead.",
+    }
 
     @property
     def set_states_refreshes(self) -> bool:  # type: ignore[override]
@@ -1453,6 +1457,26 @@ class MujocoHandler(BaseSimHandler):
         model.body_mass[ids] = new
         # subtree masses and the constraint solver's invweight0 are derived from body_mass at compile time
         mujoco.mj_setConst(model.ptr, mujoco.MjData(model.ptr))
+
+    def _collision_geoms(self, obj_name: str) -> list[np.ndarray]:
+        """Collision geom ids (``contype`` or ``conaffinity`` nonzero) of each body, in native body order."""
+        model = self.physics.model
+        collides = (model.geom_contype != 0) | (model.geom_conaffinity != 0)
+        return [np.flatnonzero((model.geom_bodyid == b) & collides) for b in self._body_ids(obj_name)]
+
+    def _get_body_friction(self, obj_name: str) -> torch.Tensor:
+        friction = self.physics.model.geom_friction[:, 0]
+        means = [friction[g].mean() if len(g) else np.nan for g in self._collision_geoms(obj_name)]
+        return torch.tensor(means, dtype=torch.float64).unsqueeze(0)
+
+    def _set_body_friction(self, obj_name: str, friction: torch.Tensor, env_ids: list[int]) -> None:
+        current = self._get_body_friction(obj_name)[0]
+        model = self.physics.model
+        for geoms, new, old in zip(
+            self._collision_geoms(obj_name), friction[0].tolist(), current.tolist(), strict=True
+        ):
+            if len(geoms) and new != old:
+                model.geom_friction[geoms, 0] = new  # read at every contact, so nothing to recompute
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
         """Charlie: needs to be taken down

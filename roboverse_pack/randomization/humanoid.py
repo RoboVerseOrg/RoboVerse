@@ -3,7 +3,7 @@
 #
 # Adapted from Isaac Lab (https://github.com/isaac-sim/IsaacLab).
 # Changes: only the helpers under the 'adapted from Isaac Lab' marker (randomize_prop_by_op, _validate_scale_range)
-# and the bucketed sampling in MaterialRandomizer are Isaac Lab-derived; the randomizer classes are RoboVerse code.
+# and the bucketed material sampling idea are Isaac Lab-derived; the randomizer classes are RoboVerse code.
 # Full license: roboverse_pack/randomization/LICENSE.isaaclab
 
 """Physical-property randomizers (body materials and masses) for the humanoid and tracking tasks."""
@@ -13,24 +13,31 @@ from __future__ import annotations
 from typing import Literal
 
 import torch
-from loguru import logger as log
 
 from metasim.sim.base import BaseQueryType, BaseSimHandler
+from metasim.utils.log import warn_once
 from metasim.utils.math import sample_gaussian, sample_log_uniform, sample_uniform
-
-try:
-    import isaacgym  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import mujoco  # noqa: F401
-except ImportError:
-    pass
 
 
 class MaterialRandomizer(BaseQueryType):
-    """Randomize material properties (friction, restitution) for selected bodies."""
+    """Randomize the friction and restitution of a robot's or articulated object's bodies.
+
+    ``num_buckets`` materials are sampled once at bind; each call gives every selected body of every env in
+    ``env_ids`` one of them, written with ``handler.set_body_friction`` / ``set_body_restitution``. Friction is
+    one sliding coefficient per body (see ``BaseSimHandler.get_body_friction``). On an engine without a
+    restitution coefficient (MuJoCo, Newton) ``restitution_range`` is ignored with a warning.
+
+    Args:
+        obj_name: The robot or articulated object.
+        body_names: Bodies to randomize; every body with a collision shape when ``None``.
+        friction_range: ``(low, high)`` of the uniform friction sample; friction is left alone when ``None``.
+        restitution_range: ``(low, high)`` of the uniform restitution sample; left alone when ``None``.
+        num_buckets: Number of distinct materials.
+        static_friction_range: Deprecated; the interface has one coefficient. Used only when neither
+            ``friction_range`` nor ``dynamic_friction_range`` is given.
+        dynamic_friction_range: Deprecated alias of ``friction_range``.
+        make_consistent: Deprecated, no effect (there is no separate static coefficient to keep consistent).
+    """
 
     handler: BaseSimHandler
 
@@ -38,307 +45,76 @@ class MaterialRandomizer(BaseQueryType):
         self,
         obj_name: str,
         body_names: list[str] | str | None = None,
-        static_friction_range: list | tuple = (1.0, 1.0),
-        dynamic_friction_range: list | tuple = (1.0, 1.0),
-        restitution_range: list | tuple = (0.0, 0.0),
+        *,
+        friction_range: tuple[float, float] | None = None,
+        restitution_range: tuple[float, float] | None = None,
         num_buckets: int = 1,
+        static_friction_range: tuple[float, float] | None = None,
+        dynamic_friction_range: tuple[float, float] | None = None,
         make_consistent: bool = False,
     ):
         super().__init__()
+        if static_friction_range is not None or dynamic_friction_range is not None or make_consistent:
+            warn_once(
+                ("MaterialRandomizer", "static/dynamic"),
+                "MaterialRandomizer: static_friction_range / dynamic_friction_range / make_consistent are "
+                "deprecated; bodies have one friction coefficient. Pass friction_range (the dynamic range is used).",
+            )
+        if friction_range is None:
+            friction_range = dynamic_friction_range if dynamic_friction_range is not None else static_friction_range
+        if num_buckets < 1:
+            raise ValueError(f"MaterialRandomizer: num_buckets must be >= 1, got {num_buckets}.")
+        for label, rng in (("friction_range", friction_range), ("restitution_range", restitution_range)):
+            if rng is not None and not (0 <= rng[0] <= rng[1] and (label != "restitution_range" or rng[1] <= 1)):
+                bound = "0 <= low <= high <= 1" if label == "restitution_range" else "0 <= low <= high"
+                raise ValueError(f"MaterialRandomizer: {label} must satisfy {bound}, got {tuple(rng)}.")
         self.obj_name = obj_name
         self.set_body_names = [body_names] if isinstance(body_names, str) else body_names
-        self.static_friction_range = static_friction_range
-        self.dynamic_friction_range = dynamic_friction_range
+        self.friction_range = friction_range
         self.restitution_range = restitution_range
         self.num_buckets = num_buckets
-        self.make_consistent = make_consistent
 
     def bind_handler(self, handler: BaseSimHandler, *args, **kwargs):
-        """Attach to the simulator handler and initialize randomization buffers."""
+        """Attach to the simulator handler, resolve the bodies and sample the material buckets."""
         super().bind_handler(handler, *args, **kwargs)
-        self.simulator_name = handler.scenario.simulator
         self.initialize()
 
-    def __call__(self, env_ids=None, **kwargs):
-        """Apply material randomization for provided environment ids."""
-        # resolve environment ids
-        if env_ids is None:
-            env_ids = torch.arange(self.handler.num_envs, device="cpu")
-        else:
-            env_ids = torch.tensor(env_ids).cpu()
-        self.randomize(env_ids)
-
     def initialize(self):
-        """Sample material buckets and cache body indices for randomization."""
-        # sample material properties from the given ranges
-        # note: we only sample the materials once during initialization
-        #   afterwards these are randomly assigned to the geometries of the asset
-        range_list = [
-            self.static_friction_range,
-            self.dynamic_friction_range,
-            self.restitution_range,
-        ]
-        ranges = torch.tensor(range_list, device="cpu")
-        self.material_buckets = sample_uniform(ranges[:, 0], ranges[:, 1], (self.num_buckets, 3), device="cpu")
-
-        # ensure dynamic friction is always less than static friction
-        if self.make_consistent:
-            self.material_buckets[:, 1] = torch.min(self.material_buckets[:, 0], self.material_buckets[:, 1])
-
-        self.body_names = self.handler.get_body_names(self.obj_name, sort=False)
-        self.set_body_ids = (
-            torch.tensor(
-                [self.body_names.index(_name) for _name in self.set_body_names],
-                dtype=torch.int,
-                device="cpu",
-            )
-            if self.set_body_names is not None
-            else torch.arange(len(self.body_names), dtype=torch.int, device="cpu")
-        )
-
-        self.all_robot_names = [robot.name for robot in self.handler.robots]
-        self.all_object_names = [obj.name for obj in self.handler.objects]
-
-        self.set_shape_indices = self._get_set_shape_indices()
-        if self.simulator_name == "newton":
-            self._newton_shape_indices = self._build_newton_shape_indices()
-
-    def _get_set_shape_indices(self):
-        num_shapes_per_body = None
-        expected_shapes = 0
-        if self.simulator_name == "isaacsim":
-            if self.obj_name in self.handler.scene.articulations:
-                obj_inst = self.handler.scene.articulations[self.obj_name]
-                # obtain number of shapes per body (needed for indexing the material properties correctly)
-                # note: this is a workaround since the Articulation does not provide a direct way to obtain the number of shapes
-                #  per body. We use the physics simulation view to obtain the number of shapes per body.
-                num_shapes_per_body = []
-                for link_path in obj_inst.root_physx_view.link_paths[0]:
-                    link_physx_view = obj_inst._physics_sim_view.create_rigid_body_view(link_path)  # type: ignore
-                    num_shapes_per_body.append(link_physx_view.max_shapes)
-                # ensure the parsing is correct
-                expected_shapes = obj_inst.root_physx_view.max_shapes
-            elif self.obj_name in self.handler.scene.rigid_objects:
-                obj_inst = self.handler.scene.rigid_objects[self.obj_name]
-                expected_shapes = obj_inst.root_physx_view.max_shapes
-        elif self.simulator_name == "isaacgym":
-            if self.obj_name in self.all_robot_names:
-                _tmp_handle = self.handler._robot_handles[0]
-            elif self.obj_name in self.all_object_names:
-                _tmp_handle = self.handler._obj_handles[0][self.handler.objects.index(self.obj_name)]
-            body_shape_indices = self.handler.gym.get_actor_rigid_body_shape_indices(self.handler._envs[0], _tmp_handle)
-            num_shapes_per_body = []
-            for body_shape in body_shape_indices:
-                num_shapes_per_body.append(body_shape.count)
-            expected_shapes = len(self.handler.gym.get_actor_rigid_shape_properties(self.handler._envs[0], _tmp_handle))
-        elif self.simulator_name == "mujoco":
-            model = self.handler.physics.model
-            num_shapes_per_body = [0] * model.nbody
-            # geom_bodyid[j] = geom j belongs to body geom_bodyid[j]
-            for geom_bodyid in model.geom_bodyid:
-                num_shapes_per_body[geom_bodyid] += 1
-            expected_shapes = model.ngeom
-        elif self.simulator_name == "newton":
-            return []
+        """Resolve the bodies (by name, among those with a collision shape) and sample the buckets."""
+        names = self.handler.get_body_names(self.obj_name)
+        has_shape = ~torch.isnan(self.handler.get_body_friction(self.obj_name)[0])
+        if self.set_body_names is None:
+            ids = [i for i in range(len(names)) if has_shape[i]]
         else:
-            return []
-        if num_shapes_per_body is not None and sum(num_shapes_per_body) != expected_shapes:
-            raise ValueError(
-                "Randomization term 'randomize_rigid_body_material' failed to parse the number of shapes per body."
-                f" Expected total shapes: {expected_shapes}, but got: {sum(num_shapes_per_body)}."
-            )
-        # update material buffer with new samples
-        if num_shapes_per_body is not None:
-            set_shape_indices = []
-            # sample material properties from the given ranges
-            for body_id in self.set_body_ids:
-                # obtain indices of shapes for the body
-                start_idx = sum(num_shapes_per_body[:body_id])
-                end_idx = start_idx + num_shapes_per_body[body_id]
-                set_shape_indices.extend(list(range(start_idx, end_idx)))
-                # assign the new materials
-        else:
-            # assign all the materials
-            set_shape_indices = list(range(expected_shapes))
+            missing = [n for n in self.set_body_names if n not in names]
+            if missing:
+                raise ValueError(f"MaterialRandomizer: {self.obj_name!r} has no bodies {missing}; it has {names}.")
+            shapeless = [n for n in self.set_body_names if not has_shape[names.index(n)]]
+            if shapeless:
+                raise ValueError(
+                    f"MaterialRandomizer: bodies {shapeless} of {self.obj_name!r} have no collision shape."
+                )
+            ids = [names.index(n) for n in self.set_body_names]
+        self.set_body_ids = torch.tensor(ids, dtype=torch.long)
+        self.buckets = {}
+        for prop, rng in (("friction", self.friction_range), ("restitution", self.restitution_range)):
+            if rng is not None:
+                self.buckets[prop] = sample_uniform(float(rng[0]), float(rng[1]), (self.num_buckets,), device="cpu")
 
-        return set_shape_indices
-
-    def _build_newton_shape_indices(self) -> dict[int, list[int]]:
-        """Build per-env shape index lists for Newton."""
-        model = getattr(self.handler, "_model", None)
-        if model is None or not hasattr(model, "body_shapes"):
-            return {}
-
-        body_names = self.body_names
-        target_names = self.set_body_names if self.set_body_names is not None else body_names
-        target_names = [name for name in target_names if name in body_names]
-
-        shape_indices_by_env: dict[int, list[int]] = {}
-        for env_id in range(self.handler.num_envs):
-            body_ids = self.handler._get_body_indices(env_id, self.obj_name)
-            if not body_ids:
-                continue
-            name_to_body = {model.body_key[idx].split("/")[-1]: idx for idx in body_ids}  # as get_body_names
-            shape_indices: list[int] = []
-            for name in target_names:
-                body_id = name_to_body.get(name)
-                if body_id is None:
-                    continue
-                shape_indices.extend(list(model.body_shapes.get(body_id, [])))
-            if shape_indices:
-                shape_indices_by_env[env_id] = sorted(set(shape_indices))
-
-        return shape_indices_by_env
+    def __call__(self, env_ids=None, **kwargs):
+        """Apply material randomization for the given environment ids (all when ``None``)."""
+        if env_ids is None:
+            env_ids = torch.arange(self.handler.num_envs)
+        self.randomize(torch.as_tensor(env_ids).cpu().long().reshape(-1))
 
     def randomize(self, env_ids: torch.Tensor):
-        """Randomize material properties across supported simulators."""
-        if self.simulator_name == "isaacsim":
-            self._randomize_isaacsim(env_ids)
-        elif self.simulator_name == "isaacgym":
-            self._randomize_isaacgym(env_ids)
-        elif self.simulator_name == "mujoco":
-            self._randomize_mujoco(env_ids)
-        elif self.simulator_name == "newton":
-            self._randomize_newton(env_ids)
-        else:
-            log.warning(
-                f"Material randomization not implemented for simulator: {self.simulator_name}. This randomization step will be skipped."
-            )
-
-    def _randomize_isaacsim(self, env_ids: torch.Tensor):
-        if self.obj_name in self.handler.scene.articulations:
-            obj_inst = self.handler.scene.articulations[self.obj_name]
-        elif self.obj_name in self.handler.scene.rigid_objects:
-            obj_inst = self.handler.scene.rigid_objects[self.obj_name]
-        else:
-            raise ValueError(
-                f"Randomization term 'randomize_rigid_body_material' not supported for asset: {self.obj_name}."
-            )
-
-        # retrieve material buffer from the physics simulation
-        materials = obj_inst.root_physx_view.get_material_properties()
-        # randomly assign material IDs to the geometries
-        total_num_shapes = obj_inst.root_physx_view.max_shapes
-        bucket_ids = torch.randint(0, self.num_buckets, (len(env_ids), total_num_shapes), device="cpu")
-        material_samples = self.material_buckets[bucket_ids]
-
-        # update material buffer with new samples
-        materials[env_ids] = material_samples[:, self.set_shape_indices]
-
-        # apply to simulation
-        obj_inst.root_physx_view.set_material_properties(materials, env_ids)
-
-    def _randomize_isaacgym(self, env_ids: torch.Tensor):
-        """Randomize friction properties for IsaacGym simulator."""
-        # Sample friction values for each environment
-        if self.obj_name in self.all_robot_names:
-            # For robot, get actor handle and modify rigid shape properties
-            _all_handles = self.handler._robot_handles
-        elif self.obj_name in self.all_object_names:
-            # For objects, find the corresponding object handle
-            _all_handles = [
-                self.handler._obj_handles[i][self.handler.objects.index(self.obj_name)]
-                for i in range(self.handler.num_envs)
-            ]
-        else:
-            raise ValueError(
-                f"Randomization term 'randomize_rigid_body_material' not supported for asset: {self.obj_name}."
-            )
-        max_body_shape = len(self.handler.gym.get_actor_rigid_shape_properties(self.handler._envs[0], _all_handles[0]))
-        bucket_ids = torch.randint(0, self.num_buckets, (len(env_ids), max_body_shape), device="cpu")
-        material_samples = self.material_buckets[bucket_ids]  # static friction, dynamic friction and restitution
-
-        roll_friction_factor = 0.05
-        spin_friction_factor = 0.02
-        for i, env_id in enumerate(env_ids):
-            env = self.handler._envs[env_id]
-            # For objects, find the corresponding object handle
-            _tmp_handle = _all_handles[env_id]
-            # Get current rigid shape properties
-            shape_props = self.handler.gym.get_actor_rigid_shape_properties(env, _tmp_handle)
-
-            for _id in self.set_shape_indices:
-                shape_prop = shape_props[_id]
-                shape_prop.friction = material_samples[i, _id, 0]
-                shape_prop.rolling_friction = roll_friction_factor * material_samples[i, _id, 1]
-                shape_prop.torsion_friction = spin_friction_factor * material_samples[i, _id, 1]
-                shape_prop.restitution = material_samples[i, _id, 2]
-
-            # Apply the modified properties
-            self.handler.gym.set_actor_rigid_shape_properties(env, _tmp_handle, shape_props)
-
-    def _randomize_mujoco(self, env_ids: torch.Tensor):
-        """Randomize friction and restitution for MuJoCo simulator."""
-        assert self.handler.num_envs == 1, "MuJoCo handler only supports single environment."
-        model = self.handler.physics.model
-
-        bucket_ids = torch.randint(0, self.num_buckets, (len(env_ids), model.ngeom), device="cpu")
-        material_samples = self.material_buckets[bucket_ids]  # static friction, dynamic friction and restitution
-
-        static_friction = material_samples[env_ids, self.set_shape_indices, 0]
-        solimp_value = 0.1 * static_friction
-        model.geom_solimp[self.set_shape_indices, 0] = solimp_value
-
-        # model.geom_friction --> friction for (slide, spin, roll)
-        dynamic_friction = material_samples[env_ids, self.set_shape_indices, 1]
-        model.geom_friction[self.set_shape_indices, 0] = dynamic_friction  # slide friction
-        model.geom_friction[self.set_shape_indices, 1] = 0.01 * dynamic_friction  # spin friction
-        model.geom_friction[self.set_shape_indices, 2] = 0.01 * dynamic_friction  # roll friction
-
-        # restitution and damping calculation
-        restitution_scale = 1.0  # from 0.5 - 2.0
-        restitution = material_samples[env_ids, self.set_shape_indices, 2] * restitution_scale + 1e-6
-        damping = (-torch.log(restitution) / torch.sqrt(torch.pi**2 + torch.log(restitution) ** 2)).clamp(
-            min=0.0, max=1.0
-        )
-
-        # solref：timeconst & damping ratio
-        model.geom_solref[self.set_shape_indices, 1] = damping
-
-    def _randomize_newton(self, env_ids: torch.Tensor):
-        """Randomize material properties for Newton simulator."""
-        model = getattr(self.handler, "_model", None)
-        if model is None or model.shape_material_mu is None:
-            return
-
-        shape_mu = model.shape_material_mu.numpy()
-        shape_restitution = (
-            model.shape_material_restitution.numpy() if model.shape_material_restitution is not None else None
-        )
-        shape_torsion = (
-            model.shape_material_torsional_friction.numpy()
-            if model.shape_material_torsional_friction is not None
-            else None
-        )
-        shape_rolling = (
-            model.shape_material_rolling_friction.numpy() if model.shape_material_rolling_friction is not None else None
-        )
-
-        roll_friction_factor = 0.05
-        spin_friction_factor = 0.02
-
-        for env_id in env_ids.tolist():
-            shape_indices = self._newton_shape_indices.get(int(env_id), [])
-            if not shape_indices:
-                continue
-            bucket_ids = torch.randint(0, self.num_buckets, (len(shape_indices),), device="cpu")
-            material_samples = self.material_buckets[bucket_ids].cpu().numpy()
-
-            shape_mu[shape_indices] = material_samples[:, 0]
-            if shape_restitution is not None:
-                shape_restitution[shape_indices] = material_samples[:, 2]
-            if shape_torsion is not None:
-                shape_torsion[shape_indices] = spin_friction_factor * material_samples[:, 1]
-            if shape_rolling is not None:
-                shape_rolling[shape_indices] = roll_friction_factor * material_samples[:, 1]
-
-        model.shape_material_mu.assign(shape_mu)
-        if shape_restitution is not None:
-            model.shape_material_restitution.assign(shape_restitution)
-        if shape_torsion is not None:
-            model.shape_material_torsional_friction.assign(shape_torsion)
-        if shape_rolling is not None:
-            model.shape_material_rolling_friction.assign(shape_rolling)
+        """Give every selected body of ``env_ids`` a material drawn from the buckets."""
+        rows, cols = env_ids[:, None], self.set_body_ids
+        for prop, buckets in self.buckets.items():
+            get = getattr(self.handler, f"get_body_{prop}")
+            values = get(self.obj_name)
+            values[rows, cols] = buckets[torch.randint(0, self.num_buckets, (len(env_ids), len(cols)))]
+            getattr(self.handler, f"set_body_{prop}")(self.obj_name, values[env_ids], env_ids=env_ids)
 
 
 class MassRandomizer(BaseQueryType):

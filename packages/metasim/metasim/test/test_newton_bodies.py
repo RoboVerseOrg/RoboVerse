@@ -7,6 +7,9 @@
 3. ``set_body_masses`` reaches ``SolverMuJoCo``'s copy of the model and leaves the bodies it did not change
    bit-exact.
 4. ``ContactForces`` works on the 1.2+ ``SensorContact`` API and names the same bodies as MuJoCo.
+5. ``set_body_friction`` reaches each world's ``SolverMuJoCo`` geoms (the box slides as far as on MuJoCo);
+   restitution, which SolverMuJoCo does not model, warns. Newton 1.6 renamed the torsional / rolling
+   friction fields, and the handler's writes to the old names had become silent no-ops.
 """
 
 from __future__ import annotations
@@ -157,3 +160,48 @@ def test_the_root_joint_is_read_only_when_the_file_says_it_plainly(tmp_path):
         path = tmp_path / f"{key}.xml"
         path.write_text(xml)
         assert NewtonHandler._mjcf_root_joint(str(path)) == expected[key], key
+
+
+def test_friction_reaches_each_world_and_restitution_warns(tmp_path):
+    from metasim.test.test_mujoco_body_properties import _G, _V, _slide, _slide_scenario
+    from metasim.utils.setup_util import get_handler
+
+    handler = get_handler(_slide_scenario(tmp_path, num_envs=2, simulator="newton"))
+    try:
+        friction = handler.get_body_friction("box")
+        assert handler.get_body_names("box") == ["block", "handle"]
+        torch.testing.assert_close(friction, torch.tensor([[1.0, float("nan")]] * 2), equal_nan=True)
+        mu = handler._model.shape_material_mu.numpy().copy()
+        handler.set_body_friction("box", friction)  # round trip: nothing written
+        assert np.array_equal(handler._model.shape_material_mu.numpy(), mu)
+        handler.set_body_friction("box", torch.tensor([[0.25, float("nan")], [0.5, float("nan")]]))
+        assert torch.isnan(handler.get_body_restitution("box")).all()
+        dist = _slide(handler)
+        assert dist.tolist() == pytest.approx([_V**2 / (2 * m * _G) for m in (0.25, 0.5)], rel=0.02)
+    finally:
+        handler.close()
+
+
+def test_builder_defaults_and_foot_friction_use_the_current_field_names(walker):
+    import newton
+
+    from metasim.sim.newton._newton_compat import friction_field
+
+    builder = newton.ModelBuilder()
+    walker._configure_builder_defaults(builder)
+    cfg = builder.default_shape_cfg
+    assert getattr(cfg, friction_field(cfg, "torsional")) == 0.0
+    assert getattr(cfg, friction_field(cfg, "rolling")) == 0.0
+    assert hasattr(walker._model, friction_field(walker._model, "torsional", "shape_material_"))
+    with pytest.raises(AttributeError, match="no torsional friction field"):
+        friction_field(object(), "torsional")
+
+    # the ground's friction goes onto the robot's feet (it raised AttributeError on newton 1.6)
+    from types import SimpleNamespace
+
+    walker.scenario.ground = SimpleNamespace(dynamic_friction=0.7)
+    walker.robots[0].feet_links = ["leg_"]
+    walker._apply_foot_friction_overrides()
+    names = walker.get_body_names("walker")
+    torch.testing.assert_close(walker.get_body_friction("walker")[:, names.index("leg_l")], torch.tensor([0.7, 0.7]))
+    assert walker.get_body_friction("walker")[0, names.index("torso")] == 1.0

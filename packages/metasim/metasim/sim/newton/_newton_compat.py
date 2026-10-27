@@ -74,18 +74,17 @@ def _resolve_populate_contacts():
 populate_contacts = _resolve_populate_contacts()
 
 
-def body_inertial_flag():
-    """The ``notify_model_changed`` flag for a body mass / inertia change (resolved when called).
+def model_flag(name: str):
+    """The ``notify_model_changed`` flag ``name`` (e.g. ``"BODY_INERTIAL_PROPERTIES"``), resolved when called.
 
-    newton >= 1.2: ``newton.ModelFlags.BODY_INERTIAL_PROPERTIES``;
-    older: ``newton.solvers.SolverNotifyFlags.BODY_INERTIAL_PROPERTIES``.
+    newton >= 1.2: ``newton.ModelFlags``; older: ``newton.solvers.SolverNotifyFlags``.
     """
     import newton
 
     flags = getattr(newton, "ModelFlags", None)
     if flags is None:
         from newton.solvers import SolverNotifyFlags as flags  # newton < 1.2
-    return flags.BODY_INERTIAL_PROPERTIES
+    return getattr(flags, name)
 
 
 def set_current_world(builder, world_idx: int) -> None:
@@ -316,3 +315,22 @@ _check_newton_version()
 
 
 __all__ = ["JointType", "add_mjcf", "populate_contacts", "set_current_world"]
+
+
+# newton >= 1.6 renamed the torsional / rolling friction coefficients (``ShapeConfig.mu_torsional``,
+# ``Model.shape_material_mu_torsional``); older versions call them ``torsional_friction`` / ``rolling_friction``.
+_FRICTION_FIELDS = {"torsional": ("mu_torsional", "torsional_friction"), "rolling": ("mu_rolling", "rolling_friction")}
+
+
+def friction_field(obj, kind: str, prefix: str = "") -> str:
+    """Name of the ``kind`` (``"torsional"`` / ``"rolling"``) friction attribute ``prefix + ...`` on ``obj``.
+
+    Use ``prefix="shape_material_"`` for a ``newton.Model`` and ``""`` for a ``ModelBuilder.ShapeConfig``.
+    Raises ``AttributeError`` when ``obj`` has neither spelling, so a rename can never turn a write into a no-op.
+    """
+    for name in _FRICTION_FIELDS[kind]:
+        if hasattr(obj, prefix + name):
+            return prefix + name
+    raise AttributeError(
+        f"{type(obj).__name__} has no {kind} friction field ({[prefix + n for n in _FRICTION_FIELDS[kind]]})."
+    )

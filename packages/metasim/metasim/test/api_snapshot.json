@@ -7077,7 +7077,8 @@
     "get_states_honours_env_ids": "bool",
     "set_states_refreshes": "bool",
     "set_states_restores_dict_velocities": "bool",
-    "set_states_restores_velocities": "bool"
+    "set_states_restores_velocities": "bool",
+    "unsupported_body_properties": "dict"
    },
    "bases": [
     "ABC"
@@ -7166,6 +7167,21 @@
      ],
      "signature": "(self) -> 'dict[str, list[str]]'"
     },
+    "get_body_friction": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      }
+     ],
+     "signature": "(self, obj_name: 'str') -> 'torch.Tensor'"
+    },
     "get_body_masses": {
      "params": [
       {
@@ -7215,6 +7231,21 @@
       }
      ],
      "signature": "(self, obj_name: 'str') -> 'list[int]'"
+    },
+    "get_body_restitution": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      }
+     ],
+     "signature": "(self, obj_name: 'str') -> 'torch.Tensor'"
     },
     "get_extra": {
      "params": [
@@ -7334,6 +7365,31 @@
      ],
      "signature": "(self) -> 'None'"
     },
+    "set_body_friction": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "friction"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, obj_name: 'str', friction: 'torch.Tensor', *, env_ids: 'list[int] | torch.Tensor | None' = None) -> 'None'"
+    },
     "set_body_masses": {
      "params": [
       {
@@ -7363,6 +7419,31 @@
       }
      ],
      "signature": "(self, obj_name: 'str', masses: 'torch.Tensor', *, env_ids: 'list[int] | torch.Tensor | None' = None, scale_inertia: 'bool' = True) -> 'None'"
+    },
+    "set_body_restitution": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "restitution"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "env_ids"
+      }
+     ],
+     "signature": "(self, obj_name: 'str', restitution: 'torch.Tensor', *, env_ids: 'list[int] | torch.Tensor | None' = None) -> 'None'"
     },
     "set_dof_targets": {
      "params": [

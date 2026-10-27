@@ -69,37 +69,62 @@ ties a task to one backend, which is how a task that declares two simulators end
 
 `tests/test_kernel_boundary.py` counts those reach-ins per content area and holds each area to a
 budget that only goes down. 1.0.0 started at 354; LIBERO-90's 63 site reads and the mass randomizers'
-per-backend branches are gone since (see below):
+per-backend branches, and every per-backend branch in the material randomizer are gone since (see below):
 
 | Area | Reach-ins | Mostly |
 |---|---:|---|
 | `tasks/mjlab` | 61 | `physics` (MuJoCo-native ports for mjlab parity) |
 | `roboverse_pack/queries` | 44 | backend branches inside queries (expected: a query is where backend code belongs) |
 | `tasks/maniskill` | 35 | `object_ids` (SAPIEN friction in the native ports) |
-| `roboverse_pack/randomization` | 24 | `scene`, `gym`, `physics` (friction / restitution per backend) |
 | `tasks/libero` | 21 | `physics` in the native replay port |
 | `tasks/beyondmimic` | 10 | `scene`, `physics` (joint defaults, contact sensor) |
 | others | 28 | |
 
 ## Physical properties
 
-Body masses are a handler verb, so a randomizer or a system-identification script writes them once
-for every backend instead of once per engine:
+Masses, friction and restitution are handler verbs, so a randomizer or a system-identification script
+writes them once for every backend instead of once per engine. All three take and return one value per
+body of an articulation, as a `(num_envs, num_bodies)` tensor in `get_body_names` order:
 
 ```python
-masses = handler.get_body_masses("g1")          # (num_envs, num_bodies), bodies in get_body_names("g1") order
+masses = handler.get_body_masses("g1")          # bodies in get_body_names("g1") order
 masses[:, handler.get_body_names("g1").index("pelvis")] += 1.0
 handler.set_body_masses("g1", masses)            # env_ids=None: all envs; scale_inertia=True by default
+
+friction = handler.get_body_friction("g1")      # NaN for a body with no collision shape
+friction[:] = 0.6
+handler.set_body_friction("g1", friction)        # every collision shape of each body; NaN entries ignored
+handler.set_body_restitution("g1", torch.zeros_like(friction))  # warns on MuJoCo / Newton, see below
 ```
 
-`set_body_masses` validates the shape and values, keeps every entry it did not change bit-exact (a
-float32 read written back restores the engine's float64 value), scales each changed body's inertia by
-its mass ratio, and leaves the engine simulating the new values from the next `simulate()`: on MuJoCo
-it reruns `mj_setConst` (subtree masses, `invweight0`), on Newton it recomputes the inverse mass and
-inertia and notifies `SolverMuJoCo`, which otherwise keeps its own copy. MuJoCo (single and parallel
-envs) and Newton are verified by simulating with the new masses; Isaac Sim and Isaac Gym implement the
-hooks but have not been run. Friction and restitution are still written per backend inside
-`MaterialRandomizer`; they are the next property to move onto the handler.
+The semantics are kept small so they mean the same on every engine:
+
+- **Friction** is one sliding (Coulomb) coefficient per body: the mean over its collision shapes when
+  read, written to all of them. PhysX's separate static and dynamic coefficients are both set to it;
+  torsional and rolling friction are not part of the interface and keep their asset values. How two
+  touching bodies' coefficients combine stays the engine's rule (MuJoCo and Newton take the larger,
+  PhysX averages by default), so a body on a high-friction floor sees a different contact friction on
+  PhysX than on MuJoCo for the same setting.
+- **Restitution** is a coefficient in `[0, 1]`. MuJoCo and Newton's `SolverMuJoCo` have no such
+  coefficient (bounce follows the contact stiffness and damping), so these backends list it in
+  `unsupported_body_properties`: reading gives NaN and writing validates, warns once, and changes
+  nothing. That is the rule for anything the *engine* lacks. A backend that simply has not implemented
+  a hook (SAPIEN, PyBullet, Genesis, MJX today) raises `NotImplementedError` instead, so a missing
+  implementation is never mistaken for a missing feature.
+
+Every setter validates shape and values first, keeps every entry it did not change bit-exact (a float32
+read written back restores the engine's float64 value, and leaves a body's differing per-shape frictions
+alone), and leaves the engine simulating the new values from the next `simulate()`: on MuJoCo masses
+rerun `mj_setConst` (friction is read at every contact); on Newton the handler notifies `SolverMuJoCo`,
+which otherwise keeps its own per-world copy. `set_body_masses` also scales each changed body's inertia
+by its mass ratio.
+
+Verified by simulating: on MuJoCo (single and parallel envs) and Newton, a body with a heavier link sags
+further and comes back exactly when restored, and a box slid at 2 m/s across a frictionless slab with
+mu = 0.25 / 0.5 stops after 0.815 / 0.407 m on MuJoCo and 0.813 / 0.403 m on Newton (theory
+v^2 / 2 mu g = 0.816 / 0.408 m), per env. Isaac Sim and Isaac Gym implement the hooks but have not been
+run. `MaterialRandomizer` and `MassRandomizer` (`roboverse_pack.randomization.humanoid`) and mjlab's
+`body_mass` DR term are written on these verbs only.
 
 ## Sites: frames derived from the state
 

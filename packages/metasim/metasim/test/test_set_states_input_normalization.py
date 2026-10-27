@@ -149,3 +149,25 @@ def test_known_dict_only_backends_declare_their_input_type():
             pytest.skip(f"{module_path} backend not installed in this env")
         cls = getattr(module, cls_name)
         assert cls._set_states_input_type == "dict", f"{cls_name} should declare _set_states_input_type='dict'"
+
+
+def test_parallel_wrapper_forwards_only_state_keys_to_its_workers():
+    """A ``get_states`` read-back carries body states and joint targets; a worker's ``set_states`` would warn about
+    each of them as if the caller had passed it, so the wrapper forwards what ``set_states`` applies."""
+    from metasim.sim.base import BaseSimHandler
+    from metasim.sim.parallel import _state_keys_only
+
+    keep = (
+        BaseSimHandler._SET_STATES_VALID_ROBOT_KEYS
+        | BaseSimHandler._SET_STATES_VALID_OBJECT_KEYS
+        | BaseSimHandler._SET_STATES_READ_ONLY_KEYS
+    )
+    row = {
+        "robots": {"r": {"pos": 1, "rot": 2, "vel": 3, "dof_pos": 4, "dof_pos_target": 5, "body": 6}},
+        "objects": {"o": {"pos": 1, "rot": 2, "ang_vel": 3}},
+        "cameras": {"c": {"rgb": 0}},
+    }
+    out = _state_keys_only(row, keep)
+    assert out["robots"] == {"r": {"pos": 1, "rot": 2, "vel": 3, "dof_pos": 4}}
+    assert out["objects"] == row["objects"] and out["cameras"] is row["cameras"]
+    assert "body" in row["robots"]["r"], "the caller's dict is not mutated"

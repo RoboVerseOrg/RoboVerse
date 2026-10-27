@@ -225,7 +225,7 @@ def test_parallel_set_states_routes_rows_by_env_id():
 
     remotes = [_FakeRemote() for _ in range(3)]
     h = _make_parallel_stub_handler(remotes, processes=[])  # the shared stub wrapper, real _check_error
-    states = [{"objects": {}, "robots": {"r": {"env": i}}} for i in range(3)]
+    states = [{"objects": {}, "robots": {"r": {"dof_pos": {"j": float(i)}}}} for i in range(3)]
 
     def sent():
         out = [[m for m in r.sent if m[0] == "set_states"] for r in remotes]

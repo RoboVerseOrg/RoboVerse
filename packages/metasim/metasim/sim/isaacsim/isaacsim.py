@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import gc
+import itertools
 import math
 import os
 import threading
@@ -1939,6 +1940,57 @@ class IsaacsimHandler(BaseSimHandler):
             view.set_inertias(inertias, idx)
         all_masses[idx] = masses.to(all_masses.dtype)
         view.set_masses(all_masses, idx)
+
+    def _shape_slices(self, obj_name: str) -> list[slice]:
+        """Columns of each body's collision shapes in ``root_physx_view.get_material_properties()``, native order."""
+        cache = self.__dict__.setdefault("_shape_slices_cache", {})
+        if obj_name not in cache:
+            art = self.scene.articulations[obj_name]
+            counts = [
+                art._physics_sim_view.create_rigid_body_view(path).max_shapes
+                for path in art.root_physx_view.link_paths[0]
+            ]
+            if sum(counts) != art.root_physx_view.max_shapes:
+                raise RuntimeError(
+                    f"{obj_name!r}: shapes per body {counts} do not add up to the view's {art.root_physx_view.max_shapes}."
+                )
+            starts = np.cumsum([0, *counts])
+            cache[obj_name] = [slice(int(a), int(b)) for a, b in itertools.pairwise(starts)]
+        return cache[obj_name]
+
+    def _get_material_column(self, obj_name: str, column: int) -> torch.Tensor:
+        """Per-body mean of material column ``column`` (0 static, 1 dynamic friction, 2 restitution); NaN if shapeless."""
+        materials = self.scene.articulations[obj_name].root_physx_view.get_material_properties().to(torch.float64)
+        cols = [
+            materials[:, sl, column].mean(dim=1) if sl.stop > sl.start else torch.full((materials.shape[0],), torch.nan)
+            for sl in self._shape_slices(obj_name)
+        ]
+        return torch.stack(cols, dim=1)
+
+    def _set_material_columns(
+        self, obj_name: str, values: torch.Tensor, env_ids: list[int], columns: tuple[int, ...], current: torch.Tensor
+    ) -> None:
+        view = self.scene.articulations[obj_name].root_physx_view
+        materials = view.get_material_properties()  # (num_envs, num_shapes, 3), CPU
+        for row, env_id in enumerate(env_ids):
+            for body, sl in enumerate(self._shape_slices(obj_name)):
+                new = values[row, body].item()
+                if sl.stop > sl.start and new != current[env_id, body].item():
+                    for column in columns:
+                        materials[env_id, sl, column] = new
+        view.set_material_properties(materials, torch.tensor(env_ids, dtype=torch.long))
+
+    def _get_body_friction(self, obj_name: str) -> torch.Tensor:
+        return self._get_material_column(obj_name, 1)  # the dynamic coefficient; set writes static = dynamic
+
+    def _set_body_friction(self, obj_name: str, friction: torch.Tensor, env_ids: list[int]) -> None:
+        self._set_material_columns(obj_name, friction, env_ids, (0, 1), self._get_body_friction(obj_name))
+
+    def _get_body_restitution(self, obj_name: str) -> torch.Tensor:
+        return self._get_material_column(obj_name, 2)
+
+    def _set_body_restitution(self, obj_name: str, restitution: torch.Tensor, env_ids: list[int]) -> None:
+        self._set_material_columns(obj_name, restitution, env_ids, (2,), self._get_body_restitution(obj_name))
 
     def _add_pinhole_camera(self, camera: PinholeCameraCfg) -> None:
         import isaaclab.sim as sim_utils

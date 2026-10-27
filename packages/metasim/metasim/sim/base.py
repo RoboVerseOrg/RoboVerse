@@ -13,6 +13,7 @@ from loguru import logger as log
 from metasim.queries.base import BaseQueryType
 from metasim.types import CompatActionInput, DictStateBatch, StateMode, StateOutput, TensorState
 from metasim.utils.gs_util import quaternion_multiply
+from metasim.utils.log import warn_once
 from metasim.utils.state import (
     _action_input_to_tensor,
     list_state_to_tensor,
@@ -869,6 +870,15 @@ class BaseSimHandler(ABC):
     ############################################################
     ## Physical properties
     ############################################################
+    # One standard surface for the per-body physical properties every engine has some notion of. Semantics are
+    # deliberately simple (one value per body, applied to all of its collision shapes) so they mean the same thing
+    # on every backend. A property the *engine* has no notion of is listed in ``unsupported_body_properties``:
+    # reading it gives NaN and writing it warns and changes nothing. A backend that has not implemented a hook
+    # raises ``NotImplementedError`` instead, so a missing implementation is never mistaken for a missing feature.
+
+    #: Body properties this engine does not model, mapped to the reason (shown in the warning).
+    unsupported_body_properties: dict[str, str] = {}
+
     def get_body_masses(self, obj_name: str) -> torch.Tensor:
         """Masses (kg) of an articulation's bodies, as the engine simulates them now.
 
@@ -879,8 +889,7 @@ class BaseSimHandler(ABC):
             A float32 CPU tensor of shape ``(num_envs, num_bodies)`` (``set_body_masses`` writes float64), bodies in
             ``get_body_names(obj_name)`` order (alphabetical, the order of the state's body tensors).
         """
-        order = self._body_mass_order(obj_name)
-        return self._get_body_masses(obj_name)[:, order].to(dtype=torch.float32, device="cpu")
+        return self._read_body_property(obj_name, "mass")
 
     def set_body_masses(
         self,
@@ -906,45 +915,161 @@ class BaseSimHandler(ABC):
                 or non-finite entry, or ``scale_inertia`` meets a body whose current mass is zero.
             NotImplementedError: The backend does not expose body masses.
         """
-        order = self._body_mass_order(obj_name)
-        ids = list(range(self.num_envs)) if env_ids is None else [int(i) for i in torch.as_tensor(env_ids).reshape(-1)]
-        if any(i < 0 or i >= self.num_envs for i in ids):
-            raise ValueError(f"env_ids {ids} out of range for {self.num_envs} envs.")
-        masses = torch.as_tensor(masses).detach().to(dtype=torch.float64, device="cpu")
-        if masses.shape != (len(ids), len(order)):
+        write = self._prepare_body_write(obj_name, "mass", masses, env_ids)
+        if write is None:
+            return
+        native, ids, current, changed = write
+        if scale_inertia and (changed & (current == 0)).any():
+            names = self._get_body_names(obj_name, sort=False)
+            zero = sorted({names[j] for j in torch.nonzero(changed & (current == 0))[:, 1].tolist()})
             raise ValueError(
-                f"masses for {obj_name!r} must have shape (len(env_ids), num_bodies) = {(len(ids), len(order))}, "
-                f"got {tuple(masses.shape)}."
+                f"cannot scale the inertia of zero-mass bodies {zero} of {obj_name!r}; "
+                "pass scale_inertia=False and set their inertia another way."
             )
-        if not torch.isfinite(masses).all() or (masses < 0).any():
-            raise ValueError(f"masses for {obj_name!r} must be finite and non-negative, got {masses.tolist()}.")
-        native = torch.empty_like(masses)
-        native[:, order] = masses
-        current = self._get_body_masses(obj_name)[ids].to(dtype=torch.float64, device="cpu")
-        # a column read with get_body_masses (float32) and written back unchanged keeps the engine's value
-        unchanged = (native == current) | (native == current.to(torch.float32).to(torch.float64))
-        native = torch.where(unchanged, current, native)
-        if scale_inertia:
-            changed = ~unchanged
-            if (changed & (current == 0)).any():
-                names = self._get_body_names(obj_name, sort=False)
-                zero = sorted({names[j] for j in torch.nonzero(changed & (current == 0))[:, 1].tolist()})
-                raise ValueError(
-                    f"cannot scale the inertia of zero-mass bodies {zero} of {obj_name!r}; "
-                    "pass scale_inertia=False and set their inertia another way."
-                )
         self._set_body_masses(obj_name, native, ids, scale_inertia)
 
-    def _body_mass_order(self, obj_name: str) -> list[int]:
+    def get_body_friction(self, obj_name: str) -> torch.Tensor:
+        """Sliding (Coulomb) friction coefficient of each of an articulation's bodies.
+
+        One coefficient per body, the mean over the body's collision shapes. Engines that split static and
+        dynamic friction (PhysX) get both set to it; torsional and rolling friction are not part of this
+        interface and keep their asset values. How the coefficients of two touching bodies combine is the
+        engine's own rule (MuJoCo and Newton take the larger, PhysX the average by default).
+
+        Returns:
+            A float32 CPU tensor ``(num_envs, num_bodies)`` in ``get_body_names(obj_name)`` order; NaN for a body
+            with no collision shape.
+        """
+        return self._read_body_property(obj_name, "friction")
+
+    def set_body_friction(
+        self, obj_name: str, friction: torch.Tensor, *, env_ids: list[int] | torch.Tensor | None = None
+    ) -> None:
+        """Set the sliding friction coefficient of an articulation's bodies (all collision shapes of each body).
+
+        Args:
+            obj_name: A robot or articulated object.
+            friction: Shape ``(len(env_ids), num_bodies)``, bodies in ``get_body_names(obj_name)`` order. A value
+                equal to the current one leaves the body's shapes exactly as they are; a body with no collision
+                shape keeps NaN (a finite value for it is ignored with a warning).
+            env_ids: The environments to write; all of them when ``None``.
+
+        Raises:
+            ValueError: ``obj_name`` is not an articulation, or ``friction`` has the wrong shape or a negative or
+                non-finite entry for a body that has collision shapes.
+            NotImplementedError: The backend does not expose friction.
+        """
+        write = self._prepare_body_write(obj_name, "friction", friction, env_ids)
+        if write is not None:
+            self._set_body_friction(obj_name, write[0], write[1])
+
+    def get_body_restitution(self, obj_name: str) -> torch.Tensor:
+        """Coefficient of restitution (0 = no bounce, 1 = elastic) of each body, as ``get_body_friction``.
+
+        All NaN, with a warning, on an engine that has no restitution coefficient (see
+        ``unsupported_body_properties``).
+        """
+        return self._read_body_property(obj_name, "restitution")
+
+    def set_body_restitution(
+        self, obj_name: str, restitution: torch.Tensor, *, env_ids: list[int] | torch.Tensor | None = None
+    ) -> None:
+        """Set the coefficient of restitution (in ``[0, 1]``) of an articulation's bodies, as ``set_body_friction``.
+
+        On an engine that has no restitution coefficient this validates ``restitution``, warns once, and changes
+        nothing.
+        """
+        write = self._prepare_body_write(obj_name, "restitution", restitution, env_ids)
+        if write is not None:
+            self._set_body_restitution(obj_name, write[0], write[1])
+
+    _BODY_PROPERTY_HOOKS = {
+        "mass": "_get_body_masses",
+        "friction": "_get_body_friction",
+        "restitution": "_get_body_restitution",
+    }
+
+    def _body_property_order(self, obj_name: str) -> list[int]:
         """Native body index of each sorted body name; validates that ``obj_name`` is an articulation."""
         from metasim.scenario.objects import ArticulationObjCfg
 
         if not isinstance(self.object_dict.get(obj_name), ArticulationObjCfg):
             raise ValueError(
-                f"{obj_name!r} is not a robot or articulated object of this scenario; body masses are defined "
+                f"{obj_name!r} is not a robot or articulated object of this scenario; body properties are defined "
                 "for articulations only."
             )
         return self.get_body_reindex(obj_name)
+
+    def _warn_unsupported_body_property(self, prop: str) -> bool:
+        reason = self.unsupported_body_properties.get(prop)
+        if reason is None:
+            return False
+        warn_once(
+            (type(self).__name__, "body_property", prop), f"{type(self).__name__}: body {prop} is ignored. {reason}"
+        )
+        return True
+
+    def _current_body_property(self, obj_name: str, prop: str) -> torch.Tensor:
+        """``(num_envs, num_bodies)`` float64 CPU values in native order, from the backend hook."""
+        hook = getattr(self, self._BODY_PROPERTY_HOOKS[prop])
+        return torch.as_tensor(hook(obj_name)).detach().to(dtype=torch.float64, device="cpu")
+
+    def _read_body_property(self, obj_name: str, prop: str) -> torch.Tensor:
+        order = self._body_property_order(obj_name)
+        if self._warn_unsupported_body_property(prop):
+            return torch.full((self.num_envs, len(order)), float("nan"))
+        return self._current_body_property(obj_name, prop)[:, order].to(torch.float32)
+
+    def _prepare_body_write(
+        self, obj_name: str, prop: str, values: torch.Tensor, env_ids: list[int] | torch.Tensor | None
+    ) -> tuple[torch.Tensor, list[int], torch.Tensor, torch.Tensor] | None:
+        """Validate a write and return ``(native, env_ids, current, changed)``, or ``None`` when nothing is written.
+
+        ``native`` is ``values`` in native body order with the engine's own value in every entry the caller did
+        not change (including NaN for a body without collision shapes), so a hook compares against its current
+        values to find what to write; ``changed`` marks those entries.
+        """
+        order = self._body_property_order(obj_name)
+        ids = list(range(self.num_envs)) if env_ids is None else [int(i) for i in torch.as_tensor(env_ids).reshape(-1)]
+        if any(i < 0 or i >= self.num_envs for i in ids):
+            raise ValueError(f"env_ids {ids} out of range for {self.num_envs} envs.")
+        values = torch.as_tensor(values).detach().to(dtype=torch.float64, device="cpu")
+        if values.shape != (len(ids), len(order)):
+            raise ValueError(
+                f"body {prop} for {obj_name!r} must have shape (len(env_ids), num_bodies) = {(len(ids), len(order))}, "
+                f"got {tuple(values.shape)}."
+            )
+        bound = "in [0, 1]" if prop == "restitution" else "finite and non-negative"
+
+        def out_of_bounds(v: torch.Tensor) -> torch.Tensor:
+            return (
+                ~torch.isfinite(v) | (v < 0) | ((v > 1) if prop == "restitution" else torch.zeros_like(v, dtype=bool))
+            )
+
+        if self._warn_unsupported_body_property(prop):
+            if (out_of_bounds(values) & ~torch.isnan(values)).any():
+                raise ValueError(f"body {prop} for {obj_name!r} must be {bound}, got {values.tolist()}.")
+            return None
+        if not ids:
+            return None
+        native = torch.empty_like(values)
+        native[:, order] = values
+        current = self._current_body_property(obj_name, prop)[ids]
+        missing = torch.isnan(current)  # a body with no collision shape has no friction / restitution
+        if (~missing & out_of_bounds(native)).any():
+            raise ValueError(f"body {prop} for {obj_name!r} must be {bound}, got {values.tolist()}.")
+        ignored = missing & ~torch.isnan(native)
+        if ignored.any():
+            names = self._get_body_names(obj_name, sort=False)
+            skipped = sorted({names[j] for j in torch.nonzero(ignored)[:, 1].tolist()})
+            warn_once(
+                (type(self).__name__, "body_property", prop, obj_name, tuple(skipped)),
+                f"{obj_name!r} bodies {skipped} have no collision shape; their {prop} is ignored.",
+            )
+        # a column read with get_* (float32) and written back unchanged keeps the engine's value
+        unchanged = missing | (native == current) | (native == current.to(torch.float32).to(torch.float64))
+        native = torch.where(unchanged, current, native)
+        return native, ids, current, ~unchanged
 
     def _get_body_masses(self, obj_name: str) -> torch.Tensor:
         """Backend hook: ``(num_envs, num_bodies)`` masses in ``get_body_names(obj_name, sort=False)`` order."""
@@ -959,6 +1084,26 @@ class BaseSimHandler(ABC):
         and in every case leaves the engine using the new values from the next ``simulate``.
         """
         raise NotImplementedError(f"{type(self).__name__} does not expose body masses.")
+
+    def _get_body_friction(self, obj_name: str) -> torch.Tensor:
+        """Backend hook: ``(num_envs, num_bodies)`` mean sliding friction of each body's collision shapes, NaN for none."""
+        raise NotImplementedError(f"{type(self).__name__} does not expose body friction.")
+
+    def _set_body_friction(self, obj_name: str, friction: torch.Tensor, env_ids: list[int]) -> None:
+        """Backend hook: set every collision shape of each body whose entry differs from ``_get_body_friction``.
+
+        Same contract as ``_set_body_masses``: native order, CPU float64, unchanged entries hold the current value
+        (NaN for a body without collision shapes) and must be left alone.
+        """
+        raise NotImplementedError(f"{type(self).__name__} does not expose body friction.")
+
+    def _get_body_restitution(self, obj_name: str) -> torch.Tensor:
+        """Backend hook: as ``_get_body_friction``, for the coefficient of restitution."""
+        raise NotImplementedError(f"{type(self).__name__} does not expose body restitution.")
+
+    def _set_body_restitution(self, obj_name: str, restitution: torch.Tensor, env_ids: list[int]) -> None:
+        """Backend hook: as ``_set_body_friction``, for the coefficient of restitution."""
+        raise NotImplementedError(f"{type(self).__name__} does not expose body restitution.")
 
     ############################################################
     ## GS Renderer

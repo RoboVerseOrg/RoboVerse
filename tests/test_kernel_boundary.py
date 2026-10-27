@@ -29,7 +29,6 @@ BUDGET = {
     "tasks/mjlab": 61,  # +2: the Newton end-effector fallback reads tree depth from the body labels
     "roboverse_pack/queries": 44,
     "tasks/maniskill": 35,
-    "roboverse_pack/randomization": 24,
     "tasks/libero": 21,
     "tasks/simpler_env": 13,
     "tasks/beyondmimic": 10,
