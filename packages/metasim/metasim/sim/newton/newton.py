@@ -558,10 +558,10 @@ class NewtonHandler(BaseSimHandler):
             # own joint (mjlab cartpole's slider) keeps floating=None so the parser does not replace it.
             root_joint = self._mjcf_root_joint(mjcf_path)
             floating = True if (not robot.fix_base_link and root_joint is None) else None
-            if not robot.fix_base_link and root_joint == "other":
+            if not robot.fix_base_link and root_joint in ("other", "unknown"):
                 warn_once(
-                    f"Newton: {robot.name}'s MJCF root body has its own joint; it is kept and the base is not "
-                    "made free on top of it (the MuJoCo handler would add a freejoint above it)."
+                    f"Newton: {robot.name}'s MJCF root {'has its own joint' if root_joint == 'other' else 'could not be read (several top-level bodies, <frame> or <include>)'}"
+                    "; the parser's base is kept and not made free (the MuJoCo handler would add a freejoint above it)."
                 )
             #
             # Strip the asset's <actuator> entries for joints that RobotCfg
@@ -602,11 +602,31 @@ class NewtonHandler(BaseSimHandler):
         )
 
     @staticmethod
+    def _inverse_inertia(inertia: np.ndarray) -> np.ndarray:
+        """As ModelBuilder.add_body: the inverse of a nonzero inertia (pseudo-inverse if singular), zero for zero."""
+        if not inertia.any():
+            return np.zeros_like(inertia)
+        try:
+            return np.linalg.inv(inertia.astype(np.float64)).astype(inertia.dtype)
+        except np.linalg.LinAlgError:
+            return np.linalg.pinv(inertia.astype(np.float64)).astype(inertia.dtype)
+
+    @staticmethod
     def _mjcf_root_joint(mjcf_path: str) -> str | None:
-        """``"free"`` / ``"other"`` / ``None``: the joint the MJCF's top-level bodies declare themselves."""
-        worldbody = ET.parse(mjcf_path).getroot().find("worldbody")
+        """``"free"`` / ``"other"`` / ``None`` (no joint): what the MJCF's one top-level body declares itself.
+
+        ``"unknown"`` when that cannot be read from the file alone: no ``<worldbody>``, an ``<include>``, a
+        ``<frame>`` or several top-level bodies. The caller then leaves the parser's default in place.
+        """
+        root = ET.parse(mjcf_path).getroot()
+        worldbody = root.find("worldbody")
+        if worldbody is None or root.find(".//include") is not None or worldbody.find("frame") is not None:
+            return "unknown"
+        bodies = worldbody.findall("body")
+        if len(bodies) != 1:
+            return "unknown"
         kinds = set()
-        for body in worldbody.findall("body") if worldbody is not None else []:
+        for body in bodies:
             for child in body:
                 if child.tag == "freejoint" or (child.tag == "joint" and child.get("type") == "free"):
                     kinds.add("free")
@@ -2620,8 +2640,7 @@ class NewtonHandler(BaseSimHandler):
                 inertia[body] = inertia[body] * (m / mass[body])
             mass[body] = m
             inv_mass[body] = 1.0 / m if m > 0 else 0.0
-            # as ModelBuilder.add_body: the inverse of a nonzero inertia, zero for a zero one
-            inv_inertia[body] = np.linalg.inv(inertia[body].astype(np.float64)) if inertia[body].any() else 0.0
+            inv_inertia[body] = self._inverse_inertia(inertia[body])
         model.body_mass.assign(mass)
         model.body_inv_mass.assign(inv_mass)
         model.body_inertia.assign(inertia)

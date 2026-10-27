@@ -19,6 +19,7 @@ _ARM = """
       <body name="link" pos="0 0 0.1">
         <joint name="hinge" type="hinge" axis="0 1 0"/>
         <geom type="capsule" fromto="0 0 0 0.3 0 0" size="0.02" mass="0.5"/>
+        <body name="tip" pos="0.3 0 0"/>
       </body>
     </body>
   </worldbody>
@@ -87,3 +88,15 @@ def test_a_range_that_can_go_negative_fails_at_bind(arm):
 
     with pytest.raises(ValueError, match="negative mass"):
         MassRandomizer(obj_name="arm", body_names="link", mass_distribution_params=(-1.0, 3.0)).bind_handler(arm)
+
+
+@pytest.mark.requires_optional("mujoco")
+def test_scaling_every_body_leaves_a_massless_one_massless(arm):
+    from roboverse_pack.randomization.humanoid import MassRandomizer
+
+    assert arm.get_body_names("arm") == ["base", "link", "tip"]
+    rand = MassRandomizer(obj_name="arm", mass_distribution_params=(0.8, 1.2), operation="scale")
+    rand.bind_handler(arm)
+    rand()
+    masses = arm.get_body_masses("arm")[0]
+    assert 0.8 <= float(masses[0]) <= 1.2 and 0.4 <= float(masses[1]) <= 0.6 and float(masses[2]) == 0.0

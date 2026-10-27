@@ -120,14 +120,40 @@ def test_contact_forces_name_the_same_bodies_as_mujoco(tmp_path):
         '<body name="leg_r" pos="0 -0.08 -0.1">\n        <joint name="hip_r" type="hinge" axis="0 1 0" range="-1 1"/>\n        <geom type="capsule" fromto="0 0 0 0 0 -0.2"',
     )
     assert "-0.4" in xml and "-0.2" in xml
-    for sim in ("mujoco", "newton"):
+    for sim, num_envs in (("mujoco", 1), ("newton", 1), ("newton", 3)):
         queries = {"contact_forces": ContactForces(history_length=1)}
-        handler = _launch(tmp_path, sim, fix_base_link=True, queries=queries, xml=xml, height=0.48)
+        handler = _launch(tmp_path, sim, fix_base_link=True, queries=queries, xml=xml, height=0.48, num_envs=num_envs)
         try:
             _run(handler, 0.05)
             names = handler.get_body_names("walker")
-            forces = handler.get_states(mode="tensor").extras["contact_forces"]["walker"].contact_forces[0]
-            touching = {names[i] for i in torch.nonzero(forces.norm(dim=-1) > 0.1).flatten().tolist()}
-            assert touching == {"leg_l"}, (sim, touching, forces)
+            forces = handler.get_states(mode="tensor").extras["contact_forces"]["walker"].contact_forces
+            for env in range(num_envs):  # every world's rows land in its own env
+                touching = {names[i] for i in torch.nonzero(forces[env].norm(dim=-1) > 0.1).flatten().tolist()}
+                assert touching == {"leg_l"}, (sim, env, touching, forces[env])
         finally:
             handler.close()
+
+
+def test_the_root_joint_is_read_only_when_the_file_says_it_plainly(tmp_path):
+    from metasim.sim.newton.newton import NewtonHandler
+
+    cases = {
+        "none": '<mujoco><worldbody><body name="a"><geom size="0.1"/></body></worldbody></mujoco>',
+        "free": '<mujoco><worldbody><body name="a"><freejoint/><geom size="0.1"/></body></worldbody></mujoco>',
+        "other": '<mujoco><worldbody><body name="a"><joint type="slide"/><geom size="0.1"/></body></worldbody></mujoco>',
+        "two": '<mujoco><worldbody><body name="a"/><body name="b"/></worldbody></mujoco>',
+        "frame": '<mujoco><worldbody><frame><body name="a"/></frame></worldbody></mujoco>',
+        "include": '<mujoco><include file="x.xml"/><worldbody><body name="a"/></worldbody></mujoco>',
+    }
+    expected = {
+        "none": None,
+        "free": "free",
+        "other": "other",
+        "two": "unknown",
+        "frame": "unknown",
+        "include": "unknown",
+    }
+    for key, xml in cases.items():
+        path = tmp_path / f"{key}.xml"
+        path.write_text(xml)
+        assert NewtonHandler._mjcf_root_joint(str(path)) == expected[key], key

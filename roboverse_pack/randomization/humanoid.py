@@ -418,8 +418,9 @@ class MassRandomizer(BaseQueryType):
             operation=self.operation,
             distribution=self.distribution,
         )
-        # a gaussian sample is unbounded: keep the mass physical
-        masses[rows, cols] = masses[rows, cols].clamp(min=1e-6)
+        # a gaussian sample is unbounded: keep the mass physical (a massless body stays massless)
+        sampled = masses[rows, cols]
+        masses[rows, cols] = torch.where(self.default_masses[rows, cols] > 0, sampled.clamp(min=1e-6), sampled)
         self.handler.set_body_masses(
             self.obj_name, masses[env_ids], env_ids=env_ids, scale_inertia=self.recompute_inertia
         )
