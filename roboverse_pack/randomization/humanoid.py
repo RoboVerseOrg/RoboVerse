@@ -388,6 +388,16 @@ class MassRandomizer(BaseQueryType):
             raise ValueError(f"MassRandomizer: {self.obj_name!r} has no bodies {missing}; it has {names}.")
         self.set_body_ids = torch.tensor([names.index(name) for name in targets], dtype=torch.long)
         self.default_masses = self.handler.get_body_masses(self.obj_name).clone()
+        if self.distribution in ("uniform", "log_uniform"):
+            # a bounded sample that can give a body a negative mass is a config error: say so now, not mid-run
+            low = float(self.mass_distribution_params[0])
+            lightest = float(self.default_masses[:, self.set_body_ids].min())
+            worst = {"add": lightest + low, "scale": lightest * low, "abs": low}[self.operation]
+            if worst < 0:
+                raise ValueError(
+                    f"MassRandomizer({self.obj_name!r}): {self.operation} {tuple(self.mass_distribution_params)} can "
+                    f"give a body of {lightest:.3g} kg a negative mass ({worst:.3g} kg)."
+                )
 
     def __call__(self, env_ids: torch.Tensor | None = None, **kwargs):
         """Apply mass randomization for selected environments."""
@@ -408,6 +418,8 @@ class MassRandomizer(BaseQueryType):
             operation=self.operation,
             distribution=self.distribution,
         )
+        # a gaussian sample is unbounded: keep the mass physical
+        masses[rows, cols] = masses[rows, cols].clamp(min=1e-6)
         self.handler.set_body_masses(
             self.obj_name, masses[env_ids], env_ids=env_ids, scale_inertia=self.recompute_inertia
         )

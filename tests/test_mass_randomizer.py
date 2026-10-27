@@ -79,3 +79,11 @@ def test_beyondmimic_uses_the_same_randomizers():
     assert cfg_randomizers.MassRandomizer is humanoid.MassRandomizer
     assert cfg_randomizers.MaterialRandomizer is humanoid.MaterialRandomizer
     assert cfg_randomizers.randomize_prop_by_op is humanoid.randomize_prop_by_op
+
+
+@pytest.mark.requires_optional("mujoco")
+def test_a_range_that_can_go_negative_fails_at_bind(arm):
+    from roboverse_pack.randomization.humanoid import MassRandomizer
+
+    with pytest.raises(ValueError, match="negative mass"):
+        MassRandomizer(obj_name="arm", body_names="link", mass_distribution_params=(-1.0, 3.0)).bind_handler(arm)

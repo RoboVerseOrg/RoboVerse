@@ -1221,9 +1221,12 @@ class IsaacgymHandler(BaseSimHandler):
                 new = float(masses[row, body])
                 if scale_inertia and new != prop.mass:
                     r = new / prop.mass
+                    # build a new Mat33 and assign it: the struct member may come back as a copy
+                    inertia = gymapi.Mat33()
                     for axis in ("x", "y", "z"):
                         v = getattr(prop.inertia, axis)
-                        setattr(prop.inertia, axis, gymapi.Vec3(v.x * r, v.y * r, v.z * r))
+                        setattr(inertia, axis, gymapi.Vec3(v.x * r, v.y * r, v.z * r))
+                    prop.inertia = inertia
                 prop.mass = new
             self.gym.set_actor_rigid_body_properties(env, actor, props, recomputeInertia=False)
 

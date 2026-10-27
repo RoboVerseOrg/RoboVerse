@@ -32,8 +32,16 @@ the parallel implementations, then build the benchmark data model on top.
       Newton, Isaac Sim, Isaac Gym and the parallel wrapper; one `MassRandomizer` for the humanoid and
       BeyondMimic packs. Verified on MuJoCo and Newton; the Isaac hooks still need a run.
 - [ ] Per-shape friction / restitution on the handler. `MaterialRandomizer` still branches per backend,
-      the branches disagree on what "static friction" means (MuJoCo writes it into `solimp`), and the
-      Newton branch does not notify the solver. The core `ObjectRandomizer` covers Isaac Sim only.
+      the branches disagree on what "static friction" means (MuJoCo writes it into `solimp`), the Newton
+      branch does not notify the solver, the MuJoCo branch indexes the model's geoms with the robot's own
+      body indices (off by the world body and every earlier model), and the Isaac Gym branch passes a dict
+      as the actor handle. The core `ObjectRandomizer` covers Isaac Sim only. mjlab's `body_mass` DR event
+      writes Newton / MuJoCo mass fields itself and skips the solver refresh: route it through
+      `set_body_masses`.
+- [ ] Newton drops an MJCF body with no geometry and no inertia (H1's `left_hand` / `right_hand` site
+      carriers): H1 has 20 bodies on Newton, 22 on MuJoCo, so the body tensors differ in width.
+- [ ] `ParallelHandler` cannot return a state whose extras hold a query object (`ContactForces` on MuJoCo
+      with `num_envs > 1`: "cannot pickle '_thread.RLock'").
 - [x] Site poses derived from the state (`metasim.utils.site_util.site_pose`): LIBERO-90's success checks
       no longer read `physics.named.data.site_*` (63 reach-ins to 0). The mjlab ports still read `physics`.
 - [x] LIBERO-90 success as the BDDL goal, declared as data (`goal = (("In", obj, region_obj, site), ...)`) and

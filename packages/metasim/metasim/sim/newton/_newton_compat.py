@@ -74,6 +74,20 @@ def _resolve_populate_contacts():
 populate_contacts = _resolve_populate_contacts()
 
 
+def body_inertial_flag():
+    """The ``notify_model_changed`` flag for a body mass / inertia change (resolved when called).
+
+    newton >= 1.2: ``newton.ModelFlags.BODY_INERTIAL_PROPERTIES``;
+    older: ``newton.solvers.SolverNotifyFlags.BODY_INERTIAL_PROPERTIES``.
+    """
+    import newton
+
+    flags = getattr(newton, "ModelFlags", None)
+    if flags is None:
+        from newton.solvers import SolverNotifyFlags as flags  # newton < 1.2
+    return flags.BODY_INERTIAL_PROPERTIES
+
+
 def set_current_world(builder, world_idx: int) -> None:
     """Set the ModelBuilder's active world index across newton versions.
 

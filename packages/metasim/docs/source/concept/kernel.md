@@ -73,7 +73,7 @@ per-backend branches are gone since (see below):
 
 | Area | Reach-ins | Mostly |
 |---|---:|---|
-| `tasks/mjlab` | 59 | `physics` (MuJoCo-native ports for mjlab parity) |
+| `tasks/mjlab` | 61 | `physics` (MuJoCo-native ports for mjlab parity) |
 | `roboverse_pack/queries` | 44 | backend branches inside queries (expected: a query is where backend code belongs) |
 | `tasks/maniskill` | 35 | `object_ids` (SAPIEN friction in the native ports) |
 | `roboverse_pack/randomization` | 24 | `scene`, `gym`, `physics` (friction / restitution per backend) |

@@ -198,8 +198,9 @@ class ContactForces(BaseQueryType):
         env_ids = []
         local_ids = []
         valid = []
-        for row in sensor.sensing_objs:
-            body_idx = row[0]
+        # newton < 1.2 lists (body, kind) rows, 1.2+ the body indices
+        rows = [row[0] for row in sensor.sensing_objs] if hasattr(sensor, "sensing_objs") else sensor.sensing_indices
+        for body_idx in rows:
             if not isinstance(body_idx, (int, np.integer)):
                 env_ids.append(-1)
                 local_ids.append(-1)

@@ -6268,6 +6268,21 @@
      ],
      "signature": "(obj: 'object') -> 'object'"
     },
+    "file_name": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "sim_name"
+      }
+     ],
+     "signature": "(self, sim_name)"
+    },
     "from_dict": {
      "params": [
       {

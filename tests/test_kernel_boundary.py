@@ -26,7 +26,7 @@ _ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 #: Reach-ins past the kernel handler surface, per content area (1.0.0 started at 354).
 BUDGET = {
-    "tasks/mjlab": 59,
+    "tasks/mjlab": 61,  # +2: the Newton end-effector fallback reads tree depth from the body labels
     "roboverse_pack/queries": 44,
     "tasks/maniskill": 35,
     "roboverse_pack/randomization": 24,
