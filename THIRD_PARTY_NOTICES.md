@@ -54,7 +54,8 @@ below. If you cannot name the upstream and its license, do not merge it.
 | `packages/metasim/metasim/utils/string_util.py` | [Isaac Lab](https://github.com/isaac-sim/IsaacLab) © 2022-2024 The Isaac Lab Project Developers | BSD-3-Clause | Adapted | `packages/metasim/LICENSE.isaaclab` |
 | `roboverse_learn/rl/configs/rsl_rl/algorithm.py` | [Isaac Lab](https://github.com/isaac-sim/IsaacLab) © 2022-2025 The Isaac Lab Project Developers | BSD-3-Clause | Adapted | [below](#bsd-3-clause-isaac-lab-and-rsl-rl) |
 | `roboverse_pack/tasks/beyondmimic/` (most of the tree, incl. `isaaclab/mdp/`, `isaaclab/configs/`, `isaaclab/robots/g1*.py`, `metasim/`, `scripts/`) | [BeyondMimic / whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking) | MIT (see note) | Adapted | `roboverse_pack/tasks/beyondmimic/LICENSE.beyondmimic` |
-| `roboverse_pack/tasks/beyondmimic/isaaclab/envs/tracking_*.py`, `.../isaaclab/robots/actuator.py`, `.../scripts/convert_urdf.py`, `.../metasim/utils/misc.py`, `.../metasim/utils/string.py`, `.../metasim/configs/cfg_randomizers.py` | [Isaac Lab](https://github.com/isaac-sim/IsaacLab) © 2022-2025 The Isaac Lab Project Developers | BSD-3-Clause | Adapted | `roboverse_pack/tasks/beyondmimic/LICENSE.isaaclab` |
+| `roboverse_pack/tasks/beyondmimic/isaaclab/envs/tracking_*.py`, `.../isaaclab/robots/actuator.py`, `.../scripts/convert_urdf.py`, `.../metasim/utils/misc.py`, `.../metasim/utils/string.py` | [Isaac Lab](https://github.com/isaac-sim/IsaacLab) © 2022-2025 The Isaac Lab Project Developers | BSD-3-Clause | Adapted | `roboverse_pack/tasks/beyondmimic/LICENSE.isaaclab` |
+| `roboverse_pack/randomization/humanoid.py` (`randomize_prop_by_op`, `_validate_scale_range`, the bucketed material sampling) | [Isaac Lab](https://github.com/isaac-sim/IsaacLab) © 2022-2025 The Isaac Lab Project Developers | BSD-3-Clause | Adapted | `roboverse_pack/randomization/LICENSE.isaaclab` |
 | `roboverse_pack/tasks/simpler_env/_native/control/`, `roboverse_pack/tasks/simpler_env/_native/overlay.py` | [ManiSkill2-real2sim](https://github.com/simpler-env/ManiSkill2_real2sim) (the sim stack behind [SimplerEnv](https://github.com/simpler-env/SimplerEnv)) | Apache-2.0 | Vendored | `roboverse_pack/tasks/simpler_env/_native/control/LICENSE` |
 | `roboverse_pack/tasks/maniskill/_native/control.py` | [ManiSkill](https://github.com/haosulab/ManiSkill) | Apache-2.0 | Adapted | `roboverse_pack/tasks/simpler_env/_native/control/LICENSE` |
 | `roboverse_pack/tasks/robosuite/_osc.py`, `roboverse_pack/tasks/robosuite/native.py` | [robosuite](https://github.com/ARISE-Initiative/robosuite) © 2022 Stanford Vision and Learning Lab & UT Robot Perception and Learning Lab | MIT | Adapted (port) | `roboverse_pack/tasks/robosuite/LICENSE` |
@@ -91,7 +92,8 @@ variant), and it is attributed to BeyondMimic. Only these files inside the tree 
 Isaac Lab-derived and carry the BSD-3-Clause notice: `isaaclab/envs/tracking_base_env.py`,
 `isaaclab/envs/tracking_rl_env.py`, `isaaclab/robots/actuator.py` (Isaac Lab's
 `DelayedPDActuator` logic, reached via BeyondMimic), `scripts/convert_urdf.py`,
-`metasim/utils/misc.py`, `metasim/utils/string.py`, and `metasim/configs/cfg_randomizers.py`.
+`metasim/utils/misc.py` and `metasim/utils/string.py`. The randomizers `metasim/configs/cfg_randomizers.py`
+re-exports now live in `roboverse_pack/randomization/humanoid.py`, which carries the notice itself.
 
 ## Unresolved — must be settled before the next release
 

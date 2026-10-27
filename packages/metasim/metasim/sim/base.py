@@ -867,6 +867,100 @@ class BaseSimHandler(ABC):
         return self._body_reindex_cache[obj_name]
 
     ############################################################
+    ## Physical properties
+    ############################################################
+    def get_body_masses(self, obj_name: str) -> torch.Tensor:
+        """Masses (kg) of an articulation's bodies, as the engine simulates them now.
+
+        Args:
+            obj_name: A robot or articulated object.
+
+        Returns:
+            A float32 CPU tensor of shape ``(num_envs, num_bodies)`` (``set_body_masses`` writes float64), bodies in
+            ``get_body_names(obj_name)`` order (alphabetical, the order of the state's body tensors).
+        """
+        order = self._body_mass_order(obj_name)
+        return self._get_body_masses(obj_name)[:, order].to(dtype=torch.float32, device="cpu")
+
+    def set_body_masses(
+        self,
+        obj_name: str,
+        masses: torch.Tensor,
+        *,
+        env_ids: list[int] | torch.Tensor | None = None,
+        scale_inertia: bool = True,
+    ) -> None:
+        """Set the masses of an articulation's bodies.
+
+        Args:
+            obj_name: A robot or articulated object.
+            masses: Shape ``(len(env_ids), num_bodies)``, bodies in ``get_body_names(obj_name)`` order. To
+                change some bodies, read ``get_body_masses``, edit the columns, and write the rows back.
+            env_ids: The environments to write; all of them when ``None``.
+            scale_inertia: Scale each body's inertia tensor by its new mass over its current mass, which
+                keeps its shape (a uniform density change). Needs every changed body to have a nonzero
+                current mass. With ``False`` the inertia is left as it is.
+
+        Raises:
+            ValueError: ``obj_name`` is not an articulation, ``masses`` has the wrong shape or a negative
+                or non-finite entry, or ``scale_inertia`` meets a body whose current mass is zero.
+            NotImplementedError: The backend does not expose body masses.
+        """
+        order = self._body_mass_order(obj_name)
+        ids = list(range(self.num_envs)) if env_ids is None else [int(i) for i in torch.as_tensor(env_ids).reshape(-1)]
+        if any(i < 0 or i >= self.num_envs for i in ids):
+            raise ValueError(f"env_ids {ids} out of range for {self.num_envs} envs.")
+        masses = torch.as_tensor(masses).detach().to(dtype=torch.float64, device="cpu")
+        if masses.shape != (len(ids), len(order)):
+            raise ValueError(
+                f"masses for {obj_name!r} must have shape (len(env_ids), num_bodies) = {(len(ids), len(order))}, "
+                f"got {tuple(masses.shape)}."
+            )
+        if not torch.isfinite(masses).all() or (masses < 0).any():
+            raise ValueError(f"masses for {obj_name!r} must be finite and non-negative, got {masses.tolist()}.")
+        native = torch.empty_like(masses)
+        native[:, order] = masses
+        current = self._get_body_masses(obj_name)[ids].to(dtype=torch.float64, device="cpu")
+        # a column read with get_body_masses (float32) and written back unchanged keeps the engine's value
+        unchanged = (native == current) | (native == current.to(torch.float32).to(torch.float64))
+        native = torch.where(unchanged, current, native)
+        if scale_inertia:
+            changed = ~unchanged
+            if (changed & (current == 0)).any():
+                names = self._get_body_names(obj_name, sort=False)
+                zero = sorted({names[j] for j in torch.nonzero(changed & (current == 0))[:, 1].tolist()})
+                raise ValueError(
+                    f"cannot scale the inertia of zero-mass bodies {zero} of {obj_name!r}; "
+                    "pass scale_inertia=False and set their inertia another way."
+                )
+        self._set_body_masses(obj_name, native, ids, scale_inertia)
+
+    def _body_mass_order(self, obj_name: str) -> list[int]:
+        """Native body index of each sorted body name; validates that ``obj_name`` is an articulation."""
+        from metasim.scenario.objects import ArticulationObjCfg
+
+        if not isinstance(self.object_dict.get(obj_name), ArticulationObjCfg):
+            raise ValueError(
+                f"{obj_name!r} is not a robot or articulated object of this scenario; body masses are defined "
+                "for articulations only."
+            )
+        return self.get_body_reindex(obj_name)
+
+    def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+        """Backend hook: ``(num_envs, num_bodies)`` masses in ``get_body_names(obj_name, sort=False)`` order."""
+        raise NotImplementedError(f"{type(self).__name__} does not expose body masses.")
+
+    def _set_body_masses(self, obj_name: str, masses: torch.Tensor, env_ids: list[int], scale_inertia: bool) -> None:
+        """Backend hook: write ``masses`` (``(len(env_ids), num_bodies)``, native order, CPU float64).
+
+        The caller has validated the shape and values, and put the engine's own value in every entry the
+        caller did not change, so ``masses != current`` is exactly the set of changed bodies. With ``scale_inertia`` the hook multiplies each
+        body's inertia by ``new / current`` mass (bodies whose mass does not change keep their inertia),
+        and in every case leaves the engine using the new values from the next ``simulate``.
+        """
+        raise NotImplementedError(f"{type(self).__name__} does not expose body masses.")
+
+    ############################################################
     ## GS Renderer
     ############################################################
     def _get_camera_params(self, camera):

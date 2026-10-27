@@ -1924,6 +1924,22 @@ class IsaacsimHandler(BaseSimHandler):
         else:
             return []
 
+    def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+        return self.scene.articulations[obj_name].root_physx_view.get_masses().clone()
+
+    def _set_body_masses(self, obj_name: str, masses: torch.Tensor, env_ids: list[int], scale_inertia: bool) -> None:
+        view = self.scene.articulations[obj_name].root_physx_view
+        idx = torch.tensor(env_ids, dtype=torch.long)
+        all_masses = view.get_masses()  # (num_envs, num_bodies), CPU
+        current = all_masses[idx].to(torch.float64)
+        if scale_inertia:
+            ratio = torch.where(masses != current, masses / torch.where(current == 0, 1.0, current), 1.0)
+            inertias = view.get_inertias()  # (num_envs, num_bodies, 9)
+            inertias[idx] = inertias[idx] * ratio[..., None].to(inertias.dtype)
+            view.set_inertias(inertias, idx)
+        all_masses[idx] = masses.to(all_masses.dtype)
+        view.set_masses(all_masses, idx)
+
     def _add_pinhole_camera(self, camera: PinholeCameraCfg) -> None:
         import isaaclab.sim as sim_utils
         from isaaclab.sensors.camera import Camera, CameraCfg

@@ -24,15 +24,15 @@ from metasim.sim.base import BaseSimHandler
 
 _ROOT = pathlib.Path(__file__).resolve().parents[1]
 
-#: Reach-ins past the kernel handler surface, per content area, as of 1.0.0.
+#: Reach-ins past the kernel handler surface, per content area (1.0.0 started at 354).
 BUDGET = {
     "tasks/mjlab": 59,
-    "tasks/beyondmimic": 55,
-    "roboverse_pack/randomization": 49,
     "roboverse_pack/queries": 44,
     "tasks/maniskill": 35,
+    "roboverse_pack/randomization": 24,
     "tasks/libero": 21,
     "tasks/simpler_env": 13,
+    "tasks/beyondmimic": 10,
     "tasks/robosuite": 7,
     "roboverse_pack/callback_funcs": 6,
     "roboverse_pack/utils": 2,

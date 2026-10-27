@@ -1420,18 +1420,39 @@ class MujocoHandler(BaseSimHandler):
         """Global actuator ids of the robot's *actuated* joints in sorted-joint order (passive joints skipped)."""
         return [aid for aid in self._joint_actuator_ids(robot_name) if aid is not None]
 
+    def _body_ids(self, obj_name: str) -> list[int]:
+        """Model body ids of an articulation, in ``_get_body_names(obj_name, sort=False)`` order."""
+        model_name = self.mj_objects[obj_name].model
+        ids = []
+        for i in range(self.physics.model.nbody):
+            parts = self.physics.model.body(i).name.split("/")
+            if parts[0] == model_name and parts[-1] != "":
+                ids.append(i)
+        return ids
+
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            model_name = self.mj_objects[obj_name].model
-            names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
-            names = [name.split("/")[-1] for name in names if name.split("/")[0] == model_name]
-            names = [name for name in names if name != ""]
-
+            names = [self.physics.model.body(i).name.split("/")[-1] for i in self._body_ids(obj_name)]
             if sort:
                 names.sort()
             return names
         else:
             return []
+
+    def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+        return torch.as_tensor(self.physics.model.body_mass[self._body_ids(obj_name)].copy()).unsqueeze(0)
+
+    def _set_body_masses(self, obj_name: str, masses: torch.Tensor, env_ids: list[int], scale_inertia: bool) -> None:
+        model = self.physics.model
+        ids = self._body_ids(obj_name)
+        current = model.body_mass[ids].copy()
+        new = masses[0].numpy()
+        if scale_inertia:
+            ratio = np.divide(new, current, out=np.ones_like(new), where=new != current)
+            model.body_inertia[ids] = model.body_inertia[ids] * ratio[:, None]
+        model.body_mass[ids] = new
+        # subtree masses and the constraint solver's invweight0 are derived from body_mass at compile time
+        mujoco.mj_setConst(model.ptr, mujoco.MjData(model.ptr))
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
         """Charlie: needs to be taken down

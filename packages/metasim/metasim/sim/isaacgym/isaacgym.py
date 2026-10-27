@@ -1199,6 +1199,34 @@ class IsaacgymHandler(BaseSimHandler):
         else:
             return []
 
+    def _actor_handle(self, env_id: int, obj_name: str):
+        if obj_name in self._robot_handles[env_id]:
+            return self._robot_handles[env_id][obj_name]
+        return self._obj_handles[env_id][[obj.name for obj in self.objects].index(obj_name)]
+
+    def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+        return torch.tensor(
+            [
+                [prop.mass for prop in self.gym.get_actor_rigid_body_properties(env, self._actor_handle(i, obj_name))]
+                for i, env in enumerate(self._envs)
+            ],
+            dtype=torch.float64,
+        )
+
+    def _set_body_masses(self, obj_name: str, masses: torch.Tensor, env_ids: list[int], scale_inertia: bool) -> None:
+        for row, env_id in enumerate(env_ids):
+            env, actor = self._envs[env_id], self._actor_handle(env_id, obj_name)
+            props = self.gym.get_actor_rigid_body_properties(env, actor)
+            for body, prop in enumerate(props):
+                new = float(masses[row, body])
+                if scale_inertia and new != prop.mass:
+                    r = new / prop.mass
+                    for axis in ("x", "y", "z"):
+                        v = getattr(prop.inertia, axis)
+                        setattr(prop.inertia, axis, gymapi.Vec3(v.x * r, v.y * r, v.z * r))
+                prop.mass = new
+            self.gym.set_actor_rigid_body_properties(env, actor, props, recomputeInertia=False)
+
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
         return [self._body_info[obj_name]["global_indices"][bn] for bn in self._get_body_names(obj_name)]
 

@@ -7151,6 +7151,21 @@
      ],
      "signature": "(self) -> 'dict[str, list[str]]'"
     },
+    "get_body_masses": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      }
+     ],
+     "signature": "(self, obj_name: 'str') -> 'torch.Tensor'"
+    },
     "get_body_names": {
      "params": [
       {
@@ -7303,6 +7318,36 @@
       }
      ],
      "signature": "(self) -> 'None'"
+    },
+    "set_body_masses": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "obj_name"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "masses"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "env_ids"
+      },
+      {
+       "default": true,
+       "kind": "KEYWORD_ONLY",
+       "name": "scale_inertia"
+      }
+     ],
+     "signature": "(self, obj_name: 'str', masses: 'torch.Tensor', *, env_ids: 'list[int] | torch.Tensor | None' = None, scale_inertia: 'bool' = True) -> 'None'"
     },
     "set_dof_targets": {
      "params": [

@@ -184,7 +184,8 @@ class ContactForces(BaseQueryType):
                 if body_count is None:
                     body_count = 0
                 continue
-            body_names = [model.body_key[idx] for idx in body_ids]
+            # the handler's body names (the label's last segment): rows in get_body_names / state order
+            body_names = [self.handler._body_name(idx) for idx in body_ids]
             sorted_pairs = sorted(zip(body_names, body_ids, strict=False), key=lambda pair: pair[0])
             sorted_body_ids = [idx for _, idx in sorted_pairs]
             if body_count is None:

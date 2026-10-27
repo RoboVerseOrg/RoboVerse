@@ -28,10 +28,12 @@ the parallel implementations, then build the benchmark data model on top.
 - [x] `metasim.kernel`: the minimum a port builds on (scenario, `TensorState`, handler, task loop,
       protocol), backend-free and API-pinned; content's reach-ins past the handler surface are counted
       per area and only go down (`tests/test_kernel_boundary.py`, 354 at 1.0.0).
-- [ ] Handler physical-property interface: per-body mass / inertia and per-shape friction /
-      restitution, per env, on every backend. Today the humanoid and beyondmimic packs each carry
-      their own Isaac Sim / Isaac Gym / MuJoCo / Newton branches for it, and the core
-      `ObjectRandomizer` covers Isaac Sim only.
+- [x] Handler body masses (`get_body_masses` / `set_body_masses`, inertia scaled with the mass) on MuJoCo,
+      Newton, Isaac Sim, Isaac Gym and the parallel wrapper; one `MassRandomizer` for the humanoid and
+      BeyondMimic packs. Verified on MuJoCo and Newton; the Isaac hooks still need a run.
+- [ ] Per-shape friction / restitution on the handler. `MaterialRandomizer` still branches per backend,
+      the branches disagree on what "static friction" means (MuJoCo writes it into `solimp`), and the
+      Newton branch does not notify the solver. The core `ObjectRandomizer` covers Isaac Sim only.
 - [x] Site poses derived from the state (`metasim.utils.site_util.site_pose`): LIBERO-90's success checks
       no longer read `physics.named.data.site_*` (63 reach-ins to 0). The mjlab ports still read `physics`.
 - [x] LIBERO-90 success as the BDDL goal, declared as data (`goal = (("In", obj, region_obj, site), ...)`) and

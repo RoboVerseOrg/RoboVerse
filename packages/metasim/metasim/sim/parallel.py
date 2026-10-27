@@ -65,6 +65,11 @@ def _worker(
                 remote.send(names)
             elif cmd == "set_dof_targets":
                 env.set_dof_targets(data[0])
+            elif cmd == "get_body_masses":
+                remote.send(env._get_body_masses(data[0]))
+            elif cmd == "set_body_masses":
+                env._set_body_masses(data[0], data[1], [0], data[2])
+                remote.send(None)
             elif cmd == "set_seed":
                 env.set_seed(data[0])
             elif cmd == "handshake":
@@ -423,6 +428,20 @@ def ParallelSimWrapper(base_cls: type[BaseSimHandler]) -> type[BaseSimHandler]:
 
         def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
             return self.get_body_names(obj_name, sort)
+
+        # each worker holds one env; the base class validates and reorders, the workers read and write
+        def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+            for remote in self.remotes:
+                self._send(remote, ("get_body_masses", (obj_name,)))
+            return torch.cat([self._recv_or_surface(i) for i in range(self.num_envs)])
+
+        def _set_body_masses(
+            self, obj_name: str, masses: torch.Tensor, env_ids: list[int], scale_inertia: bool
+        ) -> None:
+            for row, env_id in enumerate(env_ids):
+                self._send(self.remotes[env_id], ("set_body_masses", (obj_name, masses[row : row + 1], scale_inertia)))
+            for env_id in env_ids:
+                self._recv_or_surface(env_id)
 
         @property
         def device(self) -> torch.device:

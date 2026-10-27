@@ -68,20 +68,38 @@ MuJoCo, `handler.gym` / `_envs` on Isaac Gym, `handler.scene` on Isaac Sim, `obj
 ties a task to one backend, which is how a task that declares two simulators ends up working on one.
 
 `tests/test_kernel_boundary.py` counts those reach-ins per content area and holds each area to a
-budget that only goes down. As of 1.0.0 (LIBERO-90's 63 site reads are gone; see below):
+budget that only goes down. 1.0.0 started at 354; LIBERO-90's 63 site reads and the mass randomizers'
+per-backend branches are gone since (see below):
 
 | Area | Reach-ins | Mostly |
 |---|---:|---|
 | `tasks/mjlab` | 59 | `physics` (MuJoCo-native ports for mjlab parity) |
-| `tasks/beyondmimic` | 55 | `scene`, `gym`, `_envs` (per-backend randomization) |
-| `roboverse_pack/randomization` | 49 | `scene`, `gym`, `physics` (mass and friction per backend) |
 | `roboverse_pack/queries` | 44 | backend branches inside queries (expected: a query is where backend code belongs) |
 | `tasks/maniskill` | 35 | `object_ids` (SAPIEN friction in the native ports) |
+| `roboverse_pack/randomization` | 24 | `scene`, `gym`, `physics` (friction / restitution per backend) |
 | `tasks/libero` | 21 | `physics` in the native replay port |
+| `tasks/beyondmimic` | 10 | `scene`, `physics` (joint defaults, contact sensor) |
 | others | 28 | |
 
-The largest recurring gap still open is a per-body **physical property** interface (mass, friction,
-restitution per env), which today is written four times over, once per backend, in two content packs.
+## Physical properties
+
+Body masses are a handler verb, so a randomizer or a system-identification script writes them once
+for every backend instead of once per engine:
+
+```python
+masses = handler.get_body_masses("g1")          # (num_envs, num_bodies), bodies in get_body_names("g1") order
+masses[:, handler.get_body_names("g1").index("pelvis")] += 1.0
+handler.set_body_masses("g1", masses)            # env_ids=None: all envs; scale_inertia=True by default
+```
+
+`set_body_masses` validates the shape and values, keeps every entry it did not change bit-exact (a
+float32 read written back restores the engine's float64 value), scales each changed body's inertia by
+its mass ratio, and leaves the engine simulating the new values from the next `simulate()`: on MuJoCo
+it reruns `mj_setConst` (subtree masses, `invweight0`), on Newton it recomputes the inverse mass and
+inertia and notifies `SolverMuJoCo`, which otherwise keeps its own copy. MuJoCo (single and parallel
+envs) and Newton are verified by simulating with the new masses; Isaac Sim and Isaac Gym implement the
+hooks but have not been run. Friction and restitution are still written per backend inside
+`MaterialRandomizer`; they are the next property to move onto the handler.
 
 ## Sites: frames derived from the state
 

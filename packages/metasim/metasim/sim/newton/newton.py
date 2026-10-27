@@ -393,7 +393,7 @@ class NewtonHandler(BaseSimHandler):
                 if not foot_tokens:
                     continue
                 for body_id in self._get_body_indices(env_id, robot.name):
-                    body_name = self._model.body_key[body_id]
+                    body_name = self._body_name(body_id)
                     if not any(token in body_name for token in foot_tokens):
                         continue
                     for shape_idx in self._model.body_shapes.get(body_id, []):
@@ -884,7 +884,7 @@ class NewtonHandler(BaseSimHandler):
 
                 body_ids = self._get_body_indices(env_id, name)
                 if body_ids:
-                    body_names = [self._model.body_key[idx] for idx in body_ids]
+                    body_names = [self._body_name(idx) for idx in body_ids]
                     sorted_pairs = sorted(zip(body_names, body_ids, strict=False), key=lambda pair: pair[0])
                     sorted_body_ids = [idx for _, idx in sorted_pairs]
                 else:
@@ -1806,7 +1806,7 @@ class NewtonHandler(BaseSimHandler):
 
                 body_ids = self._get_body_indices(env_id, robot_name)
                 if body_ids:
-                    body_names = [self._model.body_key[idx] for idx in body_ids]
+                    body_names = [self._body_name(idx) for idx in body_ids]
                     sorted_pairs = sorted(zip(body_names, body_ids, strict=False), key=lambda pair: pair[0])
                     sorted_body_ids = [idx for _, idx in sorted_pairs]
                 else:
@@ -1862,7 +1862,7 @@ class NewtonHandler(BaseSimHandler):
                 body_ids = self._get_body_indices(env_id, obj_name)
                 if body_q is not None:
                     if body_ids:
-                        body_names = [self._model.body_key[idx] for idx in body_ids]
+                        body_names = [self._body_name(idx) for idx in body_ids]
                         sorted_pairs = sorted(zip(body_names, body_ids, strict=False), key=lambda pair: pair[0])
                         sorted_body_ids = [idx for _, idx in sorted_pairs]
                     else:
@@ -2541,6 +2541,15 @@ class NewtonHandler(BaseSimHandler):
             names.sort()
         return names
 
+    def _body_name(self, body_idx: int) -> str:
+        """A body's name as the other backends report it.
+
+        Newton >= 1.2 labels a body with its path in the source file (``franka/worldbody/panda_link0/...``);
+        the name is the last segment. Sorting the full path would put the state's body rows in tree order
+        instead of the alphabetical order every other backend uses.
+        """
+        return self._model.body_key[body_idx].split("/")[-1]
+
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         """Get body/link names for an articulated object."""
         obj_cfg = self.object_dict.get(obj_name)
@@ -2553,10 +2562,47 @@ class NewtonHandler(BaseSimHandler):
             return []
 
         # Include the root link to align with other simulators (IsaacGym/MuJoCo).
-        names = [self._model.body_key[idx] for idx in body_ids]
+        names = [self._body_name(idx) for idx in body_ids]
+        if len(set(names)) != len(names):
+            dupes = sorted({n for n in names if names.count(n) > 1})
+            raise ValueError(f"{obj_name!r} has several bodies named {dupes}; body names must be unique per object.")
         if sort:
             names.sort()
         return names
+
+    def _env_body_ids(self, obj_name: str) -> np.ndarray:
+        """Model body ids of an articulation, ``(num_envs, num_bodies)``, in ``_get_body_names(sort=False)`` order."""
+        names = self._get_body_names(obj_name, sort=False)
+        rows = []
+        for env_id in range(self.num_envs):
+            by_name = {self._body_name(i): i for i in self._get_body_indices(env_id, obj_name)}
+            rows.append([by_name[name] for name in names])
+        return np.asarray(rows, dtype=np.int64)
+
+    def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+        return torch.as_tensor(self._model.body_mass.numpy()[self._env_body_ids(obj_name)])
+
+    def _set_body_masses(self, obj_name: str, masses: torch.Tensor, env_ids: list[int], scale_inertia: bool) -> None:
+        ids = self._env_body_ids(obj_name)[env_ids]
+        model = self._model
+        mass, inv_mass = model.body_mass.numpy(), model.body_inv_mass.numpy()
+        inertia, inv_inertia = model.body_inertia.numpy(), model.body_inv_inertia.numpy()
+        new = masses.numpy().astype(mass.dtype)
+        current = mass[ids]
+        if scale_inertia:
+            ratio = np.divide(new, current, out=np.ones_like(new), where=new != current)
+            inertia[ids] = inertia[ids] * ratio[..., None, None]
+        mass[ids] = new
+        inv_mass[ids] = np.divide(1.0, new, out=np.zeros_like(new), where=new > 0)
+        for body in ids.reshape(-1):
+            # as ModelBuilder.add_body: the inverse of a nonzero inertia, zero for a zero one
+            inv_inertia[body] = np.linalg.pinv(inertia[body]) if inertia[body].any() else 0.0
+        model.body_mass.assign(mass)
+        model.body_inv_mass.assign(inv_mass)
+        model.body_inertia.assign(inertia)
+        model.body_inv_inertia.assign(inv_inertia)
+        # SolverMuJoCo holds its own copy of the inertial properties; without this it keeps the old ones
+        self._solver.notify_model_changed(newton.ModelFlags.BODY_INERTIAL_PROPERTIES)
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
         """Get body indices for reindexing contact forces.
@@ -2576,7 +2622,7 @@ class NewtonHandler(BaseSimHandler):
             return []
 
         # Get body names and their indices
-        body_names_with_indices = [(self._model.body_key[idx], idx) for idx in body_ids]
+        body_names_with_indices = [(self._body_name(idx), idx) for idx in body_ids]
 
         # Sort by body name and return the indices
         sorted_pairs = sorted(body_names_with_indices, key=lambda x: x[0])
