@@ -26,7 +26,7 @@ class LiftPegUprightTask(ManiskillBaseTask):
             PrimitiveCubeCfg(
                 name="peg",
                 size=(peg_length, peg_widdth, peg_widdth),
-                mass=0.04,
+                mass=0.6,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=(1.0, 0.0, 0.0),
             )

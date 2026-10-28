@@ -41,12 +41,12 @@ from metasim.task.registry import register_task
 from ._dense_rl import DenseRLResetMixin
 from .maniskill_base import ManiskillBaseTask
 
-# Match ManiSkill: half-size 0.02 → 4 cm cube; default density picks up
-# ~0.064 kg with sapien's 1000 kg/m³ default — close to ManiSkill's
-# implicit choice (they don't set mass either).
+# Match ManiSkill: half-size 0.02 → 4 cm cube, built at ManiSkill's default
+# 1000 kg/m³ → 0.064 kg (every backend honours ``mass``).
 _CUBE = PrimitiveCubeCfg(
     name="cube",
     size=(0.04, 0.04, 0.04),
+    mass=0.064,
     physics=PhysicStateType.RIGIDBODY,
     color=(1.0, 0.0, 0.0),
 )

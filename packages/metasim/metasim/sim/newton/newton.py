@@ -642,6 +642,13 @@ class NewtonHandler(BaseSimHandler):
             col = np.concatenate([col, np.array([1.0], dtype=np.float32)])
         return col.astype(np.float32)
 
+    @staticmethod
+    def _primitive_shape_cfg(builder: newton.ModelBuilder, obj) -> newton.ModelBuilder.ShapeConfig:
+        """The builder's default shape config, at the density that gives the primitive its configured ``mass``."""
+        cfg = builder.default_shape_cfg.copy()
+        cfg.density = obj.density
+        return cfg
+
     def _add_object_to_builder(
         self, builder: newton.ModelBuilder, obj, shape_colors: dict[int, np.ndarray] | None = None
     ) -> None:
@@ -658,6 +665,7 @@ class NewtonHandler(BaseSimHandler):
                 hx=obj.half_size[0],
                 hy=obj.half_size[1],
                 hz=obj.half_size[2],
+                cfg=self._primitive_shape_cfg(builder, obj),
                 as_site=_primitive_is_site(obj),
             )
             if shape_colors is not None:
@@ -674,6 +682,7 @@ class NewtonHandler(BaseSimHandler):
                 body=body,
                 xform=xform if body == -1 else None,
                 radius=obj.radius,
+                cfg=self._primitive_shape_cfg(builder, obj),
                 as_site=_primitive_is_site(obj),
             )
             if shape_colors is not None:
@@ -686,11 +695,12 @@ class NewtonHandler(BaseSimHandler):
                 wp.quat(*self._wxyz_to_xyzw(obj.default_orientation)),
             )
             body = -1 if _primitive_is_kinematic(obj) else builder.add_body(xform=xform, key=obj.name)
-            shape_idx = builder.add_shape_capsule(
+            shape_idx = builder.add_shape_cylinder(
                 body=body,
                 xform=xform if body == -1 else None,
                 radius=obj.radius,
                 half_height=obj.height / 2,
+                cfg=self._primitive_shape_cfg(builder, obj),
                 as_site=_primitive_is_site(obj),
             )
             if shape_colors is not None:

@@ -62,7 +62,7 @@ class RollBallCfg(ManiskillBaseTask):
             PrimitiveSphereCfg(
                 name="ball",
                 radius=0.05,
-                mass=0.02,
+                mass=0.5236,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=[1.0, 0.0, 0.0],
             ),

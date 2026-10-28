@@ -10,6 +10,7 @@ from loguru import logger as log
 
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.scenario.robot import RobotCfg
+from metasim.sim.mujoco.primitives import primitive_xml
 from metasim.sim.mujoco.renderer_teardown import attach_renderer_teardown, close_renderer
 from metasim.utils.log import warn_once
 
@@ -392,31 +393,6 @@ class MujocoHandler(BaseSimHandler):
         global_elem.offwidth = width
         global_elem.offheight = height
 
-    def _create_primitive_xml(self, obj):
-        if isinstance(obj, PrimitiveCubeCfg):
-            size_str = f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}"
-            type_str = "box"
-        elif isinstance(obj, PrimitiveCylinderCfg):
-            size_str = f"{obj.radius} {obj.height}"
-            type_str = "cylinder"
-        elif isinstance(obj, PrimitiveSphereCfg):
-            size_str = f"{obj.radius}"
-            type_str = "sphere"
-        else:
-            raise ValueError("Unknown primitive type")
-
-        rgba_str = f"{obj.color[0]} {obj.color[1]} {obj.color[2]} 1"
-        xml = f"""
-        <mujoco model="{obj.name}_model">
-        <worldbody>
-            <body name="{type_str}_body" pos="{0} {0} {0}">
-            <geom name="{type_str}_geom" type="{type_str}" size="{size_str}" rgba="{rgba_str}"/>
-            </body>
-        </worldbody>
-        </mujoco>
-        """
-        return xml.strip()
-
     def _init_mujoco(self) -> mjcf.RootElement:
         """Initialize MuJoCo model with optional scene support."""
         mjcf_model = self._init_scene()
@@ -650,7 +626,7 @@ class MujocoHandler(BaseSimHandler):
 
         for obj in self.objects:
             if isinstance(obj, (PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg)):
-                xml_str = self._create_primitive_xml(obj)
+                xml_str = primitive_xml(obj)
                 obj_mjcf = mjcf.from_xml_string(xml_str)
             else:
                 obj_mjcf = mjcf.from_path(obj.mjcf_path)

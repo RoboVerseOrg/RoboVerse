@@ -21,14 +21,14 @@ class StackCubeTask(ManiskillBaseTask):
             PrimitiveCubeCfg(
                 name="cube",
                 size=(0.04, 0.04, 0.04),
-                mass=0.02,
+                mass=0.064,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=(1.0, 0.0, 0.0),
             ),
             PrimitiveCubeCfg(
                 name="base",
                 size=(0.04, 0.04, 0.04),
-                mass=0.02,
+                mass=0.064,
                 physics=PhysicStateType.RIGIDBODY,
                 color=(0.0, 0.0, 1.0),
             ),

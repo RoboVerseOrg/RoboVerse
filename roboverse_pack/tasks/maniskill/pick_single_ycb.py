@@ -67,7 +67,11 @@ class PickSingleYcbDenseTask(DenseRLResetMixin, _PickSingleYcbBaseTask):
     scenario = ScenarioCfg(
         objects=[
             PrimitiveCubeCfg(
-                name="obj", size=(0.04, 0.04, 0.04), mass=0.02, physics=PhysicStateType.RIGIDBODY, color=(1.0, 0.5, 0.0)
+                name="obj",
+                size=(0.04, 0.04, 0.04),
+                mass=0.064,
+                physics=PhysicStateType.RIGIDBODY,
+                color=(1.0, 0.5, 0.0),
             ),
             PrimitiveSphereCfg(name="goal_site", radius=0.025, physics=PhysicStateType.XFORM, color=(0.0, 1.0, 0.0)),
         ],

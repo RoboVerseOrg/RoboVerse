@@ -63,7 +63,7 @@ class PokeCubeCfg(ManiskillBaseTask):
             PrimitiveCubeCfg(
                 name="cube",
                 size=[0.04, 0.04, 0.04],
-                mass=0.02,
+                mass=0.064,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=[1.0, 0.0, 0.0],
             ),
@@ -148,12 +148,12 @@ class PokeCubeDenseTask(DenseRLResetMixin, PokeCubeCfg):
             _Cube(
                 name="cube",
                 size=[0.04, 0.04, 0.04],
-                mass=0.02,
+                mass=0.064,
                 physics=PhysicStateType.RIGIDBODY,
                 color=[1.0, 0.0, 0.0],
             ),
             _Cube(
-                name="peg", size=[0.24, 0.05, 0.05], mass=0.05, physics=PhysicStateType.RIGIDBODY, color=[0.5, 0.5, 0.5]
+                name="peg", size=[0.24, 0.05, 0.05], mass=0.6, physics=PhysicStateType.RIGIDBODY, color=[0.5, 0.5, 0.5]
             ),
         ],
         robots=["franka"],
