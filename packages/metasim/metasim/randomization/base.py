@@ -251,6 +251,26 @@ class BaseRandomizerType:
                     )
                 )
 
+        # Backends without an Isaac Lab scene: the scenario's robots and objects, by name (no USD prims)
+        if not (hasattr(handler, "scene") and hasattr(handler.scene, "articulations")):
+            from metasim.constants import PhysicStateType
+
+            robots = list(getattr(handler, "robots", None) or [])
+            for cfg in [*robots, *(getattr(handler, "objects", None) or [])]:
+                known = registry.get(cfg.name)
+                if known is not None and known.prim_paths:
+                    continue  # a hybrid's Isaac side registered it with its prim paths; keep them
+                registry.register(
+                    ObjectMetadata(
+                        name=cfg.name,
+                        category="robot" if any(cfg is r for r in robots) else "object",
+                        lifecycle="static",
+                        prim_paths=[],
+                        shared=False,
+                        has_physics=getattr(cfg, "physics", None) != PhysicStateType.XFORM,
+                    )
+                )
+
         # Register cameras
         if hasattr(handler, "cameras"):
             for camera in handler.cameras:

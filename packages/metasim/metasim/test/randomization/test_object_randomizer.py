@@ -1,4 +1,8 @@
-"""Test object randomizer functionality."""
+"""Object randomizer: physics through the handler's body-property verbs, pose through get/set_states.
+
+Runs on every backend that implements the verbs; restitution, which MuJoCo and Newton do not model, reads NaN
+there and a write warns and changes nothing.
+"""
 
 from __future__ import annotations
 
@@ -36,23 +40,17 @@ def object_physics(handler, distribution="uniform", common_range=(0.1, 1.0)):
     randomizer = ObjectRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
 
-    # Get object instance
-    obj_inst = _get_object(randomizer)
-
     # Get current mass before randomization
-    current_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
-    current_materials = obj_inst.root_physx_view.get_material_properties().clone().cpu()
-    current_friction = current_materials[..., 0]  # static friction
-    current_restitution = current_materials[..., 2]
+    current_mass = handler.get_body_masses("cube")
+    current_friction = handler.get_body_friction("cube")
+    current_restitution = handler.get_body_restitution("cube")
 
     # Apply randomization
     randomizer()
 
-    # Get new mass after randomization
-    new_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
-    new_materials = obj_inst.root_physx_view.get_material_properties().clone().cpu()
-    new_friction = new_materials[..., 0]
-    new_restitution = new_materials[..., 2]
+    new_mass = handler.get_body_masses("cube")
+    new_friction = handler.get_body_friction("cube")
+    new_restitution = handler.get_body_restitution("cube")
     assert (
         (current_mass != new_mass).all() and (new_mass >= common_range[0]).all() and (new_mass <= common_range[1]).all()
     ), "Mass should have changed after randomization"
@@ -61,11 +59,14 @@ def object_physics(handler, distribution="uniform", common_range=(0.1, 1.0)):
         and (new_friction >= common_range[0]).all()
         and (new_friction <= common_range[1]).all()
     ), "Friction should have changed after randomization"
-    assert (
-        (current_restitution != new_restitution).all()
-        and (new_restitution >= common_range[0]).all()
-        and (new_restitution <= common_range[1]).all()
-    ), "Restitution should have changed after randomization"
+    if "restitution" in handler.unsupported_body_properties:
+        assert torch.isnan(new_restitution).all(), "an engine without restitution reads NaN"
+    else:
+        assert (
+            (current_restitution != new_restitution).all()
+            and (new_restitution >= common_range[0]).all()
+            and (new_restitution <= common_range[1]).all()
+        ), "Restitution should have changed after randomization"
 
     # We don't enforce strict inequality since randomization could theoretically produce same value
     log.info(f"Object physics randomization (Type: {distribution}) test passed")
@@ -95,11 +96,8 @@ def object_pose(handler, distribution="uniform", common_range=(0.1, 1.0)):
     randomizer = ObjectRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
 
-    # Get object instance
-    obj_inst = _get_object(randomizer)
-
     # Get current pose before randomization
-    root_state_before = obj_inst.data.root_state_w
+    root_state_before = handler.get_states(mode="tensor").objects["cube"].root_state.clone()
     pos_before = root_state_before[:, 0:3].cpu()
     rot_before = root_state_before[:, 3:7].cpu()
     r_before, p_before, y_before = euler_xyz_from_quat(rot_before)
@@ -107,8 +105,7 @@ def object_pose(handler, distribution="uniform", common_range=(0.1, 1.0)):
     # Apply randomization
     randomizer()
 
-    # Get new pose after randomization
-    root_state_after = obj_inst.data.root_state_w
+    root_state_after = handler.get_states(mode="tensor").objects["cube"].root_state
     pos_after = root_state_after[:, 0:3].cpu()
     rot_after = root_state_after[:, 3:7].cpu()
 
@@ -154,10 +151,9 @@ def object_operation_types(handler, distribution="uniform", common_range=(0.1, 1
     )
     randomizer_scale = ObjectRandomizer(cfg_scale, seed=789)
     randomizer_scale.bind_handler(handler)
-    obj_inst = _get_object(randomizer_scale)
-    before_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
+    before_mass = handler.get_body_masses("cube")
     randomizer_scale()
-    after_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
+    after_mass = handler.get_body_masses("cube")
     assert ((after_mass / before_mass - common_range[0]).abs() <= 1e-3).all(), "Scale operation failed"
 
     # Test add operation
@@ -172,10 +168,9 @@ def object_operation_types(handler, distribution="uniform", common_range=(0.1, 1
     )
     randomizer_add = ObjectRandomizer(cfg_add, seed=789)
     randomizer_add.bind_handler(handler)
-    obj_inst = _get_object(randomizer_add)
-    before_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
+    before_mass = handler.get_body_masses("cube")
     randomizer_add()
-    after_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
+    after_mass = handler.get_body_masses("cube")
     assert ((after_mass - before_mass - common_range[0]).abs() <= 1e-3).all(), "Add operation failed"
 
     # Test abs operation
@@ -190,40 +185,32 @@ def object_operation_types(handler, distribution="uniform", common_range=(0.1, 1
     )
     randomizer_abs = ObjectRandomizer(cfg_abs, seed=789)
     randomizer_abs.bind_handler(handler)
-    obj_inst = _get_object(randomizer_abs)
-    before_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
+    before_mass = handler.get_body_masses("cube")
     randomizer_abs()
-    after_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
+    after_mass = handler.get_body_masses("cube")
     assert ((after_mass - common_range[0]).abs() <= 1e-3).all(), "Abs operation failed"
 
     log.info(f"Object operation types (Type: {distribution}) test passed")
 
 
 def object_seed(handler, distribution="uniform", common_range=(0.1, 1.0)):
-    """Test that object randomization is reproducible with same seed."""
-    # Create object randomizer
+    """The same seed draws the same masses."""
     cfg = ObjectRandomCfg(
         obj_name="cube",
-        physics=PhysicsRandomCfg(
-            enabled=True,
-            mass_range=common_range,
-            distribution=distribution,
-            operation="scale",
-        ),
+        physics=PhysicsRandomCfg(enabled=True, mass_range=common_range, distribution=distribution, operation="abs"),
     )
-
-    # Test reproducibility
     randomizer = ObjectRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
 
-    # Get object instance
-    obj_inst = _get_object(randomizer)
-    # Store RNG internal state by generating some values
     randomizer.set_seed(42)
-    val1 = obj_inst.root_physx_view.get_masses().clone().cpu()
-
+    randomizer()
+    val1 = handler.get_body_masses("cube")
+    randomizer.set_seed(43)
+    randomizer()
+    assert not torch.equal(handler.get_body_masses("cube"), val1), "another seed draws other masses"
     randomizer.set_seed(42)
-    val2 = obj_inst.root_physx_view.get_masses().clone().cpu()
+    randomizer()
+    val2 = handler.get_body_masses("cube")
 
     assert (val1 == val2).all(), "Same seed should produce same random values"
     log.info("Object seed reproducibility test passed")
@@ -256,15 +243,12 @@ def object_envid(handler, distribution="uniform", common_range=(0.1, 1.0)):
     randomizer = ObjectRandomizer(cfg, seed=789)
     randomizer.bind_handler(handler)
 
-    # Get object instance
-    obj_inst = _get_object(randomizer)
-
     # Mass before randomization (all envs)
-    before_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
+    before_mass = handler.get_body_masses("cube")
     # Apply randomization limited to target_env_ids
     randomizer()
     # Mass after randomization (all envs)
-    after_mass = obj_inst.root_physx_view.get_masses().clone().cpu()
+    after_mass = handler.get_body_masses("cube")
 
     assert ((after_mass - before_mass)[random_env_ids].abs() > 1e-3).all(), (
         "Mass should have changed for target env_ids"
@@ -285,7 +269,7 @@ TEST_FUNCTIONS = [
 ]
 
 
-@pytest.mark.isaacsim
+@pytest.mark.sim("isaacsim", "mujoco", "newton")
 @pytest.mark.parametrize("distribution", ["uniform", "log_uniform", "gaussian"])
 @pytest.mark.parametrize("test_func", TEST_FUNCTIONS, ids=[f.__name__ for f in TEST_FUNCTIONS])
 def test_object_randomizers(handler, test_func, distribution):
@@ -294,16 +278,41 @@ def test_object_randomizers(handler, test_func, distribution):
     test_func(handler, distribution=distribution, common_range=common_range)
 
 
-def _get_object(randomizer):
-    """Helper function to get object instance from randomizer."""
-    obj_name = randomizer.cfg.obj_name
-    handler = randomizer._actual_handler
-    if obj_name in handler.scene.articulations:
-        return handler.scene.articulations[obj_name]
-    elif obj_name in handler.scene.rigid_objects:
-        return handler.scene.rigid_objects[obj_name]
+@pytest.mark.sim("isaacsim", "mujoco", "newton")
+def test_material_randomizer_physical_goes_through_the_verbs(handler):
+    """One friction / restitution draw per env on the object's bodies, on any backend with the verbs."""
+    from metasim.randomization.material_randomizer import MaterialRandomCfg, MaterialRandomizer, PhysicalMaterialCfg
+
+    cfg = MaterialRandomCfg(
+        obj_name="cube", physical=PhysicalMaterialCfg(friction_range=(0.2, 0.3), restitution_range=(0.1, 0.2))
+    )
+    randomizer = MaterialRandomizer(cfg, seed=7)
+    randomizer.bind_handler(handler)
+    randomizer()
+    friction = handler.get_body_friction("cube")
+    assert ((friction >= 0.2) & (friction <= 0.3)).all()
+    restitution = handler.get_body_restitution("cube")
+    if "restitution" in handler.unsupported_body_properties:
+        assert torch.isnan(restitution).all()
     else:
-        raise ValueError(f"Object {obj_name} not found in the scene")
+        assert ((restitution >= 0.1) & (restitution <= 0.2)).all()
+
+
+@pytest.mark.sim("isaacsim", "mujoco", "newton")
+def test_body_name_of_a_rigid_object_is_its_own_name(handler):
+    cfg = ObjectRandomCfg(
+        obj_name="cube",
+        body_name="cube",
+        physics=PhysicsRandomCfg(enabled=True, mass_range=(0.5, 0.5), operation="abs"),
+    )
+    randomizer = ObjectRandomizer(cfg, seed=1)
+    randomizer.bind_handler(handler)
+    randomizer()
+    torch.testing.assert_close(handler.get_body_masses("cube"), torch.full((handler.num_envs, 1), 0.5))
+    lid = ObjectRandomizer(ObjectRandomCfg(obj_name="cube", body_name="lid", physics=cfg.physics), seed=1)
+    lid.bind_handler(handler)
+    with pytest.raises(ValueError, match="has no body 'lid'"):
+        lid()
 
 
 if __name__ == "__main__":

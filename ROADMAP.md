@@ -34,9 +34,15 @@ the parallel implementations, then build the benchmark data model on top.
 - [x] Handler friction / restitution (one value per body, all its collision shapes; restitution warns on
       MuJoCo / Newton, which have none); `MaterialRandomizer` and mjlab's `body_mass` DR on the handler
       verbs. Verified on MuJoCo and Newton by sliding distance; the Isaac hooks still need a run.
-- [ ] The core `metasim.randomization` `ObjectRandomizer` / `MaterialRandomizer` physics paths write
-      Isaac Sim's `root_physx_view` directly (Isaac Sim only); move articulations onto the handler verbs,
-      and decide whether rigid objects get the verbs as one-body articulations.
+- [x] Rigid objects get the body-property verbs as one body; the core `metasim.randomization`
+      `ObjectRandomizer` (physics, static-object pose) and `MaterialRandomizer` (physical materials) go
+      through the handler, so they run on MuJoCo and Newton. Isaac Sim paths unverified (no working Isaac here).
+- [ ] Newton builds a static (`GEOM` / `XFORM`) primitive as a shape on the world, with no body, so its
+      friction reads NaN and cannot be set and `set_states` does not move it (`ObjectRandomizer` warns); on
+      MuJoCo both work (a fixed body).
+- [ ] Re-check the content whose primitive masses became real on MuJoCo / Newton / Isaac Gym: the
+      `pick_place` family's 0.01-0.02 kg objects and 100-1000 kg walls (Isaac Gym training configs), and the
+      RLBench primitives at the 0.1 kg default.
 - [ ] Body properties for SAPIEN / PyBullet / Genesis (they have native friction and restitution; the hooks
       are not written, so they raise `NotImplementedError`).
 - [ ] Newton drops an MJCF body with no geometry and no inertia (H1's `left_hand` / `right_hand` site

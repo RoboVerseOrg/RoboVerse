@@ -18,3 +18,11 @@ def test_primitive_without_color_fails_at_construction():
 
 def test_primitive_with_color_is_unchanged():
     assert PrimitiveCubeCfg(name="c", size=(0.1, 0.1, 0.1), color=[0.8, 0.1, 0.1]).color == [0.8, 0.1, 0.1]
+
+
+def test_a_rigid_primitive_needs_a_positive_mass():
+    from metasim.constants import PhysicStateType
+
+    with pytest.raises(ValueError, match="mass must be positive"):
+        PrimitiveCubeCfg(name="c", size=(0.1, 0.1, 0.1), color=[1, 0, 0], mass=0.0, physics=PhysicStateType.RIGIDBODY)
+    PrimitiveCubeCfg(name="c", size=(0.1, 0.1, 0.1), color=[1, 0, 0], mass=0.0, physics=PhysicStateType.XFORM)

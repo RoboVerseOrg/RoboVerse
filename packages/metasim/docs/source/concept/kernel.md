@@ -84,7 +84,10 @@ per-backend branches, and every per-backend branch in the material randomizer ar
 
 Masses, friction and restitution are handler verbs, so a randomizer or a system-identification script
 writes them once for every backend instead of once per engine. All three take and return one value per
-body of an articulation, as a `(num_envs, num_bodies)` tensor in `get_body_names` order:
+body, as a `(num_envs, num_bodies)` tensor in `get_body_names` order for a robot or articulated object,
+and `(num_envs, 1)` for a rigid object, which is one body: its total mass and the mean coefficient over
+its engine bodies (a compound MJCF has several; a write scales all their masses by the same factor, so
+the mass distribution is kept, and sets every collision shape):
 
 ```python
 masses = handler.get_body_masses("g1")          # bodies in get_body_names("g1") order
@@ -123,8 +126,11 @@ Verified by simulating: on MuJoCo (single and parallel envs) and Newton, a body 
 further and comes back exactly when restored, and a box slid at 2 m/s across a frictionless slab with
 mu = 0.25 / 0.5 stops after 0.815 / 0.407 m on MuJoCo and 0.813 / 0.403 m on Newton (theory
 v^2 / 2 mu g = 0.816 / 0.408 m), per env. Isaac Sim and Isaac Gym implement the hooks but have not been
-run. `MaterialRandomizer` and `MassRandomizer` (`roboverse_pack.randomization.humanoid`) and mjlab's
-`body_mass` DR term are written on these verbs only.
+run. `MaterialRandomizer` and `MassRandomizer` (`roboverse_pack.randomization.humanoid`), mjlab's
+`body_mass` DR term, and the physics of `metasim.randomization`'s `ObjectRandomizer` and
+`MaterialRandomizer` are written on these verbs only; `ObjectRandomizer` moves a handler-managed object
+through `get_states` / `set_states`, so both run on MuJoCo and Newton as well as Isaac Sim. A rigid cube
+slid across a static slab whose friction is set to 0 stops within 1% of v^2 / 2 mu g on MuJoCo.
 
 ## Sites: frames derived from the state
 

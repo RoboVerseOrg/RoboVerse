@@ -213,3 +213,106 @@ def test_friction_is_per_env_through_the_parallel_handler(tmp_path):
         assert dist.tolist() == pytest.approx([_V**2 / (2 * mu * _G) for mu in (0.25, 0.5)], rel=0.01)
     finally:
         handler.close()
+
+
+_COMPOUND = """
+<mujoco model="compound">
+  <worldbody>
+    <body name="block">
+      <geom type="box" size="0.1 0.1 0.1" mass="1"/>
+      <body name="handle" pos="0 0 0.15"><geom type="sphere" size="0.03" mass="0.5"/></body>
+    </body>
+  </worldbody>
+</mujoco>
+"""
+
+
+def _rigid_scenario(tmp_path, num_envs=1):
+    from metasim.constants import PhysicStateType
+    from metasim.scenario.objects import PrimitiveCubeCfg, RigidObjCfg
+    from metasim.scenario.scenario import ScenarioCfg
+
+    path = tmp_path / "compound.xml"
+    path.write_text(textwrap.dedent(_COMPOUND).strip() + "\n")
+    return ScenarioCfg(
+        objects=[
+            PrimitiveCubeCfg(
+                name="slab",
+                size=(10.0, 10.0, 0.1),
+                color=[0.5, 0.5, 0.5],
+                physics=PhysicStateType.GEOM,
+                default_position=(0.0, 0.0, 0.1),  # above the scene's ground plane
+            ),
+            PrimitiveCubeCfg(
+                name="cube",
+                size=(0.1, 0.1, 0.1),
+                mass=0.3,
+                color=[1, 0, 0],
+                physics=PhysicStateType.RIGIDBODY,
+                default_position=(0.0, 0.0, 0.2),
+            ),
+            RigidObjCfg(
+                name="compound",
+                mjcf_path=str(path),
+                physics=PhysicStateType.RIGIDBODY,
+                default_position=(0.0, 2.0, 0.3),
+            ),
+        ],
+        robots=[],
+        simulator="mujoco",
+        num_envs=num_envs,
+        headless=True,
+    )
+
+
+def test_a_rigid_object_is_one_body(tmp_path):
+    from metasim.utils.setup_util import get_handler
+
+    handler = get_handler(_rigid_scenario(tmp_path))
+    try:
+        model = handler.physics.model
+        block, handle = (model.body(f"compound/{n}").id for n in ("block", "handle"))
+        assert handler.get_body_masses("cube").tolist() == [[pytest.approx(0.3)]]
+        assert handler.get_body_masses("compound").tolist() == [[pytest.approx(1.5)]]
+
+        # a new total scales every body, so the compound keeps its mass distribution and its inertia shape
+        inertia = model.body_inertia[[block, handle]].copy()
+        handler.set_body_masses("compound", torch.tensor([[3.0]]))
+        np.testing.assert_allclose(model.body_mass[[block, handle]], [2.0, 1.0])
+        np.testing.assert_allclose(model.body_inertia[[block, handle]], 2 * inertia)
+
+        # one coefficient for all of its collision geoms; a round trip leaves them bit-exact
+        handler.set_body_friction("compound", torch.tensor([[0.4]], dtype=torch.float64))
+        geoms = np.flatnonzero(np.isin(model.geom_bodyid, [block, handle]))
+        np.testing.assert_array_equal(model.geom_friction[geoms, 0], [0.4, 0.4])
+        before = model.geom_friction.copy()
+        handler.set_body_friction("compound", handler.get_body_friction("compound"))
+        np.testing.assert_array_equal(model.geom_friction, before)
+        assert torch.isnan(handler.get_body_restitution("compound")).all()
+
+        with pytest.raises(ValueError, match="not a robot or object"):
+            handler.get_body_masses("nothing")
+    finally:
+        handler.close()
+
+
+@pytest.mark.parametrize("mu", [0.25, 0.5])
+def test_rigid_object_friction_sets_the_stopping_distance(tmp_path, mu):
+    from metasim.utils.setup_util import get_handler
+
+    handler = get_handler(_rigid_scenario(tmp_path))
+    try:
+        handler.set_body_friction("slab", torch.zeros(1, 1))  # MuJoCo takes the larger coefficient of a pair
+        handler.set_body_friction("cube", torch.full((1, 1), mu))
+        for _ in range(50):
+            handler.simulate()
+        states = handler.get_states(mode="tensor")
+        x0 = states.objects["cube"].root_state[0, 0].item()
+        states.objects["cube"].root_state[0, 7] = 2.0
+        handler.set_states(states)
+        for _ in range(int(1.5 / handler.physics_dt)):
+            handler.simulate()
+        distance = handler.get_states(mode="tensor").objects["cube"].root_state[0, 0].item() - x0
+        assert distance == pytest.approx(2.0**2 / (2 * mu * 9.81), rel=0.01)
+    finally:
+        handler.close()

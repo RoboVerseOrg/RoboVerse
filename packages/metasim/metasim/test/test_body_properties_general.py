@@ -90,8 +90,8 @@ def test_set_rejects_bad_input_before_the_backend():
     h = _Handler()
     good = h.get_body_masses("leg")
     cases = [
-        (dict(obj_name="cube", masses=good), "articulations only"),
-        (dict(obj_name="nope", masses=good), "articulations only"),
+        (dict(obj_name="cube", masses=good), "shape"),  # a rigid object is one body
+        (dict(obj_name="nope", masses=good), "not a robot or object"),
         (dict(obj_name="leg", masses=good[:, :2]), "shape"),
         (dict(obj_name="leg", masses=-good), "non-negative"),
         (dict(obj_name="leg", masses=torch.full_like(good, float("nan"))), "finite"),
@@ -100,9 +100,36 @@ def test_set_rejects_bad_input_before_the_backend():
     for kwargs, msg in cases:
         with pytest.raises(ValueError, match=msg):
             h.set_body_masses(**kwargs)
-    with pytest.raises(ValueError, match="articulations only"):
-        h.get_body_masses("cube")
+    with pytest.raises(ValueError, match="not a robot or object"):
+        h.get_body_masses("nope")
     assert h.writes == []
+
+
+def test_a_rigid_object_is_one_body_over_its_engine_bodies():
+    # the stub's three engine bodies stand for a compound rigid object
+    h = _Handler(num_envs=1)
+    assert h.get_body_masses("cube").tolist() == [[pytest.approx(3.4000000001)]]
+    assert h.get_body_friction("cube").tolist() == [[pytest.approx(0.9)]]  # mean over the bodies with shapes
+
+    h.set_body_masses("cube", h.get_body_masses("cube").double() * 2)
+    (written, env_ids, _), *_ = h.writes
+    torch.testing.assert_close(written[0], torch.tensor([0.6000000002, 4.0, 2.2], dtype=torch.float64))  # same shares
+    h.set_body_friction("cube", torch.tensor([[0.5]]))
+    assert torch.isnan(h.friction[0, 0]) and h.friction[0, 1:].tolist() == [0.5, 0.5]
+
+    masses, friction = h.masses.clone(), h.friction.clone()
+    h.set_body_friction("cube", h.get_body_friction("cube"))  # a float32 round trip changes nothing
+    h.set_body_masses("cube", h.get_body_masses("cube"))
+    assert torch.equal(h.masses, masses) and torch.allclose(h.friction, friction, equal_nan=True, rtol=0, atol=0)
+
+    # a rigid object with no collision shape at all (a static primitive on Newton): warns, does not raise
+    h.friction = torch.full((1, 3), float("nan"), dtype=torch.float64)
+    h.set_body_friction("cube", torch.tensor([[0.5]]))
+    assert torch.isnan(h.friction).all()
+
+    h.masses.zero_()
+    with pytest.raises(ValueError, match="3 engine bodies and no mass"):
+        h.set_body_masses("cube", torch.tensor([[1.0]]), scale_inertia=False)
 
 
 def test_scaling_the_inertia_of_a_massless_body_is_refused():

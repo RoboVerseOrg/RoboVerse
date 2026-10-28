@@ -46,7 +46,7 @@ class PandaPickCube(RLTaskEnv):
             PrimitiveCubeCfg(
                 name="box",
                 size=(0.04, 0.04, 0.04),
-                mass=0.02,
+                mass=0.064,  # Playground's cube sets no mass: MuJoCo's 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=(1.0, 0.0, 0.0),
             ),

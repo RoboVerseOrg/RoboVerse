@@ -2627,7 +2627,11 @@ class NewtonHandler(BaseSimHandler):
         return names
 
     def _env_body_ids(self, obj_name: str) -> np.ndarray:
-        """Model body ids of an articulation, ``(num_envs, num_bodies)``, in ``_get_body_names(sort=False)`` order."""
+        """Model body ids, ``(num_envs, num_bodies)``: an articulation's in ``_get_body_names(sort=False)`` order,
+        all of a rigid object's (none for a static primitive, which is a shape on the world)."""
+        if not isinstance(self.object_dict[obj_name], ArticulationObjCfg):
+            rows = [self._get_body_indices(env_id, obj_name) for env_id in range(self.num_envs)]
+            return np.asarray(rows, dtype=np.int64).reshape(self.num_envs, -1)
         names = self._get_body_names(obj_name, sort=False)
         rows = []
         for env_id in range(self.num_envs):

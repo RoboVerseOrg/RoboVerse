@@ -872,7 +872,8 @@ class BaseSimHandler(ABC):
     ############################################################
     # One standard surface for the per-body physical properties every engine has some notion of. Semantics are
     # deliberately simple (one value per body, applied to all of its collision shapes) so they mean the same thing
-    # on every backend. A property the *engine* has no notion of is listed in ``unsupported_body_properties``:
+    # on every backend. A rigid object is one body: its total mass and the mean coefficient of its engine bodies
+    # (a compound has several); a write scales every body's mass by the same factor or sets every collision shape. A property the *engine* has no notion of is listed in ``unsupported_body_properties``:
     # reading it gives NaN and writing it warns and changes nothing. A backend that has not implemented a hook
     # raises ``NotImplementedError`` instead, so a missing implementation is never mistaken for a missing feature.
 
@@ -880,10 +881,10 @@ class BaseSimHandler(ABC):
     unsupported_body_properties: dict[str, str] = {}
 
     def get_body_masses(self, obj_name: str) -> torch.Tensor:
-        """Masses (kg) of an articulation's bodies, as the engine simulates them now.
+        """Masses (kg) of an object's bodies, as the engine simulates them now.
 
         Args:
-            obj_name: A robot or articulated object.
+            obj_name: A robot, articulated object, or rigid object (one body).
 
         Returns:
             A float32 CPU tensor of shape ``(num_envs, num_bodies)`` (``set_body_masses`` writes float64), bodies in
@@ -899,10 +900,10 @@ class BaseSimHandler(ABC):
         env_ids: list[int] | torch.Tensor | None = None,
         scale_inertia: bool = True,
     ) -> None:
-        """Set the masses of an articulation's bodies.
+        """Set the masses of an object's bodies (a rigid object's total mass, kept in proportion over its parts).
 
         Args:
-            obj_name: A robot or articulated object.
+            obj_name: A robot, articulated object, or rigid object (one body).
             masses: Shape ``(len(env_ids), num_bodies)``, bodies in ``get_body_names(obj_name)`` order. To
                 change some bodies, read ``get_body_masses``, edit the columns, and write the rows back.
             env_ids: The environments to write; all of them when ``None``.
@@ -911,7 +912,7 @@ class BaseSimHandler(ABC):
                 current mass. With ``False`` the inertia is left as it is.
 
         Raises:
-            ValueError: ``obj_name`` is not an articulation, ``masses`` has the wrong shape or a negative
+            ValueError: ``obj_name`` is not in the scenario, ``masses`` has the wrong shape or a negative
                 or non-finite entry, or ``scale_inertia`` meets a body whose current mass is zero.
             NotImplementedError: The backend does not expose body masses.
         """
@@ -920,7 +921,7 @@ class BaseSimHandler(ABC):
             return
         native, ids, current, changed = write
         if scale_inertia and (changed & (current == 0)).any():
-            names = self._get_body_names(obj_name, sort=False)
+            names = self._property_body_names(obj_name)
             zero = sorted({names[j] for j in torch.nonzero(changed & (current == 0))[:, 1].tolist()})
             raise ValueError(
                 f"cannot scale the inertia of zero-mass bodies {zero} of {obj_name!r}; "
@@ -929,7 +930,7 @@ class BaseSimHandler(ABC):
         self._set_body_masses(obj_name, native, ids, scale_inertia)
 
     def get_body_friction(self, obj_name: str) -> torch.Tensor:
-        """Sliding (Coulomb) friction coefficient of each of an articulation's bodies.
+        """Sliding (Coulomb) friction coefficient of each of an object's bodies.
 
         One coefficient per body, the mean over the body's collision shapes. Engines that split static and
         dynamic friction (PhysX) get both set to it; torsional and rolling friction are not part of this
@@ -945,17 +946,17 @@ class BaseSimHandler(ABC):
     def set_body_friction(
         self, obj_name: str, friction: torch.Tensor, *, env_ids: list[int] | torch.Tensor | None = None
     ) -> None:
-        """Set the sliding friction coefficient of an articulation's bodies (all collision shapes of each body).
+        """Set the sliding friction coefficient of an object's bodies (all collision shapes of each body).
 
         Args:
-            obj_name: A robot or articulated object.
+            obj_name: A robot, articulated object, or rigid object (one body).
             friction: Shape ``(len(env_ids), num_bodies)``, bodies in ``get_body_names(obj_name)`` order. A value
                 equal to the current one leaves the body's shapes exactly as they are; a body with no collision
                 shape keeps NaN (a finite value for it is ignored with a warning).
             env_ids: The environments to write; all of them when ``None``.
 
         Raises:
-            ValueError: ``obj_name`` is not an articulation, or ``friction`` has the wrong shape or a negative or
+            ValueError: ``obj_name`` is not in the scenario, or ``friction`` has the wrong shape or a negative or
                 non-finite entry for a body that has collision shapes.
             NotImplementedError: The backend does not expose friction.
         """
@@ -974,7 +975,7 @@ class BaseSimHandler(ABC):
     def set_body_restitution(
         self, obj_name: str, restitution: torch.Tensor, *, env_ids: list[int] | torch.Tensor | None = None
     ) -> None:
-        """Set the coefficient of restitution (in ``[0, 1]``) of an articulation's bodies, as ``set_body_friction``.
+        """Set the coefficient of restitution (in ``[0, 1]``) of an object's bodies, as ``set_body_friction``.
 
         On an engine that has no restitution coefficient this validates ``restitution``, warns once, and changes
         nothing.
@@ -989,16 +990,52 @@ class BaseSimHandler(ABC):
         "restitution": "_get_body_restitution",
     }
 
-    def _body_property_order(self, obj_name: str) -> list[int]:
-        """Native body index of each sorted body name; validates that ``obj_name`` is an articulation."""
+    def _is_rigid_body_object(self, obj_name: str) -> bool:
+        """``obj_name`` is a scenario object that is not an articulation; validates that it exists."""
         from metasim.scenario.objects import ArticulationObjCfg
 
-        if not isinstance(self.object_dict.get(obj_name), ArticulationObjCfg):
-            raise ValueError(
-                f"{obj_name!r} is not a robot or articulated object of this scenario; body properties are defined "
-                "for articulations only."
-            )
+        cfg = self.object_dict.get(obj_name)
+        if cfg is None:
+            raise ValueError(f"{obj_name!r} is not a robot or object of this scenario.")
+        return not isinstance(cfg, ArticulationObjCfg)
+
+    def _body_property_order(self, obj_name: str) -> list[int]:
+        """Native body index of each sorted body name; ``[0]`` for a rigid object, which is one body."""
+        if self._is_rigid_body_object(obj_name):
+            return [0]
         return self.get_body_reindex(obj_name)
+
+    @staticmethod
+    def _combine_rigid_bodies(prop: str, native: torch.Tensor) -> torch.Tensor:
+        """A rigid object's ``(num_envs, 1)`` value from its engine bodies: total mass, mean coefficient."""
+        if prop == "mass":
+            return native.sum(dim=1, keepdim=True)
+        if native.shape[1] == 0:
+            return torch.full((native.shape[0], 1), float("nan"), dtype=native.dtype)
+        return native.nanmean(dim=1, keepdim=True)
+
+    def _split_rigid_write(
+        self, obj_name: str, prop: str, values: torch.Tensor, ids: list[int], changed: torch.Tensor
+    ) -> tuple[torch.Tensor, list[int], torch.Tensor, torch.Tensor]:
+        """Spread a rigid object's ``(n, 1)`` write over its engine bodies.
+
+        A new mass scales every body by ``new / total`` (so a compound keeps its mass distribution); a new
+        coefficient goes on every body that has collision shapes.
+        """
+        current = self._current_body_property(obj_name, prop, combine=False)[ids]
+        if prop == "mass" and current.shape[1] != 1 and (changed[:, 0] & (current.sum(dim=1) == 0)).any():
+            raise ValueError(
+                f"{obj_name!r} has {current.shape[1]} engine bodies and no mass (a static object has none); "
+                "cannot spread a new mass over them."
+            )
+        changed = changed.expand_as(current)
+        if prop == "mass":
+            total = current.sum(dim=1, keepdim=True)
+            new = torch.where(total == 0, values.expand_as(current), current * (values / total.clamp_min(1e-300)))
+        else:
+            new = torch.where(torch.isnan(current), current, values.expand_as(current))
+        new = torch.where(changed, new, current)
+        return new, ids, current, changed & (new != current)
 
     def _warn_unsupported_body_property(self, prop: str) -> bool:
         reason = self.unsupported_body_properties.get(prop)
@@ -1009,10 +1046,16 @@ class BaseSimHandler(ABC):
         )
         return True
 
-    def _current_body_property(self, obj_name: str, prop: str) -> torch.Tensor:
-        """``(num_envs, num_bodies)`` float64 CPU values in native order, from the backend hook."""
+    def _current_body_property(self, obj_name: str, prop: str, *, combine: bool = True) -> torch.Tensor:
+        """``(num_envs, num_bodies)`` float64 CPU values in native order, from the backend hook.
+
+        A rigid object's engine bodies are combined into one unless ``combine=False``.
+        """
         hook = getattr(self, self._BODY_PROPERTY_HOOKS[prop])
-        return torch.as_tensor(hook(obj_name)).detach().to(dtype=torch.float64, device="cpu")
+        native = torch.as_tensor(hook(obj_name)).detach().to(dtype=torch.float64, device="cpu")
+        if combine and self._is_rigid_body_object(obj_name):
+            return self._combine_rigid_bodies(prop, native.reshape(native.shape[0], -1))
+        return native
 
     def _read_body_property(self, obj_name: str, prop: str) -> torch.Tensor:
         order = self._body_property_order(obj_name)
@@ -1060,7 +1103,7 @@ class BaseSimHandler(ABC):
             raise ValueError(f"body {prop} for {obj_name!r} must be {bound}, got {values.tolist()}.")
         ignored = missing & ~torch.isnan(native)
         if ignored.any():
-            names = self._get_body_names(obj_name, sort=False)
+            names = [obj_name] if self._is_rigid_body_object(obj_name) else self._get_body_names(obj_name, sort=False)
             skipped = sorted({names[j] for j in torch.nonzero(ignored)[:, 1].tolist()})
             warn_once(
                 (type(self).__name__, "body_property", prop, obj_name, tuple(skipped)),
@@ -1069,7 +1112,16 @@ class BaseSimHandler(ABC):
         # a column read with get_* (float32) and written back unchanged keeps the engine's value
         unchanged = missing | (native == current) | (native == current.to(torch.float32).to(torch.float64))
         native = torch.where(unchanged, current, native)
+        if self._is_rigid_body_object(obj_name):
+            return self._split_rigid_write(obj_name, prop, native, ids, ~unchanged)
         return native, ids, current, ~unchanged
+
+    def _property_body_names(self, obj_name: str) -> list[str]:
+        """Names for the native body columns of the hooks, for messages (``name[i]`` for a rigid object's bodies)."""
+        if self._is_rigid_body_object(obj_name):
+            count = torch.as_tensor(self._get_body_masses(obj_name)).reshape(self.num_envs, -1).shape[1]
+            return [obj_name] if count == 1 else [f"{obj_name}[{i}]" for i in range(count)]
+        return self._get_body_names(obj_name, sort=False)
 
     def _get_body_masses(self, obj_name: str) -> torch.Tensor:
         """Backend hook: ``(num_envs, num_bodies)`` masses in ``get_body_names(obj_name, sort=False)`` order."""
