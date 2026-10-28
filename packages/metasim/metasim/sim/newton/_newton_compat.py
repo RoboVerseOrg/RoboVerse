@@ -322,15 +322,21 @@ __all__ = ["JointType", "add_mjcf", "populate_contacts", "set_current_world"]
 _FRICTION_FIELDS = {"torsional": ("mu_torsional", "torsional_friction"), "rolling": ("mu_rolling", "rolling_friction")}
 
 
+def field_name(obj, *names: str) -> str:
+    """The first of ``names`` (newest spelling first) that ``obj`` has.
+
+    Raises ``AttributeError`` when ``obj`` has none of them, so a rename can never turn a write into a no-op
+    (assigning an old name on a plain Python object just adds an attribute nobody reads).
+    """
+    for name in names:
+        if hasattr(obj, name):
+            return name
+    raise AttributeError(f"{type(obj).__name__} has none of the fields {list(names)}.")
+
+
 def friction_field(obj, kind: str, prefix: str = "") -> str:
     """Name of the ``kind`` (``"torsional"`` / ``"rolling"``) friction attribute ``prefix + ...`` on ``obj``.
 
     Use ``prefix="shape_material_"`` for a ``newton.Model`` and ``""`` for a ``ModelBuilder.ShapeConfig``.
-    Raises ``AttributeError`` when ``obj`` has neither spelling, so a rename can never turn a write into a no-op.
     """
-    for name in _FRICTION_FIELDS[kind]:
-        if hasattr(obj, prefix + name):
-            return prefix + name
-    raise AttributeError(
-        f"{type(obj).__name__} has no {kind} friction field ({[prefix + n for n in _FRICTION_FIELDS[kind]]})."
-    )
+    return field_name(obj, *(prefix + name for name in _FRICTION_FIELDS[kind]))

@@ -48,7 +48,15 @@ from metasim.utils.state import (
 # JointType lived under _src.sim.joints and populate_contacts was a
 # free function) AND newton >= 1.2 (public JointType, contacts
 # auto-populated by solver). See _newton_compat.py.
-from ._newton_compat import JointType, add_mjcf, friction_field, model_flag, populate_contacts, set_current_world
+from ._newton_compat import (
+    JointType,
+    add_mjcf,
+    field_name,
+    friction_field,
+    model_flag,
+    populate_contacts,
+    set_current_world,
+)
 
 #: newton < 1.2's SensorContact (``sensing_obj_bodies`` / ``eval`` / ``get_total_force``); 1.2 renamed all three
 _SENSOR_CONTACT_LEGACY_API = "sensing_obj_bodies" in inspect.signature(SensorContact.__init__).parameters
@@ -343,13 +351,14 @@ class NewtonHandler(BaseSimHandler):
         builder.validate_inertia_detailed = True
         builder.bound_inertia = 1e-6
 
-        # Map contact offset to Newton's shape thickness/contact margin and builder margin.
+        # PhysX's contact_offset is the distance at which contacts are generated: Newton's contact gap (named
+        # contact_margin before 1.6). It is not the shape margin, which moves the collision surface outward.
         contact_offset = getattr(self.scenario.sim_params, "contact_offset", None)
         if contact_offset is not None:
             offset = max(0.0, float(contact_offset))
-            builder.default_shape_cfg.thickness = offset
-            builder.default_shape_cfg.contact_margin = offset
-            builder.rigid_contact_margin = offset
+            cfg = builder.default_shape_cfg
+            setattr(cfg, field_name(cfg, "gap", "contact_margin"), offset)
+            setattr(builder, field_name(builder, "rigid_gap", "rigid_contact_margin"), offset)
 
     def _get_ground_shape_cfg(self, builder: newton.ModelBuilder) -> newton.ModelBuilder.ShapeConfig:
         """Create a ground shape config that honors ScenarioCfg ground friction."""

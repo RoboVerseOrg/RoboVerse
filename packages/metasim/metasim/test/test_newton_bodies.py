@@ -9,7 +9,8 @@
 4. ``ContactForces`` works on the 1.2+ ``SensorContact`` API and names the same bodies as MuJoCo.
 5. ``set_body_friction`` reaches each world's ``SolverMuJoCo`` geoms (the box slides as far as on MuJoCo);
    restitution, which SolverMuJoCo does not model, warns. Newton 1.6 renamed the torsional / rolling
-   friction fields, and the handler's writes to the old names had become silent no-ops.
+   friction fields and the contact gap (``contact_margin`` -> ``gap``), and the handler's writes to the old
+   names had become silent no-ops.
 """
 
 from __future__ import annotations
@@ -193,8 +194,18 @@ def test_builder_defaults_and_foot_friction_use_the_current_field_names(walker):
     assert getattr(cfg, friction_field(cfg, "torsional")) == 0.0
     assert getattr(cfg, friction_field(cfg, "rolling")) == 0.0
     assert hasattr(walker._model, friction_field(walker._model, "torsional", "shape_material_"))
-    with pytest.raises(AttributeError, match="no torsional friction field"):
+    with pytest.raises(AttributeError, match="has none of the fields"):
         friction_field(object(), "torsional")
+
+    # contact_offset is the contact detection gap (Newton 1.6 renamed contact_margin to gap), not a surface margin
+    walker.scenario.sim_params.contact_offset = 0.004
+    builder = newton.ModelBuilder()
+    walker._configure_builder_defaults(builder)
+    assert (builder.default_shape_cfg.gap, builder.rigid_gap) == (0.004, 0.004)
+    assert builder.default_shape_cfg.margin == 0.0
+    assert not hasattr(builder.default_shape_cfg, "thickness") and not hasattr(
+        builder.default_shape_cfg, "contact_margin"
+    )
 
     # the ground's friction goes onto the robot's feet (it raised AttributeError on newton 1.6)
     from types import SimpleNamespace
