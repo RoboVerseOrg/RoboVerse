@@ -161,7 +161,11 @@ def enforce_backend_versions(sim: SimType) -> BackendVersionReport:
     untested one. ``METASIM_SKIP_VERSION_CHECK=1`` turns the error into a warning.
     """
     report = check_backend(sim)
-    if report.unsupported:
+    if report.unsupported and not report.installed:
+        # the backend itself is missing: importing the handler says so; a verdict on a dependency it
+        # shares with another backend (mujoco for newton / mjx) would hide that
+        log.debug(f"{sim.value}: not installed; skipping the version check of its dependencies")
+    elif report.unsupported:
         lines = ", ".join(
             f"{s.requirement.dist} {s.installed} (supported: {s.requirement.spec})" for s in report.unsupported
         )

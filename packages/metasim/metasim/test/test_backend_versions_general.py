@@ -26,7 +26,7 @@ def _fake_installed(monkeypatch, table: dict[str, str | None]):
 def test_unsupported_version_raises_with_both_versions_in_the_message(monkeypatch):
     _fake_installed(monkeypatch, {"mujoco": "2.3.7", "dm-control": "1.0.45"})
     monkeypatch.delenv("METASIM_SKIP_VERSION_CHECK", raising=False)
-    with pytest.raises(v.BackendVersionError, match=r"mujoco 2\.3\.7 \(supported: >=3\.2,<3\.14\)"):
+    with pytest.raises(v.BackendVersionError, match=r"mujoco 2\.3\.7 \(supported: >=3\.2,<3\.18\)"):
         v.enforce_backend_versions(SimType.MUJOCO)
 
 
@@ -46,6 +46,16 @@ def test_untested_version_inside_the_range_is_reported_not_refused(monkeypatch):
     report = v.enforce_backend_versions(SimType.MUJOCO)
     assert not report.unsupported and [s.requirement.dist for s in report.untested] == ["mujoco"]
     assert report.statuses[0].label == "untested"
+
+
+@pytest.mark.general
+def test_a_backend_that_is_not_installed_is_not_judged_by_its_shared_dependencies(monkeypatch):
+    """Newton is absent and the MuJoCo on the box is newer than Newton's range: that is "newton is not
+    installed", not a version error about mujoco (CI with mujoco 3.17 and no newton hit this)."""
+    _fake_installed(monkeypatch, {"mujoco": "3.17.0", "newton": None, "warp-lang": None, "mujoco-warp": None})
+    monkeypatch.delenv("METASIM_SKIP_VERSION_CHECK", raising=False)
+    report = v.enforce_backend_versions(SimType.NEWTON)
+    assert not report.installed and [s.requirement.dist for s in report.unsupported] == ["mujoco"]
 
 
 @pytest.mark.general
