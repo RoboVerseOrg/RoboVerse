@@ -24,6 +24,11 @@ class RLTaskEnv(BaseTaskEnv):
     """Common utilities for RL tasks."""
 
     max_episode_steps = 1000
+    auto_reset = True
+    success_is_termination = False
+    """An RL episode that ends early has usually *failed* (a fall, a limit), so ``terminated`` is
+    not success here; a task reports success through :meth:`_success` and it reaches
+    ``info["success"]`` (all ``False`` until a subclass overrides it)."""
 
     def __init__(
         self,
@@ -136,30 +141,13 @@ class RLTaskEnv(BaseTaskEnv):
         Returns:
             (obs, info).
         """
-        if seed is not None:
-            set_seed = getattr(self.handler, "set_seed", None)
-            if callable(set_seed):
-                set_seed(seed)
-            elif not getattr(self, "_seed_unsupported_warned", False):
-                from loguru import logger as _log
-
-                _log.warning(
-                    f"{type(self).__name__}: handler "
-                    f"{type(self.handler).__name__} does not implement set_seed; "
-                    f"reset(seed={seed}) is a no-op on the simulator side."
-                )
-                self._seed_unsupported_warned = True
-        if env_ids is None:
-            env_ids = list(range(self.num_envs))
-
-        self._episode_steps[env_ids] = 0
-        raw_states = self._initial_states if states is None else states
-        self._run_reset_callbacks(env_ids)  # before the states are materialised, as BaseTaskEnv does
+        env_ids, raw_states = self._begin_reset(states, env_ids, seed)
         states_to_set = self._prepare_states(raw_states, env_ids)
         # the auto-reset inside step() fires on nearly every training step; a render refresh there is
         # only worth paying when the observation actually contains a camera frame
         has_cameras = bool(getattr(getattr(self.handler, "scenario", None), "cameras", None))
         self._write_reset_states(states_to_set, env_ids, refresh=has_cameras)
+        self._on_reset(env_ids)
 
         states = self.handler.get_states(mode="tensor")
         first_obs = self._observation(states).to(self.device)
@@ -196,28 +184,37 @@ class RLTaskEnv(BaseTaskEnv):
         """Build the joint-angle bounds the dict action path clamps to, for the robots they certainly apply to.
 
         A robot every backend drives by position takes joint angles in its action slots, so ``joint_limits``
-        bounds them, and the tensor path already clips them there. A robot with an effort-driven joint takes
-        torques in some or all of those slots, and which ones depends on the backend (MuJoCo routes per
-        joint, Isaac Gym and Newton send the whole vector to force), so an angle limit may not describe them
-        at all: those robots are left out here and keep the behaviour they have on both paths. See the
-        CHANGELOG for the open half. A handler that does not answer the predicate leaves every robot out.
+        bounds them, and the tensor path already clips them there. A robot with an effort-driven joint
+        (``control_type``) takes torques in some or all of those slots, and which ones depends on the backend
+        (MuJoCo routes per joint, Isaac Gym and Newton send the whole vector to force), so an angle limit may
+        not describe them at all: those robots are left out here and keep the behaviour they have on both
+        paths. See the CHANGELOG for the open half.
 
-        The bounds are read back from a float32 tensor so the dict path clamps to the numbers the tensor
-        path's float32 bounds produce, not to a Python float that rounds elsewhere.
+        The bounds are the slices of ``_action_low`` / ``_action_high`` the robot's joints occupy, read back
+        as Python floats, so the dict path clamps to the very float32 numbers the tensor path clips to.
         """
         self._clamp_limits_by_robot: dict[str, dict[str, tuple[float, float]]] = {}
-        reports_position = getattr(self.handler, "_robot_reports_position_target", None)
-        if reports_position is None:
-            return
+        offset = 0
         for robot in self.robots:
-            if not reports_position(robot.name):
-                continue
             joint_names = self.joint_names_by_robot[robot.name]
-            low = torch.tensor([robot.joint_limits[j][0] for j in joint_names], dtype=torch.float32)
-            high = torch.tensor([robot.joint_limits[j][1] for j in joint_names], dtype=torch.float32)
+            low = self._action_low[offset : offset + len(joint_names)].tolist()
+            high = self._action_high[offset : offset + len(joint_names)].tolist()
+            offset += len(joint_names)
+            if any(mode == "effort" for mode in (robot.control_type or {}).values()):
+                continue
             self._clamp_limits_by_robot[robot.name] = {
-                j: (float(low[i]), float(high[i])) for i, j in enumerate(joint_names)
+                j: (float(lo), float(hi)) for j, lo, hi in zip(joint_names, low, high, strict=True)
             }
+
+    @staticmethod
+    def _target_as_float(value) -> float | None:
+        """``value`` as a float when it is a number (Python, NumPy or a 0-d tensor), else None."""
+        if value is None or isinstance(value, bool):
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
 
     def _clamp_dict_actions(self, actions):
         """``dof_pos_target`` entries of a dict action clamped to the same bounds the tensor path uses.
@@ -227,9 +224,11 @@ class RLTaskEnv(BaseTaskEnv):
         Only the robots ``_build_clamp_bounds`` could settle are clamped;
         ``dof_vel_target`` / ``dof_effort_target`` entries are passed through. A clamp that fires is warned
         about once per robot and joint, because a demo recorded outside the config's limits then replays as a
-        different trajectory. A value already in bounds is not rewritten and NaN is
-        left as it is, so an action that needs no clamping reaches the handler as the caller's own object;
-        the caller's dicts are never modified. The scan is per env, robot and joint, on the dict path only.
+        different trajectory. A value already in bounds is not rewritten; NaN and a value that is not a
+        number (a demo may carry ``None`` for an unactuated joint) are left as they are, so an action that
+        needs no clamping reaches the handler as the caller's own object; the caller's dicts are never
+        modified. A NumPy or 0-d tensor target is clamped like a Python float (a pickled demo keeps NumPy
+        scalars). The scan is per env, robot and joint, on the dict path only.
         """
         # a subclass that builds on BaseTaskEnv.__init__ has no bounds, and neither has a scenario whose
         # robots are all effort-driven: the action goes through as it did before, without the per-env scan
@@ -245,70 +244,61 @@ class RLTaskEnv(BaseTaskEnv):
                 targets = robot_action.get("dof_pos_target") if isinstance(robot_action, dict) else None
                 if not limits or not targets:
                     continue
-                # NaN is neither below nor above a bound: it is out of range in no direction, and the tensor
-                # path passes it through too
-                if not any(
-                    value < limits[joint][0] or value > limits[joint][1]
-                    for joint, value in targets.items()
-                    if joint in limits
-                ):
-                    continue
                 new_targets = {}
+                touched = False
                 for joint, value in targets.items():
-                    low, high = limits.get(joint, (None, None))
-                    # a value the limits do not describe, or one that is not a number (a demo may carry None
-                    # for an unactuated joint), reaches the backend as it did before
-                    if low is None or not isinstance(value, (int, float)) or not (value < low or value > high):
+                    bounds = limits.get(joint)
+                    number = self._target_as_float(value) if bounds is not None else None
+                    # NaN is neither below nor above a bound: it is out of range in no direction, and the
+                    # tensor path passes it through too
+                    if number is None or not (number < bounds[0] or number > bounds[1]):
                         new_targets[joint] = value
                         continue
-                    new_targets[joint] = min(max(value, low), high)
+                    low, high = bounds
+                    new_targets[joint] = min(max(number, low), high)
+                    touched = True
                     warn_once(
                         ("rl_task.clamped_action", robot_name, joint),
                         f"{type(self).__name__}: joint target {joint!r} of {robot_name!r} was outside the "
                         f"configured joint_limits {(low, high)} and was clamped; a demo recorded outside them "
                         "replays as a different trajectory. Warned once per robot and joint.",
                     )
+                if not touched:
+                    continue
                 if clamped[env_id] is env_action:
                     clamped[env_id] = dict(env_action)
                 clamped[env_id][robot_name] = {**robot_action, "dof_pos_target": new_targets}
                 changed = True
         return clamped if changed else actions
 
-    def step(
-        self,
-        actions: CompatActionInput,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]:
-        """One step with joint-space actions.
+    def _apply_action(self, actions: CompatActionInput) -> None:
+        """Clip the action to the joint limits, then hand it to the handler as joint targets.
 
         A tensor action is clipped to the joint-limit box (``_action_low`` / ``_action_high``). A dict action
         is clipped to the same limits for the robots those limits certainly describe, so the same command
         reaches the engine whichever way it was written; see ``_build_clamp_bounds``.
         """
-        self._episode_steps += 1
-
-        # Sanctioned action-transform hook (default identity). Lets tasks apply
-        # delta control / unnormalisation here instead of overriding step().
-        actions = self._process_action(actions)
-
         if isinstance(actions, (torch.Tensor, np.ndarray)):
             if not isinstance(actions, torch.Tensor):
                 actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device)
             if actions.ndim == 1:
                 actions = actions.unsqueeze(0)
-
-            real_actions = torch.maximum(torch.minimum(actions, self._action_high), self._action_low)
-            self.handler.set_dof_targets(real_actions)
+            self.handler.set_dof_targets(torch.maximum(torch.minimum(actions, self._action_high), self._action_low))
         else:
             self.handler.set_dof_targets(self._clamp_dict_actions(actions))
-        self.handler.simulate()
-        states = self.handler.get_states(mode="tensor")
+
+    def step(
+        self,
+        actions: CompatActionInput,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Info]:
+        """One step of the shared loop (``BaseTaskEnv``), then the auto-reset of the envs that finished.
+
+        Actions are clipped to the joint limits in ``_apply_action``.
+        """
+        states = self._advance(actions)
         obs = self._observation(states).to(self.device)
         priv_obs = self._privileged_observation(states)
-
-        # normalised to the step() contract, shared with BaseTaskEnv (see ``_as_step_tensor``)
-        reward = self._as_step_tensor(self._reward(states), dtype=torch.float32, hook="_reward")
-        terminated = self._as_step_tensor(self._terminated(states), dtype=torch.bool, hook="_terminated")
-        time_out = self._as_step_tensor(self._time_out(states), dtype=torch.bool, hook="_time_out")
+        reward, terminated, time_out = self._step_signals(states)
 
         # Cache observations for RSL-RL compatibility
         self._obs_buf = obs
@@ -321,6 +311,9 @@ class RLTaskEnv(BaseTaskEnv):
         info = {
             "privileged_observation": priv_obs,
             "episode_steps": self._episode_steps.clone(),
+            # success of *this* step, read before the auto-reset below so a done env reports the
+            # state its episode ended in (see ``BaseTaskEnv.success_is_termination``)
+            "success": self._step_success(states, terminated),
             # The terminal observation, snapshotted before the auto-reset below overwrites `obs`
             # in place for the done envs. Off-policy learners bootstrap truncated episodes from
             # this (V(s_T) for a time-out is a real value; V(reset state) is not), so it must be

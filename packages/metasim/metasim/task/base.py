@@ -12,7 +12,7 @@ from metasim.constants import SimType
 from metasim.queries.base import BaseQueryType
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.sim.base import BaseSimHandler
-from metasim.types import CompatActionInput, Info, Obs, Reward, Success, Termination, TimeOut
+from metasim.types import CompatActionInput, Info, Obs, Reward, Success, TensorState, Termination, TimeOut
 from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.setup_util import get_sim_handler_class
 
@@ -24,30 +24,63 @@ class BaseTaskEnv:
 
     The default scenario config is defined by the class variable "scenario". One can modify it and pass it to the __init__ method.
 
-    To write your own task, you need to inherit this class and override the following methods:
-    - _observation
-    - _privileged_observation
-    - _reward
-    - _terminated
-    - _time_out
-    - _observation_space
-    - _action_space
-    - _extra_spec
+    One step is a fixed sequence; a task changes it through the hooks, never by copying ``step``::
 
-    And use callbacks to modify the environment. The callbacks are:
-    - pre_physics_step_callback: Called before the physics step
-    - post_physics_step_callback: Called after the physics step
-    - reset_callback: Called when the environment is reset
-    - close_callback: Called when the environment is closed
+        _episode_steps += 1
+        actions = _process_action(actions)       # delta control, unnormalisation, IK
+        pre_physics_step_callback(actions)
+        _apply_action(actions)                   # default: handler.set_dof_targets
+        handler.simulate()
+        states = handler.get_states()
+        post_physics_step_callback(states)
+        _on_step(states)                         # per-step bookkeeping (commands, latches, grasp state)
+        _reward, _terminated, _time_out, _success
 
-    Some methods you usually should not override.
-    - step
-    - reset
-    - close
+    ``reset(states, env_ids, seed)`` seeds the handler, zeroes the episode counter, runs
+    ``reset_callback``, writes the states and then calls ``_on_reset(env_ids)``, the hook for
+    per-env buffers (checkers, latches, commands). ``RLTaskEnv`` runs the same sequence and adds
+    joint-limit clipping (in ``_apply_action``) and the auto-reset of finished envs.
+    (The humanoid and beyondmimic locomotion bases and the manager-based RL env still run loops of
+    their own and call none of these hooks; a subclass of those overrides their methods instead.)
+
+    Override for content: ``_get_initial_states``, ``_observation``, ``_privileged_observation``,
+    ``_reward``, ``_terminated``, ``_success``, ``_time_out``, ``_observation_space``,
+    ``_action_space``, ``_extra_spec``. Override for control: ``_process_action``,
+    ``_apply_action``, ``_on_step``, ``_on_reset``.
+
+    Callbacks are lists of ``fn(actions)`` / ``fn(states)`` / ``fn(env_ids)`` / ``fn()`` for
+    pre-step, post-step, reset and close, or ``{name: (fn, params)}`` mappings called as
+    ``fn(env, **params)`` / ``fn(env, states, **params)`` / ``fn(env, env_ids, **params)``.
     """
 
     max_episode_steps = 100
     traj_filepath = None
+    auto_reset: bool = False
+    """Whether ``step`` resets the envs that finished an episode before returning.
+
+    ``BaseTaskEnv.step`` does not: the caller sees the terminal observation and calls ``reset``
+    itself. ``RLTaskEnv.step`` does (and publishes the terminal state in ``info``). An evaluator
+    reads this flag instead of guessing from the class hierarchy.
+    """
+    success_is_termination: bool = True
+    """Whether ``_terminated`` *is* the task's success signal.
+
+    Historically the third value ``step`` returns is typed ``Success`` and every manipulation
+    task computes it in ``_terminated`` (a checker, a bounding box, a joint threshold), so the
+    default keeps that reading and ``info["success"]`` mirrors ``terminated``. A task where an
+    early termination means *failure* (a fall, leaving the workspace) or that succeeds without
+    ending the episode sets this to ``False`` and overrides :meth:`_success`; ``RLTaskEnv`` does
+    so by default.
+    """
+    actions_are_joint_targets: bool = True
+    """Whether the action handed to ``step`` is a joint target in the handler's action order.
+
+    ``BaseTaskEnv.step`` and ``RLTaskEnv.step`` pass it to ``set_dof_targets`` as such (RLTaskEnv clips it
+    to the joint limits, whatever its declared ``[-1, 1]`` action space says), so the robots' joint
+    limits are the real bounds and the default joint positions the "do nothing" action. An env that maps
+    actions itself (an action manager, deltas, unnormalisation in ``_process_action``) sets this to
+    ``False``; its declared ``action_space`` is then the contract a policy must meet.
+    """
     supported_simulators: tuple[str, ...] | None = None
     """Backends this task is known to run on (e.g. ``("mujoco", "newton")``).
 
@@ -86,6 +119,10 @@ class BaseTaskEnv:
             check_and_download_single(self.traj_filepath)
 
         self._initial_states = self._get_initial_states()
+        if self._initial_states is None:
+            # A task without initial states resets to the pose the handler launched in (every robot in its
+            # default pose), captured once here; without this a reset would leave the robot mid-episode.
+            self._initial_states = self.handler.get_states(mode="tensor")
         self.device = self.handler.device
         self._prepare_callbacks()
         self._episode_steps = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
@@ -150,6 +187,30 @@ class BaseTaskEnv:
         """
         return actions
 
+    def _apply_action(self, actions: CompatActionInput) -> None:
+        """Hand the processed action to the simulator (default: ``handler.set_dof_targets``).
+
+        Override when the action is not a joint target the handler can take as is: an effort
+        command, a write to a subset of actuators, a controller that runs in the task.
+        ``RLTaskEnv`` clips to the joint limits here.
+        """
+        self.handler.set_dof_targets(actions)
+
+    def _on_step(self, env_states: TensorState) -> None:
+        """Per-step bookkeeping after the physics step, before reward and termination (default: none).
+
+        The place to advance commands, latch the last action, update grasp state or history
+        buffers: everything ``_reward`` / ``_terminated`` read that is not in ``env_states``.
+        Under ``RLTaskEnv`` it runs before the auto-reset, so ``_on_reset`` sees its result.
+        """
+
+    def _on_reset(self, env_ids: list[int]) -> None:
+        """Per-env bookkeeping after the reset states are written, before the observation (default: none).
+
+        Reset checkers, latches, commands and history buffers of ``env_ids`` here instead of
+        overriding ``reset``: both reset paths (``reset()`` and ``RLTaskEnv``'s auto-reset) call it.
+        """
+
     def _extra_spec(self) -> dict[str, BaseQueryType]:
         """Get the extra spec of the environment."""
         return {}
@@ -169,6 +230,34 @@ class BaseTaskEnv:
     def _terminated(self, env_states: Obs) -> Termination:
         """Get the terminated of the environment."""
         return torch.zeros(self.handler.num_envs, dtype=torch.bool, device=self.device)
+
+    def _success(self, env_states: Obs) -> Success:
+        """Per-env success flags for *this* step, when success is not the termination signal.
+
+        Only consulted when ``success_is_termination`` is ``False``; the default says no env has
+        succeeded. Return the instantaneous predicate (the cube is in the box *now*); whether a
+        task counts as solved on the first hit, at the end, or after holding it for N steps is
+        decided by the evaluation protocol (``metasim.bench.EvalProtocol``), not here.
+        """
+        return torch.zeros(self.handler.num_envs, dtype=torch.bool, device=self.device)
+
+    @property
+    def defines_success(self) -> bool:
+        """Whether this task has a success signal at all.
+
+        True when ``_terminated`` is read as success (``success_is_termination``) or the task overrides
+        :meth:`_success`. False for an ``RLTaskEnv`` that never defined one: its ``info["success"]`` is
+        all ``False`` by construction, and an evaluator should say "no success defined" rather than
+        report a 0% success rate.
+        """
+        cls = type(self)
+        return bool(cls.success_is_termination) or cls._success is not BaseTaskEnv._success
+
+    def _step_success(self, env_states: Obs, terminated: torch.Tensor) -> torch.Tensor:
+        """The ``info["success"]`` tensor of a step: ``terminated`` or :meth:`_success` by the class flag."""
+        if type(self).success_is_termination:
+            return terminated.clone()  # a caller that folds time-outs into `terminated` in place must not edit this
+        return self._as_step_tensor(self._success(env_states), dtype=torch.bool, hook="_success")
 
     def _as_step_tensor(self, value, *, dtype: torch.dtype, hook: str) -> torch.Tensor:
         """``value`` as a ``(num_envs,)`` tensor of ``dtype`` on the env device: the type every ``step()`` field has.
@@ -226,50 +315,90 @@ class BaseTaskEnv:
         """Timeout flags."""
         return self._episode_steps >= self.max_episode_steps
 
+    def _run_step_callbacks(self, kind: str, arg) -> None:
+        """Run the pre- or post-step callbacks in either supported form (see the class docstring).
+
+        An env built without ``__init__`` (a wrapper, a test double) has none and runs none.
+        """
+        callbacks = getattr(self, kind, ())
+        if isinstance(callbacks, dict):
+            for fn, params in callbacks.values():
+                if kind == "pre_physics_step_callback":
+                    fn(self, **(params or {}))
+                else:
+                    fn(self, arg, **(params or {}))
+            return
+        if not isinstance(callbacks, (list, tuple)):
+            raise TypeError(f"{type(self).__name__}.{kind} must be a list of callables or a name -> (fn, params) dict")
+        for callback in callbacks:
+            callback(arg)
+
+    def _apply_seed(self, seed: int | None) -> None:
+        """Seed the handler, or warn once that this backend cannot be seeded."""
+        if seed is None:
+            return
+        set_seed = getattr(self.handler, "set_seed", None)
+        if callable(set_seed):
+            set_seed(seed)
+        elif not getattr(self, "_seed_unsupported_warned", False):
+            # once per task instance: RL training resets thousands of times
+            from loguru import logger as _log
+
+            _log.warning(
+                f"{type(self).__name__}: handler {type(self.handler).__name__} does not implement set_seed; "
+                f"reset(seed={seed}) does not seed the simulator, so rollouts are not bit-reproducible "
+                "on this backend."
+            )
+            self._seed_unsupported_warned = True
+
+    def _advance(self, actions: CompatActionInput) -> TensorState:
+        """Run the loop in the class docstring up to ``_on_step``; return the states after the physics step."""
+        self._episode_steps += 1
+        actions = self._process_action(actions)
+        self._run_step_callbacks("pre_physics_step_callback", actions)
+        self._apply_action(actions)
+        self.handler.simulate()
+        env_states = self.handler.get_states(mode="tensor")
+        self._run_step_callbacks("post_physics_step_callback", env_states)
+        self._on_step(env_states)
+        return env_states
+
+    def _step_signals(self, env_states: TensorState) -> tuple[Reward, Termination, TimeOut]:
+        """Reward, termination and time-out of a step, normalised to the ``step()`` contract (``_as_step_tensor``)."""
+        reward = self._as_step_tensor(self._reward(env_states), dtype=torch.float32, hook="_reward")
+        terminated = self._as_step_tensor(self._terminated(env_states), dtype=torch.bool, hook="_terminated")
+        time_out = self._as_step_tensor(self._time_out(env_states), dtype=torch.bool, hook="_time_out")
+        return reward, terminated, time_out
+
+    def _begin_reset(self, states, env_ids: list[int] | None, seed: int | None) -> tuple[list[int], object]:
+        """The shared head of both ``reset`` methods: seed, env ids, counters, reset callbacks.
+
+        Returns the env ids and the states to write (the task's initial states when ``states`` is None).
+        """
+        self._apply_seed(seed)
+        if env_ids is None:
+            env_ids = list(range(self.handler.num_envs))
+        self._episode_steps[torch.as_tensor(env_ids, dtype=torch.long, device=self._episode_steps.device)] = 0
+        self._run_reset_callbacks(env_ids)  # before the states are materialised
+        return env_ids, (self._initial_states if states is None else states)
+
     def step(self, actions: CompatActionInput) -> tuple[Obs, Reward, Success, TimeOut, Info | None]:
-        """Step the environment.
+        """Step the environment (see the class docstring for the sequence and its hooks).
 
         Args:
             actions: The actions to take
         """
-        # actions = self.__pre_physics_step(actions)
-        # env_states, _ = self.__physics_step(actions)
-        # obs, priv_obs, reward, terminated, time_out, _ = self.__post_physics_step(env_states)
-
-        # info = {
-        #     "privileged_observation": priv_obs,
-        # }
-
-        # return obs, reward, terminated, time_out, info
-        actions = self._process_action(actions)
-        for callback in self.pre_physics_step_callback:
-            callback(actions)
-
-        self.handler.set_dof_targets(actions)
-
-        self.handler.simulate()
-
-        env_states = self.handler.get_states(mode="tensor")
-
-        for callback in self.post_physics_step_callback:
-            callback(env_states)
-
-        # compute reward/termination, normalised to the step() contract (see ``_as_step_tensor``)
-        rewards: Reward = self._as_step_tensor(self._reward(env_states), dtype=torch.float32, hook="_reward")
-        terminated: Termination = self._as_step_tensor(
-            self._terminated(env_states), dtype=torch.bool, hook="_terminated"
-        )
-
-        # increment step counter and compute a single unified timeout
-        self._episode_steps = self._episode_steps + 1
-        timeout: TimeOut = self._as_step_tensor(self._time_out(env_states), dtype=torch.bool, hook="_time_out")
-
+        env_states = self._advance(actions)
+        rewards, terminated, timeout = self._step_signals(env_states)
         return (
             self._observation(env_states),
             rewards,
             terminated,
             timeout,
-            {"privileged_observation": self._privileged_observation(env_states)},
+            {
+                "privileged_observation": self._privileged_observation(env_states),
+                "success": self._step_success(env_states, terminated),
+            },
         )
 
     def reset(
@@ -291,42 +420,15 @@ class BaseTaskEnv:
 
         Returns:
             obs: The observation
-            priv_obs: The privileged observation
             info: The info
         """
-        if seed is not None:
-            set_seed = getattr(self.handler, "set_seed", None)
-            if callable(set_seed):
-                set_seed(seed)
-            else:
-                # Warn once per task instance, not per reset — RL training resets
-                # thousands of times and a per-call warning would drown the log.
-                if not getattr(self, "_seed_unsupported_warned", False):
-                    from loguru import logger as _log
-
-                    _log.warning(
-                        f"{type(self).__name__}: handler "
-                        f"{type(self.handler).__name__} does not implement set_seed; "
-                        f"env.reset(seed={seed}) only seeds the gym base RNG, not the "
-                        f"simulator. Rollouts will not be bit-reproducible across runs "
-                        f"until the backend adds set_seed."
-                    )
-                    self._seed_unsupported_warned = True
-        if env_ids is None:
-            env_ids = list(range(self.handler.num_envs))
-
-        self._run_reset_callbacks(env_ids)
-        states_to_set = self._initial_states if states is None else states
+        env_ids, states_to_set = self._begin_reset(states, env_ids, seed)
         self._write_reset_states(states_to_set, env_ids)
+        self._on_reset(env_ids)
         env_states = self.handler.get_states(env_ids=env_ids, mode="tensor")
         info = {
             "privileged_observation": self._privileged_observation(env_states),
         }
-
-        # reset episode step counters for reset envs
-        ids = torch.tensor(env_ids, dtype=torch.long, device=self.device)
-        self._episode_steps[ids] = 0
-
         return self._observation(env_states), info
 
     def close(self) -> None:

@@ -133,22 +133,15 @@ class MinimalTask(BaseTaskEnv):
         """
         return actions
 
-    def reset(self, states=None, env_ids=None, seed=None):
-        """Reset environment.
+    def _on_reset(self, env_ids: list[int]) -> None:
+        """Reset per-env members (checkers, counters, latches) for ``env_ids``.
 
-        Use this to reset custom member variables. Always keep ``seed`` in the
-        signature and forward it to ``super().reset`` so the
-        ``env.reset(seed=)`` reproducibility contract reaches the handler.
+        Both reset paths call this after the new states are written: ``reset()`` and, under
+        ``RLTaskEnv``, the auto-reset of envs that finished. Prefer it to overriding ``reset``.
         """
-        states = super().reset(states, env_ids, seed)
-
-        # Reset custom variables， e.g.
-        # if env_ids is None:
-        #     self.step_count = torch.zeros(self.num_envs, device=self.device)
-        # else:
-        #     self.step_count[env_ids] = 0
-
-        return states
+        # e.g. self.step_count[env_ids] = 0
+        # if self.checker is not None:
+        #     self.checker.reset(self.handler, env_ids=env_ids)
 
 
 # ========================================

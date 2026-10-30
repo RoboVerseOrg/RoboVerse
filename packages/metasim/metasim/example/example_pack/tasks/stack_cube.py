@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import torch
 
+from metasim.bench.prompts import PromptBank
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
+from metasim.task.checkers.checkers import DetectedChecker
+from metasim.task.checkers.detectors import RelativeBboxDetector
 from metasim.task.registry import register_task
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
@@ -23,14 +24,14 @@ class StackCubeTask(BaseTaskEnv):
             PrimitiveCubeCfg(
                 name="cube",
                 size=(0.04, 0.04, 0.04),
-                mass=0.02,
+                mass=0.064,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=(1.0, 0.0, 0.0),
             ),
             PrimitiveCubeCfg(
                 name="base",
                 size=(0.04, 0.04, 0.04),
-                mass=0.02,
+                mass=0.064,
                 physics=PhysicStateType.RIGIDBODY,
                 color=(0.0, 0.0, 1.0),
             ),
@@ -38,6 +39,26 @@ class StackCubeTask(BaseTaskEnv):
         robots=["franka"],
     )
     max_episode_steps = 250
+
+    prompt_bank = PromptBank(
+        canonical="Stack the red cube on top of the blue cube.",
+        train=(
+            "Put the red cube on the blue cube.",
+            "Place the red block on top of the blue block.",
+            "Pick up the red cube and set it on the blue one.",
+            "Stack red on blue.",
+            "Move the red cube onto the blue cube and let go.",
+            "Lay the red cube on top of the blue cube.",
+            "Set the red block down on the blue block.",
+            "Build a two-cube stack with red on top of blue.",
+        ),
+        heldout=(
+            "Balance the red box on the blue box.",
+            "Rest the crimson cube on the blue one.",
+            "Pile the red cube onto the blue cube.",
+            "Make a tower: blue at the bottom, red above it.",
+        ),
+    )
     checker = DetectedChecker(
         obj_name="cube",
         detector=RelativeBboxDetector(
@@ -60,11 +81,9 @@ class StackCubeTask(BaseTaskEnv):
         """Success when cube is detected in the bbox above base."""
         return self.checker.check(self.handler, states)
 
-    def reset(self, states=None, env_ids=None):
-        """Reset the checker."""
-        states = super().reset(states, env_ids)
+    def _on_reset(self, env_ids: list[int]) -> None:
+        """Reset the checker for ``env_ids``."""
         self.checker.reset(self.handler, env_ids=env_ids)
-        return states
 
     def _get_initial_states(self) -> list[dict] | None:
         """Give the inital states from traj file."""

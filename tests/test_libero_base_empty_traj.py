@@ -109,33 +109,24 @@ def test_reset_signature_matches_base_task_env():
 
 
 @pytest.mark.general
-def test_reset_calls_checker_reset_before_super(monkeypatch):
-    """checker.reset must run before super().reset so the latter's
-    callbacks see fresh checker state, and reset() must forward every
-    argument (including ``seed``) on to super()."""
+def test_reset_resets_the_checker_after_the_new_states_are_written():
+    """The bbox detector places its region from the base object's pose at reset, so the checker
+    must reset after ``set_states`` (it read the previous episode's pose when it ran first), and
+    ``reset`` must still take the base signature (``states``, ``env_ids``, ``seed``)."""
+    import torch
+
     task = _instance_without_init(num_envs=1)
     order = []
-    forwarded = {}
+    task.handler.set_states.side_effect = lambda **k: order.append(("set_states", k["env_ids"]))
+    task.handler.set_states_refreshes = True
+    task.handler.set_seed.side_effect = lambda seed: order.append(("seed", seed))
+    task.checker.reset.side_effect = lambda handler, env_ids: order.append(("checker", env_ids))
+    task._episode_steps = torch.zeros(1, dtype=torch.int32)
+    task._initial_states = "initial"
+    task._prepare_callbacks()
 
-    def _checker_reset(*a, **k):
-        order.append("checker")
-
-    task.checker = MagicMock()
-    task.checker.reset = _checker_reset
-
-    # Patch super().reset to record ordering and the arguments it received.
-    def _super_reset(self, states=None, env_ids=None, seed=None):
-        order.append("super")
-        forwarded.update(states=states, env_ids=env_ids, seed=seed)
-        return "sentinel"
-
-    monkeypatch.setattr(BaseTaskEnv, "reset", _super_reset)
-
-    result = task.reset(env_ids=[0], seed=7)
-    assert result == "sentinel"
-    assert order == ["checker", "super"]
-    # seed must reach BaseTaskEnv.reset, or the env.reset(seed=) contract dies here.
-    assert forwarded == {"states": None, "env_ids": [0], "seed": 7}
+    task.reset(env_ids=[0], seed=7)
+    assert order == [("seed", 7), ("set_states", [0]), ("checker", [0])]
 
 
 @pytest.mark.general
@@ -144,7 +135,4 @@ def test_reset_tolerates_missing_checker(monkeypatch):
     class), reset() should still succeed."""
     task = _instance_without_init(num_envs=1)
     task.checker = None
-
-    monkeypatch.setattr(BaseTaskEnv, "reset", lambda self, states=None, env_ids=None, seed=None: "ok")
-
-    assert task.reset(env_ids=[0]) == "ok"
+    task._on_reset([0])  # the hook both reset paths call; a None checker is skipped

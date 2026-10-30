@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -80,17 +77,4 @@ class LiberoKitchenScene3TurnOnStoveTask(Libero90BaseTask):
     # Trajectory file path
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene3_turn_on_the_stove_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker."""
-        # 假设 stove 的开关状态可以通过 states.objects["flat_stove"].joint_state 获取
-        # 这里 joint_state[:, knob_index] > threshold 代表已打开
-        # knob_index 和 threshold 需根据实际模型调
-        knob_index = 0  # 示例：第一个关节为旋钮
-        threshold = 0.5  # 示例：大于 0.5 视为打开
-        stove_joint_state = states.objects["flat_stove"].joint_pos[:, 0]  # (N,)
-        # joint_pos[:, 0] is already (N,); .all(dim=-1) collapsed it to a scalar
-        # (reducing over the batch). Compare element-wise to keep per-env shape.
-        is_on = stove_joint_state > threshold  # (N,)
-        return is_on
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("Turnon", "flat_stove", "button"),)

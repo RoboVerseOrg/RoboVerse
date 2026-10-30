@@ -281,7 +281,7 @@ def test_parallel_wrapper_forwards_only_a_class_level_guarantee():
     assert instance.set_states_refreshes is True and len(instance.remotes[0].sent) == 1  # asked once
 
 
-def _reset_with(flag: bool) -> list[str]:
+def _reset_with(flag: bool, initial_states=({}, {})) -> list[str]:
     """Drive ``BaseTaskEnv.reset`` with a stub handler that records its calls."""
     import torch
 
@@ -306,7 +306,7 @@ def _reset_with(flag: bool) -> list[str]:
     env = BaseTaskEnv.__new__(BaseTaskEnv)
     env.handler = _Stub()
     env.reset_callback = []
-    env._initial_states = None
+    env._initial_states = list(initial_states) if initial_states is not None else None
     env._episode_steps = torch.zeros(2, dtype=torch.long)
     env.device = torch.device("cpu")
     env._privileged_observation = lambda states: None
@@ -319,6 +319,55 @@ def test_task_reset_refreshes_render_only_when_the_backend_did_not():
     """``BaseTaskEnv.reset`` consults the backend's capability flag instead of guessing the backend."""
     assert _reset_with(False) == ["set_states", "refresh_render", "get_states"]
     assert _reset_with(True) == ["set_states", "get_states"]
+
+
+def test_task_without_initial_states_resets_to_the_launch_pose():
+    """``_get_initial_states`` returning None means "the pose the handler launched in": ``__init__`` captures it
+    once and every reset writes it back, so an episode never starts where the previous one ended."""
+    import torch
+
+    from metasim.sim.base import BaseSimHandler
+    from metasim.task.base import BaseTaskEnv
+
+    launch_state = object()
+    calls: list[tuple] = []
+
+    class _Stub(BaseSimHandler):  # a handler stand-in: BaseTaskEnv takes a built handler in place of a scenario
+        num_envs = 1
+        device = torch.device("cpu")
+        set_states_refreshes = True
+
+        def __init__(self):
+            pass
+
+        def get_states(self, env_ids=None, mode="tensor"):
+            calls.append(("get_states", env_ids))
+            return launch_state
+
+        def set_states(self, states=None, env_ids=None):
+            calls.append(("set_states", states, env_ids))
+
+        def _get_states(self, env_ids=None, mode="tensor"):
+            return self.get_states(env_ids, mode)
+
+        def _set_states(self, states, env_ids=None):
+            return self.set_states(states, env_ids)
+
+        def _set_dof_targets(self, actions):
+            return None
+
+        def _simulate(self):
+            return None
+
+    class _NoStates(BaseTaskEnv):
+        def _get_initial_states(self):
+            return None
+
+    env = _NoStates(_Stub())  # no simulator is built
+    assert env._initial_states is launch_state
+    calls.clear()
+    env.reset()
+    assert calls[0] == ("set_states", launch_state, [0])
 
 
 def test_capability_flags_match_the_backends_that_implement_them():

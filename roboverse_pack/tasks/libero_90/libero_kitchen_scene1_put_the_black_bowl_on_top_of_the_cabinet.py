@@ -8,7 +8,6 @@ from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 from metasim.utils.math import matrix_from_quat
 
 from .libero_90_base import Libero90BaseTask
@@ -95,29 +94,4 @@ class LiberoKitchen1PutBowlOnCabinetTask(Libero90BaseTask):
         "roboverse_data/trajs/libero90/libero_90_kitchen_scene1_put_the_black_bowl_on_top_of_the_cabinet_traj_v2.pkl"
     )
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker."""
-        bowl_pos = states.objects["akita_black_bowl"].root_state[:, :3]  # (N,3)
-        cabinet_pos = states.objects["wooden_cabinet"].root_state[:, :3]  # (N,3)
-        cabinet_quat = states.objects["wooden_cabinet"].root_state[:, 3:7]  # (N,4)
-        # cabinet_T = pose_to_mat(cabinet_pos, cabinet_quat)
-        # manually set bbox lower/upper bound (cabinet local coordinate system)
-        bbox_lower = torch.tensor([-0.12, -0.076, 0.22], device=bowl_pos.device)  # x-, y-, z-
-        bbox_upper = torch.tensor([0.13, 0.11, 0.22 + 0.05], device=bowl_pos.device)  # x+, y+, z+
-        # cabinet rotation matrix
-        R = matrix_from_quat(cabinet_quat)  # (N,3,3)
-        # bowl in cabinet local coordinate system
-        bowl_local = torch.matmul(R.transpose(1, 2), (bowl_pos - cabinet_pos).unsqueeze(-1)).squeeze(-1)  # (N,3)
-        # check each direction within lower/upper bound
-        ge_lower = bowl_local >= bbox_lower  # (N,3)
-        le_upper = bowl_local <= bbox_upper  # (N,3)
-        inside = (ge_lower & le_upper).all(dim=-1)
-
-        # print('bowl_local >= bbox_lower:', ge_lower)
-        # print('bowl_local <= bbox_upper:', le_upper)
-        # print('Bowl local position:', bowl_local)
-        # print('bbox center', cabinet_pos + torch.tensor([0, 0, 0.25], device=cabinet_pos.device))
-        # print('Bowl on top of the cabinet:', inside)
-        return inside
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("On", "akita_black_bowl", "wooden_cabinet", "top_side"),)

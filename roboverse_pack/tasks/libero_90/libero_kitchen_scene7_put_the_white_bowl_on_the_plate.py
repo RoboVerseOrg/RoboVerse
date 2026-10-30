@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -71,31 +68,4 @@ class LiberoKitchenScene7PutTheWhiteBowlOnThePlateTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene7_put_the_white_bowl_on_the_plate_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: white bowl is on the plate.
-
-        Success condition:
-        - Bowl is within xy range of plate center (< 0.06m radius)
-        - Bowl is slightly above plate (0 < height_diff < 0.03m)
-        """
-        bowl_pos = states.objects["white_bowl"].root_state[:, :3]  # (N,3)
-        plate_pos = states.objects["plate"].root_state[:, :3]  # (N,3)
-
-        # Check if bowl is within a small region above the plate
-        range_threshold = 0.06  # Radius of the range in xy plane
-        height_threshold = 0.03  # Height threshold above the plate
-
-        # Calculate xy distance between bowl and plate
-        xy_distance = torch.norm(bowl_pos[:, :2] - plate_pos[:, :2], dim=-1)  # (N,)
-        # Calculate height difference (bowl z - plate z)
-        height_diff = bowl_pos[:, 2] - plate_pos[:, 2]  # (N,)
-
-        # Check both conditions: xy distance < range AND 0 < height_diff < height_threshold
-        xy_close = xy_distance < range_threshold  # (N,)
-        height_valid = (height_diff > 0) & (height_diff < height_threshold)  # (N,)
-
-        is_on_plate = xy_close & height_valid  # (N,)
-
-        return is_on_plate
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("On", "white_bowl", "plate"),)

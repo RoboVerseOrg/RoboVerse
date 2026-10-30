@@ -110,8 +110,7 @@ class WalkG1Dof12EnvCfg(BaseEnvCfg):
     callbacks_setup = {
         "material_randomizer": MaterialRandomizer(
             obj_name="g1_dof12",
-            static_friction_range=(0.1, 1.25),
-            dynamic_friction_range=(0.1, 1.25),
+            friction_range=(0.1, 1.25),
             restitution_range=(0.0, 0.0),
             num_buckets=64,
         ),

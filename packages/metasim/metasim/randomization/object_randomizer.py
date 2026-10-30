@@ -5,8 +5,10 @@ It supports both Static Objects (Handler-managed) and Dynamic Objects (Scene-man
 with intelligent handling based on object capabilities.
 
 Key features:
-- Physics randomization: mass, friction, restitution (Static Objects only)
-- Pose randomization: position, rotation (all objects)
+- Physics randomization: mass, friction, restitution (Static Objects only), through the handler's
+  body-property verbs (``get/set_body_masses`` ...), so it works on every backend that implements them
+- Pose randomization: position, rotation (all objects); Static Objects through ``get_states`` /
+  ``set_states``, Dynamic Objects through USD (Isaac Sim)
 - Intelligent degradation: warns when Dynamic Objects receive physics randomization
 - Supports Hybrid simulation (uses physics_handler for Static, but needs special handling)
 """
@@ -23,6 +25,7 @@ from metasim.randomization.base import BaseRandomizerType
 from metasim.randomization.core.isaacsim_adapter import IsaacSimAdapter
 from metasim.randomization.core.object_registry import ObjectRegistry
 from metasim.utils.configclass import configclass
+from metasim.utils.log import warn_once
 
 # =============================================================================
 # Configuration Classes
@@ -79,7 +82,8 @@ class ObjectRandomCfg:
 
     Attributes:
         obj_name: Name of object to randomize (must exist in ObjectRegistry)
-        body_name: Specific body name (for articulated objects, None = root)
+        body_name: Only this body's physics (an articulation's body name; a rigid object is one body, named
+            like the object). None = every body
         env_ids: Environment IDs to apply randomization (None = all)
         physics: Physics property randomization configuration
         pose: Pose randomization configuration
@@ -170,9 +174,7 @@ class ObjectRandomizer(BaseRandomizerType):
         # Physics randomization (only for Static Objects with physics)
         if self.cfg.physics.enabled:
             if obj_meta.has_physics and obj_meta.lifecycle == "static":
-                # Convert env_ids to tensor (device will be matched later with actual data)
-                env_ids_tensor = torch.tensor(env_ids, dtype=torch.int32)
-                self._randomize_physics(env_ids_tensor)
+                self._randomize_physics(torch.tensor(env_ids, dtype=torch.long))
             else:
                 if not obj_meta.has_physics:
                     logger.warning(
@@ -188,146 +190,90 @@ class ObjectRandomizer(BaseRandomizerType):
         # Pose randomization (all objects supported)
         if self.cfg.pose.enabled:
             if obj_meta.lifecycle == "static":
-                # Convert env_ids to tensor for Handler API
-                env_ids_tensor = torch.tensor(env_ids, dtype=torch.int32, device=self._actual_handler.device)
-                self._randomize_pose_static(env_ids_tensor)
+                self._randomize_pose_static(torch.tensor(env_ids, dtype=torch.long))
             else:
                 self._randomize_pose_dynamic(obj_meta, env_ids)
-
-        # Pose randomization writes directly to the simulator
-        # (write_root_state_to_sim), bypassing the handler's set_states path, so
-        # the handler's cached state would otherwise stay pre-randomization. Drop
-        # the cache so the next get_states() refetches the randomized root pose
-        # (see BaseSimHandler.invalidate_state_caches).
-        self._actual_handler.invalidate_state_caches()
+                # USD writes bypass set_states, so the handler's cached state would stay pre-randomization
+                # (see BaseSimHandler.invalidate_state_caches).
+                self._actual_handler.invalidate_state_caches()
 
     # -------------------------------------------------------------------------
     # Physics Randomization (Static Objects only, via Handler API)
     # -------------------------------------------------------------------------
 
-    def _randomize_physics(self, env_ids: list[int]):
-        """Randomize physics properties for Static Objects.
+    def _randomize_physics(self, env_ids: torch.Tensor):
+        """Randomize mass, friction and restitution through the handler's body-property verbs.
+
+        Mass is drawn per (env, body) and combined with the current value by ``operation``; friction and
+        restitution are drawn per env and set on every body that has collision shapes. ``body_name``
+        limits the write to that body. A property the engine does not model (restitution on MuJoCo and
+        Newton) warns once and changes nothing.
 
         Args:
             env_ids: Environment IDs to randomize
         """
-        # Get object instance from Handler
-        try:
-            if self.cfg.obj_name in self._actual_handler.scene.articulations:
-                obj_inst = self._actual_handler.scene.articulations[self.cfg.obj_name]
-            elif self.cfg.obj_name in self._actual_handler.scene.rigid_objects:
-                obj_inst = self._actual_handler.scene.rigid_objects[self.cfg.obj_name]
-            else:
-                logger.error(f"Static object '{self.cfg.obj_name}' not found in Handler.scene")
-                return
-        except AttributeError:
-            logger.error("Handler does not have scene attribute")
-            return
-
-        # Keep env_ids as tensor (device will be matched per-operation)
-        num_envs = env_ids.shape[0]
-
-        # Randomize mass
-        if self.cfg.physics.mass_range:
-            # Get all masses, then index by env_ids (match device)
-            all_masses = obj_inst.root_physx_view.get_masses()
-            env_ids_mass = env_ids.to(all_masses.device)
-            new_mass = current_mass = all_masses
-            num_links = current_mass.shape[1] if len(current_mass.shape) > 1 else 1
-            shape = (num_envs, num_links)
-
-            rand_values = self._generate_random_tensor(
-                shape, self.cfg.physics.distribution, self.cfg.physics.mass_range
-            )
-            rand_values = rand_values.to(current_mass.device)
-
-            if self.cfg.physics.operation == "add":
-                new_mass[env_ids_mass] = current_mass[env_ids_mass] + rand_values
-            elif self.cfg.physics.operation == "scale":
-                new_mass[env_ids_mass] = current_mass[env_ids_mass] * rand_values
-            elif self.cfg.physics.operation == "abs":
-                new_mass[env_ids_mass] = rand_values
-            else:
-                raise ValueError(f"Unsupported operation: {self.cfg.physics.operation}")
-
-            # Set masses with indices parameter (use device-matched tensor)
-            obj_inst.root_physx_view.set_masses(new_mass, indices=env_ids_mass)
-
-        # Randomize friction
-        if self.cfg.physics.friction_range:
-            rand_friction = self._generate_random_tensor(
-                (num_envs,), self.cfg.physics.distribution, self.cfg.physics.friction_range
-            )
-
-            try:
-                # Get current material properties
-                materials = obj_inst.root_physx_view.get_material_properties()
-
-                # Update friction (index 0=static, 1=dynamic, 2=restitution)
-                if len(materials.shape) == 3:
-                    # [num_envs, num_bodies, 3]
-                    materials[env_ids, :, 0] = rand_friction.unsqueeze(1).to(materials.device)
-                    materials[env_ids, :, 1] = rand_friction.unsqueeze(1).to(materials.device)
+        handler = self._actual_handler
+        phys = self.cfg.physics
+        name = self.cfg.obj_name
+        ids = [int(i) for i in env_ids.tolist()]
+        column = self._body_column(name)
+        for prop, getter, setter, value_range in (
+            ("mass", handler.get_body_masses, handler.set_body_masses, phys.mass_range),
+            ("friction", handler.get_body_friction, handler.set_body_friction, phys.friction_range),
+            ("restitution", handler.get_body_restitution, handler.set_body_restitution, phys.restitution_range),
+        ):
+            if not value_range:
+                continue
+            current = getter(name)[ids].to(torch.float64)
+            new = current.clone()
+            if prop == "mass":
+                rand = self._generate_random_tensor(tuple(current.shape), phys.distribution, value_range).to(new)
+                if phys.operation == "add":
+                    new = current + rand
+                elif phys.operation == "scale":
+                    new = current * rand
+                elif phys.operation == "abs":
+                    new = rand
                 else:
-                    # [num_envs, 3]
-                    materials[env_ids, 0] = rand_friction.to(materials.device)
-                    materials[env_ids, 1] = rand_friction.to(materials.device)
+                    raise ValueError(f"Unsupported operation: {phys.operation}")
+            else:
+                rand = self._generate_random_tensor((len(ids),), phys.distribution, value_range).to(new)
+                new = torch.where(torch.isnan(current), current, rand[:, None].expand_as(current))
+            if column is not None:
+                new = torch.where(torch.arange(new.shape[1]) == column, new, current)
+            setter(name, new, env_ids=ids)
 
-                # Set back
-                obj_inst.root_physx_view.set_material_properties(materials, env_ids)
-            except Exception as e:
-                logger.error(f"Failed to set friction: {e}")
-
-        # Randomize restitution
-        if self.cfg.physics.restitution_range:
-            rand_restitution = self._generate_random_tensor(
-                (num_envs,), self.cfg.physics.distribution, self.cfg.physics.restitution_range
-            )
-
-            try:
-                # Get current material properties
-                materials = obj_inst.root_physx_view.get_material_properties()
-
-                # Update restitution (index 2)
-                if len(materials.shape) == 3:
-                    # [num_envs, num_bodies, 3]
-                    materials[env_ids, :, 2] = rand_restitution.unsqueeze(1).to(materials.device)
-                else:
-                    # [num_envs, 3]
-                    materials[env_ids, 2] = rand_restitution.to(materials.device)
-
-                # Set back
-                obj_inst.root_physx_view.set_material_properties(materials, env_ids)
-            except Exception as e:
-                logger.warning(f"Failed to set restitution: {e}")
+    def _body_column(self, obj_name: str) -> int | None:
+        """Column of ``cfg.body_name`` in the handler's body-property tensors, or ``None`` for every body."""
+        if self.cfg.body_name is None:
+            return None
+        names = self._actual_handler.get_body_names(obj_name) or [obj_name]  # a rigid object is one body
+        if self.cfg.body_name not in names:
+            raise ValueError(f"{obj_name!r} has no body {self.cfg.body_name!r}; bodies: {names}.")
+        return names.index(self.cfg.body_name)
 
     # -------------------------------------------------------------------------
     # Pose Randomization (All Objects)
     # -------------------------------------------------------------------------
 
     def _randomize_pose_static(self, env_ids: torch.Tensor):
-        """Randomize pose for Static Objects via Handler API.
+        """Randomize the root pose of a handler-managed object through ``get_states`` / ``set_states``.
+
+        Positions are in the env frame, like every handler state.
 
         Args:
             env_ids: Environment IDs to randomize (tensor)
         """
-        # Get object instance from Handler
-        try:
-            if self.cfg.obj_name in self._actual_handler.scene.articulations:
-                obj_inst = self._actual_handler.scene.articulations[self.cfg.obj_name]
-            elif self.cfg.obj_name in self._actual_handler.scene.rigid_objects:
-                obj_inst = self._actual_handler.scene.rigid_objects[self.cfg.obj_name]
-            else:
-                logger.error(f"Static object '{self.cfg.obj_name}' not found in Handler.scene")
-                return
-        except AttributeError:
-            logger.error("Handler does not have scene attribute")
-            return
+        handler = self._actual_handler
+        name = self.cfg.obj_name
+        states = handler.get_states(mode="tensor")
+        group = states.robots if name in states.robots else states.objects
+        if name not in group:
+            raise ValueError(f"{name!r} is neither a robot nor an object of the handler's state.")
+        ids = env_ids.to(device=group[name].root_state.device, dtype=torch.long)
+        num_envs = ids.shape[0]
 
-        num_envs = env_ids.shape[0]
-
-        # Get current pose
-        root_state = obj_inst.data.root_state_w[env_ids]
+        root_state = group[name].root_state[ids]
         current_pos = root_state[:, 0:3]
         current_rot = root_state[:, 3:7]
 
@@ -389,7 +335,18 @@ class ObjectRandomizer(BaseRandomizerType):
         new_root_state[:, 0:3] = new_pos
         new_root_state[:, 3:7] = new_rot
 
-        obj_inst.write_root_state_to_sim(new_root_state, env_ids)
+        group[name].root_state[ids] = new_root_state
+        handler.set_states(states, env_ids=ids.tolist())
+        after = handler.get_states(mode="tensor")
+        reached = (after.robots if name in after.robots else after.objects)[name].root_state[ids, :7].cpu()
+        wanted = new_root_state[:, :7].cpu()
+        same_rot = (reached[:, 3:7] * wanted[:, 3:7]).sum(dim=1).abs() > 1 - 1e-4  # q and -q are one rotation
+        if not (torch.allclose(reached[:, :3], wanted[:, :3], atol=1e-4) and same_rot.all()):
+            warn_once(
+                (type(handler).__name__, "static_pose", name),
+                f"ObjectRandomizer: {type(handler).__name__} did not move {name!r} (a static object it builds as "
+                "a shape on the world, e.g. a GEOM / XFORM primitive on Newton); its pose randomization has no effect.",
+            )
         self._mark_visual_dirty()
 
     def _randomize_pose_dynamic(self, obj_meta, env_ids: list[int]):

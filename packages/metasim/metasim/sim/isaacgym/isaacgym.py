@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import math
 from copy import deepcopy
 
@@ -384,6 +385,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset_options.fix_base_link = object.fix_base_link
             asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
+            asset_options.density = object.density  # so the body weighs object.mass
             asset = self.gym.create_box(self.sim, object.size[0], object.size[1], object.size[2], asset_options)
         elif isinstance(object, PrimitiveSphereCfg):
             asset_options = gymapi.AssetOptions()
@@ -391,6 +393,7 @@ class IsaacgymHandler(BaseSimHandler):
             asset_options.fix_base_link = object.fix_base_link
             asset_options.disable_gravity = not object.enabled_gravity
             asset_options.flip_visual_attachments = False
+            asset_options.density = object.density  # so the body weighs object.mass
             asset = self.gym.create_sphere(self.sim, object.radius, asset_options)
 
         elif isinstance(object, ArticulationObjCfg):
@@ -1198,6 +1201,81 @@ class IsaacgymHandler(BaseSimHandler):
             return body_names
         else:
             return []
+
+    def _actor_handle(self, env_id: int, obj_name: str):
+        if obj_name in self._robot_handles[env_id]:
+            return self._robot_handles[env_id][obj_name]
+        return self._obj_handles[env_id][[obj.name for obj in self.objects].index(obj_name)]
+
+    def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+        return torch.tensor(
+            [
+                [prop.mass for prop in self.gym.get_actor_rigid_body_properties(env, self._actor_handle(i, obj_name))]
+                for i, env in enumerate(self._envs)
+            ],
+            dtype=torch.float64,
+        )
+
+    def _set_body_masses(self, obj_name: str, masses: torch.Tensor, env_ids: list[int], scale_inertia: bool) -> None:
+        for row, env_id in enumerate(env_ids):
+            env, actor = self._envs[env_id], self._actor_handle(env_id, obj_name)
+            props = self.gym.get_actor_rigid_body_properties(env, actor)
+            for body, prop in enumerate(props):
+                new = float(masses[row, body])
+                if scale_inertia and new != prop.mass:
+                    r = new / prop.mass
+                    # build a new Mat33 and assign it: the struct member may come back as a copy
+                    inertia = gymapi.Mat33()
+                    for axis in ("x", "y", "z"):
+                        v = getattr(prop.inertia, axis)
+                        setattr(inertia, axis, gymapi.Vec3(v.x * r, v.y * r, v.z * r))
+                    prop.inertia = inertia
+                prop.mass = new
+            self.gym.set_actor_rigid_body_properties(env, actor, props, recomputeInertia=False)
+
+    def _shape_ranges(self, env, actor, num_shapes: int, obj_name: str) -> list[range]:
+        """Each body's slice of the actor's rigid-shape list, from the per-body shape counts (native body order)."""
+        counts = [r.count for r in self.gym.get_actor_rigid_body_shape_indices(env, actor)]
+        if sum(counts) != num_shapes:
+            raise RuntimeError(f"{obj_name!r}: shapes per body {counts} do not add up to the actor's {num_shapes}.")
+        starts = np.cumsum([0, *counts])
+        return [range(int(a), int(b)) for a, b in itertools.pairwise(starts)]
+
+    def _get_shape_attr(self, obj_name: str, attr: str) -> torch.Tensor:
+        """Per-body mean of rigid-shape attribute ``attr`` (``friction`` / ``restitution``), NaN for a shapeless body."""
+        rows = []
+        for i, env in enumerate(self._envs):
+            actor = self._actor_handle(i, obj_name)
+            props = self.gym.get_actor_rigid_shape_properties(env, actor)
+            rows.append([
+                float(np.mean([getattr(props[s], attr) for s in r])) if len(r) else np.nan
+                for r in self._shape_ranges(env, actor, len(props), obj_name)
+            ])
+        return torch.tensor(rows, dtype=torch.float64)
+
+    def _set_shape_attr(self, obj_name: str, attr: str, values: torch.Tensor, env_ids: list[int]) -> None:
+        current = self._get_shape_attr(obj_name, attr)
+        for row, env_id in enumerate(env_ids):
+            env, actor = self._envs[env_id], self._actor_handle(env_id, obj_name)
+            props = self.gym.get_actor_rigid_shape_properties(env, actor)
+            for body, r in enumerate(self._shape_ranges(env, actor, len(props), obj_name)):
+                new = values[row, body].item()
+                if len(r) and new != current[env_id, body].item():
+                    for s in r:
+                        setattr(props[s], attr, new)
+            self.gym.set_actor_rigid_shape_properties(env, actor, props)
+
+    def _get_body_friction(self, obj_name: str) -> torch.Tensor:
+        return self._get_shape_attr(obj_name, "friction")
+
+    def _set_body_friction(self, obj_name: str, friction: torch.Tensor, env_ids: list[int]) -> None:
+        self._set_shape_attr(obj_name, "friction", friction, env_ids)
+
+    def _get_body_restitution(self, obj_name: str) -> torch.Tensor:
+        return self._get_shape_attr(obj_name, "restitution")
+
+    def _set_body_restitution(self, obj_name: str, restitution: torch.Tensor, env_ids: list[int]) -> None:
+        self._set_shape_attr(obj_name, "restitution", restitution, env_ids)
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
         return [self._body_info[obj_name]["global_indices"][bn] for bn in self._get_body_names(obj_name)]

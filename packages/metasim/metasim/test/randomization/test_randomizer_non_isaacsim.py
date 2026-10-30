@@ -102,3 +102,25 @@ def test_base_randomizer_attempts_isaacsim_adapter_when_handler_named_isaacsim(m
     randomizer.bind_handler(IsaacsimHandler())
     assert len(constructed) == 1, "should construct exactly one adapter for IsaacsimHandler"
     assert isinstance(randomizer.adapter, _FakeAdapter)
+
+
+@pytest.mark.general
+def test_scenario_registration_keeps_prim_paths_an_isaac_scan_registered():
+    """A hybrid's physics side rescans the registry; it must not drop the render side's prim paths."""
+    from metasim.randomization.core.object_registry import ObjectMetadata, ObjectRegistry
+
+    handler = _FakeMujocoHandler()
+    handler.objects = [SimpleNamespace(name="cube", physics=None)]
+    ObjectRegistry.reset()
+    registry = ObjectRegistry.get_instance(handler)
+    registry.register(
+        ObjectMetadata(
+            name="cube", category="object", lifecycle="static", prim_paths=["/World/envs/env_0/cube"], has_physics=True
+        )
+    )
+    BaseRandomizerType._scan_and_register_handler_objects(handler, registry)
+    assert registry.get("cube").prim_paths == ["/World/envs/env_0/cube"]
+    handler.objects.append(SimpleNamespace(name="ball", physics=None))
+    BaseRandomizerType._scan_and_register_handler_objects(handler, registry)
+    assert registry.get("ball").prim_paths == [] and registry.get("ball").has_physics
+    ObjectRegistry.reset()

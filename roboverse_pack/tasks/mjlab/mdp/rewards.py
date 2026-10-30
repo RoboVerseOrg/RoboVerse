@@ -466,7 +466,7 @@ def _newton_robot_ee_pos_w(env, body_suffix: str | None = None) -> torch.Tensor 
     """``(N,3)`` world position of the robot end-effector body on Newton.
 
     If ``body_suffix`` is given, match the body whose name ends with it;
-    otherwise pick the deepest (most ``/``-segments) non-camera body, which
+    otherwise pick the deepest non-camera body in the kinematic tree, which
     for a serial manipulator is the gripper/tcp link — the closest analogue
     to mjlab's ``tcp_site``.
     """
@@ -486,10 +486,16 @@ def _newton_robot_ee_pos_w(env, body_suffix: str | None = None) -> torch.Tensor 
             None,
         )
     if idx is None:
-        cands = [(n.count("/"), i) for i, n in enumerate(names) if "camera" not in n.lower()]
+        # depth in the kinematic tree: Newton labels a body with its path in the source file, while the state
+        # names it by the last segment; ties go to the last label, as when the state carried the labels
+        model = env.handler._model
+        labels = {model.body_key[b].split("/")[-1]: model.body_key[b] for b in env.handler._get_body_indices(0, rname)}
+        cands = [
+            (labels.get(n, n).count("/"), labels.get(n, n), i) for i, n in enumerate(names) if "camera" not in n.lower()
+        ]
         if not cands:
             return None
-        idx = max(cands)[1]
+        idx = max(cands)[2]
     return rs.body_state[:, idx, :3]
 
 

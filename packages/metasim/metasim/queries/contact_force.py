@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-try:
-    import isaacgym
-except ImportError:
-    pass
-
 from collections import deque
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -16,11 +10,6 @@ from metasim.queries.base import BaseQueryType
 
 if TYPE_CHECKING:
     from metasim.sim.base import BaseSimHandler
-
-try:
-    import mujoco
-except ImportError:
-    pass
 
 
 def mujoco_net_contact_forces_world(model, data) -> np.ndarray:
@@ -34,6 +23,8 @@ def mujoco_net_contact_forces_world(model, data) -> np.ndarray:
     reaction instead of the force it feels; Isaac Sim / Isaac Gym report world-frame forces on the
     body, so this matches them. One vectorised pass, no per-contact torch dispatch.
     """
+    import mujoco  # the backend is loaded by the handler that calls this; the module stays backend-free
+
     nbody = int(model.nbody)
     ncon = int(data.ncon)
     net = np.zeros((nbody, 3), dtype=np.float64)
@@ -102,7 +93,9 @@ class ContactForces(BaseQueryType):
         """Warm-start the queue with `history_length` entries."""
         for _ in range(self.history_length):
             if self.simulator == "isaacgym":
-                self._current_contact_force = isaacgym.gymtorch.wrap_tensor(
+                from isaacgym import gymtorch  # already imported by the Isaac Gym handler
+
+                self._current_contact_force = gymtorch.wrap_tensor(
                     self.handler.gym.acquire_net_contact_force_tensor(self.handler.sim)
                 )
             elif self.simulator == "isaacsim":
@@ -191,7 +184,8 @@ class ContactForces(BaseQueryType):
                 if body_count is None:
                     body_count = 0
                 continue
-            body_names = [model.body_key[idx] for idx in body_ids]
+            # the handler's body names (the label's last segment): rows in get_body_names / state order
+            body_names = [self.handler._body_name(idx) for idx in body_ids]
             sorted_pairs = sorted(zip(body_names, body_ids, strict=False), key=lambda pair: pair[0])
             sorted_body_ids = [idx for _, idx in sorted_pairs]
             if body_count is None:
@@ -204,8 +198,9 @@ class ContactForces(BaseQueryType):
         env_ids = []
         local_ids = []
         valid = []
-        for row in sensor.sensing_objs:
-            body_idx = row[0]
+        # newton < 1.2 lists (body, kind) rows, 1.2+ the body indices
+        rows = [row[0] for row in sensor.sensing_objs] if hasattr(sensor, "sensing_objs") else sensor.sensing_indices
+        for body_idx in rows:
             if not isinstance(body_idx, (int, np.integer)):
                 env_ids.append(-1)
                 local_ids.append(-1)

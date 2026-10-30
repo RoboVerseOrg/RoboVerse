@@ -43,7 +43,7 @@ from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
 
-from ._locator import lazy_scenario, mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset, single_process_mujoco
 from .cartpole import _CARTPOLE_XML  # path string
 
 # dm_control tolerance defaults: value_at_margin = 0.1
@@ -96,6 +96,8 @@ class _MjlabCartpoleTrainBase(BaseTaskEnv):
     _vel_range: float = 0.01
 
     def __init__(self, scenario=None, device=None):
+        if scenario is not None:
+            single_process_mujoco(scenario, type(self).__name__)
         super().__init__(scenario=scenario, device=device)
         # mjlab cartpole cfg: SimulationCfg(mujoco=MujocoCfg(disableflags=("contact",)))
         # SimParamCfg has no equivalent option, so we patch mj_model.opt directly

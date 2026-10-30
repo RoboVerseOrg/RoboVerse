@@ -8,7 +8,6 @@ from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 from metasim.utils.math import matrix_from_quat
 
 from .libero_90_base import Libero90BaseTask
@@ -98,26 +97,4 @@ class LiberoKitchenScene4PutWineBottleInBottomDrawerTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene4_put_the_wine_bottle_in_the_bottom_drawer_of_the_cabinet_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: wine bottle is inside the bottom drawer."""
-        bottle_pos = states.objects["wine_bottle"].root_state[:, :3]  # (N,3)
-        cabinet_pos = states.objects["white_cabinet"].root_state[:, :3]  # (N,3)
-        cabinet_quat = states.objects["white_cabinet"].root_state[:, 3:7]  # (N,4)
-        # bottom drawer index assumed to be 0
-        bottom_idx = 0
-        bbox_displacement = states.objects["white_cabinet"].joint_pos[:, bottom_idx]
-        cabinet_T = pose_to_mat(cabinet_pos, cabinet_quat)
-        # bottom drawer bbox
-        bbox_relative_pos = torch.tensor([0.003, 0.011 + bbox_displacement, 0.065], device=bottle_pos.device)
-        bbox_relative_quat = torch.tensor([0.70711, 0.00000, 0.70711, 0.00000], device=bottle_pos.device)
-        bbox_relative_T = pose_to_mat(bbox_relative_pos.unsqueeze(0), bbox_relative_quat.unsqueeze(0))
-        bbox_half_size = torch.tensor([0.029, 0.075, 0.102], device=bottle_pos.device)
-        bbox_T_world = torch.matmul(cabinet_T, bbox_relative_T)
-        R = bbox_T_world[:, :3, :3]  # (N,3,3)
-        t = bbox_T_world[:, :3, 3]  # (N,3)
-        bottle_local = torch.matmul(R.transpose(1, 2), (bottle_pos - t).unsqueeze(-1)).squeeze(-1)  # (N,3)
-        eps = 1e-6
-        inside = (bottle_local.abs() <= (bbox_half_size.unsqueeze(0) + eps)).all(dim=-1)  # (N,)
-        return inside
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("In", "wine_bottle", "white_cabinet", "bottom_region"),)

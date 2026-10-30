@@ -4,7 +4,7 @@ Background: the detector's ``reset`` and ``is_detected`` used to call
 ``handler.get_pos(...)`` as if it were a handler method, but no handler
 in the repo implements one — the project-standard pattern is the
 module-level ``get_pos`` helper in
-``metasim.example.example_pack.tasks.checkers.util`` (which every other
+``metasim.task.checkers.util`` (which every other
 detector in ``detectors.py`` already imports + uses). Result: the
 detector crashed with ``AttributeError`` the moment a task tried to use
 it. Surfaced while porting ManiSkill PickCube-v1 success semantics.
@@ -56,7 +56,7 @@ def test_relative3dsphere_uses_module_get_pos_and_detects():
     """reset() then is_detected() must both succeed (no AttributeError)
     and the detector must return True only when the object is inside the
     sphere."""
-    from metasim.example.example_pack.tasks.checkers.detectors import Relative3DSphereDetector
+    from metasim.task.checkers.detectors import Relative3DSphereDetector
 
     initial_pos = torch.tensor([0.5, 0.0, 0.1])
     moved_pos = torch.tensor([0.51, 0.0, 0.105])  # within 2.5 cm radius

@@ -3,10 +3,10 @@ from __future__ import annotations
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import RelativeBboxDetector
 from metasim.scenario.objects import PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers.checkers import DetectedChecker
+from metasim.task.checkers.detectors import RelativeBboxDetector
 from metasim.task.registry import register_task
 
 from ._dense_rl import DenseRLResetMixin
@@ -57,7 +57,7 @@ class PlaceSphereTask(ManiskillBaseTask):
             PrimitiveSphereCfg(
                 name="sphere",
                 radius=0.03,
-                mass=0.001,
+                mass=0.1131,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=[1.0, 0.0, 0.0],
             ),
@@ -123,7 +123,7 @@ class PlaceSphereDenseTask(DenseRLResetMixin, PlaceSphereTask):
         objects=[
             _Cube(name="bin", size=(0.05, 0.05, 0.05), color=(0.4, 0.3, 0.2), physics=PhysicStateType.GEOM),
             PrimitiveSphereCfg(
-                name="sphere", radius=_PS_RADIUS, mass=0.001, physics=PhysicStateType.RIGIDBODY, color=(1.0, 0.0, 0.0)
+                name="sphere", radius=_PS_RADIUS, mass=0.1131, physics=PhysicStateType.RIGIDBODY, color=(1.0, 0.0, 0.0)
             ),
         ],
         robots=["franka"],

@@ -74,6 +74,19 @@ def _resolve_populate_contacts():
 populate_contacts = _resolve_populate_contacts()
 
 
+def model_flag(name: str):
+    """The ``notify_model_changed`` flag ``name`` (e.g. ``"BODY_INERTIAL_PROPERTIES"``), resolved when called.
+
+    newton >= 1.2: ``newton.ModelFlags``; older: ``newton.solvers.SolverNotifyFlags``.
+    """
+    import newton
+
+    flags = getattr(newton, "ModelFlags", None)
+    if flags is None:
+        from newton.solvers import SolverNotifyFlags as flags  # newton < 1.2
+    return getattr(flags, name)
+
+
 def set_current_world(builder, world_idx: int) -> None:
     """Set the ModelBuilder's active world index across newton versions.
 
@@ -302,3 +315,28 @@ _check_newton_version()
 
 
 __all__ = ["JointType", "add_mjcf", "populate_contacts", "set_current_world"]
+
+
+# newton >= 1.6 renamed the torsional / rolling friction coefficients (``ShapeConfig.mu_torsional``,
+# ``Model.shape_material_mu_torsional``); older versions call them ``torsional_friction`` / ``rolling_friction``.
+_FRICTION_FIELDS = {"torsional": ("mu_torsional", "torsional_friction"), "rolling": ("mu_rolling", "rolling_friction")}
+
+
+def field_name(obj, *names: str) -> str:
+    """The first of ``names`` (newest spelling first) that ``obj`` has.
+
+    Raises ``AttributeError`` when ``obj`` has none of them, so a rename can never turn a write into a no-op
+    (assigning an old name on a plain Python object just adds an attribute nobody reads).
+    """
+    for name in names:
+        if hasattr(obj, name):
+            return name
+    raise AttributeError(f"{type(obj).__name__} has none of the fields {list(names)}.")
+
+
+def friction_field(obj, kind: str, prefix: str = "") -> str:
+    """Name of the ``kind`` (``"torsional"`` / ``"rolling"``) friction attribute ``prefix + ...`` on ``obj``.
+
+    Use ``prefix="shape_material_"`` for a ``newton.Model`` and ``""`` for a ``ModelBuilder.ShapeConfig``.
+    """
+    return field_name(obj, *(prefix + name for name in _FRICTION_FIELDS[kind]))

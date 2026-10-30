@@ -74,15 +74,10 @@ class ManiskillBaseTask(BaseTaskEnv):
         """Task success when the cube has been lifted sufficiently along z from its reset height."""
         return self.checker.check(self.handler, states)
 
-    def reset(self, states=None, env_ids=None, seed=None):
-        """Reset the env; reset the checker unless ``skip_checker_reset`` is set.
-
-        ``seed`` is forwarded to ``super().reset``.
-        """
-        states = super().reset(states, env_ids, seed)
+    def _on_reset(self, env_ids: list[int]) -> None:
+        """Reset the checker for ``env_ids`` unless ``skip_checker_reset`` is set."""
         if self.checker is not None and not self.skip_checker_reset:
             self.checker.reset(self.handler, env_ids=env_ids)
-        return states
 
     def _get_initial_states(self) -> list[dict] | None:
         """Give the inital states from traj file."""

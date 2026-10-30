@@ -27,6 +27,7 @@ from mujoco import mjx
 
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
+from metasim.sim.mujoco.primitives import primitive_xml
 from metasim.sim.mujoco.renderer_teardown import attach_renderer_teardown
 
 if TYPE_CHECKING:
@@ -562,7 +563,7 @@ class MJXHandler(BaseSimHandler):
         self.object_body_names, self.mj_objects = [], {}
         for obj in self.objects:
             xml = (
-                mjcf.from_xml_string(self._create_primitive_xml(obj))
+                mjcf.from_xml_string(primitive_xml(obj))
                 if isinstance(obj, (PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg))
                 else mjcf.from_path(obj.mjx_mjcf_path)
             )
@@ -717,31 +718,6 @@ class MJXHandler(BaseSimHandler):
 
         batched = jax.vmap(_one_env, in_axes=(None, 0))
         return jax.jit(batched)
-
-    def _create_primitive_xml(self, obj):
-        if isinstance(obj, PrimitiveCubeCfg):
-            size_str = f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}"
-            type_str = "box"
-        elif isinstance(obj, PrimitiveCylinderCfg):
-            size_str = f"{obj.radius} {obj.height}"
-            type_str = "cylinder"
-        elif isinstance(obj, PrimitiveSphereCfg):
-            size_str = f"{obj.radius}"
-            type_str = "sphere"
-        else:
-            raise ValueError("Unknown primitive type")
-
-        rgba_str = f"{obj.color[0]} {obj.color[1]} {obj.color[2]} 1"
-        xml = f"""
-        <mujoco model="{obj.name}_model">
-        <worldbody>
-            <body name="{type_str}_body" pos="{0} {0} {0}">
-            <geom name="{type_str}_geom" type="{type_str}" size="{size_str}" rgba="{rgba_str}"/>
-            </body>
-        </worldbody>
-        </mujoco>
-        """
-        return xml.strip()
 
     @property
     def num_envs(self) -> int:
