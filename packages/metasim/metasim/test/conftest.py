@@ -44,6 +44,7 @@ def _skip_unless_installed(sim: str) -> None:
     if missing:
         pytest.skip(f"{sim} backend is not installed (missing {', '.join(missing)})")
 
+
 # pkg_prefix -> scenario_fn
 _SUITE_REGISTRY: dict[str, Callable[[str, int], ScenarioCfg]] = {}
 
