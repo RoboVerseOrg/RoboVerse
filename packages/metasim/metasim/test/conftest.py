@@ -28,6 +28,22 @@ from metasim.test.test_utils import get_test_parameters
 _SUPPORTED_SIMS = {"isaacgym", "isaacsim", "mujoco", "mjx", "newton", "sapien3", "superdex"}
 _SINGLE_ACTIVE_HANDLER_SIMS = {"isaacgym", "isaacsim"}
 
+
+def _missing_backend_dists(sim: str) -> list[str]:
+    """Required distributions of ``sim`` that are not installed (``metasim.sim._versions`` is the one list)."""
+    from metasim.constants import SimType
+    from metasim.sim._versions import check_backend
+
+    report = check_backend(SimType(sim))
+    return [s.requirement.dist for s in report.statuses if s.installed is None and not s.requirement.optional]
+
+
+def _skip_unless_installed(sim: str) -> None:
+    """A backend that is not installed here skips its items instead of erroring in handler creation."""
+    missing = _missing_backend_dists(sim)
+    if missing:
+        pytest.skip(f"{sim} backend is not installed (missing {', '.join(missing)})")
+
 # pkg_prefix -> scenario_fn
 _SUITE_REGISTRY: dict[str, Callable[[str, int], ScenarioCfg]] = {}
 
@@ -175,6 +191,7 @@ def _get_or_create_handler(param, request, isaacsim_app):
 
     if sim not in _SUPPORTED_SIMS:
         pytest.skip(f"Skipping handler for unsupported sim '{sim}'")
+    _skip_unless_installed(sim)
 
     key = (scenario_fn.__module__, scenario_fn.__name__, sim, num_envs)
 
@@ -237,6 +254,12 @@ def isaacsim_app(request):
             ):
                 needs_isaacsim = True
                 break
+
+    if needs_isaacsim and _missing_backend_dists("isaacsim"):
+        # selected isaacsim items skip in ``_get_or_create_handler``; a hard import here would error
+        # every other backend's items in the same session (session-scoped fixture)
+        log.info("[isaacsim_app] isaacsim items selected but Isaac Sim / Isaac Lab are not installed; skipping them")
+        needs_isaacsim = False
 
     if needs_isaacsim:
         from isaaclab.app import AppLauncher

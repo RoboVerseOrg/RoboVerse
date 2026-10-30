@@ -93,7 +93,7 @@ class BackendVersionReport:
 # honest: widen ``spec`` only with a passing run, bump ``tested`` from the backend-compat workflow.
 BACKEND_REQUIREMENTS: dict[SimType, tuple[Requirement, ...]] = {
     SimType.MUJOCO: (
-        Requirement("mujoco", ">=3.2,<3.14", tested="3.12.0"),
+        Requirement("mujoco", ">=3.2,<3.18", tested="3.17.0"),
         Requirement("dm-control", ">=1.0.20,<2", tested="1.0.45"),
     ),
     SimType.MJX: (

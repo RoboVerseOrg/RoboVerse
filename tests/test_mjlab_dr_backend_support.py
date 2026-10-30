@@ -168,8 +168,15 @@ def _trunk_cfg() -> SceneEntityCfg:
 # ---------------------------------------------------------------------------
 
 
+def _needs_newton_names():
+    """The friction / COM events resolve Newton's field and flag names through ``metasim.sim.newton``,
+    which imports the ``newton`` package; the fake handler covers everything else."""
+    pytest.importorskip("newton", reason="the Newton field-name shims need the newton package")
+
+
 @pytest.mark.general
 def test_geom_friction_writes_newton_shape_friction():
+    _needs_newton_names()
     env, handler = _make_env("newton")
     before = handler._model.shape_material_mu.numpy()
 
@@ -188,6 +195,7 @@ def test_geom_friction_writes_newton_shape_friction():
 @pytest.mark.general
 def test_geom_friction_tells_the_newton_solver():
     """SolverMuJoCo keeps its own geom_friction: a write it is not told about never reaches the contacts."""
+    _needs_newton_names()
     env, handler = _make_env("newton")
     geom_friction(env, asset_cfg=_foot_cfg(), ranges=(0.3, 1.2), axes=(0, 1))
     assert len(handler._solver.notified) == 1
@@ -213,6 +221,7 @@ def test_body_mass_goes_through_the_handler_interface():
 
 @pytest.mark.general
 def test_body_com_offset_writes_newton_body_com():
+    _needs_newton_names()
     env, handler = _make_env("newton")
 
     body_com_offset(env, asset_cfg=_trunk_cfg(), operation="add", ranges={0: (0.02, 0.025), 2: (-0.03, -0.02)})
@@ -330,6 +339,7 @@ def _seed(seed: int) -> None:
 @pytest.mark.general
 def test_dr_draws_are_reproducible_through_set_seed():
     """The samplers draw from the RNG ``set_seed`` seeds: same seed, same DR; different seed, different DR."""
+    _needs_newton_names()
     from roboverse_pack.tasks.mjlab.mdp.events_dr import _make_sampler
 
     _seed(7)

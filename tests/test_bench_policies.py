@@ -24,7 +24,13 @@ def _ctx(num_envs: int, action_dim: int) -> PolicyContext:
     )
 
 
+def _needs_fast_td3():
+    """FastTD3 lives behind the ``[learn]`` extra: its module imports ``tensordict``."""
+    pytest.importorskip("tensordict", reason="FastTD3 needs tensordict (pip install -e '.[learn]')")
+
+
 def _fast_td3_checkpoint(tmp_path, n_obs: int, n_act: int, hidden: int):
+    _needs_fast_td3()
     from roboverse_learn.rl.fast_td3.fttd3_module import Actor, EmpiricalNormalization
 
     torch.manual_seed(3)
@@ -74,6 +80,7 @@ def test_fast_td3_policy_rejects_a_checkpoint_for_another_task(tmp_path):
 
 
 def test_fast_td3_policy_needs_a_fast_td3_checkpoint(tmp_path):
+    _needs_fast_td3()
     from roboverse_learn.rl.fast_td3.bench_policy import FastTD3Policy
 
     path = tmp_path / "other.pt"
