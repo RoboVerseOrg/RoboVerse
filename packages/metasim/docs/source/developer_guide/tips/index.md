@@ -32,6 +32,7 @@ pip install -e ".[dev]"
 ```python
 # Enable verbose logging
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 
 # Run in non-headless mode to visualize

@@ -264,8 +264,8 @@ ground_cfg = GroundCfg(
     dynamic_friction=1.0,
     elements={
         "slope": [SlopeCfg(origin=[0, 0], size=[2.0, 2.0], slope=0.3)],
-        "stair": [StairCfg(origin=[5, 0], size=[2.0, 2.0], step_height=0.1)]
-    }
+        "stair": [StairCfg(origin=[5, 0], size=[2.0, 2.0], step_height=0.1)],
+    },
 )
 ```
 
