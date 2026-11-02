@@ -91,7 +91,8 @@ class OpenVLARunner:
 
         self.processor = AutoProcessor.from_pretrained(self.model_path, trust_remote_code=True)
         self.model = (
-            AutoModelForVision2Seq.from_pretrained(
+            AutoModelForVision2Seq
+            .from_pretrained(
                 self.model_path,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,

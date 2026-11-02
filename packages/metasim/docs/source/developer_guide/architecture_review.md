@@ -211,10 +211,12 @@ clear failing test on day one if they forget a method.
 ```python
 # Method 1: Gymnasium style (used in clean_rl, vla)
 from gymnasium import make_vec
+
 env = make_vec("RoboVerse/task", robots=[...], simulator=sim)
 
 # Method 2: Direct task class (used in fast_td3, rsl_rl, il)
 from metasim.task.registry import get_task_class
+
 env = get_task_class(task)(scenario)
 ```
 
@@ -498,6 +500,7 @@ once.
 ```python
 # metasim/sim/base.py
 
+
 class BaseSimHandler(ABC):
     def __init__(self, scenario, optional_queries=None):
         # ... existing code ...
@@ -517,9 +520,7 @@ class BaseSimHandler(ABC):
         self._set_states(states, env_ids)
 
     def get_states(
-        self, 
-        env_ids: list[int] | None = None, 
-        mode: Literal["tensor", "dict"] = "tensor"
+        self, env_ids: list[int] | None = None, mode: Literal["tensor", "dict"] = "tensor"
     ) -> TensorState | list[DictEnvState]:
         """Get states with independent caching for each mode."""
         if self._state_cache_expire:
@@ -531,9 +532,7 @@ class BaseSimHandler(ABC):
             return self._tensor_state_cache
         else:
             if self._dict_state_cache is None:
-                self._dict_state_cache = state_tensor_to_nested(
-                    self, self._tensor_state_cache
-                )
+                self._dict_state_cache = state_tensor_to_nested(self, self._tensor_state_cache)
             return self._dict_state_cache
 ```
 
@@ -542,24 +541,25 @@ class BaseSimHandler(ABC):
 ```python
 # metasim/test/sim/test_state_cache.py
 
+
 @pytest.mark.general
 def test_state_cache_mode_independence():
     """Verify that switching modes doesn't corrupt cache."""
     handler = create_test_handler()
     handler.launch()
-    
+
     # Get tensor state
     states_t1 = handler.get_states(mode="tensor")
     assert isinstance(states_t1, TensorState)
-    
+
     # Get dict state (should not affect tensor cache)
     states_d = handler.get_states(mode="dict")
     assert isinstance(states_d, list)
-    
+
     # Get tensor state again (should return same type)
     states_t2 = handler.get_states(mode="tensor")
     assert isinstance(states_t2, TensorState)
-    
+
     # Values should match
     assert torch.allclose(states_t1.pos, states_t2.pos)
 ```
@@ -587,6 +587,7 @@ def test_state_cache_mode_independence():
 # @abstractmethod
 def _set_dof_targets(self, actions: list[Action]) -> None:
     raise NotImplementedError
+
 
 # After
 @abstractmethod
@@ -619,27 +620,27 @@ from pathlib import Path
 import importlib
 import pkgutil
 
+
 def get_all_robot_configs():
     """Dynamically discover all robot configuration classes."""
     import roboverse_pack.robots as robots_module
-    
+
     configs = []
     for importer, modname, ispkg in pkgutil.iter_modules(robots_module.__path__):
-        if modname.endswith('_cfg'):
-            module = importlib.import_module(f'roboverse_pack.robots.{modname}')
+        if modname.endswith("_cfg"):
+            module = importlib.import_module(f"roboverse_pack.robots.{modname}")
             for name in dir(module):
                 obj = getattr(module, name)
-                if (isinstance(obj, type) and 
-                    hasattr(obj, 'name') and 
-                    name.endswith('Cfg')):
+                if isinstance(obj, type) and hasattr(obj, "name") and name.endswith("Cfg"):
                     configs.append(obj)
     return configs
 
+
 ALL_ROBOT_CONFIGS = get_all_robot_configs()
 
+
 @pytest.mark.general
-@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS, 
-                         ids=lambda x: x.__name__)
+@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS, ids=lambda x: x.__name__)
 def test_robot_config_instantiation(robot_cfg_cls):
     """Verify robot config can be instantiated."""
     cfg = robot_cfg_cls()
@@ -647,43 +648,42 @@ def test_robot_config_instantiation(robot_cfg_cls):
     assert isinstance(cfg.name, str)
     assert len(cfg.name) > 0
 
+
 @pytest.mark.general
-@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS,
-                         ids=lambda x: x.__name__)
+@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS, ids=lambda x: x.__name__)
 def test_robot_config_has_asset_path(robot_cfg_cls):
     """Verify robot config has at least one asset path."""
     cfg = robot_cfg_cls()
-    
+
     asset_paths = [
-        getattr(cfg, 'usd_path', None),
-        getattr(cfg, 'urdf_path', None),
-        getattr(cfg, 'mjcf_path', None),
+        getattr(cfg, "usd_path", None),
+        getattr(cfg, "urdf_path", None),
+        getattr(cfg, "mjcf_path", None),
     ]
-    
+
     valid_paths = [p for p in asset_paths if p is not None and len(p) > 0]
     assert len(valid_paths) > 0, f"{cfg.name} has no valid asset path"
 
+
 @pytest.mark.general
-@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS,
-                         ids=lambda x: x.__name__)
+@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS, ids=lambda x: x.__name__)
 def test_robot_config_has_actuators(robot_cfg_cls):
     """Verify robot config has actuator definitions."""
     cfg = robot_cfg_cls()
-    
-    if hasattr(cfg, 'actuators'):
+
+    if hasattr(cfg, "actuators"):
         assert len(cfg.actuators) > 0, f"{cfg.name} has no actuators defined"
 
+
 @pytest.mark.general
-@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS,
-                         ids=lambda x: x.__name__)
+@pytest.mark.parametrize("robot_cfg_cls", ALL_ROBOT_CONFIGS, ids=lambda x: x.__name__)
 def test_robot_config_joint_limits_valid(robot_cfg_cls):
     """Verify joint limits are valid (lower < upper)."""
     cfg = robot_cfg_cls()
-    
-    if hasattr(cfg, 'joint_limits'):
+
+    if hasattr(cfg, "joint_limits"):
         for joint_name, (lower, upper) in cfg.joint_limits.items():
-            assert lower < upper, \
-                f"{cfg.name}.{joint_name}: lower ({lower}) >= upper ({upper})"
+            assert lower < upper, f"{cfg.name}.{joint_name}: lower ({lower}) >= upper ({upper})"
 ```
 
 ---
@@ -749,11 +749,12 @@ from metasim.task.registry import get_task_class, TASK_REGISTRY
 # Select representative tasks for testing
 CORE_TASKS = [
     "pick_cube",
-    "place_cube", 
+    "place_cube",
     "open_drawer",
     "close_drawer",
     "push_button",
 ]
+
 
 @pytest.mark.mujoco
 @pytest.mark.parametrize("task_name", CORE_TASKS)
@@ -766,19 +767,19 @@ def test_task_reset_step_mujoco(task_name):
         num_envs=1,
         headless=True,
     )
-    
+
     env = task_cls(scenario, device="cpu")
     env.launch()
-    
+
     try:
         # Test reset
         obs, info = env.reset()
         assert obs is not None
-        
+
         # Test step
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
-        
+
         assert obs is not None
         assert isinstance(reward, (int, float, torch.Tensor))
         assert isinstance(terminated, (bool, torch.Tensor))
@@ -804,6 +805,7 @@ import pytest
 import torch
 from roboverse_learn.il.policies.dp.ddpm_dit_image_policy import DDPMDiTImagePolicy
 
+
 @pytest.fixture
 def sample_obs():
     """Create sample observation for testing."""
@@ -811,6 +813,7 @@ def sample_obs():
         "image": torch.randn(1, 3, 224, 224),
         "agent_pos": torch.randn(1, 7),
     }
+
 
 def test_diffusion_policy_forward():
     """Test forward pass of diffusion policy."""
@@ -820,20 +823,21 @@ def test_diffusion_policy_forward():
         horizon=16,
         # ... minimal config
     )
-    
+
     obs = sample_obs()
     action = policy.predict_action(obs)
-    
+
     assert action.shape == (1, 16, 7)  # (batch, horizon, action_dim)
+
 
 def test_diffusion_policy_training_step():
     """Test single training step."""
     policy = DDPMDiTImagePolicy(...)
     optimizer = torch.optim.Adam(policy.parameters())
-    
+
     batch = create_training_batch()
     loss = policy.compute_loss(batch)
-    
+
     assert loss.requires_grad
     loss.backward()
     optimizer.step()
@@ -855,6 +859,7 @@ def test_diffusion_policy_training_step():
 from typing import Union, List, Optional
 from metasim.scenario.robot import RobotCfg
 
+
 def make_env(
     task: str,
     robots: Optional[List[Union[str, RobotCfg]]] = None,
@@ -863,13 +868,13 @@ def make_env(
     headless: bool = True,
     device: str = "cuda",
     cameras: Optional[List] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Unified environment factory for RoboVerse.
-    
+
     This is the recommended way to create environments.
-    
+
     Args:
         task: Task name (e.g., "pick_cube", "locomotion_walk")
         robots: List of robot names or RobotCfg instances
@@ -879,10 +884,10 @@ def make_env(
         device: Device for tensor computations
         cameras: Camera configurations for observations
         **kwargs: Additional task-specific arguments
-    
+
     Returns:
         BaseTaskEnv: Configured environment instance
-    
+
     Example:
         >>> env = make_env(
         ...     task="pick_cube",
@@ -895,13 +900,13 @@ def make_env(
     """
     from metasim.task.registry import get_task_class
     from metasim.utils.setup_util import get_robot
-    
+
     # Resolve task class
     task_cls = get_task_class(task)
-    
+
     # Build scenario from task default
     scenario = task_cls.scenario.copy()
-    
+
     # Resolve robots
     if robots is not None:
         resolved_robots = []
@@ -911,7 +916,7 @@ def make_env(
             else:
                 resolved_robots.append(robot)
         scenario.robots = resolved_robots
-    
+
     # Apply overrides
     scenario.update(
         simulator=simulator,
@@ -919,19 +924,20 @@ def make_env(
         headless=headless,
         cameras=cameras or [],
     )
-    
+
     # Create and return environment
     env = task_cls(scenario, device=device, **kwargs)
     env.launch()
-    
+
     return env
+
 
 # Also register with gymnasium for compatibility
 def register_gymnasium_envs():
     """Register all RoboVerse tasks with Gymnasium."""
     import gymnasium
     from metasim.task.registry import TASK_REGISTRY
-    
+
     for task_name in TASK_REGISTRY:
         gymnasium.register(
             id=f"RoboVerse/{task_name}",
@@ -1030,15 +1036,16 @@ For high-risk changes, use feature flags:
 ```python
 # metasim/config.py
 
+
 class FeatureFlags:
     """Feature flags for gradual rollout of changes."""
-    
+
     # State cache v2 with independent tensor/dict caches
     USE_INDEPENDENT_STATE_CACHE = False
-    
+
     # New unified environment factory
     USE_UNIFIED_ENV_FACTORY = False
-    
+
     # Strict type checking in configs
     STRICT_CONFIG_VALIDATION = False
 ```

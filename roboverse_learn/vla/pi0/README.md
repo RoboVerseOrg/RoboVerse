@@ -150,15 +150,13 @@ Inside the openpi repo:
        def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
            repack_transform = _transforms.Group(
                inputs=[
-                   _transforms.RepackTransform(
-                       {
-                           "observation/image": "image",
-                           # "observation/wrist_image": "wrist_image",  # RoboVerse has a single view now
-                           "observation/state": "state",
-                           "actions": "actions",
-                           "prompt": "prompt",
-                       }
-                   )
+                   _transforms.RepackTransform({
+                       "observation/image": "image",
+                       # "observation/wrist_image": "wrist_image",  # RoboVerse has a single view now
+                       "observation/state": "state",
+                       "actions": "actions",
+                       "prompt": "prompt",
+                   })
                ]
            )
 
@@ -212,9 +210,7 @@ TrainConfig(
         decay_lr=5e-5,
     ),
     optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
-    weight_loader=weight_loaders.CheckpointWeightLoader(
-        "gs://openpi-assets/checkpoints/pi05_base/params"
-    ),
+    weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
     num_train_steps=30_000,
     freeze_filter=pi0_config.Pi0Config(
         paligemma_variant="gemma_2b_lora",

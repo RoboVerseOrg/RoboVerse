@@ -87,7 +87,8 @@ class PositionEmbeddingLearned(nn.Module):
         x_emb = self.col_embed(i)
         y_emb = self.row_embed(j)
         pos = (
-            torch.cat(
+            torch
+            .cat(
                 [
                     x_emb.unsqueeze(0).repeat(h, 1, 1),
                     y_emb.unsqueeze(1).repeat(1, w, 1),

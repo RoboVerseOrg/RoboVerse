@@ -263,7 +263,7 @@ class IsaacSimAdapter:
         # - material_name: Variant within MDL (optional, e.g., "Plywood::Oak")
         # - mtl_prim_name: Unique prim name to avoid conflicts
         mdl_basename = os.path.basename(mdl_path).removesuffix(".mdl")
-        prim_basename = prim_path.split("/")[-1]
+        prim_basename = prim_path.rsplit("/", maxsplit=1)[-1]
         mtl_prim_unique = f"{mdl_basename}_{prim_basename}_{id(prim_path)}"  # Fully unique
 
         _, mtl_prim_path = get_material_prim_path(mtl_prim_unique)
