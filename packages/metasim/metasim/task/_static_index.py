@@ -15,10 +15,13 @@ the registry can fall back to the full import for those packages.
 from __future__ import annotations
 
 import ast
+import gc
 import json
 import os
+import unicodedata
 from dataclasses import dataclass, field
 from importlib.util import find_spec
+from itertools import accumulate
 
 
 @dataclass
@@ -65,16 +68,37 @@ def _parse_registrations(path: str) -> tuple[list[str], bool]:
     cannot see is flagged dynamic and imported when the full name list is needed.
     """
     with open(path, encoding="utf-8") as f:
-        tree = ast.parse(f.read(), filename=path)
+        source = f.read()
+    tree = ast.parse(source, filename=path)
+    # identifiers are NFKC-normalized by the parser; hits[n] = source lines 1..n spelling register_task
+    text = source if source.isascii() else unicodedata.normalize("NFKC", source)
     names: list[str] = []
     dynamic = False
-    for node in ast.walk(tree):
+    if "register_task" not in text:
+        return names, dynamic
+    hits = list(accumulate(("register_task" in line for line in text.split("\n")), initial=0))
+
+    def may_hold_call(first: object, last: object) -> bool:
+        """False if the source lines from ``first`` to ``last`` cannot spell register_task."""
+        end = getattr(last, "end_lineno", None)
+        decorators = getattr(first, "decorator_list", None)
+        start = decorators[0].lineno if decorators else getattr(first, "lineno", None)  # decorators sit above
+        return end is None or start is None or hits[end] != hits[start - 1]
+
+    todo = [tree]
+    for node in todo:  # breadth-first like ast.walk, skipping fields and lists whose lines cannot hold a call
         found = _decorator_names(node)
-        if found is None:
-            continue
-        if not found:
+        if found:
+            names.extend(found)
+        elif found is not None:
             dynamic = True
-        names.extend(found)
+        for name in node._fields:
+            value = getattr(node, name, None)
+            if isinstance(value, ast.AST):
+                if value._fields and may_hold_call(value, value):  # skip leaves such as Load() and Add()
+                    todo.append(value)
+            elif isinstance(value, list) and value and may_hold_call(value[0], value[-1]):
+                todo.extend(item for item in value if isinstance(item, ast.AST) and may_hold_call(item, item))
     return names, dynamic
 
 
@@ -103,9 +127,16 @@ def _load_cache(path: str) -> dict:
 def _save_cache(path: str, entries: dict) -> None:
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
+        text = json.dumps({"version": 1, "files": entries})
+        try:
+            with open(path, encoding="utf-8") as f:
+                if f.read() == text:  # nothing changed since the last save
+                    return
+        except (OSError, ValueError):
+            pass
         tmp = f"{path}.tmp-{os.getpid()}"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"version": 1, "files": entries}, f)
+            f.write(text)
         os.replace(tmp, path)
     except OSError:  # a read-only or full cache location must not break lookups
         pass
@@ -119,7 +150,14 @@ def _scan_source(module_name: str, path: str, index: StaticIndex, cache: dict | 
         if entry is not None and entry.get("stamp") == stamp:
             names, dynamic = entry["names"], entry["dynamic"]
         else:
-            names, dynamic = _parse_registrations(path)
+            # the syntax tree is acyclic and freed on return: collections while it is alive are wasted work
+            resume_gc = gc.isenabled()
+            gc.disable()
+            try:
+                names, dynamic = _parse_registrations(path)
+            finally:
+                if resume_gc:
+                    gc.enable()
             if cache is not None:
                 cache[path] = {"stamp": stamp, "names": names, "dynamic": dynamic}
     except (OSError, SyntaxError, ValueError) as exc:
@@ -182,6 +220,17 @@ def build_static_index(
     cache_path = default_cache_path() if cache_path is None else cache_path
     cache: dict | None = _load_cache(cache_path).get("files", {}) if cache_path else None
     seen_paths: set[str] = set()
+    real_dirs: dict[str, str] = {}
+
+    def realpath(path: str) -> str:
+        """``os.path.realpath`` that resolves each directory once; only symlinked files need a full walk."""
+        if os.path.islink(path):
+            return os.path.realpath(path)
+        dirname, basename = os.path.split(path)
+        if dirname not in real_dirs:
+            real_dirs[dirname] = os.path.realpath(dirname)
+        return os.path.join(real_dirs[dirname], basename)
+
     for pkg_name in package_names:
         if "." not in pkg_name and pkg_name in local_modules:
             continue
@@ -195,20 +244,22 @@ def build_static_index(
             continue
         if spec.submodule_search_locations:
             for module_name, src in _iter_package_sources(pkg_name, list(spec.submodule_search_locations)):
-                if os.path.realpath(src) in seen_paths:
+                real = realpath(src)
+                if real in seen_paths:
                     continue
-                seen_paths.add(os.path.realpath(src))
+                seen_paths.add(real)
                 _scan_source(module_name, src, index, cache)
         elif spec.origin and spec.origin.endswith(".py"):
-            seen_paths.add(os.path.realpath(spec.origin))
+            seen_paths.add(realpath(spec.origin))
             _scan_source(pkg_name, spec.origin, index, cache)
     for mod in local_modules:
         src = _module_source_path(mod)
         if src is None and os.path.isfile(mod + ".py"):
             src = mod + ".py"
         # a file reachable both as a package module and as a cwd module (symlinks resolved) is one registration
-        if src and os.path.realpath(src) not in seen_paths:
-            seen_paths.add(os.path.realpath(src))
+        real = realpath(src) if src else None
+        if real and real not in seen_paths:
+            seen_paths.add(real)
             _scan_source(mod, src, index, cache)
     if cache is not None:
         _save_cache(cache_path, cache)
