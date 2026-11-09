@@ -258,7 +258,7 @@ def _align_by_jointname(a: RolloutResult, b: RolloutResult):
     import mujoco
 
     def _short(n: str) -> str:
-        return n.split("/")[-1]
+        return n.rsplit("/", maxsplit=1)[-1]
 
     a_short = [_short(n) for n in a.joint_names]
     b_short = [_short(n) for n in b.joint_names]

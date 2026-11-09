@@ -121,6 +121,7 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.test.conftest import register_shared_suite
 from roboverse_pack.robots.panda_cfg import PandaCfg
 
+
 def get_manipulation_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     """Build scenario for all manipulation tests.
 
@@ -137,6 +138,7 @@ def get_manipulation_scenario(sim: str, num_envs: int) -> ScenarioCfg:
         # ... other config
     )
 
+
 # Register this scenario for ALL tests in the manipulation/ directory
 register_shared_suite("metasim.test.manipulation", get_manipulation_scenario)
 ```
@@ -145,11 +147,13 @@ register_shared_suite("metasim.test.manipulation", get_manipulation_scenario)
 ```python
 import pytest
 
+
 @pytest.mark.mujoco
 def test_gripper_open_close(handler):
     """Test gripper opening and closing."""
     # handler is the shared handler instance for this (sim, num_envs) combo
     assert handler.scenario.simulator == "mujoco"
+
 
 @pytest.mark.sim("mujoco", "isaacsim")
 def test_gripper_force_limits(handler):
@@ -160,6 +164,7 @@ def test_gripper_force_limits(handler):
 **In `metasim/test/manipulation/test_grasping.py`:**
 ```python
 import pytest
+
 
 @pytest.mark.isaacsim
 def test_grasp_cube(handler):
@@ -188,6 +193,7 @@ from metasim.test.conftest import register_shared_suite
 from roboverse_pack.robots.bipedal_cfg import BipedalCfg
 from roboverse_pack.robots.quadruped_cfg import QuadrupedCfg
 
+
 def get_walking_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     """Build scenario for bipedal walking tests."""
     return ScenarioCfg(
@@ -196,6 +202,7 @@ def get_walking_scenario(sim: str, num_envs: int) -> ScenarioCfg:
         simulator=sim,
         headless=True,
     )
+
 
 def get_running_scenario(sim: str, num_envs: int) -> ScenarioCfg:
     """Build scenario for quadruped running tests."""
@@ -206,6 +213,7 @@ def get_running_scenario(sim: str, num_envs: int) -> ScenarioCfg:
         headless=True,
     )
 
+
 # Register TWO scenarios with file-specific prefixes
 register_shared_suite("metasim.test.locomotion.test_walking", get_walking_scenario)
 register_shared_suite("metasim.test.locomotion.test_running", get_running_scenario)
@@ -215,11 +223,13 @@ register_shared_suite("metasim.test.locomotion.test_running", get_running_scenar
 ```python
 import pytest
 
+
 @pytest.mark.mujoco
 def test_bipedal_gait(handler):
     """Test bipedal walking gait."""
     # Uses BipedalCfg scenario
     assert len(handler.scenario.robots) == 1
+
 
 @pytest.mark.isaacsim
 def test_balance_control(handler):
@@ -232,11 +242,13 @@ def test_balance_control(handler):
 ```python
 import pytest
 
+
 @pytest.mark.mujoco
 def test_quadruped_trot(handler):
     """Test quadruped trotting gait."""
     # Uses QuadrupedCfg scenario (different from walking!)
     assert len(handler.scenario.robots) == 1
+
 
 @pytest.mark.isaacsim
 def test_high_speed_stability(handler):
@@ -256,12 +268,14 @@ Tests marked `@pytest.mark.general` are pure unit tests that don't require any s
 import pytest
 from metasim.utils import some_pure_function
 
+
 @pytest.mark.general
 def test_pure_math():
     """Test a pure function that doesn't need any simulator."""
     # NO handler fixture requested!
     result = some_pure_function(2, 3)
     assert result == 5
+
 
 @pytest.mark.general
 def test_config_validation():
@@ -273,6 +287,7 @@ def test_config_validation():
     cfg = ScenarioCfg(robots=[], num_envs=1, simulator="mujoco")
     assert cfg.num_envs == 1
     assert cfg.simulator == "mujoco"
+
 
 @pytest.mark.general
 def test_string_parsing():

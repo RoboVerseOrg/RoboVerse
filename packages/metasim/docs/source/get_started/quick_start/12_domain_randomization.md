@@ -237,8 +237,8 @@ Good starting point for understanding how things work. Everything is just cube p
 **Environment**:
 ```python
 ScenePresets.empty_room(
-    room_size=10.0,      # 10m x 10m room
-    wall_height=5.0,     # 5m tall walls
+    room_size=10.0,  # 10m x 10m room
+    wall_height=5.0,  # 5m tall walls
 )
 ```
 
@@ -254,7 +254,7 @@ ManualGeometryCfg(
     geometry_type="cube",
     size=(1.8, 1.8, 0.1),
     position=(0.0, 0.0, 0.65),
-    default_material="roboverse_data/materials/arnold/Wood/Plywood.mdl"
+    default_material="roboverse_data/materials/arnold/Wood/Plywood.mdl",
 )
 ```
 
@@ -270,7 +270,7 @@ USDAssetPoolCfg(
     name="table",
     usd_paths=table_paths,  # 5 tables from EmbodiedGen
     per_path_overrides=table_configs,  # Per-table calibrations
-    selection_strategy="random" if level >= 1 else "sequential"
+    selection_strategy="random" if level >= 1 else "sequential",
 )
 ```
 
@@ -286,7 +286,7 @@ USDAssetPoolCfg(
     name="kujiale_scene",
     usd_paths=scene_paths,  # 12 interior scenes
     per_path_overrides=scene_configs,  # Position/scale calibrations
-    selection_strategy="random" if level >= 1 else "sequential"
+    selection_strategy="random" if level >= 1 else "sequential",
 )
 ```
 
@@ -307,9 +307,9 @@ Adds desktop objects to Mode 2 for maximum visual diversity.
 ObjectsLayerCfg(
     elements=[
         USDAssetPoolCfg(
-            name=f"desktop_object_{i+1}",
+            name=f"desktop_object_{i + 1}",
             usd_paths=object_paths,  # 10 fruit models
-            selection_strategy="random"
+            selection_strategy="random",
         )
         for i in range(3)  # Place 3 objects
     ]
@@ -361,11 +361,7 @@ Selects from MDL families. Each MDL file may contain multiple variants. The syst
 
 **Physical Materials** (optional):
 ```python
-PhysicalMaterialCfg(
-    friction_range=(0.3, 0.7),
-    restitution_range=(0.1, 0.3),
-    enabled=True
-)
+PhysicalMaterialCfg(friction_range=(0.3, 0.7), restitution_range=(0.1, 0.3), enabled=True)
 ```
 
 Randomizes physics properties on objects with RigidBodyAPI. Note: dynamic objects from SceneRandomizer are visual-only, so they skip this.
@@ -394,13 +390,13 @@ LightRandomCfg(
     light_name="ceiling_main",
     intensity=LightIntensityRandomCfg(
         intensity_range=(16000, 30000),  # Raytracing
-        enabled=True
+        enabled=True,
     ),
     color=LightColorRandomCfg(
         temperature_range=(3000, 6000),  # Warm to cool white
         use_temperature=True,
-        enabled=True
-    )
+        enabled=True,
+    ),
 )
 ```
 
@@ -495,9 +491,9 @@ After scene creation, the system adjusts robot and object positions to match the
 ```python
 table_bounds = scene_rand.get_table_bounds(env_id=0)
 if table_bounds:
-    table_height = table_bounds['height']
+    table_height = table_bounds["height"]
     clearance = 0.05
-    
+
     for obj_state in init_state["objects"].values():
         obj_state["pos"][2] = table_height + clearance
     for robot_state in init_state["robots"].values():
@@ -536,9 +532,9 @@ Each randomizer maintains an independent random number generator. Running the sc
 box_mat = MaterialRandomizer(
     MaterialPresets.mdl_family_object(
         "box_base",
-        family=("stone", "ceramic", "plastic")  # Different families
+        family=("stone", "ceramic", "plastic"),  # Different families
     ),
-    seed=args.seed + 1
+    seed=args.seed + 1,
 )
 ```
 
@@ -548,10 +544,9 @@ box_mat = MaterialRandomizer(
 # Add a fill light
 fill_light = LightRandomizer(
     LightRandomCfg(
-        light_name="fill_light",
-        intensity=LightIntensityRandomCfg(intensity_range=(5000, 10000), enabled=True)
+        light_name="fill_light", intensity=LightIntensityRandomCfg(intensity_range=(5000, 10000), enabled=True)
     ),
-    seed=args.seed + 20
+    seed=args.seed + 20,
 )
 randomizers["light"].append(fill_light)
 ```
@@ -567,7 +562,7 @@ environment_layer = EnvironmentLayerCfg(
             geometry_type="cube",
             size=(15.0, 15.0, 0.1),
             position=(0.0, 0.0, 0.005),
-            default_material="roboverse_data/materials/arnold/Stone/Marble.mdl"
+            default_material="roboverse_data/materials/arnold/Stone/Marble.mdl",
         ),
         # Add custom walls, ceiling, etc.
     ]
@@ -629,8 +624,8 @@ ObjectRegistry gives unified access to all sim objects, whether they're static (
 ```python
 registry = ObjectRegistry.get_instance()
 all_objects = registry.list_objects()
-static_only = registry.list_objects(lifecycle='static')
-dynamic_only = registry.list_objects(lifecycle='dynamic')
+static_only = registry.list_objects(lifecycle="static")
+dynamic_only = registry.list_objects(lifecycle="dynamic")
 ```
 
 Material, Object, Light, and Camera randomizers query the registry automatically to find their targets. No need for manual prim path specification in most cases.
@@ -713,16 +708,18 @@ class MyRandomCfg:
     obj_name: str
     my_param_range: tuple[float, float]
 
+
 # Implement randomizer
 class MyRandomizer(BaseRandomizerType):
     def __init__(self, cfg: MyRandomCfg, seed: int | None = None):
         super().__init__(seed=seed)
         self.cfg = cfg
-    
+
     def __call__(self):
         obj = self.registry.get_object(self.cfg.obj_name)
         value = self.rng.uniform(*self.cfg.my_param_range)
         # Apply randomization...
+
 
 # Use in demo
 my_rand = MyRandomizer(cfg, seed=args.seed + 100)
@@ -737,13 +734,11 @@ randomizers["custom"].append(my_rand)
 class SceneUSDCollections:
     @staticmethod
     def my_custom_assets(
-        *,
-        indices: list[int] | None = None,
-        return_configs: bool = False
+        *, indices: list[int] | None = None, return_configs: bool = False
     ) -> list[str] | tuple[list[str], dict]:
         paths = [...]  # Your asset paths
         configs = {...}  # Optional per-asset configs
-        
+
         if return_configs:
             return (paths, configs)
         return paths
