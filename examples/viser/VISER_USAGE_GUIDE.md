@@ -185,8 +185,8 @@ visualizer.enable_trajectory_playback()
 visualizer.setup_ik_solver(robot_name, robot_config, env_handler)
 
 # Load and set trajectory
-visualizer.load_trajectory('trajectory.pkl.gz')
-visualizer.set_current_trajectory('franka', 0)
+visualizer.load_trajectory("trajectory.pkl.gz")
+visualizer.set_current_trajectory("franka", 0)
 ```
 
 ### Custom Scene Setup
