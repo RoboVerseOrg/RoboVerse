@@ -17,6 +17,7 @@ happened, so a test or a data-ingest gate can assert on it and a human can read 
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 import torch
@@ -53,6 +54,8 @@ def _state_distance(a: TensorState, b: TensorState) -> tuple[float, str, int]:
             continue
         compared += 1
         d = float((ta - tb).abs().max())
+        if not math.isfinite(d):
+            d = math.inf
         if d > worst:
             worst, where = d, key
     return worst, where, compared
