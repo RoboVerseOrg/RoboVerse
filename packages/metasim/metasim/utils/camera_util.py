@@ -53,6 +53,9 @@ def get_cam_params(
 ):
     """Get the camera parameters.
 
+    Uses world +Z as the reference up direction, falling back to +Y for
+    viewing directions parallel to +Z or -Z.
+
     Args:
         cam_pos: The camera position.
         cam_look_at: The camera look at point.
@@ -72,7 +75,13 @@ def get_cam_params(
     num_envs = len(cam_pos)
     cam_front = cam_look_at - cam_pos
     cam_right = torch.cross(cam_front, torch.tensor([[0.0, 0.0, 1.0]], device=device), dim=1)
-    cam_up = torch.cross(cam_right, cam_front)
+    vertical = torch.norm(cam_right, dim=-1, keepdim=True) < 1e-6 * torch.norm(cam_front, dim=-1, keepdim=True)
+    cam_right = torch.where(
+        vertical,
+        torch.cross(cam_front, cam_front.new_tensor([[0.0, 1.0, 0.0]]), dim=1),
+        cam_right,
+    )
+    cam_up = torch.cross(cam_right, cam_front, dim=1)
 
     cam_right = cam_right / (torch.norm(cam_right, dim=-1, keepdim=True) + 1e-12)
     cam_front = cam_front / (torch.norm(cam_front, dim=-1, keepdim=True) + 1e-12)

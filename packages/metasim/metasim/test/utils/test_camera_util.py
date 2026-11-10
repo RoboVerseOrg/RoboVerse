@@ -11,6 +11,35 @@ from metasim.utils.camera_util import get_cam_params
 
 
 @pytest.mark.general
+@pytest.mark.parametrize(
+    "positions",
+    [
+        [[2.0, 0.0, 1.0]],
+        [[2.0, 0.0, 1.0], [0.0, 2.0, 1.0], [0.0, 1.0, 2.0]],
+        [[0.0, 0.0, 2.0], [0.0, 0.0, -2.0]],
+        [[2.0, 0.0, 1.0], [0.0, 0.0, 2.0], [0.0, 0.0, -2.0]],
+    ],
+    ids=["single-control", "three-cameras", "vertical-views", "mixed-batch"],
+)
+def test_get_cam_params_returns_valid_camera_frames(positions):
+    """Camera bases stay orthonormal at the poles and for three-camera batches."""
+    cam_pos = torch.tensor(positions)
+    extrinsics, intrinsics = get_cam_params(cam_pos, torch.zeros_like(cam_pos))
+    rotation = extrinsics[:, :3, :3]
+    assert torch.allclose(rotation @ rotation.transpose(1, 2), torch.eye(3).expand(len(positions), -1, -1), atol=1e-6)
+    assert torch.allclose(torch.linalg.det(rotation), torch.ones(len(positions)), atol=1e-6)
+    assert torch.allclose(
+        (rotation @ cam_pos.unsqueeze(-1)).squeeze(-1) + extrinsics[:, :3, 3], torch.zeros_like(cam_pos)
+    )
+    target_in_camera = extrinsics[:, :3, 3]
+    assert (target_in_camera[:, 2] > 0).all()
+    pixels = (intrinsics @ target_in_camera.unsqueeze(-1)).squeeze(-1)
+    assert torch.allclose(
+        pixels[:, :2] / pixels[:, 2:], torch.tensor([320.0, 240.0]).expand(len(positions), -1), atol=1e-4
+    )
+
+
+@pytest.mark.general
 def test_get_cam_params_single_camera():
     """Test camera parameter computation for a single camera."""
     cam_pos = torch.tensor([[1.0, 0.0, 0.5]])
