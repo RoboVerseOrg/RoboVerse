@@ -135,9 +135,9 @@ inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
 curr_robot_q = obs.robots[scenario.robots[0].name].joint_pos[:, inverse_reorder_idx]
 # Solve IK for multiple environments
 q_solution, ik_success = ik_solver.solve_ik_batch(
-    ee_pos_target=target_positions,    # (B, 3) - target EE positions
-    ee_quat_target=target_quaternions, # (B, 4) - target EE quaternions (wxyz)
-    seed_q=curr_robot_q         # (B, n_dof) - seed configs (required for curobo)
+    ee_pos_target=target_positions,  # (B, 3) - target EE positions
+    ee_quat_target=target_quaternions,  # (B, 4) - target EE quaternions (wxyz)
+    seed_q=curr_robot_q,  # (B, n_dof) - seed configs (required for curobo)
 )
 
 # q_solution: (B, n_dof_ik) - arm joint positions only
@@ -154,15 +154,15 @@ This function combines the arm joint positions from IK with gripper positions to
 gripper_widths = process_gripper_command(
     gripper_binary=gripper_open_close,  # (B,) or (B, 1) - binary gripper state
     robot_cfg=robot_cfg,
-    device=device
+    device=device,
 )
 
 # Option 1: Return tensor in alphabetical order (default)
 actions_tensor = ik_solver.compose_joint_action(
-    q_solution=q_solution,           # (B, n_dof_ik) - arm joint positions from IK
-    gripper_widths=gripper_widths,   # (B, ee_n_dof) - gripper joint positions
-    current_q=current_joint_state,   # (B, n_robot_dof) - optional current state
-    return_dict=False                # Default: return tensor
+    q_solution=q_solution,  # (B, n_dof_ik) - arm joint positions from IK
+    gripper_widths=gripper_widths,  # (B, ee_n_dof) - gripper joint positions
+    current_q=current_joint_state,  # (B, n_robot_dof) - optional current state
+    return_dict=False,  # Default: return tensor
 )
 # q_full: (B, n_robot_dof) - complete joint command in alphabetical order
 
@@ -171,7 +171,7 @@ actions_dict = ik_solver.compose_joint_action(
     q_solution=q_solution,
     gripper_widths=gripper_widths,
     current_q=current_joint_state,
-    return_dict=True                 # Return action dictionaries
+    return_dict=True,  # Return action dictionaries
 )
 # actions: list of action dictionaries for env execution
 ```
@@ -213,25 +213,18 @@ inverse_reorder_idx = [reorder_idx.index(i) for i in range(len(reorder_idx))]
 curr_robot_q = obs.robots[scenario.robots[0].name].joint_pos[:, inverse_reorder_idx]
 
 q_arm, ik_success = ik_solver.solve_ik_batch(
-    ee_pos_target=target_positions,
-    ee_quat_target=target_quaternions,
-    seed_q=curr_robot_q 
+    ee_pos_target=target_positions, ee_quat_target=target_quaternions, seed_q=curr_robot_q
 )
 
 # Step 2: Process gripper commands
-gripper_widths = process_gripper_command(
-    gripper_binary=gripper_commands,
-    robot_cfg=robot_cfg,
-    device=device
-)
+gripper_widths = process_gripper_command(gripper_binary=gripper_commands, robot_cfg=robot_cfg, device=device)
 
 # Step 3: Compose full joint command and create actions directly
 actions = ik_solver.compose_joint_action(
     q_solution=q_arm,
     gripper_widths=gripper_widths,
-    return_dict=True  # Return action dictionaries directly
+    return_dict=True,  # Return action dictionaries directly
 )
-
 ```
 
 ### Backend-Specific Notes

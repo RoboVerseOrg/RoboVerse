@@ -40,7 +40,6 @@ scenario = task_cls.scenario.update(
 # Create task env via registry
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 env = task_cls(scenario=scenario, device=device)
-
 ```
 
 **Key points:**
@@ -65,8 +64,10 @@ This workflow ensures tasks are:
 
 ```python
 """Train PPO for a reaching task using RLTaskEnv."""
+
 from metasim.task.registry import get_task_class
 import torch
+
 task_cls = get_task_class(args.task)  # e.g., "example.my_task"
 
 # Start from the class-provided default scenario and override as needed
@@ -93,7 +94,7 @@ from gymnasium import make_vec
 metasim.register_gym_envs()  # register RoboVerse/* with Gymnasium before make_vec
 
 env = make_vec(
-    env_id,                      # e.g., "example.my_task"
+    env_id,  # e.g., "example.my_task"
     num_envs=args.num_envs,
     robots=[args.robot],
     simulator=args.sim,
@@ -157,9 +158,11 @@ from metasim.task.base import BaseTaskEnv
 from metasim.task.registry import register_task
 from metasim.scenario.scenario import ScenarioCfg
 
+
 @register_task("example.my_task")
 class MyExampleTask(BaseTaskEnv):
     scenario = ScenarioCfg(robots=["franka"], simulator="mujoco", cameras=[])
+
     def _observation(self, state): ...
     def _privileged_observation(self, state): ...
     def _reward(self, state, action, next_state=None): ...
@@ -168,8 +171,8 @@ class MyExampleTask(BaseTaskEnv):
     def _observation_space(self): ...
     def _action_space(self): ...
     def _extra_spec(self): ...
-    def step(self,actions): ...
-    def reset(self,states,env_ids): ...
+    def step(self, actions): ...
+    def reset(self, states, env_ids): ...
 ```
 
 ### 4.3 Using the Task Template
