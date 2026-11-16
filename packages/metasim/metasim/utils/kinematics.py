@@ -103,7 +103,8 @@ def get_pyroki_model(robot_cfg: RobotCfg):
         ]
 
         sol = (
-            jaxls.LeastSquaresProblem(factors, [joint_var])
+            jaxls
+            .LeastSquaresProblem(factors, [joint_var])
             .analyze()
             .solve(
                 initial_vals=jaxls.VarValues.make([joint_var.with_value(prev_cfg)]),
@@ -130,7 +131,8 @@ def get_pyroki_model(robot_cfg: RobotCfg):
         ]
 
         sol = (
-            jaxls.LeastSquaresProblem(factors, [joint_var])
+            jaxls
+            .LeastSquaresProblem(factors, [joint_var])
             .analyze()
             .solve(
                 verbose=False,

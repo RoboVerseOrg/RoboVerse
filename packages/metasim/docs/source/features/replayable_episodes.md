@@ -29,9 +29,9 @@ from metasim.utils.replay import verify_episode_replay
 episode = record_episode(handler, handler.get_states(mode="tensor"), actions, seed=0)
 save_episode(episode, "episode.npz")
 
-back = load_episode("episode.npz")          # validates format, shapes, names, quaternions
-check_assets(back)                          # {"franka.mjcf_path": "ok" | "changed" | "missing"}
-print(verify_episode_replay(handler, back)) # L0 from disk: replay the actions, compare every state
+back = load_episode("episode.npz")  # validates format, shapes, names, quaternions
+check_assets(back)  # {"franka.mjcf_path": "ok" | "changed" | "missing"}
+print(verify_episode_replay(handler, back))  # L0 from disk: replay the actions, compare every state
 ```
 
 `verify_episode_replay` refuses to compare across a different simulator, a different `num_envs` (a
