@@ -85,14 +85,14 @@ python examples/rl/1_fttd3.py
 
 ```python
 CONFIG = {
-    "sim": "mjx",                    # Simulator backend
-    "robots": ["h1"],               # Robot type
-    "task": "humanoid.run",         # Task name
-    "num_envs": 1024,              # Number of environments
-    "total_timesteps": 1500,       # Training timesteps
-    "batch_size": 32768,           # Batch size
-    "learning_rate": 0.0003,       # Learning rate
-    "use_wandb": False,            # Weights & Biases logging
+    "sim": "mjx",  # Simulator backend
+    "robots": ["h1"],  # Robot type
+    "task": "humanoid.run",  # Task name
+    "num_envs": 1024,  # Number of environments
+    "total_timesteps": 1500,  # Training timesteps
+    "batch_size": 32768,  # Batch size
+    "learning_rate": 0.0003,  # Learning rate
+    "use_wandb": False,  # Weights & Biases logging
 }
 ```
 

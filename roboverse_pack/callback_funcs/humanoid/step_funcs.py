@@ -80,7 +80,8 @@ def push_by_setting_velocity(
             / env.step_dt
         ).to(torch.int)
     push_env_ids = (
-        torch.logical_and(env._episode_steps % env.push_interval == 0, env._episode_steps > 0)
+        torch
+        .logical_and(env._episode_steps % env.push_interval == 0, env._episode_steps > 0)
         .nonzero(as_tuple=False)
         .flatten()
     )
