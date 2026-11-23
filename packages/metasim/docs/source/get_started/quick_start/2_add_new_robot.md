@@ -128,7 +128,7 @@ robot = RobotCfg(
     name="new_robot_h1",
     num_joints=26,
     usd_path="roboverse_data/robots/h1/usd/h1.usd",
-    mjcf_path="roboverse_data/robots/h1/mjcf/h1.xml", 
+    mjcf_path="roboverse_data/robots/h1/mjcf/h1.xml",
     urdf_path="roboverse_data/robots/h1/urdf/h1.urdf",
     actuators={
         "left_hip_yaw": BaseActuatorCfg(stiffness=200, damping=5),
@@ -144,7 +144,7 @@ robot = RobotCfg(
         "left_hip_yaw": "position",
         "left_knee": "position",
         # ... more control modes
-    }
+    },
 )
 ```
 
