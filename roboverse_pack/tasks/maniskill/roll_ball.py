@@ -3,10 +3,10 @@ from __future__ import annotations
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import Relative2DSphereDetector
 from metasim.scenario.objects import PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers.checkers import DetectedChecker
+from metasim.task.checkers.detectors import Relative2DSphereDetector
 from metasim.task.registry import register_task
 
 from ._dense_rl import DenseRLResetMixin
@@ -62,7 +62,7 @@ class RollBallCfg(ManiskillBaseTask):
             PrimitiveSphereCfg(
                 name="ball",
                 radius=0.05,
-                mass=0.02,
+                mass=0.5236,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=[1.0, 0.0, 0.0],
             ),
@@ -120,18 +120,11 @@ class RollBallDenseTask(DenseRLResetMixin, RollBallCfg):
         if getattr(self, "_reached_status", None) is None or self._reached_status.shape[0] != n:
             self._reached_status = torch.zeros(n, device=device)
 
-    def reset(self, states=None, env_ids=None, seed=None):
-        """Reset the env and clear cached reached status for the given env ids.
-
-        ``seed`` is forwarded to ``super().reset``.
-        """
-        out = super().reset(states, env_ids, seed)
+    def _on_reset(self, env_ids: list[int]) -> None:
+        """Reset the checker, then clear the cached reached status of ``env_ids``."""
+        super()._on_reset(env_ids)
         if getattr(self, "_reached_status", None) is not None:
-            if env_ids is None:
-                self._reached_status.zero_()
-            else:
-                self._reached_status[torch.as_tensor(env_ids, device=self._reached_status.device)] = 0.0
-        return out
+            self._reached_status[torch.as_tensor(env_ids, device=self._reached_status.device)] = 0.0
 
     def _reward(self, env_states):
         from metasim.utils.math import quat_rotate

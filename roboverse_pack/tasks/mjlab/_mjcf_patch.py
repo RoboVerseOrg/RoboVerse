@@ -70,6 +70,9 @@ def patch_mjcf_with_pd_actuators(
     Returns:
         Absolute path to the patched MJCF.
     """
+    # the patched XML pins meshdir to the source's absolute directory, so the cache key must be absolute too:
+    # two checkouts with the same relative asset path must not share a patched file
+    mjcf_path = os.path.abspath(mjcf_path)
     key = hashlib.md5(
         (
             f"{mjcf_path}|{sorted(joint_kp.items())}|{damping_ratio}|{natural_freq_hz}"

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import torch
 
-from metasim.example.example_pack.tasks.checkers import EmptyChecker
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
+from metasim.task.checkers import EmptyChecker
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
 from metasim.utils.state import TensorState
@@ -40,8 +40,6 @@ class RLBenchTask(BaseTaskEnv):
         self._initial_states = initial_states[: self.num_envs]
         return self._initial_states
 
-    def reset(self, states=None, env_ids=None, seed=None):
-        """Reset the checker. ``seed`` is forwarded to ``super().reset``."""
-        states = super().reset(states, env_ids, seed)
+    def _on_reset(self, env_ids: list[int]) -> None:
+        """Reset the checker for ``env_ids``."""
         self.checker.reset(self.handler, env_ids=env_ids)
-        return states

@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -86,37 +83,4 @@ class LiberoKitchenScene9PutTheFryingPanOnTheCabinetShelfTask(Libero90BaseTask):
         "roboverse_data/trajs/libero90/libero_90_kitchen_scene9_put_the_frying_pan_on_the_cabinet_shelf_traj_v2.pkl"
     )
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: frying pan is on the cabinet shelf top region.
-
-        Success condition (similar to wine_rack in kitchen4):
-        - Frying pan is within the bounding box region defined by the top_region site
-        - Uses the site's position and orientation from physics data
-        """
-        frypan_pos = states.objects["chefmate_8_frypan"].root_state[:, :3]  # (N,3)
-        N = frypan_pos.shape[0]
-
-        # Get shelf top_region site pose and expand to N environments
-        shelf_top_mat = self.handler.physics.named.data.site_xmat["wooden_two_layer_shelf/top_region"]  # (9,)
-        shelf_top_pos = self.handler.physics.named.data.site_xpos["wooden_two_layer_shelf/top_region"]  # (3,)
-
-        # Expand to (N,3,3) and (N,3)
-        shelf_top_R = (
-            torch.from_numpy(shelf_top_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(frypan_pos.device)
-        )  # (N,3,3)
-        shelf_top_t = torch.from_numpy(shelf_top_pos).float().unsqueeze(0).expand(N, 3).to(frypan_pos.device)  # (N,3)
-
-        # top_region site half-size from wooden_two_layer_shelf.xml: size="0.03272 0.05000 0.11027"
-        bbox_lower = torch.tensor([-0.03272, -0.05000, -0.11027], device=frypan_pos.device)
-        bbox_upper = torch.tensor([0.03272, 0.05000, 0.11027], device=frypan_pos.device)
-
-        # Transform frying pan position to shelf top_region local frame
-        frypan_local = torch.matmul(shelf_top_R.transpose(1, 2), (frypan_pos - shelf_top_t).unsqueeze(-1)).squeeze(
-            -1
-        )  # (N,3)
-        ge_lower = frypan_local >= bbox_lower  # (N,3)
-        le_upper = frypan_local <= bbox_upper  # (N,3)
-        inside = (ge_lower & le_upper).all(dim=-1)
-        return inside
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("In", "chefmate_8_frypan", "wooden_two_layer_shelf", "top_region"),)

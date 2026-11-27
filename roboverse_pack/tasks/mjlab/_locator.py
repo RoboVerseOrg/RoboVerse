@@ -95,3 +95,19 @@ class lazy_scenario:
         if self._value is None:
             self._value = self._factory()
         return self._value
+
+
+def single_process_mujoco(scenario, task_name: str) -> None:
+    """Refuse ``num_envs > 1`` on MuJoCo for a task that reads the MuJoCo model directly.
+
+    The mjlab ports load their robot as the scene MJCF and read ``handler.physics`` (joint ids, ``qpos``,
+    sensors) in their MDP terms. With ``num_envs > 1`` MetaSim runs MuJoCo through the parallel wrapper,
+    whose handler lives in worker processes and exposes no ``physics``; the first such read would fail deep
+    inside a reset. Fail at construction with the two working options instead.
+    """
+    num_envs = int(getattr(scenario, "num_envs", 1) or 1)
+    if getattr(scenario, "simulator", None) == "mujoco" and num_envs > 1:
+        raise ValueError(
+            f"{task_name} runs MuJoCo in one process and reads the model directly, so it supports --num-envs 1 "
+            f"on --sim mujoco (got num_envs={num_envs}). Use --num-envs 1, or --sim newton for batched envs."
+        )

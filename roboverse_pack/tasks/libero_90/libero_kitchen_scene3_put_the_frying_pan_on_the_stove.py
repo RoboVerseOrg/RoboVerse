@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -80,25 +77,4 @@ class LiberoKitchenScene3PutFryingPanOnStoveTask(Libero90BaseTask):
     # Trajectory file path
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene3_put_the_frying_pan_on_the_stove_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker."""
-        frypan_pos = states.objects["moka_pot"].root_state[:, :3]  # (N,3)
-        stove_center_pos = self.handler.physics.named.data.site_xpos["flat_stove/burner"]
-
-        # Check if frying pan is within a region above the stove
-        range_threshold = 0.08  # Radius of the range in xy plane
-        height_threshold = 0.03  # Height threshold above the stove
-
-        # Calculate xy distance between frying pan and stove
-        xy_distance = torch.norm(frypan_pos[:, :2] - stove_center_pos[:, :2], dim=-1)  # (N,)
-        # Calculate height difference (frypan z - stove z)
-        height_diff = frypan_pos[:, 2] - stove_center_pos[:, 2]  # (N,)
-
-        # Check both conditions: xy distance < range AND 0 < height_diff < height_threshold
-        xy_close = xy_distance < range_threshold  # (N,)
-        height_valid = (height_diff > 0) & (height_diff < height_threshold)  # (N,)
-        is_on_stove = xy_close & height_valid  # (N,)
-
-        return is_on_stove
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("On", "chefmate_8_frypan", "flat_stove", "cook_region"),)

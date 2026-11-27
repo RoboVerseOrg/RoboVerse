@@ -5,7 +5,7 @@ from __future__ import annotations
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.test.conftest import register_shared_suite
 
-_ALLOWED_SIMS = {"isaacsim"}
+_ALLOWED_SIMS = {"isaacsim", "mujoco", "newton"}
 
 
 def get_randomization_scenario(sim: str, num_envs: int) -> ScenarioCfg:

@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -69,21 +66,6 @@ class LiberoLivingRoomScene1PickUpAlphabetSoupAndPutItInTheBasketTask(Libero90Ba
     workspace_offset = ((0, 0, 0),)
     workspace_size = ((1.0, 1.2, 0.1),)
 
-    # traj_filepath = "roboverse_data/trajs/libero90/libero_90_living_room_scene1_pick_up_the_alphabet_soup_and_put_it_in_the_basket_traj_v2.pkl"
-    traj_filepath = "roboverse_data/trajs/libero90_ground/libero_90_living_room_scene1_pick_up_the_alphabet_soup_and_put_it_in_the_basket_traj_v2.pkl"
+    traj_filepath = "roboverse_data/trajs/libero90/libero_90_living_room_scene1_pick_up_the_alphabet_soup_and_put_it_in_the_basket_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: alphabet_soup is inside basket/contain_region bounding box."""
-        soup_pos = states.objects["alphabet_soup"].root_state[:, :3]  # (N,3)
-        N = soup_pos.shape[0]
-        # Get site pose (xmat as a flattened 3x3, xpos as position)
-        region_mat = self.handler.physics.named.data.site_xmat["basket/contain_region"]  # (9,)
-        region_pos = self.handler.physics.named.data.site_xpos["basket/contain_region"]  # (3,)
-        region_R = torch.from_numpy(region_mat).float().reshape(3, 3).unsqueeze(0).expand(N, 3, 3).to(soup_pos.device)
-        region_t = torch.from_numpy(region_pos).float().unsqueeze(0).expand(N, 3).to(soup_pos.device)
-        half_size = torch.tensor([0.06108, 0.06108, 0.06949], device=soup_pos.device)
-        soup_local = torch.matmul(region_R.transpose(1, 2), (soup_pos - region_t).unsqueeze(-1)).squeeze(-1)
-        inside = (soup_local.abs() <= (half_size + 1e-6)).all(dim=-1)
-        return inside
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("In", "alphabet_soup", "basket", "contain_region"),)

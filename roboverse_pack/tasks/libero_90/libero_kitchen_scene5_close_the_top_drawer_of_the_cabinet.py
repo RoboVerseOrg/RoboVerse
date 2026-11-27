@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -83,14 +80,4 @@ class LiberoKitchenScene5CloseTheTopDrawerOfTheCabinetTask(Libero90BaseTask):
         "roboverse_data/trajs/libero90/libero_90_kitchen_scene5_close_the_top_drawer_of_the_cabinet_traj_v2.pkl"
     )
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: top drawer closed."""
-        cabinet_joint_pos = states.objects["white_cabinet"].joint_pos  # (N, num_joints)
-        # Joint position logic:
-        # negative value (e.g., -0.1580) = drawer open
-        # positive/zero value = drawer closed
-        top_threshold = -0.01  # Top drawer closed: position > this
-        top_closed = cabinet_joint_pos[:, 2] > top_threshold  # (N,)
-        return top_closed
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("Close", "white_cabinet", "top_level"),)

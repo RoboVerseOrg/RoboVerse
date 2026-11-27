@@ -6,13 +6,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "roboverse-py"
-version = "1.0.0b0"
+version = "1.0.0"
 description = "RoboVerse content, learning, and examples built on MetaSim"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
-    "roboverse-metasim>=1.0.0b0,<1.1",
+    "roboverse-metasim>=1.0.0,<1.1",
     "gymnasium",
     "loguru",
     "numpy",
@@ -26,7 +26,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "ruff",
-    "roboverse-metasim[dev]>=1.0.0b0,<1.1",
+    "roboverse-metasim[dev]>=1.0.0,<1.1",
 ]
 assets = ["huggingface-hub", "rootutils", "tyro"]
 examples = [
@@ -79,18 +79,18 @@ vla = [
     "tensorflow-hub",
     "transformers",
 ]
-genesis = ["roboverse-metasim[genesis]>=1.0.0b0,<1.1"]
-isaacgym = ["roboverse-metasim[isaacgym]>=1.0.0b0,<1.1"]
-isaacsim = ["roboverse-metasim[isaacsim]>=1.0.0b0,<1.1"]
-isaacsim211 = ["roboverse-metasim[isaacsim211]>=1.0.0b0,<1.1"]
-mjx = ["roboverse-metasim[mjx]>=1.0.0b0,<1.1"]
-mujoco = ["roboverse-metasim[mujoco]>=1.0.0b0,<1.1"]
-newton = ["roboverse-metasim[newton]>=1.0.0b0,<1.1"]
-superdex = ["roboverse-metasim[superdex]>=1.0.0b0,<1.1"]  # Python 3.12 only
-pybullet = ["roboverse-metasim[pybullet]>=1.0.0b0,<1.1"]
-robosplatter = ["roboverse-metasim[robosplatter]>=1.0.0b0,<1.1"]
-sapien2 = ["roboverse-metasim[sapien2]>=1.0.0b0,<1.1"]
-sapien3 = ["roboverse-metasim[sapien3]>=1.0.0b0,<1.1"]
+genesis = ["roboverse-metasim[genesis]>=1.0.0,<1.1"]
+isaacgym = ["roboverse-metasim[isaacgym]>=1.0.0,<1.1"]
+isaacsim = ["roboverse-metasim[isaacsim]>=1.0.0,<1.1"]
+isaacsim211 = ["roboverse-metasim[isaacsim211]>=1.0.0,<1.1"]
+mjx = ["roboverse-metasim[mjx]>=1.0.0,<1.1"]
+mujoco = ["roboverse-metasim[mujoco]>=1.0.0,<1.1"]
+newton = ["roboverse-metasim[newton]>=1.0.0,<1.1"]
+superdex = ["roboverse-metasim[superdex]>=1.0.0,<1.1"]  # Python 3.12 only
+pybullet = ["roboverse-metasim[pybullet]>=1.0.0,<1.1"]
+robosplatter = ["roboverse-metasim[robosplatter]>=1.0.0,<1.1"]
+sapien2 = ["roboverse-metasim[sapien2]>=1.0.0,<1.1"]
+sapien3 = ["roboverse-metasim[sapien3]>=1.0.0,<1.1"]
 
 [project.entry-points."metasim.packages"]
 roboverse_pack = "roboverse_pack"

@@ -3,10 +3,10 @@ from __future__ import annotations
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import Relative2DSphereDetector
 from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveCylinderCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers.checkers import DetectedChecker
+from metasim.task.checkers.detectors import Relative2DSphereDetector
 from metasim.task.registry import register_task
 
 from ._dense_rl import DenseRLResetMixin
@@ -63,7 +63,7 @@ class PokeCubeCfg(ManiskillBaseTask):
             PrimitiveCubeCfg(
                 name="cube",
                 size=[0.04, 0.04, 0.04],
-                mass=0.02,
+                mass=0.064,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=[1.0, 0.0, 0.0],
             ),
@@ -148,12 +148,12 @@ class PokeCubeDenseTask(DenseRLResetMixin, PokeCubeCfg):
             _Cube(
                 name="cube",
                 size=[0.04, 0.04, 0.04],
-                mass=0.02,
+                mass=0.064,
                 physics=PhysicStateType.RIGIDBODY,
                 color=[1.0, 0.0, 0.0],
             ),
             _Cube(
-                name="peg", size=[0.24, 0.05, 0.05], mass=0.05, physics=PhysicStateType.RIGIDBODY, color=[0.5, 0.5, 0.5]
+                name="peg", size=[0.24, 0.05, 0.05], mass=0.6, physics=PhysicStateType.RIGIDBODY, color=[0.5, 0.5, 0.5]
             ),
         ],
         robots=["franka"],

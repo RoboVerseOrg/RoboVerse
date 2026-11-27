@@ -10,6 +10,7 @@ from loguru import logger as log
 
 from metasim.scenario.objects import ArticulationObjCfg, PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg
 from metasim.scenario.robot import RobotCfg
+from metasim.sim.mujoco.primitives import primitive_xml
 from metasim.sim.mujoco.renderer_teardown import attach_renderer_teardown, close_renderer
 from metasim.utils.log import warn_once
 
@@ -84,6 +85,10 @@ MUJOCO_ARENA_MEMORY = "512M"
 class MujocoHandler(BaseSimHandler):
     set_states_restores_velocities = True  # ``_set_root_state`` / ``_set_joint_state`` write qvel
     set_states_restores_dict_velocities = True  # the dict path writes them too
+    unsupported_body_properties = {
+        "restitution": "MuJoCo has no coefficient of restitution; bounce follows each geom's solref "
+        "(stiffness and damping), so set those in the asset instead.",
+    }
 
     @property
     def set_states_refreshes(self) -> bool:  # type: ignore[override]
@@ -203,6 +208,13 @@ class MujocoHandler(BaseSimHandler):
 
         self._init_torque_control()
         self._apply_default_joint_positions()
+        for robot in self.robots:
+            passive = self._passive_joint_names(robot.name)
+            if passive:
+                log.info(
+                    f"MuJoCo: robot {robot.name!r} has passive joints {passive} (no actuator): observed, never "
+                    "driven; their action slots are ignored."
+                )
 
         if not self.headless:
             self.viewer = mujoco.viewer.launch_passive(self.physics.model.ptr, self.physics.data.ptr)
@@ -343,7 +355,9 @@ class MujocoHandler(BaseSimHandler):
 
             if hasattr(site, "size") and site.size is not None:
                 size = list(site.size)
-                if len(size) >= 1:
+                if len(size) == 3:  # a box site's half-extents scale per axis, like its pos
+                    site.size = [size[0] * scale_x, size[1] * scale_y, size[2] * scale_z]
+                elif len(size) >= 1:
                     site.size = [size[0] * max(scale_x, scale_y, scale_z)]
 
         for joint in mjcf_model.find_all("joint"):
@@ -379,31 +393,6 @@ class MujocoHandler(BaseSimHandler):
         global_elem.offwidth = width
         global_elem.offheight = height
 
-    def _create_primitive_xml(self, obj):
-        if isinstance(obj, PrimitiveCubeCfg):
-            size_str = f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}"
-            type_str = "box"
-        elif isinstance(obj, PrimitiveCylinderCfg):
-            size_str = f"{obj.radius} {obj.height}"
-            type_str = "cylinder"
-        elif isinstance(obj, PrimitiveSphereCfg):
-            size_str = f"{obj.radius}"
-            type_str = "sphere"
-        else:
-            raise ValueError("Unknown primitive type")
-
-        rgba_str = f"{obj.color[0]} {obj.color[1]} {obj.color[2]} 1"
-        xml = f"""
-        <mujoco model="{obj.name}_model">
-        <worldbody>
-            <body name="{type_str}_body" pos="{0} {0} {0}">
-            <geom name="{type_str}_geom" type="{type_str}" size="{size_str}" rgba="{rgba_str}"/>
-            </body>
-        </worldbody>
-        </mujoco>
-        """
-        return xml.strip()
-
     def _init_mujoco(self) -> mjcf.RootElement:
         """Initialize MuJoCo model with optional scene support."""
         mjcf_model = self._init_scene()
@@ -411,8 +400,8 @@ class MujocoHandler(BaseSimHandler):
         # MuJoCo >= 3.x sizes its arena from `<size memory>` (the legacy njmax/nconmax hints no longer
         # grow it). The compiler default is far too small for humanoids + mesh objects: e.g. the H1 scene
         # in examples/10_mount_camera.py dies with "mj_stackAlloc: out of memory ... ncon = 286".
-        # Reserve a generous arena unless the scene MJCF already sets one.
-        if getattr(mjcf_model.size, "memory", None) is None:
+        # Reserve a generous arena unless the scene MJCF already sizes it (`memory`, or the legacy `njmax`).
+        if getattr(mjcf_model.size, "memory", None) is None and getattr(mjcf_model.size, "njmax", None) is None:
             mjcf_model.size.memory = MUJOCO_ARENA_MEMORY
 
         if self.scenario.sim_params.dt is not None:
@@ -424,10 +413,24 @@ class MujocoHandler(BaseSimHandler):
         self._add_robots_to_model(mjcf_model)
         self._add_cameras_to_model(mjcf_model)
         self._add_lights_to_model(mjcf_model)
+        self._drop_attached_size_hints(mjcf_model)
 
         if self.scenario.sim_params.dt is not None:
             mjcf_model.option.timestep = self.scenario.sim_params.dt
         return mjcf_model
+
+    def _drop_attached_size_hints(self, mjcf_model: mjcf.RootElement) -> None:
+        """Drop attached assets' legacy ``<size njmax/nconmax>`` once the root sizes the arena with ``memory``.
+
+        dm_control merges every attached model's ``<size>`` into the root, and MuJoCo rejects a model that
+        sets both ``memory`` and ``njmax`` (LIBERO's stove and cabinets declare ``njmax="500"``).
+        """
+        if getattr(mjcf_model.size, "memory", None) is None:
+            return
+        for attached in self.mj_objects.values():
+            for hint in ("njmax", "nconmax"):
+                if getattr(attached.size, hint, None) is not None:
+                    setattr(attached.size, hint, None)
 
     @property
     def physics_dt(self) -> float | None:  # type: ignore[override]
@@ -623,7 +626,7 @@ class MujocoHandler(BaseSimHandler):
 
         for obj in self.objects:
             if isinstance(obj, (PrimitiveCubeCfg, PrimitiveCylinderCfg, PrimitiveSphereCfg)):
-                xml_str = self._create_primitive_xml(obj)
+                xml_str = primitive_xml(obj)
                 obj_mjcf = mjcf.from_xml_string(xml_str)
             else:
                 obj_mjcf = mjcf.from_path(obj.mjcf_path)
@@ -658,6 +661,8 @@ class MujocoHandler(BaseSimHandler):
 
             if hasattr(robot, "scale") and robot.scale != (1.0, 1.0, 1.0):
                 self._apply_scale_to_mjcf(robot_xml, robot.scale)
+
+            self._synthesize_cfg_actuators(robot_xml, robot)
 
             # Promote any author-declared freejoint to the attachment wrapper
             # *before* attaching, so MuJoCo still sees one (and only one) free
@@ -722,6 +727,66 @@ class MujocoHandler(BaseSimHandler):
             self.mj_objects[robot.name] = robot_xml
             self._mujoco_robot_names.append(robot_xml.full_identifier)
 
+    @staticmethod
+    def _mjcf_actuator_names(robot_xml: mjcf.RootElement) -> set[str]:
+        """Names of the actuators a robot MJCF ships (the ``<actuator>`` children with a name)."""
+        return {act.name for act in robot_xml.actuator.all_children() if act.name}
+
+    def _synthesize_cfg_actuators(self, robot_xml: mjcf.RootElement, robot: RobotCfg) -> None:
+        """Add an actuator for every ``RobotCfg.actuators`` joint the MJCF does not actuate.
+
+        RoboVerse names each actuator after the joint it drives, and ``RobotCfg.actuators`` (keyed by
+        joint name) carries the servo gains. An asset that ships no actuator for such a joint, as mjlab's
+        bare robots and Menagerie files that leave actuation to the user do, gets one here, so the config
+        is the single source of control truth on this backend as it already is on Newton. A position-
+        controlled joint becomes a ``<position>`` servo with the config's stiffness / damping (the asset
+        is kept as-is when it already actuates the joint; ``_init_torque_control`` then overrides the
+        gains it ships with any the config sets). An effort-controlled joint becomes a ``<motor>`` whose
+        ``ctrlrange`` is the config's ``effort_limit_sim``. A joint the MJCF does not define, or a joint
+        without the data its actuator needs, is an error: a config that says "drive this joint" must
+        not turn into a free joint.
+        """
+        if not robot.actuators:
+            return
+        joints = {j.name: j for j in robot_xml.find_all("joint") if j.name and getattr(j, "type", None) != "free"}
+        existing = self._mjcf_actuator_names(robot_xml)
+        control_type = robot.control_type or {}
+        joint_limits = robot.joint_limits or {}
+        for joint_name, actuator_cfg in robot.actuators.items():
+            if joint_name in existing:
+                continue
+            if joint_name not in joints:
+                raise ValueError(
+                    f"Robot {robot.name!r}: RobotCfg.actuators names joint {joint_name!r}, which the MJCF "
+                    f"{robot.mjcf_path} does not define (joints: {sorted(joints)})."
+                )
+            mode = control_type.get(joint_name, "position")
+            if mode == "position":
+                if actuator_cfg.stiffness is None:
+                    raise ValueError(
+                        f"Robot {robot.name!r}: the MJCF {robot.mjcf_path} ships no actuator for joint "
+                        f"{joint_name!r} and its BaseActuatorCfg sets no stiffness, so there is nothing to drive it "
+                        "with. Set stiffness (and damping) on the config or add an actuator named after the joint "
+                        "to the MJCF."
+                    )
+                attrs = {"kp": float(actuator_cfg.stiffness), "kv": float(actuator_cfg.damping or 0.0)}
+                if joint_name in joint_limits:
+                    attrs["ctrlrange"] = [float(v) for v in joint_limits[joint_name]]
+                if actuator_cfg.effort_limit_sim is not None:
+                    limit = abs(float(actuator_cfg.effort_limit_sim))
+                    attrs["forcerange"] = [-limit, limit]
+                robot_xml.actuator.add("position", name=joint_name, joint=joint_name, **attrs)
+            else:
+                if actuator_cfg.effort_limit_sim is None:
+                    raise ValueError(
+                        f"Robot {robot.name!r}: the MJCF {robot.mjcf_path} ships no actuator for the effort-controlled "
+                        f"joint {joint_name!r} and its BaseActuatorCfg sets no effort_limit_sim; set one (the motor's "
+                        "ctrlrange) or add a motor named after the joint to the MJCF."
+                    )
+                limit = abs(float(actuator_cfg.effort_limit_sim))
+                robot_xml.actuator.add("motor", name=joint_name, joint=joint_name, ctrlrange=[-limit, limit])
+            log.debug(f"MuJoCo: synthesized a {mode} actuator for {robot.name}/{joint_name} from its RobotCfg")
+
     def _exclude_robot_self_collisions(self, mjcf_model: mjcf.RootElement, robot_attached) -> None:
         """Disable all same-robot contacts for robots that opt out of self-collision."""
         robot_bodies = [body for body in robot_attached.find_all("body") if body.name]
@@ -759,6 +824,13 @@ class MujocoHandler(BaseSimHandler):
                 )  # Hardcoded to position control
                 actuator_states["dof_vel_target"][clean_name] = None
                 actuator_states["dof_torque"][clean_name] = float(self.physics.data.actuator_force[actuator_id].item())
+
+        for joint_name in self._passive_joint_names(obj_name):  # no ctrl: the target is where the joint is
+            actuator_states["dof_pos_target"][joint_name] = float(
+                self.physics.data.joint(f"{robot_name}{joint_name}").qpos[0]
+            )
+            actuator_states["dof_vel_target"][joint_name] = None
+            actuator_states["dof_torque"][joint_name] = 0.0
 
         return actuator_states
 
@@ -859,29 +931,37 @@ class MujocoHandler(BaseSimHandler):
             model_name = self.mj_objects[robot.name].model
             obj_body_id = self.physics.model.body(f"{model_name}/").id
             joint_names = self._get_joint_names(robot.name, sort=True)
-            actuator_reindex = self._get_actuator_reindex(robot.name)
+            actuator_ids = self._joint_actuator_ids(robot.name)
             body_ids_reindex = self._get_body_ids_reindex(robot.name)
             root_np, body_np = self._pack_state([obj_body_id] + body_ids_reindex)
+
+            joint_pos = np.array([self._read_joint_qpos(f"{model_name}/{jn}", qpos_snapshot) for jn in joint_names])
+            # One column per joint: a passive joint has no ctrl, so its target is the position it is at and
+            # its actuator force is zero.
+            joint_pos_target = np.array([
+                ctrl_snapshot[aid] if aid is not None else joint_pos[col] for col, aid in enumerate(actuator_ids)
+            ])
+            joint_effort_target = np.array([
+                actuator_force_snapshot[aid] if aid is not None else 0.0 for aid in actuator_ids
+            ])
 
             state = RobotState(
                 body_names=self._get_body_names(robot.name),
                 root_state=torch.from_numpy(root_np).float().unsqueeze(0),  # (1,13)
                 body_state=torch.from_numpy(body_np).float().unsqueeze(0),  # (1,n_body,13)
-                joint_pos=torch.tensor([
-                    self._read_joint_qpos(f"{model_name}/{jn}", qpos_snapshot) for jn in joint_names
-                ]).unsqueeze(0),
+                joint_pos=torch.from_numpy(joint_pos).float().unsqueeze(0),
                 joint_vel=torch.tensor([
                     self._read_joint_qvel(f"{model_name}/{jn}", qvel_snapshot) for jn in joint_names
                 ]).unsqueeze(0),
                 joint_pos_target=(
-                    torch.from_numpy(ctrl_snapshot[actuator_reindex]).unsqueeze(0)
+                    torch.from_numpy(joint_pos_target).float().unsqueeze(0)
                     if self._robot_reports_position_target(robot.name)
                     else None  # an effort-driven robot's ctrl is a torque, not a position target
                 ),
                 joint_vel_target=torch.from_numpy(self._current_vel_target).unsqueeze(0)
                 if self._current_vel_target is not None
                 else None,
-                joint_effort_target=torch.from_numpy(actuator_force_snapshot[actuator_reindex]).unsqueeze(0),
+                joint_effort_target=torch.from_numpy(joint_effort_target).float().unsqueeze(0),
             )
             robot_states[robot.name] = state
 
@@ -1088,6 +1168,8 @@ class MujocoHandler(BaseSimHandler):
             else:
                 full_joint_name = f"{obj_name}/{joint_name}"
 
+            joint_pos = np.asarray(joint_pos, dtype=float).reshape(-1)
+            joint_pos = float(joint_pos[0]) if joint_pos.size == 1 else joint_pos  # demos may store 1-element arrays
             joint = self.physics.data.joint(full_joint_name)
             joint.qpos = joint_pos
             joint.qvel = 0 if zero_vel else float(np.asarray(dof_vel.get(joint_name, 0.0)).reshape(-1)[0])
@@ -1153,10 +1235,22 @@ class MujocoHandler(BaseSimHandler):
             for i, jn in enumerate(jnames):
                 if jn in joint_targets:
                     self._current_action[i] = joint_targets[jn]
+            actuator_ids = self._joint_actuator_ids(robot.name)
             for i in range(self._robot_num_dofs[robot_idx]):
                 jn = jnames[i]
-                if jn in joint_targets:
-                    self.physics.data.actuator(f"{self._mujoco_robot_names[robot_idx]}{jn}").ctrl = joint_targets[jn]
+                if jn not in joint_targets:
+                    continue
+                if actuator_ids[i] is None:  # a passive joint takes no target
+                    if not isinstance(self._actions_cache, (list, tuple)):
+                        continue  # a tensor action carries one slot per joint; the passive slot is documented as ignored
+                    warn_once(
+                        ("mujoco.passive_joint_target", robot.name, jn),
+                        f"MuJoCo: joint {jn!r} of robot {robot.name!r} has no actuator (passive, e.g. a coupled "
+                        f"gripper finger), so the dof_pos_target written for it is ignored. Drive its actuated "
+                        "partner, or give the joint an actuator in the MJCF / gains in RobotCfg.actuators. Warned once.",
+                    )
+                    continue
+                self.physics.data.ctrl[actuator_ids[i]] = joint_targets[jn]
 
     def refresh_render(self) -> None:
         self.physics.forward()  # Recomputes the forward dynamics without advancing the simulation.
@@ -1263,29 +1357,102 @@ class MujocoHandler(BaseSimHandler):
                     robot_actuator_names.append(joint_name)
 
         joint_names = self._get_joint_names(robot_name)
-        assert set(robot_actuator_names) == set(joint_names), (
-            f"Actuator names {robot_actuator_names} do not match joint names {joint_names}"
-        )
+        stray = sorted(set(robot_actuator_names) - set(joint_names))
+        if stray:
+            raise ValueError(
+                f"Robot {robot_name!r}: actuators {stray} are not named after a joint of the robot (joints: "
+                f"{joint_names}). RoboVerse drives each joint through the actuator of the same name; rename the "
+                "actuators in the MJCF (a tendon- or site-driven actuator is not supported)."
+            )
         return robot_actuator_names
 
-    def _get_actuator_reindex(self, robot_name: str) -> list[int]:
+    def _passive_joint_names(self, robot_name: str) -> list[str]:
+        """Joints of ``robot_name`` that no actuator drives, sorted.
+
+        A passive joint (a gripper finger coupled to the driven one by an MJCF ``<equality>``, a spring-
+        loaded wrist, a free wheel) is part of the robot's joint vector, so it appears in ``joint_pos`` /
+        ``joint_vel`` and takes a slot in the action tensor, but no target is written for it and its
+        ``joint_pos_target`` reports the position it actually has.
+        """
+        actuated = set(self._get_actuator_names(robot_name))
+        return [name for name in self._get_joint_names(robot_name, sort=True) if name not in actuated]
+
+    def _joint_actuator_ids(self, robot_name: str) -> list[int | None]:
+        """The MuJoCo actuator id driving each of ``robot_name``'s sorted joints; ``None`` for a passive joint.
+
+        The model is fixed after ``launch``, so the map is built once per robot and cached.
+        """
+        cache = self.__dict__.setdefault("_joint_actuator_ids_cache", {})
+        if robot_name in cache:
+            return cache[robot_name]
         assert isinstance(self.object_dict[robot_name], RobotCfg)
-        origin_actuator_names = self._get_actuator_names(robot_name)
-        sorted_actuator_names = sorted(origin_actuator_names)
-        return [origin_actuator_names.index(name) for name in sorted_actuator_names]
+        robot_idx = next(i for i, robot in enumerate(self.robots) if robot.name == robot_name)
+        prefix = self._mujoco_robot_names[robot_idx]
+        by_name = {
+            self.physics.model.actuator(i).name: i for i in range(self.physics.model.nu)
+        }  # actuators are global; a robot's are the ones under its prefix
+        self._get_actuator_names(robot_name)  # validates that every actuator under the prefix names a joint
+        ids = [by_name.get(f"{prefix}{jn}") for jn in self._get_joint_names(robot_name, sort=True)]
+        cache[robot_name] = ids
+        return ids
+
+    def _get_actuator_reindex(self, robot_name: str) -> list[int]:
+        """Global actuator ids of the robot's *actuated* joints in sorted-joint order (passive joints skipped)."""
+        return [aid for aid in self._joint_actuator_ids(robot_name) if aid is not None]
+
+    def _body_ids(self, obj_name: str) -> list[int]:
+        """Model body ids of an articulation, in ``_get_body_names(obj_name, sort=False)`` order."""
+        model_name = self.mj_objects[obj_name].model
+        ids = []
+        for i in range(self.physics.model.nbody):
+            parts = self.physics.model.body(i).name.split("/")
+            if parts[0] == model_name and parts[-1] != "":
+                ids.append(i)
+        return ids
 
     def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
         if isinstance(self.object_dict[obj_name], ArticulationObjCfg):
-            model_name = self.mj_objects[obj_name].model
-            names = [self.physics.model.body(i).name for i in range(self.physics.model.nbody)]
-            names = [name.split("/")[-1] for name in names if name.split("/")[0] == model_name]
-            names = [name for name in names if name != ""]
-
+            names = [self.physics.model.body(i).name.split("/")[-1] for i in self._body_ids(obj_name)]
             if sort:
                 names.sort()
             return names
         else:
             return []
+
+    def _get_body_masses(self, obj_name: str) -> torch.Tensor:
+        return torch.as_tensor(self.physics.model.body_mass[self._body_ids(obj_name)].copy()).unsqueeze(0)
+
+    def _set_body_masses(self, obj_name: str, masses: torch.Tensor, env_ids: list[int], scale_inertia: bool) -> None:
+        model = self.physics.model
+        ids = self._body_ids(obj_name)
+        current = model.body_mass[ids].copy()
+        new = masses[0].numpy()
+        if scale_inertia:
+            ratio = np.divide(new, current, out=np.ones_like(new), where=new != current)
+            model.body_inertia[ids] = model.body_inertia[ids] * ratio[:, None]
+        model.body_mass[ids] = new
+        # subtree masses and the constraint solver's invweight0 are derived from body_mass at compile time
+        mujoco.mj_setConst(model.ptr, mujoco.MjData(model.ptr))
+
+    def _collision_geoms(self, obj_name: str) -> list[np.ndarray]:
+        """Collision geom ids (``contype`` or ``conaffinity`` nonzero) of each body, in native body order."""
+        model = self.physics.model
+        collides = (model.geom_contype != 0) | (model.geom_conaffinity != 0)
+        return [np.flatnonzero((model.geom_bodyid == b) & collides) for b in self._body_ids(obj_name)]
+
+    def _get_body_friction(self, obj_name: str) -> torch.Tensor:
+        friction = self.physics.model.geom_friction[:, 0]
+        means = [friction[g].mean() if len(g) else np.nan for g in self._collision_geoms(obj_name)]
+        return torch.tensor(means, dtype=torch.float64).unsqueeze(0)
+
+    def _set_body_friction(self, obj_name: str, friction: torch.Tensor, env_ids: list[int]) -> None:
+        current = self._get_body_friction(obj_name)[0]
+        model = self.physics.model
+        for geoms, new, old in zip(
+            self._collision_geoms(obj_name), friction[0].tolist(), current.tolist(), strict=True
+        ):
+            if len(geoms) and new != old:
+                model.geom_friction[geoms, 0] = new  # read at every contact, so nothing to recompute
 
     def _get_body_ids_reindex(self, obj_name: str) -> list[int]:
         """Charlie: needs to be taken down

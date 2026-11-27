@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -71,17 +68,4 @@ class LiberoKitchenScene7OpenTheMicrowaveTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene7_open_the_microwave_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker: microwave is open.
-
-        Joint position logic for microwave door:
-        - range: [-2.094, 0] (from microwave.xml)
-        - closed: joint_pos > -0.01 (near 0)
-        - open: joint_pos < -1.5 (sufficiently open)
-        """
-        microjoint_pos = states.objects["microwave"].joint_pos[:, 0]  # (N,)
-        # open joint_pos < -1.5
-        opened = microjoint_pos < -1.5
-        return opened
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("Open", "microwave", "microjoint"),)

@@ -1,32 +1,6 @@
-# ruff: noqa: F401
-"""Checker config classes."""
+"""Moved to :mod:`metasim.task.checkers`; this path keeps working as an alias."""
 
-# from .base_checker import BaseChecker
-# from .checker_operators import AndOp, NotOp, OrOp
-from .checkers import (
-    DetectedChecker,
-    EmptyChecker,
-    JointPosChecker,
-    JointPosShiftChecker,
-    PositionShiftChecker,
-    RotationShiftChecker,
-)
-from .detectors import (
-    Relative2DSphereDetector,
-    Relative3DSphereDetector,
-    RelativeBboxDetector,
-)
+from __future__ import annotations
 
-__all__ = [
-    # "AndOp",
-    "BaseChecker",
-    "DetectedChecker",
-    "JointPosChecker",
-    "JointPosShiftChecker",
-    # "NotOp",
-    # "OrOp",
-    "PositionShiftChecker",
-    "Relative3DSphereDetector",
-    "RelativeBboxDetector",
-    "RotationShiftChecker",
-]
+from metasim.task.checkers import *
+from metasim.task.checkers import __all__, checkers, detectors, util  # noqa: F401

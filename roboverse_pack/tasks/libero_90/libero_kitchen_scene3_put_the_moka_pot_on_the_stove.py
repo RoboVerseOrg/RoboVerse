@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -80,29 +77,4 @@ class LiberoKitchenScene3PutMokaPotOnStoveTask(Libero90BaseTask):
     # Trajectory file path
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene3_put_the_moka_pot_on_the_stove_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker."""
-        moka_pot_pos = states.objects["moka_pot"].root_state[:, :3]  # (N,3)
-        stove_center_single = self.handler.physics.named.data.site_xpos["flat_stove/burner"]  # (3,)
-        N = moka_pot_pos.shape[0]
-        stove_center_pos = (
-            torch.tensor(stove_center_single, device=moka_pot_pos.device).reshape(1, 3).repeat(N, 1)
-        )  # (N,3)
-
-        # Check if moka pot is within a region above the stove
-        range_threshold = 0.06  # Radius of the range in xy plane (smaller for moka pot)
-        height_threshold = 0.05  # Height threshold above the stove
-
-        # Calculate xy distance between moka pot and stove
-        xy_distance = torch.norm(moka_pot_pos[:, :2] - stove_center_pos[:, :2], dim=-1)  # (N,)
-        # Calculate height difference (moka pot z - stove z)
-        height_diff = moka_pot_pos[:, 2] - stove_center_pos[:, 2]  # (N,)
-
-        # Check both conditions: xy distance < range AND 0 < height_diff < height_threshold
-        xy_close = xy_distance < range_threshold  # (N,)
-        height_valid = (height_diff > 0) & (height_diff < height_threshold)  # (N,)
-        is_on_stove = xy_close & height_valid  # (N,)
-
-        return is_on_stove
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("On", "moka_pot", "flat_stove", "cook_region"),)

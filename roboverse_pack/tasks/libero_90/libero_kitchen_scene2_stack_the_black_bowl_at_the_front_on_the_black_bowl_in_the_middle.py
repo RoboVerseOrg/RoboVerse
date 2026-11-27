@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -88,17 +85,4 @@ class LiberoKitchenScene2StackBowlFrontOnMiddleTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene2_stack_the_black_bowl_at_the_front_on_the_black_bowl_in_the_middle_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker."""
-        bowl1_pos = states.objects["akita_black_bowl_1"].root_state[:, :3]  # (N,3)
-        bowl2_pos = states.objects["akita_black_bowl_2"].root_state[:, :3]  # (N,3)
-        range_threshold = 0.06  # Radius of the range in xy plane
-        height_threshold = 0.05  # Height threshold above bowl_2
-        xy_distance = torch.norm(bowl1_pos[:, :2] - bowl2_pos[:, :2], dim=-1)  # (N,)
-        height_diff = bowl1_pos[:, 2] - bowl2_pos[:, 2]  # (N,)
-        xy_close = xy_distance < range_threshold  # (N,)
-        height_valid = (height_diff > 0) & (height_diff < height_threshold)  # (N,)
-        is_stacked = xy_close & height_valid  # (N,)
-        return is_stacked
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("On", "akita_black_bowl_1", "akita_black_bowl_2"),)

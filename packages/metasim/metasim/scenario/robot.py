@@ -181,3 +181,9 @@ class RobotCfg(ArticulationObjCfg):
 
     curobo_tcp_rel_rot: tuple[float, float, float] | None = None
     """Relative rotation of the TCP to the end effector body link. This is used for motion planning and retargetting using cuRobo."""
+
+    def file_name(self, sim_name):
+        """The description file the backend loads; Newton loads a robot's MJCF (``.xml``) when it has one."""
+        if sim_name == "newton" and isinstance(self.mjcf_path, str) and self.mjcf_path.endswith(".xml"):
+            return self.mjcf_path
+        return super().file_name(sim_name)

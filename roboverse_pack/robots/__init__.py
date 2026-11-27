@@ -46,6 +46,7 @@ from .psihand_right_cfg import PsihandRightCfg
 from .sawyer_cfg import SawyerCfg
 from .sawyer_mujoco_cfg import SawyerMujocoCfg
 from .shadow_hand_cfg import ShadowHandCfg
+from .sharpa_wave_cfg import SharpaWaveLeftCfg, SharpaWaveRightCfg
 from .so_arm100_mjcf_cfg import SoArm100Cfg
 from .unitree_dex3_1_cfg import UnitreeDex31LeftCfg
 from .ur5e_2f85_cfg import Ur5E2F85Cfg
@@ -54,3 +55,4 @@ from .ur10e_cfg import Ur10ECfg
 from .vega_cfg import VegaCfg
 from .walker_cfg import WalkerCfg
 from .xhand_cfg import XhandRightCfg
+from .yam_mjcf_cfg import YamCfg

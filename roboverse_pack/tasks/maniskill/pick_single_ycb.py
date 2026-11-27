@@ -3,9 +3,9 @@
 import torch
 
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import PositionShiftChecker
 from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveSphereCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers.checkers import PositionShiftChecker
 from metasim.task.registry import register_task
 
 from ._dense_rl import DenseRLResetMixin
@@ -67,7 +67,11 @@ class PickSingleYcbDenseTask(DenseRLResetMixin, _PickSingleYcbBaseTask):
     scenario = ScenarioCfg(
         objects=[
             PrimitiveCubeCfg(
-                name="obj", size=(0.04, 0.04, 0.04), mass=0.02, physics=PhysicStateType.RIGIDBODY, color=(1.0, 0.5, 0.0)
+                name="obj",
+                size=(0.04, 0.04, 0.04),
+                mass=0.064,
+                physics=PhysicStateType.RIGIDBODY,
+                color=(1.0, 0.5, 0.0),
             ),
             PrimitiveSphereCfg(name="goal_site", radius=0.025, physics=PhysicStateType.XFORM, color=(0.0, 1.0, 0.0)),
         ],

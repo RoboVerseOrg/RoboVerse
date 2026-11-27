@@ -47,7 +47,7 @@ from roboverse_learn.managers import (
     RewTerm,
 )
 
-from ._locator import lazy_scenario, mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset, single_process_mujoco
 from ._mjcf_patch import YAM_KP, patch_mjcf_add_cube_and_table, patch_mjcf_with_pd_actuators
 from .mdp import (
     SceneEntityCfg,
@@ -332,6 +332,7 @@ class _YamTaskBase(ManagerBasedRVEnv):
         cfg = self._env_cfg_cls()
         sim = getattr(scenario, "simulator", None) if scenario else None
         if scenario is not None and sim == "mujoco":
+            single_process_mujoco(scenario, type(self).__name__)
             scenario.robots = []
         elif scenario is not None and sim != "mujoco" and not getattr(scenario, "objects", None):
             # Newton / non-mujoco RobotCfg path: the cube + table that the

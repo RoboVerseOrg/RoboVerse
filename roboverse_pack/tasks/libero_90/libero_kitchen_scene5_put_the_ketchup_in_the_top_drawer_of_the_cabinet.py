@@ -8,7 +8,6 @@ from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 from metasim.utils.math import matrix_from_quat
 
 from .libero_90_base import Libero90BaseTask
@@ -79,23 +78,4 @@ class LiberoKitchenScene5PutKetchupInTopDrawerTask(Libero90BaseTask):
 
     traj_filepath = "roboverse_data/trajs/libero90/libero_90_kitchen_scene5_put_the_ketchup_in_the_top_drawer_of_the_cabinet_traj_v2.pkl"
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        ketchup_pos = states.objects["ketchup"].root_state[:, :3]
-        cabinet_pos = states.objects["white_cabinet"].root_state[:, :3]
-        cabinet_quat = states.objects["white_cabinet"].root_state[:, 3:7]
-        top_idx = 2  # top drawer index
-        bbox_displacement = states.objects["white_cabinet"].joint_pos[:, top_idx]
-        cabinet_T = pose_to_mat(cabinet_pos, cabinet_quat)
-        bbox_relative_pos = torch.tensor([0.00328, 0.01128 + bbox_displacement, 0.18563], device=ketchup_pos.device)
-        bbox_relative_quat = torch.tensor([0.70711, 0.00000, 0.70711, 0.00000], device=ketchup_pos.device)
-        bbox_relative_T = pose_to_mat(bbox_relative_pos.unsqueeze(0), bbox_relative_quat.unsqueeze(0))
-        bbox_half_size = torch.tensor([0.02993, 0.07561, 0.10224], device=ketchup_pos.device)
-        bbox_T_world = torch.matmul(cabinet_T, bbox_relative_T)
-        R = bbox_T_world[:, :3, :3]
-        t = bbox_T_world[:, :3, 3]
-        ketchup_local = torch.matmul(R.transpose(1, 2), (ketchup_pos - t).unsqueeze(-1)).squeeze(-1)
-        eps = 1e-6
-        inside = (ketchup_local.abs() <= (bbox_half_size.unsqueeze(0) + eps)).all(dim=-1)
-        return inside
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("In", "ketchup", "white_cabinet", "top_region"),)

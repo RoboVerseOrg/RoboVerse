@@ -43,7 +43,7 @@ from roboverse_learn.managers import (
     RewTerm,
 )
 
-from ._locator import lazy_scenario, mjlab_asset
+from ._locator import lazy_scenario, mjlab_asset, single_process_mujoco
 from ._mjcf_patch import G1_KP, patch_mjcf_with_pd_actuators
 from .mdp import (
     SceneEntityCfg,
@@ -503,6 +503,7 @@ class _G1TaskBase(ManagerBasedRVEnv):
         cfg.observations = self._obs_cfg_cls()  # rough swaps in the height_scan obs group
         sim = getattr(scenario, "simulator", None) if scenario else None
         if scenario is not None and sim == "mujoco":
+            single_process_mujoco(scenario, type(self).__name__)
             scenario.robots = []
         self.num_actions = len(_G1_ALL_JOINT_NAMES)
         self._actuated_qvel_ids: np.ndarray | None = None

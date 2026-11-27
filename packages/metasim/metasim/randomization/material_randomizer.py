@@ -380,10 +380,11 @@ class MaterialRandomizer(BaseRandomizerType):
     # -------------------------------------------------------------------------
 
     def randomize_physical_material(self):
-        """Apply physical material randomization.
+        """Apply physical material randomization through the handler's body-property verbs.
 
-        Note: This only works for Static Objects with physics.
-        Dynamic Objects (pure visual) will skip physics randomization.
+        One friction and one restitution value per env, set on every body of the object that has collision
+        shapes. Only Static Objects with physics; a property the engine does not model (restitution on MuJoCo
+        and Newton) warns once and changes nothing.
         """
         if not self.cfg.physical:
             return
@@ -396,74 +397,20 @@ class MaterialRandomizer(BaseRandomizerType):
             )
             return
 
-        # Get object from Handler (must be Static object)
-        try:
-            if self.cfg.obj_name in self._actual_handler.scene.articulations:
-                obj_inst = self._actual_handler.scene.articulations[self.cfg.obj_name]
-            elif self.cfg.obj_name in self._actual_handler.scene.rigid_objects:
-                obj_inst = self._actual_handler.scene.rigid_objects[self.cfg.obj_name]
-            else:
-                logger.error(
-                    f"Static object '{self.cfg.obj_name}' not found in Handler.scene. "
-                    f"Physical material randomization only works for Handler-managed objects."
-                )
-                return
-        except AttributeError:
-            logger.error("Handler does not have scene attribute (not IsaacSim?)")
-            return
-
-        env_ids = self.cfg.env_ids or list(range(self._actual_handler.num_envs))
-        # Convert env_ids to tensor for IsaacLab API (device will be matched per-operation)
-        env_ids_tensor = torch.tensor(env_ids, dtype=torch.int32)
-        num_envs = env_ids_tensor.shape[0]
-
-        # Randomize friction
-        if self.cfg.physical.friction_range:
-            new_friction = self._generate_random_tensor(
-                num_envs, self.cfg.physical.friction_range, self.cfg.physical.distribution
-            )
-
-            try:
-                # Get current material properties
-                materials = obj_inst.root_physx_view.get_material_properties()
-
-                # Update friction (index 0=static, 1=dynamic, 2=restitution)
-                if len(materials.shape) == 3:
-                    # [num_envs, num_bodies, 3]
-                    materials[env_ids_tensor, :, 0] = new_friction.unsqueeze(1).to(materials.device)
-                    materials[env_ids_tensor, :, 1] = new_friction.unsqueeze(1).to(materials.device)
-                else:
-                    # [num_envs, 3]
-                    materials[env_ids_tensor, 0] = new_friction.to(materials.device)
-                    materials[env_ids_tensor, 1] = new_friction.to(materials.device)
-
-                # Set back
-                obj_inst.root_physx_view.set_material_properties(materials, env_ids_tensor)
-            except Exception as e:
-                logger.error(f"Failed to set friction: {e}")
-
-        # Randomize restitution
-        if self.cfg.physical.restitution_range:
-            new_restitution = self._generate_random_tensor(
-                num_envs, self.cfg.physical.restitution_range, self.cfg.physical.distribution
-            )
-
-            try:
-                # Get current material properties
-                materials = obj_inst.root_physx_view.get_material_properties()
-
-                # Update restitution (index 2)
-                if len(materials.shape) == 3:
-                    # [num_envs, num_bodies, 3]
-                    materials[env_ids_tensor, :, 2] = new_restitution.unsqueeze(1).to(materials.device)
-                else:
-                    # [num_envs, 3]
-                    materials[env_ids_tensor, 2] = new_restitution.to(materials.device)
-
-                # Set back
-                obj_inst.root_physx_view.set_material_properties(materials, env_ids_tensor)
-            except Exception as e:
-                logger.error(f"Failed to set restitution: {e}")
+        # physics lives on the physics side of a hybrid handler, whatever REQUIRES_HANDLER picks for the visuals
+        handler = self.handler.physics_handler if self._is_hybrid_handler(self.handler) else self._actual_handler
+        name = self.cfg.obj_name
+        env_ids = self.cfg.env_ids or list(range(handler.num_envs))
+        for getter, setter, value_range in (
+            (handler.get_body_friction, handler.set_body_friction, self.cfg.physical.friction_range),
+            (handler.get_body_restitution, handler.set_body_restitution, self.cfg.physical.restitution_range),
+        ):
+            if not value_range:
+                continue
+            current = getter(name)[env_ids].to(torch.float64)
+            rand = self._generate_random_tensor(len(env_ids), value_range, self.cfg.physical.distribution)
+            new = torch.where(torch.isnan(current), current, rand.to(current)[:, None].expand_as(current))
+            setter(name, new, env_ids=env_ids)
 
     # -------------------------------------------------------------------------
     # Helper Methods

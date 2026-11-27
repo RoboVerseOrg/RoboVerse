@@ -114,6 +114,10 @@ class _PrimitiveMixin:
                 f"{type(self).__name__}({self.name!r}).color is required: pass an RGB list such as [0.8, 0.1, 0.1] "
                 "(every backend reads it to build the visual material)."
             )
+        if getattr(self, "physics", None) == PhysicStateType.RIGIDBODY and not self.mass > 0:
+            raise ValueError(
+                f"{type(self).__name__}({self.name!r}).mass must be positive for a rigid body, got {self.mass}."
+            )
 
     @property
     def volume(self) -> float:

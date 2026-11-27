@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import torch
-
 from metasim.constants import PhysicStateType
 from metasim.scenario.objects import ArticulationObjCfg, RigidObjCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.registry import register_task
-from metasim.types import TensorState
 
 from .libero_90_base import Libero90BaseTask
 
@@ -90,17 +87,4 @@ class LiberoKitchenScene2PutBowlAtBackOnPlateTask(Libero90BaseTask):
         "roboverse_data/trajs/libero90/libero_90_kitchen_scene2_put_the_black_bowl_at_the_back_on_the_plate_traj_v2.pkl"
     )
 
-    def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Task success checker."""
-        bowl_pos = states.objects["akita_black_bowl_3"].root_state[:, :3]  # (N,3)
-        plate_pos = states.objects["plate"].root_state[:, :3]  # (N,3)
-        range_threshold = 0.06  # Radius of the range in xy plane
-        height_threshold = 0.03  # Height threshold above the plate
-        xy_distance = torch.norm(bowl_pos[:, :2] - plate_pos[:, :2], dim=-1)  # (N,)
-        height_diff = bowl_pos[:, 2] - plate_pos[:, 2]  # (N,)
-        xy_close = xy_distance < range_threshold  # (N,)
-        height_valid = (height_diff > 0) & (height_diff < height_threshold)  # (N,)
-        is_on_plate = xy_close & height_valid  # (N,)
-        return is_on_plate
-
-    skip_checker_reset = True  # inherit BaseTaskEnv.reset(seed=); skip per-reset checker reset
+    goal = (("On", "akita_black_bowl_3", "plate"),)

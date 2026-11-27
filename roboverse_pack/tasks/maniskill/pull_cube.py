@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from metasim.bench.prompts import PromptBank
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import Relative2DSphereDetector
 from metasim.scenario.objects import PrimitiveCubeCfg, PrimitiveCylinderCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers.checkers import DetectedChecker
+from metasim.task.checkers.detectors import Relative2DSphereDetector
 from metasim.task.registry import register_task
 
 from ._dense_rl import DenseRLResetMixin
@@ -45,6 +46,26 @@ class PullCubeCfg(ManiskillBaseTask):
     """  # noqa: D205, D415
 
     episode_length = 250
+
+    prompt_bank = PromptBank(
+        canonical="Pull the red cube back onto the blue goal region behind it.",
+        train=(
+            "Drag the red cube backward onto the blue target.",
+            "Pull the cube toward the robot until it sits in the blue circle.",
+            "Move the red block onto the blue goal area by pulling it.",
+            "Draw the red cube back into the blue region.",
+            "Pull the red cube onto the blue disc behind it.",
+            "Tug the cube backward so it ends up inside the blue target.",
+            "Slide the red block back into the blue zone.",
+            "Pull the red cube to the blue goal.",
+        ),
+        heldout=(
+            "Haul the red box toward yourself until it reaches the blue marker.",
+            "Get the red cube onto the blue spot by dragging it back.",
+            "Retract the crimson block onto the blue patch behind it.",
+            "Bring the red cube backward into the blue target zone.",
+        ),
+    )
     scenario = ScenarioCfg(
         objects=[
             PrimitiveCylinderCfg(
@@ -59,7 +80,7 @@ class PullCubeCfg(ManiskillBaseTask):
             PrimitiveCubeCfg(
                 name="cube",
                 size=[0.04, 0.04, 0.04],
-                mass=0.02,
+                mass=0.064,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=[1.0, 0.0, 0.0],
             ),

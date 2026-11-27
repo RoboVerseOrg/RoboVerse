@@ -33,6 +33,91 @@ DOWNLOAD_LOCK_TIMEOUT_S = 3600.0
 """How long a process waits for another process's in-flight download of the same asset tree."""
 DATA_REPO_IDS = (REPO_ID, "SomaStacksOrg/roboverse_data")
 
+_UPSTREAM_MIRRORS: dict[str, str] = {}
+"""``roboverse_data``-relative prefix -> URL base of the upstream that publishes the files under it.
+
+A content pack registers the upstream of an asset it vendors by reference (a Menagerie robot, a mesh set a
+manufacturer hosts) with :func:`register_upstream_mirror`. A file missing locally and from every HuggingFace
+data repo is then fetched from ``url_base + relpath[len(prefix):]`` into the same place the HuggingFace copy
+would land, so a fresh checkout works before (and after) the asset is mirrored into the data repo.
+"""
+
+
+def register_upstream_mirror(prefix: str, url_base: str) -> None:
+    """Fetch files under ``roboverse_data/<prefix>`` from ``url_base`` when no data repo has them.
+
+    Args:
+        prefix: Directory under ``roboverse_data`` the mirror covers, e.g. ``robots/sharpa_wave/mjcf``.
+        url_base: URL that serves the same tree, e.g. a pinned-commit ``raw.githubusercontent.com`` path.
+            Pin the upstream revision in the URL so a checkout keeps fetching the bytes the config was
+            written against.
+    """
+    prefix = prefix.strip("/") + "/"
+    _UPSTREAM_MIRRORS[prefix] = url_base.rstrip("/") + "/"
+
+
+def _upstream_url(relpath_posix: str) -> str | None:
+    """The upstream URL of ``relpath_posix`` when a registered mirror covers it (the longest prefix wins)."""
+    for prefix in sorted(_UPSTREAM_MIRRORS, key=len, reverse=True):
+        if relpath_posix.startswith(prefix):
+            return _UPSTREAM_MIRRORS[prefix] + relpath_posix[len(prefix) :]
+    return None
+
+
+def _download_from_upstream(url: str, filepath: str) -> None:
+    """Stream ``url`` into ``filepath`` through a private temp file in the same directory, published atomically.
+
+    A failed fetch leaves no partial file, and two unlocked callers fetching the same file (``check_and_download_single``
+    is also called directly, outside ``download.lock``) cannot interleave their writes.
+    """
+    import shutil
+    import tempfile
+    import urllib.request
+
+    directory = os.path.dirname(os.path.abspath(filepath))
+    os.makedirs(directory, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(prefix=os.path.basename(filepath) + ".", suffix=".part", dir=directory)
+    try:
+        with urllib.request.urlopen(url, timeout=120) as response, os.fdopen(fd, "wb") as out:
+            shutil.copyfileobj(response, out)
+        os.replace(tmp_path, filepath)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
+
+_DESCRIPTION_SUFFIXES = (".xml", ".urdf", ".usd", ".usda", ".usdc")
+_COMPANION_FILES = ("LICENSE", "LICENSE.txt", "LICENSE.md", "README.md")
+"""Files fetched, when they exist, next to a robot / object description: the asset's licence and notes travel with it."""
+
+
+def _fetch_companions(filepath: str) -> None:
+    """Fetch the licence / README that sit next to a freshly downloaded description file, from wherever it came.
+
+    Each companion is optional: absent upstream, or unreachable, it is skipped without a word beyond debug.
+    """
+    if not filepath.endswith(_DESCRIPTION_SUFFIXES):
+        return
+    directory = os.path.dirname(filepath)
+    for name in _COMPANION_FILES:
+        companion = os.path.join(directory, name)
+        if os.path.exists(companion):
+            continue
+        try:
+            relpath_posix = os.path.relpath(os.path.realpath(companion), os.path.realpath(LOCAL_DIR)).replace(
+                os.sep, "/"
+            )
+            repo_id = _find_data_repo(relpath_posix, is_optional_file=True)
+            if repo_id is not None:
+                hf_hub_download(repo_id=repo_id, filename=relpath_posix, repo_type="dataset", local_dir=LOCAL_DIR)
+                continue
+            upstream_url = _upstream_url(relpath_posix)
+            if upstream_url is not None:
+                _download_from_upstream(upstream_url, companion)
+        except Exception as exc:  # the asset itself is already in place; its paperwork is best effort
+            log.debug(f"companion {name} of {filepath} not fetched: {exc}")
+
 
 def _resolve_local_dir() -> str:
     """Resolve the asset-cache root to an absolute path.
@@ -141,14 +226,47 @@ def _outside_local_dir_message(filepath: str, relpath: str) -> str:
             f"Run from the repository root, or symlink ./roboverse_data to LOCAL_DIR "
             f"(ROBOVERSE_DATA_DIR only changes where downloads are stored)."
         )
+    if os.path.isabs(filepath) and _RELATIVE_DATA_PREFIX in filepath:
+        inner = filepath.split(_RELATIVE_DATA_PREFIX, 1)[1]
+        return (
+            f"Cannot fetch {filepath!r}: an asset file references this absolute path, which belongs to the machine "
+            f"the asset was authored on. Make the reference relative to the asset file (the file is "
+            f"roboverse_data/{inner} in the data repository) and re-upload it."
+        )
     return (
         f"Refusing to fetch {filepath!r}: resolves outside LOCAL_DIR ({LOCAL_DIR}) via relative-path "
         f"traversal ({relpath!r})."
     )
 
 
+def _download_tree(relpath_posix: str) -> bool:
+    """Fetch every file under the data-repo folder ``relpath_posix`` into ``LOCAL_DIR``; False if no repo has it.
+
+    Tasks may point at a demo *directory* (``trajs/<task>/v2``, resolved to the robot's file by
+    ``metasim.utils.demo_util``); a folder is not a file the single-file path can fetch.
+    """
+    for repo_id in DATA_REPO_IDS:
+        try:
+            entries = list(
+                hf_api.list_repo_tree(repo_id, path_in_repo=relpath_posix, repo_type="dataset", recursive=True)
+            )
+        except Exception as exc:  # the folder is absent from this repo, or the repo is unreachable: try the next
+            log.debug(f"{repo_id} has no folder {relpath_posix}: {exc}")
+            continue
+        files = [e.path for e in entries if getattr(e, "size", None) is not None or type(e).__name__ == "RepoFile"]
+        if not files:
+            continue
+        for path in files:
+            hf_hub_download(repo_id=repo_id, filename=path, repo_type="dataset", local_dir=LOCAL_DIR)
+        log.info(f"Folder {relpath_posix} ({len(files)} file(s)) downloaded from the HuggingFace dataset {repo_id}.")
+        return True
+    return False
+
+
 def check_and_download_single(filepath: str):
     """Check if the file exists in the local directory, and download it from the huggingface dataset if it doesn't exist.
+
+    A path without a file suffix is taken to be a folder (a demo directory) and its files are fetched.
 
     Args:
         filepath: the filepath to check and download.
@@ -178,9 +296,28 @@ def check_and_download_single(filepath: str):
                 return
             raise ValueError(msg)
         relpath_posix = relpath.replace(os.sep, "/")
+        if not os.path.splitext(filepath)[1] and _download_tree(relpath_posix):
+            return
         repo_id = _find_data_repo(relpath_posix, is_optional_file=is_optional_file)
 
         if repo_id is None:
+            upstream_url = _upstream_url(relpath_posix)
+            if upstream_url is not None:
+                try:
+                    _download_from_upstream(upstream_url, os.path.join(LOCAL_DIR, relpath))
+                except Exception as exc:
+                    if is_optional_file:
+                        log.warning(
+                            f"Optional file {filepath} could not be fetched from {upstream_url} ({exc}), skipping."
+                        )
+                        return
+                    raise Exception(
+                        f"File {filepath} is in none of the HuggingFace data sources {DATA_REPO_IDS} and fetching it "
+                        f"from its registered upstream {upstream_url} failed: {exc}"
+                    ) from exc
+                log.info(f"File {filepath} downloaded from its upstream {upstream_url}.")
+                _fetch_companions(filepath)
+                return
             if is_optional_file:
                 log.warning(f"Optional file {filepath} not found in HuggingFace data sources, skipping.")
                 return
@@ -210,6 +347,7 @@ def check_and_download_single(filepath: str):
             log.info(f"File {filepath} downloaded from the HuggingFace dataset {repo_id}.")
         except Exception as e:
             raise e
+        _fetch_companions(filepath)
 
 
 def check_and_download_recursive(filepaths: list[str], n_processes: int = 16):

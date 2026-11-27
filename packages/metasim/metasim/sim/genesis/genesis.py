@@ -170,11 +170,15 @@ class GenesisHandler(BaseSimHandler):
                     )
             if isinstance(obj, PrimitiveCubeCfg):
                 obj_inst = self.scene_inst.add_entity(
-                    gs.morphs.Box(size=obj.size), surface=gs.surfaces.Default(color=obj.color)
+                    gs.morphs.Box(size=obj.size),
+                    material=gs.materials.Rigid(rho=obj.density),  # so the body weighs obj.mass
+                    surface=gs.surfaces.Default(color=obj.color),
                 )
             elif isinstance(obj, PrimitiveSphereCfg):
                 obj_inst = self.scene_inst.add_entity(
-                    gs.morphs.Sphere(radius=obj.radius), surface=gs.surfaces.Default(color=obj.color)
+                    gs.morphs.Sphere(radius=obj.radius),
+                    material=gs.materials.Rigid(rho=obj.density),  # so the body weighs obj.mass
+                    surface=gs.surfaces.Default(color=obj.color),
                 )
             elif isinstance(obj, RigidObjCfg):
                 if obj.file_type["genesis"] == "urdf":

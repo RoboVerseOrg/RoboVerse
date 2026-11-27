@@ -197,8 +197,7 @@ class TrackingG1EnvCfg(BaseEnvCfg):
     callbacks_setup = {
         "material_randomizer": MaterialRandomizer(
             obj_name="g1_tracking",
-            static_friction_range=(0.3, 1.6),
-            dynamic_friction_range=(0.3, 1.2),
+            friction_range=(0.3, 1.2),  # one coefficient per body; upstream's static range was (0.3, 1.6)
             restitution_range=(0.0, 0.5),
             num_buckets=64,
         ),

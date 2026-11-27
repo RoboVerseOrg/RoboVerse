@@ -92,7 +92,6 @@ _KNOWN_DEFAULT_POS_ORPHAN_GAPS: dict[str, str] = {
 }
 
 _KNOWN_DEFAULT_POS_OUT_OF_RANGE_GAPS: dict[str, str] = {
-    "YamCfg": "joint2/joint4 defaults copy-pasted from Franka home pose; limits are Yam's narrower ranges.",
     "ArxL5Cfg": "joint2/joint4 defaults copy-pasted from Franka home pose; limits are ArxL5's narrower ranges.",
     "VegaCfg": "torso_j1 default 0.0 but joint_limits is the single-point [0.2, 0.2] — limit looks like a fixed offset, not a range.",
     "SoArm100Cfg": "Wrist_Pitch default -2.356 (Franka-style) outside [-0.192, 3.927].",

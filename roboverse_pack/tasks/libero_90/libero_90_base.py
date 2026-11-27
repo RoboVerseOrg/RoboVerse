@@ -8,7 +8,10 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.task.base import BaseTaskEnv
 from metasim.utils.demo_util import get_traj
 from metasim.utils.hf_util import check_and_download_single
+from metasim.utils.site_util import SitePose, site_pose
 from metasim.utils.state import TensorState
+
+from ._goal import GoalTerm, check_goal, goal_holds
 
 
 class Libero90BaseTask(BaseTaskEnv):
@@ -16,12 +19,27 @@ class Libero90BaseTask(BaseTaskEnv):
 
     This base class handles the common functionality for LIBERO 90 tasks,
     which are more complex than LIBERO Object tasks.
+
+    Like ``LiberoBaseTask``, these are **config ports**: a MetaSim scenario that runs on any backend, not a
+    reproduction of LIBERO's robosuite physics, so the official demos are not expected to replay to success
+    (on MuJoCo they do not: there is no table, and objects settle ~2 cm below where the demos hold them).
+    For 1:1 replay use the native ids (``native_libero.py``).
+
+    A task's success is its BDDL goal, declared as data (``goal``, see ``_goal``) and evaluated with LIBERO's own
+    ``In`` / ``On`` / ``Open`` / ``Close`` / ``Turnon`` predicates. The site regions they name (a basket's
+    ``contain_region``, a drawer's ``top_region``) are read with :meth:`_site_pose`, which composes the site's
+    fixed offset from the object's MJCF with the pose in the state rather than reading MuJoCo, so a goal can run on
+    any backend that reports the bodies; it is verified on MuJoCo only. Writing LIBERO's demos into MuJoCo, the goal holds at the last state of every demo on 61 of 62
+    tasks (the other misses a wine-rack region by 0.2 mm in one demo); the hand-written checkers it replaced
+    held on 54.
     """
 
     scenario = None
     max_episode_steps = 300  # LIBERO 90 tasks are more complex
     task_desc = None
     checker = None
+    goal: tuple[GoalTerm, ...] | None = None
+    """The BDDL goal's terms (see ``_goal``); when set, success is that goal and ``checker`` is unused."""
     traj_filepath = None
     decimation = 30
     # Most libero_90 leaves intentionally skip the per-reset checker reset. Setting
@@ -34,22 +52,26 @@ class Libero90BaseTask(BaseTaskEnv):
         check_and_download_single(self.traj_filepath)
         # update objects and robots defined by task, must before super()._init_ because handler init
         super().__init__(scenario, device)
+        if self.goal is not None:  # after the handler fetched the assets the check reads
+            check_goal(self.goal, {obj.name: obj for obj in self.scenario.objects})
 
     def _terminated(self, states: TensorState) -> torch.Tensor:
-        """Success when task conditions are met."""
+        """Success when the task's goal (or, for a task without one, its checker) holds."""
+        if self.goal is not None:
+            return goal_holds(self, states, self.goal)
         return self.checker.check(self.handler, states)
 
-    def reset(self, states=None, env_ids=None, seed=None):
-        """Reset the env; reset the checker unless ``skip_checker_reset`` is set.
+    def _site_pose(self, states: TensorState, obj_name: str, site: str) -> SitePose:
+        """World pose of ``site`` on the scenario object ``obj_name``, from ``states``."""
+        for obj in self.scenario.objects:
+            if obj.name == obj_name:
+                return site_pose(states, obj=obj, site=site)
+        raise KeyError(f"{type(self).__name__}: no object {obj_name!r} in the scenario")
 
-        ``seed`` is forwarded to ``super().reset``. Leaves that set
-        ``skip_checker_reset = True`` get the old "skip checker reset" behaviour
-        without overriding ``reset`` (so the seed contract is preserved).
-        """
-        states = super().reset(states, env_ids, seed)
+    def _on_reset(self, env_ids: list[int]) -> None:
+        """Reset the checker for ``env_ids`` unless ``skip_checker_reset`` is set."""
         if self.checker is not None and not self.skip_checker_reset:
             self.checker.reset(self.handler, env_ids=env_ids)
-        return states
 
     def _get_initial_states(self) -> list[dict] | None:
         """Return per-env initial states sampled from the demo trajectory.

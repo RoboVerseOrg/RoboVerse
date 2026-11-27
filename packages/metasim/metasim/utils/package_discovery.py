@@ -18,19 +18,21 @@ except ImportError:  # pragma: no cover - Python < 3.8
     from importlib_metadata import entry_points  # type: ignore[no-redef]
 
 
-ROLES = ("tasks", "robots", "scenes", "grounds")
+ROLES = ("tasks", "robots", "scenes", "grounds", "suites")
 _CONFIG_KEYS = ("roots",) + ROLES
 _ENTRY_POINT_GROUPS = {
     "tasks": "metasim.tasks",
     "robots": "metasim.robots",
     "scenes": "metasim.scenes",
     "grounds": "metasim.grounds",
+    "suites": "metasim.suites",
 }
 _ENV_VARS = {
     "tasks": "METASIM_TASK_PACKAGES",
     "robots": "METASIM_ROBOT_PACKAGES",
     "scenes": "METASIM_SCENE_PACKAGES",
     "grounds": "METASIM_GROUND_PACKAGES",
+    "suites": "METASIM_SUITE_PACKAGES",
 }
 _CONFIG_TABLE_PATHS = (("packages",), ("tool", "metasim", "packages"))
 
@@ -44,6 +46,7 @@ class PackageConfig:
     robots: tuple[str, ...] = ()
     scenes: tuple[str, ...] = ()
     grounds: tuple[str, ...] = ()
+    suites: tuple[str, ...] = ()
 
     def packages_for(self, role: str) -> tuple[str, ...]:
         """Return ``<root>.<role>`` for every root plus the explicit packages for ``role``."""
@@ -148,6 +151,7 @@ def _merge_configs(left: PackageConfig, right: PackageConfig) -> PackageConfig:
         robots=left.robots + right.robots,
         scenes=left.scenes + right.scenes,
         grounds=left.grounds + right.grounds,
+        suites=left.suites + right.suites,
     )
 
 

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from metasim.constants import PhysicStateType
-from metasim.example.example_pack.tasks.checkers.checkers import DetectedChecker
-from metasim.example.example_pack.tasks.checkers.detectors import CombinedDetector, RelativeBboxDetector
 from metasim.scenario.objects import PrimitiveCubeCfg
 from metasim.scenario.scenario import ScenarioCfg
+from metasim.task.checkers.checkers import DetectedChecker
+from metasim.task.checkers.detectors import CombinedDetector, RelativeBboxDetector
 from metasim.task.registry import register_task
 
 from .maniskill_base import ManiskillBaseTask
@@ -48,21 +48,21 @@ class StackPyramidCfg(ManiskillBaseTask):
             PrimitiveCubeCfg(
                 name="cubeA",
                 size=[0.04, 0.04, 0.04],
-                mass=0.02,
+                mass=0.064,  # ManiSkill builds actors at 1000 kg/m^3
                 physics=PhysicStateType.RIGIDBODY,
                 color=[1.0, 0.0, 0.0],
             ),
             PrimitiveCubeCfg(
                 name="cubeB",
                 size=[0.04, 0.04, 0.04],
-                mass=0.02,
+                mass=0.064,
                 physics=PhysicStateType.RIGIDBODY,
                 color=[0.0, 1.0, 0.0],
             ),
             PrimitiveCubeCfg(
                 name="cubeC",
                 size=[0.04, 0.04, 0.04],
-                mass=0.02,
+                mass=0.064,
                 physics=PhysicStateType.RIGIDBODY,
                 color=[0.0, 0.0, 1.0],
             ),

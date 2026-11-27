@@ -103,8 +103,16 @@ def _match_names(patterns: Iterable[str] | str, available: list[str]) -> list[in
 
 
 def _entity_is_registered_robot(env, name: str) -> bool:
-    """Whether ``name`` is a robot known to the handler's TensorState path."""
-    try:
+    """Whether ``name`` is an articulation the handler registered from the scenario (robot or object).
+
+    Read from the handler's ``object_dict`` rather than by probing ``get_joint_names``: on the parallel
+    wrapper that probe is answered by a worker process, and the ``KeyError`` a scene-MJCF entity raises
+    there kills the worker instead of being caught here.
+    """
+    object_dict = getattr(env.handler, "object_dict", None)
+    if object_dict is not None:
+        return name in object_dict
+    try:  # a handler stand-in without the registry: ask it
         env.handler.get_joint_names(name, sort=True)
         return True
     except (KeyError, AttributeError):

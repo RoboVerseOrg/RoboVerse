@@ -83,6 +83,9 @@ class ManagerBasedRVEnvCfg:
 class ManagerBasedRVEnv(RLTaskEnv):
     """Sim-agnostic manager-based RL env.
 
+    ``actions_are_joint_targets`` is False: the action manager maps the learner's normalised action
+    to the actuators, so the declared ``action_space`` is the policy contract (``metasim.bench``).
+
     Lifecycle::
 
         __init__
@@ -110,6 +113,8 @@ class ManagerBasedRVEnv(RLTaskEnv):
     with semantically different behavior; this is purely a generalization
     of the existing beyondmimic manager loop.
     """
+
+    actions_are_joint_targets = False
 
     cfg: ManagerBasedRVEnvCfg
 
