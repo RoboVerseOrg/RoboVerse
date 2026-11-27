@@ -813,6 +813,39 @@ def test_bench_health_gates_on_low_and_error(monkeypatch, tmp_path):
     assert [r["task"] for r in data["rows"]] == ["b", "c"], "an explicit --task is always reported"
 
 
+def test_health_reliability_flags_a_checker_the_hold_policy_satisfies_and_a_flaky_replay(monkeypatch):
+    """--floor: a task the hold policy succeeds on is `unreliable`; --repeat: a replay that changes verdict is `flaky`."""
+    from types import SimpleNamespace
+
+    import metasim.__main__ as cli
+    import metasim.bench as bench
+
+    verdicts = {"replay": [[True, True], [True, True]], "hold": [[False, True]]}
+
+    def fake_evaluate(env, policy, protocol, policy_info=None, on_episode=None, task_name=None):
+        flags = verdicts[policy.name].pop(0)
+        return BenchmarkResult(
+            task=task_name, simulator="mujoco", robots=["bot"], num_envs=1, protocol=protocol.to_dict(),
+            policy={"name": policy.name}, episodes=[_episode(i, f) for i, f in enumerate(flags)],
+        )  # fmt: skip
+
+    monkeypatch.setattr(bench, "evaluate", fake_evaluate)
+    first = fake_evaluate(None, SimpleNamespace(name="replay"), EvalProtocol(episodes=2), task_name="t")
+    row = {"task": "t", "status": "ok", "detail": ""}
+    cli._health_reliability(None, "t", EvalProtocol(episodes=2), first, row, SimpleNamespace(repeat=2, floor=True))
+    assert row["status"] == "unreliable" and row["floor_rate"] == 0.5 and "hold policy" in row["detail"]
+
+    verdicts.update(replay=[[True, False]], hold=[[False, False]])
+    row = {"task": "t", "status": "ok", "detail": ""}
+    cli._health_reliability(None, "t", EvalProtocol(episodes=2), first, row, SimpleNamespace(repeat=2, floor=True))
+    assert row["status"] == "flaky" and "1/2 against 2/2" in row["detail"]
+
+    row = {"task": "t", "status": "ok", "detail": ""}
+    cli._health_reliability(None, "t", EvalProtocol(episodes=2), first, row, SimpleNamespace(repeat=1, floor=False))
+    assert row["status"] == "ok", "without the flags the gate is the replay score alone"
+    assert cli.HEALTH_FAILING == ("low", "unreliable", "flaky", "error")
+
+
 def test_health_error_status_tells_unsupported_and_missing_demos_from_errors():
     from metasim.__main__ import _health_error_status
 

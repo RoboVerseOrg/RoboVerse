@@ -423,7 +423,11 @@ def _bench_suite_report(args: argparse.Namespace) -> int:
     return 0 if all(block["complete"] for block in report["splits"].values()) else 1
 
 
-HEALTH_STATUSES = ("ok", "low", "undefined", "unsupported", "no-demos", "error")
+HEALTH_STATUSES = ("ok", "low", "unreliable", "flaky", "undefined", "unsupported", "no-demos", "error")
+"""``unreliable``: the hold policy also succeeds (the checker accepts the initial state); ``flaky``: the same replay
+scores differently on a second run (``--repeat``)."""
+HEALTH_FAILING = ("low", "unreliable", "flaky", "error")
+"""The statuses that fail the gate."""
 """Outcomes of ``bench health`` for one task, in the order the table sorts them."""
 
 ISOLATED_HEALTH_BACKENDS = frozenset({"isaacsim", "isaacgym"})
@@ -572,6 +576,8 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
                     else:
                         rate = float(summary["success_rate"])
                         row.update(success_rate=rate, status="ok" if rate >= args.threshold else "low")
+                        if row["status"] == "ok":
+                            _health_reliability(env, name, protocol, result, row, args)
             except Exception as err:
                 detail = _error_detail(err)
                 row.update(status=_health_error_status(detail), detail=detail)
@@ -585,6 +591,37 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
         detail = _error_detail(err)
         row.update(status=_health_error_status(detail), detail=detail)
         return row
+
+
+def _health_reliability(env, name: str, protocol, result, row: dict, args: argparse.Namespace) -> None:
+    """The checks a passing replay must also survive, when asked for.
+
+    ``--repeat N`` replays the same instances and seed N times; a different per-episode verdict is ``flaky``.
+    ``--floor`` scores the hold policy (no motion) under the same protocol; any success is ``unreliable``: the
+    checker accepts the initial state, so a success rate on that task measures nothing.
+    """
+    from metasim.bench import HoldPolicy, ReplayPolicy, evaluate
+
+    flags = [e.success for e in result.episodes]
+    for k in range(1, int(getattr(args, "repeat", 1) or 1)):
+        again = evaluate(env, ReplayPolicy(), protocol, policy_info={"spec": "replay"}, task_name=name)
+        other = [e.success for e in again.episodes]
+        if other != flags:
+            row.update(
+                status="flaky",
+                detail=f"replay run {k + 1} scored {sum(other)}/{len(other)} against {sum(flags)}/{len(flags)} on the "
+                "same instances and seed",
+            )
+            return
+    if getattr(args, "floor", False):
+        hold = evaluate(env, HoldPolicy(), protocol, policy_info={"spec": "hold"}, task_name=name)
+        floor = hold.summary["success_rate"]
+        row["floor_rate"] = None if floor is None else float(floor)
+        if floor:
+            row.update(
+                status="unreliable",
+                detail=f"the hold policy (no motion) scores {float(floor):.2f}: the checker accepts the initial state",
+            )
 
 
 def _health_table(rows: list[dict], threshold: float) -> str:
@@ -609,8 +646,8 @@ def _bench_health(args: argparse.Namespace) -> int:
     """The task health gate: the replay baseline on every task that ships demos, one row per task.
 
     A task whose own demos do not replay to the threshold on the backend they were recorded on is
-    broken (asset, checker or physics), not hard; the gate exits 1 when any task is ``low`` or
-    ``error`` so it can guard a release. Results go to ``--out-dir`` as ordinary result files plus a
+    broken (asset, checker or physics), not hard; the gate exits 1 when any task is ``low``,
+    ``unreliable``, ``flaky`` or ``error`` so it can guard a release. Results go to ``--out-dir`` as ordinary result files plus a
     ``health.json`` with the rows.
     """
     from metasim.task.registry import list_tasks
@@ -638,7 +675,7 @@ def _bench_health(args: argparse.Namespace) -> int:
         rows.append(row)
         print(f"{row['task']:48s} {row['status']:12s} {row['detail']}", file=sys.stderr)
     if os.environ.get("METASIM_HEALTH_ROWS_ONLY") == "1":  # a child of an isolated sweep: the parent reports
-        return 1 if any(r["status"] in ("low", "error") for r in rows) else 0
+        return 1 if any(r["status"] in HEALTH_FAILING for r in rows) else 0
     table = _health_table(rows, args.threshold)
     with open(os.path.join(args.out_dir, "health.json"), "w") as f:
         json.dump(
@@ -647,7 +684,7 @@ def _bench_health(args: argparse.Namespace) -> int:
     with open(os.path.join(args.out_dir, "health.md"), "w") as f:
         f.write(table + "\n")
     print(table)
-    return 1 if any(r["status"] in ("low", "error") for r in rows) else 0
+    return 1 if any(r["status"] in HEALTH_FAILING for r in rows) else 0
 
 
 _REPORT_FILES = frozenset({"suite.json", "errors.json", "health.json"})
@@ -830,6 +867,14 @@ def _add_bench(sub) -> None:
     h.add_argument("--max-steps", type=int, help="evaluator-side episode cap (default: the task's)")
     h.add_argument("--seed", type=int, default=0)
     h.add_argument("--threshold", type=float, default=0.8, help="replay success rate a healthy task reaches")
+    h.add_argument(
+        "--floor",
+        action="store_true",
+        help="also score the hold policy: a task it succeeds on is `unreliable` (the checker accepts the initial state)",
+    )
+    h.add_argument(
+        "--repeat", type=int, default=1, help="replay N times; a different verdict on the same instances is `flaky`"
+    )
     h.add_argument("--device", help="torch device (default: cuda if available)")
     h.add_argument("--out-dir", default="bench_results/health", help="result files, health.json and health.md")
     h.add_argument(
