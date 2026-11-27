@@ -74,7 +74,7 @@ SIM_BACKENDS: dict[SimType, BackendSpec] = {
         "metasim.sim.isaacsim",
         "IsaacsimHandler",
         False,
-        "IsaacSim backend needs `isaacsim` (pip, Python 3.11 for 5.0) AND Isaac Lab from source: see packages/metasim/requirements/isaacsim5.txt",
+        "IsaacSim backend needs `isaacsim` (pip, Python 3.12 for 6.0) AND Isaac Lab 3 from source: see packages/metasim/requirements/isaacsim6.txt",
     ),
     SimType.GENESIS: BackendSpec(
         "metasim.sim.genesis", "GenesisHandler", False, "Genesis is not installed, please install it first"

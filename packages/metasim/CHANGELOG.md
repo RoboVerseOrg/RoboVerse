@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Isaac Sim 6.0 + Isaac Lab 3.0 is the supported Isaac line (`isaacsim>=6.0,<7`, `isaaclab>=16,<17`; `requirements/isaacsim6.txt`, `tools/install/isaacsim6.sh`). The handler follows Isaac Lab 3's API through small compatibility helpers: PhysX settings from `isaaclab_physx` on `SimulationCfg.physics`, Warp `ProxyArray` asset data read through `.torch`, Isaac Lab 3's `(x, y, z, w)` quaternions converted to MetaSim's `(w, x, y, z)` on every read and write, `has_gui` as a property, no render modes, and environment cloning through `isaaclab.cloner`. Isaac Lab 2.x keeps working through the same helpers as a best-effort legacy path. Isaac Sim 5.x is no longer supported: on the 595 NVIDIA driver series Kit 5.0 crashes in the RTX plugin at start-up.
+- On Isaac Sim 6 the handler's `close()` ends the process (Isaac Sim's own "fast shutdown", the convention that `close()` is a script's last statement): the graceful teardown segfaults at interpreter exit on Isaac Sim 6.0.1 / Isaac Lab 3.0 even for a bare Isaac Lab scene. `METASIM_ISAAC_FAST_SHUTDOWN=0` selects the graceful path for code that must run on after `close()`; the force-exit watchdog is off by default on Isaac Lab 3 (`METASIM_FORCE_EXIT_ON_CLOSE`).
+- `python -m metasim bench health` runs each task in its own subprocess for backends that boot once per process (`isaacsim`, `isaacgym`; `--isolate auto|always|never`), and writes every task's row to `<out-dir>/rows/<task>.json` before the simulator is closed, so a shutdown that ends the process cannot lose the verdict.
+
+### Fixed
+- The Isaac handler addresses environments as `/World/envs/env_[0-9]+/...`: Isaac Lab 3 matched the old `env_.*` across the whole prim hierarchy and spawned one copy of every object under every robot link (352 cubes per env in `pick_cube`).
+- The Isaac handler boots Kit without the `omni.kit.telemetry` extension (`METASIM_ISAAC_TELEMETRY=1` keeps it). Its start-up fork segfaulted in SciPy's OpenBLAS fork handler (`blas_thread_shutdown_`) whenever SciPy had been imported first, which MetaSim's own import chain (numpy-quaternion) guarantees; the crash looked like a random Kit boot failure.
+- An Isaac launch failure logs the full traceback, not only the exception's first line.
+- `Relative2DSphereDetector` (the ManiSkill goal-region checker of push_cube / pull_cube) builds its offset on the simulator's device; on CUDA backends (Newton, Isaac Sim) `reset` raised `Expected all tensors to be on the same device`.
+- The Isaac handler releases the scene before clearing the simulation context (Isaac Lab 3's own teardown order) and closes Isaac Sim 6 on the main thread.
+
 ## [1.0.0] - 2026-10-25
 
 ### Added

@@ -41,9 +41,7 @@ visualization = ["rerun-sdk", "trimesh", "viser", "yourdfpy"]
 # Simulator extras are intended for the per-simulator Python environments documented in
 # docs/source/get_started/installation.rst, not as an arbitrary co-installable matrix.
 isaacsim = [
-    "torch==2.7.0+cu128",
-    "torchvision==0.22.0+cu128",
-    "isaacsim[all,extscache]==5.0.0",
+    "isaacsim[all,extscache]==6.0.1.0",
 ]
 isaacsim211 = [
     "torch==2.5.1+cu118",

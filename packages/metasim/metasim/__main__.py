@@ -343,6 +343,87 @@ def _bench_suite_report(args: argparse.Namespace) -> int:
 HEALTH_STATUSES = ("ok", "low", "undefined", "unsupported", "no-demos", "error")
 """Outcomes of ``bench health`` for one task, in the order the table sorts them."""
 
+ISOLATED_HEALTH_BACKENDS = frozenset({"isaacsim", "isaacgym"})
+"""Backends whose simulator boots once per process: ``bench health`` runs each task in its own subprocess."""
+
+
+def _error_detail(err: BaseException) -> str:
+    return f"{type(err).__name__}: {err}".splitlines()[0][:200]
+
+
+def _health_rows_dir(out_dir: str) -> str:
+    return os.path.join(out_dir, "rows")
+
+
+def _write_health_row(out_dir: str, row: dict) -> str:
+    """Persist one task's row as ``<out_dir>/rows/<task>.json`` (the isolated runner and crash recovery read it)."""
+    os.makedirs(_health_rows_dir(out_dir), exist_ok=True)
+    path = os.path.join(_health_rows_dir(out_dir), f"{row['task']}.json")
+    with open(path, "w") as f:
+        json.dump(row, f, indent=2)
+    return path
+
+
+def _read_health_row(out_dir: str, task: str) -> dict | None:
+    path = os.path.join(_health_rows_dir(out_dir), f"{task}.json")
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        return json.load(f)
+
+
+def _health_task_isolated(name: str, args: argparse.Namespace) -> dict:
+    """Run :func:`_health_task` for one task in a child interpreter and collect its row.
+
+    Isaac Sim boots Kit once per process and its shutdown may end the process, so a sweep over several
+    tasks cannot share one interpreter. The child runs ``bench health --task <name> --isolate never`` into the
+    same ``--out-dir`` and writes its row before it closes the simulator; a child that dies without a row is
+    reported as ``error`` with its exit code.
+    """
+    import subprocess
+    import sys
+
+    row_path = os.path.join(_health_rows_dir(args.out_dir), f"{name}.json")
+    if os.path.exists(row_path):
+        os.remove(row_path)
+    cmd = [sys.executable, "-m", "metasim", "bench", "health", "--sim", args.sim, "--task", name, "--isolate", "never"]
+    cmd += ["--num-envs", str(args.num_envs), "--episodes", str(args.episodes), "--seed", str(args.seed)]
+    cmd += ["--threshold", str(args.threshold), "--out-dir", args.out_dir]
+    for robot in args.robot or ():
+        cmd += ["--robot", robot]
+    if args.max_steps is not None:
+        cmd += ["--max-steps", str(args.max_steps)]
+    if args.device:
+        cmd += ["--device", args.device]
+    os.makedirs(os.path.join(args.out_dir, "logs"), exist_ok=True)
+    log_path = os.path.join(args.out_dir, "logs", f"{name}.log")
+    with open(log_path, "w") as log_file:
+        proc = subprocess.run(cmd, check=False, stdout=log_file, stderr=subprocess.STDOUT)
+    row = _read_health_row(args.out_dir, name)
+    if row is None:
+        row = {
+            "task": name,
+            "status": "error",
+            "success_rate": None,
+            "episodes": 0,
+            "result": None,
+            "detail": f"child exited with {proc.returncode} before reporting ({_last_error_line(log_path)}; {log_path})",
+        }
+    return row
+
+
+def _last_error_line(log_path: str) -> str:
+    """The last line of a child log that names a Python exception, else a hint that there is none."""
+    try:
+        with open(log_path, errors="replace") as f:
+            lines = [ln.strip() for ln in f if ln.strip()]
+    except OSError:
+        return "no log"
+    for line in reversed(lines):
+        if ("Error" in line or "Exception" in line) and not line.startswith(("File ", "Traceback")):
+            return line[:160]
+    return lines[-1][:160] if lines else "empty log"
+
 
 def _health_task(name: str, args: argparse.Namespace) -> dict:
     """Replay one task's demos under the protocol and classify the outcome.
@@ -374,25 +455,31 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
         protocol = EvalProtocol(episodes=args.episodes, max_episode_steps=args.max_steps, seed=args.seed, name="health")
         env = task_cls(scenario, device)
         try:
-            # the demo file is a property of the built task: some tasks pick it per robot or in __init__
-            if getattr(env, "traj_filepath", None) is None:
-                row.update(status="no-demos")
-                return row
-            result = evaluate(env, ReplayPolicy(), protocol, policy_info={"spec": "replay"}, task_name=name)
+            try:
+                # the demo file is a property of the built task: some tasks pick it per robot or in __init__
+                if getattr(env, "traj_filepath", None) is None:
+                    row.update(status="no-demos")
+                else:
+                    result = evaluate(env, ReplayPolicy(), protocol, policy_info={"spec": "replay"}, task_name=name)
+                    robots = "+".join(result.robots) or "norobot"
+                    path = result.save(os.path.join(args.out_dir, f"{name}__{robots}__{args.sim}__replay.json"))
+                    summary = result.summary
+                    row.update(episodes=summary["episodes"], result=str(path))
+                    if not summary["success_defined"]:
+                        row.update(status="undefined")
+                    else:
+                        rate = float(summary["success_rate"])
+                        row.update(success_rate=rate, status="ok" if rate >= args.threshold else "low")
+            except Exception as err:
+                row.update(status="error", detail=_error_detail(err))
+            # Written before close(): a simulator whose shutdown ends or aborts the process (Isaac Sim)
+            # must not take the verdict, or the error, with it.
+            _write_health_row(args.out_dir, row)
+            return row
         finally:
             env.close()
-        robots = "+".join(result.robots) or "norobot"
-        path = result.save(os.path.join(args.out_dir, f"{name}__{robots}__{args.sim}__replay.json"))
-        summary = result.summary
-        row.update(episodes=summary["episodes"], result=str(path))
-        if not summary["success_defined"]:
-            row.update(status="undefined")
-        else:
-            rate = float(summary["success_rate"])
-            row.update(success_rate=rate, status="ok" if rate >= args.threshold else "low")
-        return row
     except Exception as err:  # one broken task must not hide the others: it is reported as a row
-        detail = f"{type(err).__name__}: {err}".splitlines()[0][:200]
+        detail = _error_detail(err)
         # an object with no description for this backend is a backend the task does not support
         status = "unsupported" if "has no" in detail and "asset path set for the" in detail else "error"
         row.update(status=status, detail=detail)
@@ -429,9 +516,12 @@ def _bench_health(args: argparse.Namespace) -> int:
 
     names = list(args.task) if args.task else list_tasks()
     os.makedirs(args.out_dir, exist_ok=True)
+    isolate = args.isolate == "always" or (args.isolate == "auto" and args.sim in ISOLATED_HEALTH_BACKENDS)
     rows = []
     for name in names:
-        row = _health_task(name, args)
+        row = _health_task_isolated(name, args) if isolate else _health_task(name, args)
+        if not isolate:
+            _write_health_row(args.out_dir, row)
         if row["status"] == "no-demos" and not args.task:
             continue  # the default sweep is over tasks with demos; an explicit --task is always reported
         rows.append(row)
@@ -600,6 +690,12 @@ def _add_bench(sub) -> None:
     h.add_argument("--threshold", type=float, default=0.8, help="replay success rate a healthy task reaches")
     h.add_argument("--device", help="torch device (default: cuda if available)")
     h.add_argument("--out-dir", default="bench_results/health", help="result files, health.json and health.md")
+    h.add_argument(
+        "--isolate",
+        choices=("auto", "always", "never"),
+        default="auto",
+        help="run each task in its own subprocess (auto: for backends that boot once per process, e.g. isaacsim)",
+    )
     h.set_defaults(func=_bench_health)
     s = bs.add_parser("summarize", help="pool result files / directories into a Markdown table")
     s.add_argument("paths", nargs="+")

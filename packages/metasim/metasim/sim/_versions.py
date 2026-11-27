@@ -117,12 +117,15 @@ BACKEND_REQUIREMENTS: dict[SimType, tuple[Requirement, ...]] = {
     SimType.PYBULLET: (Requirement("pybullet", ">=3.2,<4"),),
     SimType.GENESIS: (Requirement("genesis-world", ">=0.2,<1"),),
     SimType.ISAACSIM: (
-        Requirement("isaacsim", ">=4.5,<5.1", tested="5.0.0.0"),
-        # The handler is built on Isaac Lab (AppLauncher, sim utils); it is not on PyPI, so the
-        # ``isaacsim`` extra cannot pull it — see requirements/isaacsim5.txt.
-        # Isaac Lab tags vs the `isaaclab` distribution: v2.0.2 -> 0.34.9, v2.1.0 -> 0.36.21,
-        # v2.1.1 -> 0.41.3, v2.2.1 -> 0.45.9. v2.0+ pairs with Isaac Sim 4.5+, hence the floor.
-        Requirement("isaaclab", ">=0.34,<1", tested="0.45.9"),
+        # Isaac Sim 6 / Isaac Lab 3 is the supported line (2026-11). Isaac Sim 5.x no longer boots on the
+        # 595 driver series (RTX plugin crash at Kit start) and Isaac Lab 2.x's torch-based asset data,
+        # ``wxyz`` quaternions and ``clone_environments`` are kept only as a best-effort legacy path in
+        # the handler's compatibility helpers.
+        Requirement("isaacsim", ">=6.0,<7", tested="6.0.1.0"),
+        # The handler is built on Isaac Lab (AppLauncher, sim utils, isaaclab_physx); it is not on PyPI,
+        # so the ``isaacsim`` extra cannot pull it — see requirements/isaacsim6.txt. The Isaac Lab 3.0
+        # tag ships the `isaaclab` distribution as 16.x (Isaac Lab 2.x shipped 0.34–0.54).
+        Requirement("isaaclab", ">=16,<17", tested="16.4.0"),
     ),
     SimType.ISAACGYM: (Requirement("isaacgym", ">=1.0rc4"),),
     SimType.BLENDER: (Requirement("bpy", ">=4.0,<5"),),

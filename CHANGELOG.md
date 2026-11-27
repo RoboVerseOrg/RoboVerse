@@ -12,6 +12,9 @@ release.
 
 ## [Unreleased]
 
+### Changed
+- `tools/install/isaacsim6.sh` replaces `isaacsim5.sh`: the Isaac backend is installed as Isaac Sim 6.0.1 + Isaac Lab release/3.0.0 (Python 3.12, torch 2.11+cu130), verified on RTX 5090 with the 595 driver. See MetaSim's changelog for the handler changes.
+
 ## [1.0.0] - 2026-10-25
 
 ### Added
