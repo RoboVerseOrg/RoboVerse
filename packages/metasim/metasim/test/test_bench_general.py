@@ -829,3 +829,67 @@ def test_health_error_status_tells_unsupported_and_missing_demos_from_errors():
     )
     assert _health_error_status("Exception: File roboverse_data/robots/g1/mjcf/g1.xml neither exists ...") == "error"
     assert _health_error_status("RuntimeError: boom") == "error"
+
+
+def test_bench_run_streams_each_episode_then_saves_the_result(monkeypatch, tmp_path, capsys):
+    """`bench run` appends every finished episode to <out>.episodes.jsonl and removes it once the result is saved."""
+    import argparse
+
+    import metasim.__main__ as cli
+    import metasim.bench as bench
+
+    class _Env:
+        scenario = SimpleNamespace(robots=[SimpleNamespace(name="bot")], simulator="mujoco")
+
+        def close(self):
+            return None
+
+    seen = []
+
+    def fake_evaluate(env, policy, protocol, policy_info=None, on_episode=None, task_name=None):
+        for ep in (_episode(0, True), _episode(1, False)):
+            on_episode(ep)  # the stream must accept a real EpisodeResult
+            seen.append((tmp_path / "r.json.episodes.jsonl").read_text().count("\n"))
+        return BenchmarkResult(
+            task=task_name,
+            simulator="mujoco",
+            robots=["bot"],
+            num_envs=1,
+            protocol=protocol.to_dict(),
+            policy={"name": policy.name},
+            episodes=[_episode(0, True), _episode(1, False)],
+        )
+
+    monkeypatch.setattr(bench, "evaluate", fake_evaluate)
+    monkeypatch.setattr(cli, "_make_env", lambda *a, **k: _Env())
+    monkeypatch.setattr(cli, "_make_policy", lambda args: (HoldPolicy(), {}))
+    args = argparse.Namespace(
+        task="t",
+        sim="mujoco",
+        robot=None,
+        num_envs=1,
+        episodes=2,
+        success_rule="first",
+        hold_steps=1,
+        max_steps=None,
+        seed=0,
+        instance=None,
+        protocol_name="default",
+        demo_budget=None,
+        demo_budget_quantile=0.75,
+        prompt_split="canonical",
+        access=None,
+        device="cpu",
+        gui=False,
+        out=str(tmp_path / "r.json"),
+        policy="hold",
+        policy_arg=None,
+        checkpoint=None,
+        policy_url=None,
+        require_metadata=None,
+        obs_key=None,
+    )
+    assert cli._bench_run(args) == 0
+    assert seen == [1, 2], "one JSON line per finished episode, written as each ends"
+    assert (tmp_path / "r.json").exists() and not (tmp_path / "r.json.episodes.jsonl").exists()
+    assert capsys.readouterr().out.startswith("t [bot @ mujoco] hold:"), "the score line names task, robot, sim, policy"

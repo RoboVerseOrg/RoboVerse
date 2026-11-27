@@ -187,6 +187,7 @@ def _score_line(summary: dict) -> str:
 
 
 def _bench_run(args: argparse.Namespace) -> int:
+    import dataclasses
     import re
     import time
 
@@ -229,7 +230,7 @@ def _bench_run(args: argparse.Namespace) -> int:
 
         def on_episode(ep) -> None:
             _report_episode(ep)
-            stream.write(json.dumps(ep.to_dict()) + "\n")
+            stream.write(json.dumps(dataclasses.asdict(ep)) + "\n")
             stream.flush()
 
         try:
