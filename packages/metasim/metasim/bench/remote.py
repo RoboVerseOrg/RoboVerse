@@ -250,6 +250,7 @@ class RemotePolicy:
         self.obs_keys = tuple(obs_keys) if obs_keys else None
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # never via a proxy
         self.metadata: dict[str, Any] = self._request("GET", "/metadata")
+        self.family = self.metadata.get("family")  # the served policy's method family, recorded like a local one
         if self.metadata.get("protocol") != PROTOCOL:
             raise ValueError(f"{self.url} speaks {self.metadata.get('protocol')!r}, this client speaks {PROTOCOL!r}")
         mismatched = {
@@ -376,6 +377,7 @@ class PolicyServer:
         self.metadata = {
             "protocol": PROTOCOL,
             "name": getattr(policy, "name", type(policy).__name__),
+            **({"family": policy.family} if isinstance(getattr(policy, "family", None), str) else {}),
             **(metadata or {}),
         }
         self.ctx: PolicyContext | None = None

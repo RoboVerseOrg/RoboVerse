@@ -194,6 +194,98 @@ adapter is expected to honour, and a served policy reads them from `PolicyContex
 scores a result only under its own tier (`bench suite run --access` and `bench suite report --access`
 set it for the whole suite); `bench summarize` shows the tier of every row.
 
+## Methods x perspectives: the first matrix
+
+The tiers only pay off when several *method families* are scored under several of them with one
+protocol. The tree ships one policy per family so the matrix can be produced today and a new method
+has a protocol-identical row to beat:
+
+| family | policy | what it is given | where |
+|---|---|---|---|
+| baseline | `hold`, `random` | nothing useful | `metasim.bench.policy` |
+| replay | `replay` | the task's own demo actions (privileged only) | `metasim.bench.policy` |
+| scripted | `metasim.bench.skills:ScriptedPolicy` | object poses; closed-loop IK skills (`pick`, `place_on`, `push_to`, `stand_upright`) from the robot's own MJCF | `metasim.bench.skills` |
+| agent | `metasim.bench.agent:LLMAgentPolicy` | the instruction, the camera image, and the skills as tools; object poses only under `agent-privileged` | `metasim.bench.agent` (Anthropic API, `ANTHROPIC_API_KEY`) |
+| vla | `roboverse_learn.vla.bench_policy:OpenVLAPolicy` | one camera image and the instruction; its end-effector deltas go through the same kinematics | served with `bench serve` from the model's own environment |
+
+Most tasks configure no camera (their demos are joint trajectories), so a visual tier has nothing to
+observe. `--camera front` (also `side`, `top`; `metasim.bench.cameras.CAMERA_PRESETS`) adds a named
+view to the scenario and records it in the result, so two visual-tier runs are comparable only when
+they looked from the same place:
+
+```bash
+python -m metasim bench suite run --suite tabletop-mujoco --episodes 10 --policy metasim.bench.skills:ScriptedPolicy
+python -m metasim bench suite run --suite tabletop-mujoco --episodes 10 --policy hold --access visual --camera front
+python -m metasim bench suite run --suite tabletop-mujoco --episodes 10 \
+    --policy metasim.bench.agent:LLMAgentPolicy --access agent-privileged --camera front
+python -m metasim bench serve --policy roboverse_learn.vla.bench_policy:OpenVLAPolicy --port 8100   # in the VLA's env
+python -m metasim bench suite run --suite tabletop-mujoco --episodes 10 --policy-url http://127.0.0.1:8100 \
+    --access visual --camera front
+python -m metasim bench matrix bench_results/suites/tabletop-mujoco/*/     # methods x tiers
+```
+
+`bench matrix` pools every result file it is given into one table (task-macro success per method and
+tier, with task and episode counts; a method scored on fewer tasks is starred) followed by the per-task
+rows with Wilson intervals. A policy declares its family with a class attribute (`family = "vla"`), which
+the result records under `policy["family"]`.
+
+Measured on 2026-11-27 (`bench matrix` output, 10 episodes per task; the suite protocol is 50):
+
+| method | privileged | agent-privileged | agent-skills | visual |
+|---|---|---|---|---|
+| llm-agent (agent) |  | 0.880 (5 tasks, 50 ep) | 0.120 (5 tasks, 50 ep) |  |
+| scripted (scripted) | 0.900 (5 tasks, 50 ep) |  |  |  |
+| hold | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
+| openvla-7b[bridge_orig] |  |  |  | 0.000 (5 tasks, 50 ep) |
+| random | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
+| replay | 0.960 (5 tasks, 50 ep) |  |  |  |
+
+`*`: fewer tasks than the full set; macros are not comparable across such cells.
+
+<details><summary>Per task, with 95 % Wilson intervals</summary>
+
+| task | method | privileged | agent-privileged | agent-skills | visual |
+|---|---|---|---|---|---|
+| lift_peg_upright | llm-agent (agent) |  | 0.700 [0.40, 0.89] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| lift_peg_upright | scripted (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| lift_peg_upright | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| lift_peg_upright | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| lift_peg_upright | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| lift_peg_upright | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| pick_cube | llm-agent (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| pick_cube | scripted (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| pick_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pick_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| pick_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pick_cube | replay | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| pull_cube | llm-agent (agent) |  | 0.800 [0.49, 0.94] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| pull_cube | scripted (scripted) | 0.700 [0.40, 0.89] n=10 |  |  |  |
+| pull_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pull_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| pull_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pull_cube | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| push_cube | llm-agent (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.600 [0.31, 0.83] n=10 |  |
+| push_cube | scripted (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| push_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| push_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| push_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| push_cube | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| stack_cube | llm-agent (agent) |  | 0.900 [0.60, 0.98] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| stack_cube | scripted (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| stack_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| stack_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| stack_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| stack_cube | replay | 0.900 [0.60, 0.98] n=10 |  |  |  |
+
+</details>
+
+What the matrix is meant to show, and what the first one does show: the replay ceiling and the scripted
+oracle bound what a perfect perception stack could reach; the same agent drops from near the oracle to
+near zero when its object poses are taken away, which is the perception gap the `agent-skills` tier
+isolates; and a zero-shot generalist VLA on a robot and scene it never saw sits at the floor, so a
+fine-tuned checkpoint has a protocol-identical baseline. A world-action model has no open implementation
+to run yet; it slots in as another `visual`-tier served policy, exactly like the VLA row.
+
 ## Episode budgets and instructions
 
 - **Demo budget.** `--demo-budget 3` (`EvalProtocol.demo_budget_factor`) caps each episode at 3x the

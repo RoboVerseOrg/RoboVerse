@@ -441,6 +441,11 @@ def evaluate(
 
     results.sort(key=lambda e: e.index)
     policy_record = {"name": getattr(policy, "name", type(policy).__name__), "kind": type(policy).__qualname__}
+    family = getattr(policy, "family", None)
+    if isinstance(family, str) and family:
+        policy_record["family"] = (
+            family  # method family (vla / il / rl / agent / scripted / baseline) for cross-method reports
+        )
     policy_record.update(policy_info or {})
     usage = _policy_usage(policy)
     if usage:

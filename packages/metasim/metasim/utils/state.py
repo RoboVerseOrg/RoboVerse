@@ -341,7 +341,10 @@ def state_to_device(state: TensorState, device) -> TensorState:
 
 def state_tensor_to_nested(handler: BaseSimHandler, tensor_state: TensorState) -> list[DictEnvState]:
     """Convert a tensor state to a list of env states. All the tensors will be converted to cpu for compatibility."""
-    num_envs = next(iter(chain(tensor_state.objects.values(), tensor_state.robots.values()))).root_state.shape[0]
+    first = next(chain(tensor_state.objects.values(), tensor_state.robots.values()), None)
+    # a scene-only scenario (the articulation lives in the scene MJCF, no objects, no robots) has nothing to
+    # convert per entity; the batch size then comes from the handler and every env state is empty
+    num_envs = first.root_state.shape[0] if first is not None else int(handler.num_envs)
     env_states = []
     for env_id in range(num_envs):
         object_states = {}

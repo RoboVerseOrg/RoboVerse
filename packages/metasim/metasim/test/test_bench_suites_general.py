@@ -331,6 +331,23 @@ def test_remote_hold_policy_scores_like_the_in_process_one(served):
     assert all(torch.equal(a, b) for a, b in zip(local_env.actions, remote_env.actions, strict=True))
 
 
+def test_remote_policy_carries_the_served_family_into_the_result(served):
+    """A served VLA is recorded as family "vla" like a local one; a policy without a family adds nothing."""
+
+    class _Vla(HoldPolicy):
+        name = "fake-vla"
+        family = "vla"
+
+    server = served(_Vla())
+    assert server.metadata["family"] == "vla" and "family" not in served(HoldPolicy()).metadata
+    policy = RemotePolicy(server.url)
+    assert policy.family == "vla"
+    result = evaluate(
+        _DictObsEnv(num_envs=1, schedule=[(2, 3, True)], pool_size=1), policy, EvalProtocol(episodes=1), task_name="t"
+    )
+    assert result.policy["family"] == "vla" and result.policy["name"] == "fake-vla"
+
+
 def test_remote_chunks_prompts_and_observation_paths(served):
     policy = _ChunkPolicy()
     server = served(policy)
