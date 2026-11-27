@@ -1,0 +1,22 @@
+# Isaac Sim 6.0 + Isaac Lab 3.0 backend (Python 3.12). Scripted in tools/install/isaacsim6.sh; the
+# steps, because Isaac Lab is not on PyPI:
+#
+#   python -m pip install -e "packages/metasim[isaacsim]" --extra-index-url https://pypi.nvidia.com
+#   git clone --depth 1 --branch release/3.0.0 https://github.com/isaac-sim/IsaacLab.git
+#   python -m pip install -e IsaacLab/source/isaaclab -e IsaacLab/source/isaaclab_physx -e IsaacLab/source/isaaclab_contrib
+#   # LAST, so nothing above replaces it with a build that lacks Blackwell (sm_120) kernels:
+#   python -m pip install --index-url https://download.pytorch.org/whl/cu130 "torch==2.11.0" torchvision
+#
+# Run-time notes
+#   * First launch needs the EULA variables: ACCEPT_EULA=Y OMNI_KIT_ACCEPT_EULA=YES PRIVACY_CONSENT=Y
+#   * The handler boots Kit without `omni.kit.telemetry`: its start-up fork crashes in SciPy's bundled
+#     OpenBLAS fork handler (`blas_thread_shutdown_`) once SciPy is imported, which MetaSim's import chain
+#     (numpy-quaternion) does long before the simulator starts. METASIM_ISAAC_TELEMETRY=1 keeps the
+#     extension; then start Python with OPENBLAS_NUM_THREADS=1 so the pool is never created.
+#   * close() ends the process (Isaac Sim 6 fast shutdown). METASIM_ISAAC_FAST_SHUTDOWN=0 keeps the
+#     interpreter alive after close(), with a known segfault at interpreter exit on 6.0.1 / Isaac Lab 3.0.
+#   * Isaac Sim 5.x is not supported any more: on the 595 NVIDIA driver series Kit 5.0 crashes in the
+#     RTX plugin at start-up, and Isaac Lab 2.x's API (torch asset data, wxyz quaternions,
+#     clone_environments) only survives in the handler as a best-effort legacy path.
+# Verify with: python -m metasim doctor --backend isaacsim
+isaacsim[all,extscache]==6.0.1.0

@@ -6,7 +6,7 @@ documentation: if the docs and the script disagree, the script is what was teste
 
 | script | stack | Python | verified |
 |---|---|---|---|
-| `isaacsim5.sh` | Isaac Sim 5.0.0 + Isaac Lab v2.2.1, torch 2.7.0+cu128 | 3.11 | 2026-09-03, RTX 5090 |
+| `isaacsim6.sh` | Isaac Sim 6.0.1 + Isaac Lab release/3.0.0, torch 2.11.0+cu130 | 3.12 | 2026-11-27, RTX 5090 (driver 595) |
 
 Every script ends with `python -m metasim doctor --backend <sim>`; a green doctor is the definition
 of "installed". The weekly `backend-compat` workflow reruns the pip-only stacks; the Isaac stacks are

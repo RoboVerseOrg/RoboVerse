@@ -198,9 +198,8 @@ class Relative2DSphereDetector(BaseDetector):
         if env_ids is None:
             env_ids = list(range(handler.num_envs))
 
-        relative_pos = torch.tensor(self.relative_pos, dtype=torch.float32)  # [3]
-
         base_pos = get_pos(handler, self.base_obj_name, env_ids=env_ids)
+        relative_pos = torch.tensor(self.relative_pos, dtype=torch.float32, device=base_pos.device)  # [3]
 
         self.checker_pos = base_pos + relative_pos
 
