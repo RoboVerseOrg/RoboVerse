@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `python -m metasim bench run|suite run --camera <preset>` adds a named camera (`front`, `side`, `top`; `metasim.bench.cameras.CAMERA_PRESETS`) to a task whose scenario has none, so the visual access tiers have something to observe; the preset names are recorded in the result's `notes["cameras"]`.
+- `metasim.bench.skills`: scripted manipulation skills on the policy contract (`ArmModel`: forward kinematics and damped-least-squares IK from the robot's own MJCF; `MoveTo`, `MoveJoints`, `Gripper`; `pick`, `place_on`, `push_to`, `stand_upright` plans) and `ScriptedPolicy`, the privileged "knows the poses" baseline: on the tabletop-mujoco suite it scores 0.90 task-macro over 10 episodes per task (pick 1.0, stack 0.9, push 1.0, pull 0.7, peg 0.9) against the replay ceiling of 0.96.
+- `metasim.bench.agent.LLMAgentPolicy`: a language-model agent (Anthropic Messages API, tool use) that plans with the skills as tools and reports `llm_calls` / `llm_tokens` / `tool_calls` for the tier budgets. Under `agent-privileged` (poses + image) it solves the suite with about one model call per episode; under `agent-skills` (image only) it has to estimate positions from the picture and scores near zero, which is the gap the tier is meant to measure.
+- `python -m metasim bench matrix <results...>`: methods x information-access tiers in one table (task-macro success, task and episode counts, partial task sets starred) plus the per-task rows with Wilson intervals; `BenchmarkResult.policy["family"]` records a policy's method family (`vla`, `il`, `rl`, `agent`, `scripted`, `baseline`) when the policy declares one.
+
 ### Fixed
 - `bench run` crashed with `AttributeError` when its first episode finished: the per-episode stream (`<out>.episodes.jsonl`) serialised `EpisodeResult` through a `to_dict()` it does not have. It uses `dataclasses.asdict`; a CLI test now drives `_bench_run` through a finished episode.
 

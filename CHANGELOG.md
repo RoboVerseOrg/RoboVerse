@@ -12,6 +12,9 @@ release.
 
 ## [Unreleased]
 
+### Added
+- `roboverse_learn/vla/bench_policy.py`: `EEDeltaPolicy` turns an end-effector-delta VLA (image + instruction -> translation, rotation, gripper) into joint targets through the robot's kinematics, and `OpenVLAPolicy` wraps `openvla/openvla-7b` for `python -m metasim bench serve`, so an off-the-shelf generalist is scored on the tabletop suite under the `visual` tier with the same protocol as every other method.
+
 ## [1.0.0] - 2026-11-27
 
 ### Added
