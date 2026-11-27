@@ -685,6 +685,17 @@ def _bench_summarize(args: argparse.Namespace) -> int:
     return 1 if bad else 0
 
 
+def _bench_matrix(args: argparse.Namespace) -> int:
+    from metasim.bench import matrix
+
+    results, bad = _load_results(args.paths)
+    if not results:
+        print("no result files found", file=sys.stderr)
+        return 1
+    print(matrix(results))
+    return 1 if bad else 0
+
+
 def _bench_validate(args: argparse.Namespace) -> int:
     from metasim.bench import validate_result
 
@@ -831,6 +842,9 @@ def _add_bench(sub) -> None:
     s = bs.add_parser("summarize", help="pool result files / directories into a Markdown table")
     s.add_argument("paths", nargs="+")
     s.set_defaults(func=_bench_summarize)
+    mx = bs.add_parser("matrix", help="methods x access tiers: task-macro success from result files / directories")
+    mx.add_argument("paths", nargs="+")
+    mx.set_defaults(func=_bench_matrix)
     v = bs.add_parser("validate", help="check result files against the schema")
     v.add_argument("paths", nargs="+")
     v.set_defaults(func=_bench_validate)

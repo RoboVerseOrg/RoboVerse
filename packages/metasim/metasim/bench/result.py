@@ -259,3 +259,63 @@ def summarize(results: list[BenchmarkResult]) -> str:
         else:
             lines.append(f"{head} {k / n:.3f} | [{low:.3f}, {high:.3f}] | {mean_steps:.1f} |")
     return "\n".join(lines)
+
+
+def matrix(results: list[BenchmarkResult]) -> str:
+    """Methods x information-access tiers: one Markdown table of task-macro success, then the per-task rows.
+
+    Rows are policies (``policy.name``, with the recorded ``family`` when present), columns the access tiers
+    the results were run under. A cell is the mean over tasks of each task's pooled success rate, with the
+    task count and the pooled episode count; a method evaluated on fewer tasks than another in the same column
+    is marked ``*`` so the macros are not read as comparable. The second table lists every task row with its
+    Wilson interval.
+    """
+    cells: dict[tuple[str, str, str], tuple[int, int]] = {}
+    families: dict[str, str] = {}
+    for result in results:
+        policy = str(result.policy.get("name", "?"))
+        if result.policy.get("family"):
+            families[policy] = str(result.policy["family"])
+        tier = _access_label(_access_key(result.protocol.get("access")))
+        key = (policy, tier, result.task)
+        wins, n = cells.get(key, (0, 0))
+        cells[key] = (wins + sum(e.success for e in result.episodes), n + len(result.episodes))
+    if not cells:
+        return "no results"
+    tiers = sorted({t for _, t, _ in cells}, key=lambda t: (t != "privileged", t))
+    policies = sorted({p for p, _, _ in cells}, key=lambda p: (families.get(p, "~"), p))
+    all_tasks = {t for _, _, t in cells}
+
+    def label(policy: str) -> str:
+        return f"{policy} ({families[policy]})" if policy in families else policy
+
+    lines = ["| method | " + " | ".join(tiers) + " |", "|---|" + "---|" * len(tiers)]
+    for policy in policies:
+        row = [label(policy)]
+        for tier in tiers:
+            rates = [(w / n, n) for (p, t, _), (w, n) in cells.items() if p == policy and t == tier and n]
+            if not rates:
+                row.append("")
+                continue
+            macro = sum(r for r, _ in rates) / len(rates)
+            episodes = sum(n for _, n in rates)
+            partial = "*" if len(rates) < len(all_tasks) else ""
+            row.append(f"{macro:.3f}{partial} ({len(rates)} tasks, {episodes} ep)")
+        lines.append("| " + " | ".join(row) + " |")
+    lines += ["", "`*`: fewer tasks than the full set; macros are not comparable across such cells.", ""]
+    lines += ["| task | method | " + " | ".join(tiers) + " |", "|---|---|" + "---|" * len(tiers)]
+    for task in sorted(all_tasks):
+        for policy in policies:
+            row = [task, label(policy)]
+            any_cell = False
+            for tier in tiers:
+                wins, n = cells.get((policy, tier, task), (0, 0))
+                if not n:
+                    row.append("")
+                    continue
+                lo, hi = wilson_interval(wins, n)
+                row.append(f"{wins / n:.3f} [{lo:.2f}, {hi:.2f}] n={n}")
+                any_cell = True
+            if any_cell:
+                lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)

@@ -445,50 +445,46 @@ def push_to(name: str, goal: str | tuple[float, float], arm: ArmModel, *, height
     ]
 
 
-def stand_upright(name: str, arm: ArmModel, *, length: float, width: float) -> list[Skill]:
-    """Grasp a lying bar ``name`` (its x axis along its length) at the centre, lift it and stand it on one end."""
+def stand_upright(name: str, arm: ArmModel, *, length: float, width: float, grasp_offset: float = 0.09) -> list[Skill]:
+    """Stand a lying bar ``name`` (its x axis along its length) on its -x end, +x end up.
+
+    A parallel gripper pinches the bar across its width, so the bar is free to pivot about the pinch axis:
+    rotating the hand does not rotate the bar. The plan uses that instead of fighting it: grasp
+    ``grasp_offset`` metres towards the +x end, lift until the long side hangs down under gravity, lower it
+    until the -x end rests on the table (which squares it up through the same pivot), and let go.
+    """
     state: dict[str, Any] = {}
+    hanging = length / 2 + grasp_offset  # bar below the grasp point once it hangs
 
     def grasp_pose(view: EnvView, dz: float):
         pos, quat = view.pose(name)
         yaw = object_yaw(quat)
         if "yaw" not in state:
             state["yaw"] = yaw
-        return pos + np.array([0.0, 0.0, dz]), top_down_rot(state["yaw"])
+        u = np.array([math.cos(yaw), math.sin(yaw), 0.0])
+        return pos + u * grasp_offset + np.array([0.0, 0.0, dz]), top_down_rot(state["yaw"])
 
-    def upright_rot() -> np.ndarray:
-        yaw = state["yaw"]
-        u = np.array([math.cos(yaw), math.sin(yaw), 0.0])  # the bar's axis in the world at grasp time
-        axis = np.cross(u, np.array([0.0, 0.0, 1.0]))
-        return _rot_about(axis, math.pi / 2) @ top_down_rot(yaw)
-
-    def rotate(view: EnvView):
+    def tcp(view: EnvView) -> np.ndarray:
         q = np.array([view.q[j] for j in arm.arm_joints])
-        pos_b, _ = arm.fk(q)
-        pos, _ = view.base_to_world(pos_b, np.eye(3))
-        return pos, upright_rot()
+        return view.base_to_world(arm.fk(q)[0], np.eye(3))[0]
+
+    def high(view: EnvView):
+        pos = tcp(view)
+        return np.array([pos[0], pos[1], hanging + 0.12]), top_down_rot(state["yaw"])
 
     def set_down(view: EnvView):
-        q = np.array([view.q[j] for j in arm.arm_joints])
-        pos_b, _ = arm.fk(q)
-        pos, _ = view.base_to_world(pos_b, np.eye(3))
-        return np.array([pos[0], pos[1], length / 2 + 0.004]), upright_rot()
-
-    def back_off(view: EnvView):
-        q = np.array([view.q[j] for j in arm.arm_joints])
-        pos_b, rot_b = arm.fk(q)
-        pos, rot = view.base_to_world(pos_b, rot_b)
-        return pos - rot[:, 2] * 0.12, rot  # straight back along the tool axis
+        pos = tcp(view)
+        return np.array([pos[0], pos[1], hanging - 0.006]), top_down_rot(state["yaw"])  # press the end down
 
     return [
         MoveTo(lambda v: grasp_pose(v, 0.12), arm.gripper_open, name="reach_above"),
         MoveTo(lambda v: grasp_pose(v, 0.0), arm.gripper_open, speed=0.02, name="descend"),
         Gripper(arm.gripper_closed, name="close"),
-        MoveTo(_offset_current(0.0, 0.0, 0.25), arm.gripper_closed, name="lift"),
-        MoveJoints(rotate, arm.gripper_closed, steps=50, name="rotate_upright"),
-        MoveTo(set_down, arm.gripper_closed, speed=0.015, max_steps=80, name="set_down"),
-        Gripper(arm.gripper_open, name="release"),
-        MoveTo(back_off, arm.gripper_open, name="back_off"),
+        MoveTo(high, arm.gripper_closed, speed=0.02, max_steps=120, name="lift_to_hang"),
+        Gripper(arm.gripper_closed, steps=25, name="settle"),
+        MoveTo(set_down, arm.gripper_closed, speed=0.01, tol=0.004, max_steps=120, name="set_down"),
+        Gripper(arm.gripper_open, steps=25, name="release"),
+        MoveTo(_offset_current(0.0, 0.0, 0.12), arm.gripper_open, name="retreat"),
     ]
 
 

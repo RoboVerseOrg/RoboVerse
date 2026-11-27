@@ -27,7 +27,16 @@ from .policy import (
 from .prompts import PromptBank, PromptDraw, task_prompt_bank
 from .protocol import PROMPT_SPLITS, SUCCESS_RULES, EvalProtocol
 from .remote import PolicyServer, RemotePolicy
-from .result import SCHEMA, SCHEMA_VERSION, BenchmarkResult, EpisodeResult, summarize, validate_result, wilson_interval
+from .result import (
+    SCHEMA,
+    SCHEMA_VERSION,
+    BenchmarkResult,
+    EpisodeResult,
+    matrix,
+    summarize,
+    validate_result,
+    wilson_interval,
+)
 from .suite import BenchmarkSuite, SuiteTask, get_suite, list_suites, register_suite, suite_report, suite_table
 
 __all__ = [
@@ -63,6 +72,7 @@ __all__ = [
     "instance_pool",
     "list_suites",
     "load_policy",
+    "matrix",
     "plan_instances",
     "register_suite",
     "restrict_observation",
