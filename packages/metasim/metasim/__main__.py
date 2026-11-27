@@ -118,8 +118,17 @@ def _parse_kv(items: list[str] | None) -> dict:
     return out
 
 
-def _make_env(task: str, *, sim: str, robots: list[str] | None, num_envs: int, gui: bool, device: str | None):
-    """Build the registry task ``task`` on ``sim`` from its class-level scenario."""
+def _make_env(
+    task: str,
+    *,
+    sim: str,
+    robots: list[str] | None,
+    num_envs: int,
+    gui: bool,
+    device: str | None,
+    cameras: list[str] | None = None,
+):
+    """Build the registry task ``task`` on ``sim`` from its class-level scenario, plus the preset ``cameras``."""
     import torch
 
     from metasim.task.registry import get_task_class
@@ -131,6 +140,10 @@ def _make_env(task: str, *, sim: str, robots: list[str] | None, num_envs: int, g
     if robots:
         updates["robots"] = list(robots)
     scenario = task_cls.scenario.replace(**updates)
+    if cameras:
+        from metasim.bench.cameras import with_cameras
+
+        scenario = with_cameras(scenario, cameras)
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     return task_cls(scenario, device)
 
@@ -212,7 +225,13 @@ def _bench_run(args: argparse.Namespace) -> int:
     policy, policy_info = _make_policy(args)
     try:
         env = _make_env(
-            args.task, sim=args.sim, robots=args.robot, num_envs=args.num_envs, gui=args.gui, device=args.device
+            args.task,
+            sim=args.sim,
+            robots=args.robot,
+            num_envs=args.num_envs,
+            gui=args.gui,
+            device=args.device,
+            cameras=args.camera,
         )
     except (KeyError, ValueError) as err:
         raise SystemExit(f"cannot build {args.task} on {args.sim}: {err}") from err
@@ -239,6 +258,8 @@ def _bench_run(args: argparse.Namespace) -> int:
             )
         finally:
             env.close()
+    if args.camera:
+        result.notes["cameras"] = list(args.camera)
     path = result.save(out)
     os.remove(partial)
     print(
@@ -337,6 +358,7 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
                 num_envs=args.num_envs,
                 gui=False,
                 device=args.device,
+                cameras=args.camera,
             )
             try:
                 result = evaluate(
@@ -350,6 +372,8 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
             failures.append({"split": split, "task": entry.task, "error": detail})
             continue
         result.notes["suite"] = {"name": suite.name, "split": split}
+        if args.camera:
+            result.notes["cameras"] = list(args.camera)
         robots = "+".join(result.robots) or "norobot"
         result.save(os.path.join(out_dir, f"{split}__{entry.task}__{robots}__{policy.name}.json"))
         print(f"{entry.task}: {_score_line(result.summary)}", file=sys.stderr)
@@ -733,6 +757,11 @@ def _add_bench(sub) -> None:
         "--access",
         help="information-access tier: a preset (`bench access`) or a JSON file; default privileged",
     )
+    r.add_argument(
+        "--camera",
+        action="append",
+        help="add a preset camera to the scenario (`front`, `side`, `top`; repeatable), for the visual tiers",
+    )
     r.add_argument("--device", help="torch device (default: cuda if available)")
     r.add_argument("--gui", action="store_true", help="run with the simulator viewer (default headless)")
     r.add_argument("--out", help="result path (default: bench_results/<task>__<robot>__<sim>__<policy>__<time>.json)")
@@ -763,6 +792,11 @@ def _add_bench(sub) -> None:
     sr.add_argument("--policy-arg", action="append", metavar="KEY=VALUE", help="constructor argument (repeatable)")
     sr.add_argument("--checkpoint", help="checkpoint path; passed to the policy and hashed into the results")
     sr.add_argument("--access", help="information-access tier for every task (preset name or JSON file)")
+    sr.add_argument(
+        "--camera",
+        action="append",
+        help="add a preset camera to the scenario (`front`, `side`, `top`; repeatable), for the visual tiers",
+    )
     sr.add_argument("--device", help="torch device (default: cuda if available)")
     sr.add_argument("--out-dir", help="default: bench_results/suites/<suite>/<sim>")
     _add_remote_args(sr)
