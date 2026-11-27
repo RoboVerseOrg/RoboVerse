@@ -22,7 +22,7 @@ This command performs demo collection, model training, and evaluation.
 
 | Argument            | Description                                                  | Example                                                      |
 | ------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `task_name_set`     | Name of the task                                             | `close_box`，`stack_cube`, `pick_cube`, `pick_butter`        |
+| `task_name_set`     | Name of the task                                             | `close_box`, `stack_cube`, `pick_cube`, `pick_butter`        |
 | `sim_set`           | Name of the selected simulator                               | `isaacsim`, `mujoco`                                         |
 | `demo_num`          | Numbers of demos to collect, train, and eval                 | `100`                                                        |
 | `algo_choose`       | IL algorithm                                                 | `act`, `dp_DDPM`, `dp_DDIM`, `dp_FM_UNet`, `dp_FM_DiT`, `dp_Score`, `dp_VITA`        |

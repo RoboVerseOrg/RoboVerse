@@ -1168,7 +1168,11 @@ class MujocoHandler(BaseSimHandler):
             else:
                 full_joint_name = f"{obj_name}/{joint_name}"
 
+            if joint_pos is None:
+                raise ValueError(f"{obj_name}/{joint_name}: dof_pos is None; a joint state needs a number")
             joint_pos = np.asarray(joint_pos, dtype=float).reshape(-1)
+            if not np.isfinite(joint_pos).all():
+                raise ValueError(f"{obj_name}/{joint_name}: dof_pos {joint_pos.tolist()} is not finite")
             joint_pos = float(joint_pos[0]) if joint_pos.size == 1 else joint_pos  # demos may store 1-element arrays
             joint = self.physics.data.joint(full_joint_name)
             joint.qpos = joint_pos

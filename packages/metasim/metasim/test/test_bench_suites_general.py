@@ -527,3 +527,62 @@ def test_observation_codec_carries_a_real_tensor_state():
     tree = unflatten_observation(flatten_observation(state))
     assert torch.equal(tree.robots["franka"].joint_pos, torch.ones(2, 9))
     assert tree.cameras["front"].rgb.shape == (2, 4, 4, 3) and "body_names" not in tree.robots["franka"]
+
+
+def test_suite_report_refuses_pooling_several_robots_into_one_task_row():
+    """An unpinned task collects every robot's results; two robots in one row would be a wrong number."""
+    suite = BenchmarkSuite(name="s", splits={"core": ("t",)}, protocol=EvalProtocol(episodes=2))
+    franka = _result("t", 2, 2, robots=["franka"], protocol=EvalProtocol(episodes=2))
+    yam = _result("t", 0, 2, robots=["yam"], protocol=EvalProtocol(episodes=2))
+    assert suite_report(suite, [franka])["splits"]["core"]["tasks"][0]["success_rate"] == 1.0
+    with pytest.raises(ValueError, match="several robots"):
+        suite_report(suite, [franka, yam])
+
+
+def test_a_task_cannot_be_both_pinned_and_unpinned_across_splits():
+    with pytest.raises(ValueError, match="belongs to one split"):
+        BenchmarkSuite(name="s", splits={"core": ("t",), "heldout": (SuiteTask("t", robots=("franka",)),)})
+    BenchmarkSuite(
+        name="ok", splits={"a": (SuiteTask("t", robots=("franka",)),), "b": (SuiteTask("t", robots=("yam",)),)}
+    )
+
+
+def test_per_task_instances_override_sets_its_own_episode_count_and_bad_overrides_fail_at_registration():
+    suite = BenchmarkSuite(
+        name="s",
+        splits={"core": (SuiteTask("t", protocol={"instances": (0, 1, 2)}),)},
+        protocol=EvalProtocol(episodes=10),
+    )
+    protocol = suite.protocol_for(suite.entries("core")[0][1])
+    assert protocol.instances == (0, 1, 2) and protocol.episodes == 3
+    with pytest.raises(ValueError, match="core/t protocol"):
+        BenchmarkSuite(
+            name="bad",
+            splits={"core": (SuiteTask("t", protocol={"instances": (0, 1), "episodes": 5}),)},
+            protocol=EvalProtocol(episodes=10),
+        )
+
+
+def test_remote_names_the_server_when_a_200_answer_is_not_an_action_array(served, monkeypatch):
+    server = served(HoldPolicy())
+    policy = RemotePolicy(server.url)
+    env = _DictObsEnv(num_envs=1, schedule=[(1, 2, False)], pool_size=1)
+    for reply in ({"error": "boom"}, [1, 2, 3], {"actions": "nope"}):
+        monkeypatch.setattr(policy, "_request", lambda *a, _r=reply, **k: _r)
+        with pytest.raises(ValueError, match="policy server"):
+            evaluate(env, policy, EvalProtocol(episodes=1), task_name="t")
+
+    class _Raw:
+        def read(self):
+            return b"<html>not json</html>"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    monkeypatch.undo()
+    monkeypatch.setattr(policy._opener, "open", lambda *a, **k: _Raw())
+    with pytest.raises(ValueError, match="non-JSON"):
+        policy._request("GET", "/metadata")

@@ -52,7 +52,7 @@ def parse_docstring_metadata(docstring: str):
 
         meta[key] = values
 
-    # === Occur  ✅，otherwise ❓ ===
+    # === Occur  ✅, otherwise ❓ ===
     if "platforms" in meta:
         listed_platforms = set(p.lower() for p in meta["platforms"])  # lowercase normalize
         platform_status = {}

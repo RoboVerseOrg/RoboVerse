@@ -61,8 +61,8 @@ python examples/5_hybrid_sim.py --sim mujoco --renderer isaacsim --headless   # 
 ## Installation
 
 Rendering needs Isaac Sim **and** Isaac Lab in the same environment. The pip `isaacsim` wheel does
-not bring Isaac Lab, so it is installed from source; the exact, verified sequence (Python 3.11,
-Isaac Sim 5.0, Isaac Lab 2.2.1, CUDA 12.8 torch on Blackwell GPUs) is scripted in
+not bring Isaac Lab, so it is installed from source; the exact, verified sequence (Python 3.12,
+Isaac Sim 6.0.1, Isaac Lab 3.0 with its `isaaclab_physx` package, CUDA 13.0 torch 2.11 on Blackwell GPUs) is scripted in
 `tools/install/isaacsim6.sh` (documented in `packages/metasim/requirements/isaacsim6.txt`). `python -m metasim doctor --backend isaacsim` checks
 the result against the tested versions in `metasim/sim/_versions.py`.
 

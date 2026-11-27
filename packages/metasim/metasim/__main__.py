@@ -209,22 +209,37 @@ def _bench_run(args: argparse.Namespace) -> int:
     except ValueError as err:
         raise SystemExit(f"invalid protocol: {err}") from err
     policy, policy_info = _make_policy(args)
-    env = _make_env(
-        args.task, sim=args.sim, robots=args.robot, num_envs=args.num_envs, gui=args.gui, device=args.device
-    )
     try:
-        result = evaluate(
-            env, policy, protocol, policy_info=policy_info, on_episode=_report_episode, task_name=args.task
+        env = _make_env(
+            args.task, sim=args.sim, robots=args.robot, num_envs=args.num_envs, gui=args.gui, device=args.device
         )
-    finally:
-        env.close()
+    except (KeyError, ValueError) as err:
+        raise SystemExit(f"cannot build {args.task} on {args.sim}: {err}") from err
     out = args.out
     if out is None:
-        robots = "+".join(result.robots) or "norobot"
+        robots = "+".join(r.name for r in env.scenario.robots) or "norobot"
         stamp = time.strftime("%Y%m%d-%H%M%S")
         slug = re.sub(r"[^A-Za-z0-9_.+-]+", "_", f"{args.task}__{robots}__{args.sim}__{policy.name}__{stamp}")
         out = f"bench_results/{slug}.json"
+    # every finished episode is appended to <out>.episodes.jsonl as it ends, so a crash or a kill at
+    # episode 49 of 50 keeps 49 rows; the file is removed once the complete result is saved
+    partial = f"{out}.episodes.jsonl"
+    os.makedirs(os.path.dirname(os.path.abspath(partial)), exist_ok=True)
+    with open(partial, "w") as stream:
+
+        def on_episode(ep) -> None:
+            _report_episode(ep)
+            stream.write(json.dumps(ep.to_dict()) + "\n")
+            stream.flush()
+
+        try:
+            result = evaluate(
+                env, policy, protocol, policy_info=policy_info, on_episode=on_episode, task_name=args.task
+            )
+        finally:
+            env.close()
     path = result.save(out)
+    os.remove(partial)
     print(
         f"{args.task} [{', '.join(result.robots)} @ {args.sim}] {policy.name}: {_score_line(result.summary)}, "
         f"mean {result.summary['mean_steps']:.1f} steps -> {path}"
@@ -300,6 +315,12 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
     out_dir = args.out_dir or os.path.join("bench_results", "suites", suite.name, sim)
     overrides = {k: v for k, v in {"episodes": args.episodes, "seed": args.seed}.items() if v is not None}
     suite = _suite_under_access(suite, args.access)
+    if args.episodes is not None and any(
+        suite.protocol_for(entry).instances is not None for _, entry in suite.entries(args.split)
+    ):
+        raise SystemExit(
+            f"suite {suite.name!r} names explicit instances, so its episode count is theirs; drop --episodes"
+        )
     results, failures = [], []
     for split, entry in suite.entries(args.split):
         print(f"=== {suite.name}/{split}: {entry.task}", file=sys.stderr, flush=True)
@@ -426,6 +447,7 @@ def _health_task_isolated(name: str, args: argparse.Namespace) -> dict:
     cmd = [sys.executable, "-m", "metasim", "bench", "health", "--sim", args.sim, "--task", name, "--isolate", "never"]
     cmd += ["--num-envs", str(args.num_envs), "--episodes", str(args.episodes), "--seed", str(args.seed)]
     cmd += ["--threshold", str(args.threshold), "--out-dir", args.out_dir]
+    env = {**os.environ, "METASIM_HEALTH_ROWS_ONLY": "1"}  # the child writes its row, not the sweep's report
     for robot in args.robot or ():
         cmd += ["--robot", robot]
     if args.max_steps is not None:
@@ -435,18 +457,36 @@ def _health_task_isolated(name: str, args: argparse.Namespace) -> dict:
     os.makedirs(os.path.join(args.out_dir, "logs"), exist_ok=True)
     log_path = os.path.join(args.out_dir, "logs", f"{name}.log")
     with open(log_path, "w") as log_file:
-        proc = subprocess.run(cmd, check=False, stdout=log_file, stderr=subprocess.STDOUT)
+        proc = subprocess.run(cmd, check=False, stdout=log_file, stderr=subprocess.STDOUT, env=env)
     row = _read_health_row(args.out_dir, name)
     if row is None:
+        last = _last_error_line(log_path)
+        # a simulator that ends the process in close() (Isaac Sim 6) takes the launch-time error with it;
+        # the log still tells an unsupported task from a broken one
+        status = _health_error_status(last)
         row = {
             "task": name,
-            "status": "error",
+            "status": status,
             "success_rate": None,
             "episodes": 0,
             "result": None,
-            "detail": f"child exited with {proc.returncode} before reporting ({_last_error_line(log_path)}; {log_path})",
+            "detail": f"child exited with {proc.returncode} before reporting ({last}; {log_path})",
         }
     return row
+
+
+def _health_error_status(detail: str) -> str:
+    """The health status an exception text stands for.
+
+    ``unsupported`` for the handler's "no asset for this backend" refusal (the task cannot run there), ``no-demos``
+    for a demo file under ``roboverse_data/trajs`` that is neither local nor on the Hub (the task ships no replayable
+    demo for this robot), ``error`` otherwise.
+    """
+    if "asset path set for the" in detail:
+        return "unsupported"
+    if "roboverse_data/trajs/" in detail and ("neither exists" in detail or "Cannot fetch" in detail):
+        return "no-demos"
+    return "error"
 
 
 def _last_error_line(log_path: str) -> str:
@@ -508,7 +548,8 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
                         rate = float(summary["success_rate"])
                         row.update(success_rate=rate, status="ok" if rate >= args.threshold else "low")
             except Exception as err:
-                row.update(status="error", detail=_error_detail(err))
+                detail = _error_detail(err)
+                row.update(status=_health_error_status(detail), detail=detail)
             # Written before close(): a simulator whose shutdown ends or aborts the process (Isaac Sim)
             # must not take the verdict, or the error, with it.
             _write_health_row(args.out_dir, row)
@@ -517,9 +558,7 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
             env.close()
     except Exception as err:  # one broken task must not hide the others: it is reported as a row
         detail = _error_detail(err)
-        # an object with no description for this backend is a backend the task does not support
-        status = "unsupported" if "has no" in detail and "asset path set for the" in detail else "error"
-        row.update(status=status, detail=detail)
+        row.update(status=_health_error_status(detail), detail=detail)
         return row
 
 
@@ -554,6 +593,16 @@ def _bench_health(args: argparse.Namespace) -> int:
     names = list(args.task) if args.task else list_tasks()
     os.makedirs(args.out_dir, exist_ok=True)
     isolate = args.isolate == "always" or (args.isolate == "auto" and args.sim in ISOLATED_HEALTH_BACKENDS)
+    if (
+        not isolate
+        and args.sim == "isaacsim"
+        and len(names) > 1
+        and os.environ.get("METASIM_ISAAC_FAST_SHUTDOWN", "1") != "0"
+    ):
+        raise SystemExit(
+            f"bench health: isaacsim ends the process when the first task's simulator closes, so {len(names)} tasks "
+            "cannot share one interpreter; use --isolate auto|always (or METASIM_ISAAC_FAST_SHUTDOWN=0)"
+        )
     rows = []
     for name in names:
         row = _health_task_isolated(name, args) if isolate else _health_task(name, args)
@@ -563,6 +612,8 @@ def _bench_health(args: argparse.Namespace) -> int:
             continue  # the default sweep is over tasks with demos; an explicit --task is always reported
         rows.append(row)
         print(f"{row['task']:48s} {row['status']:12s} {row['detail']}", file=sys.stderr)
+    if os.environ.get("METASIM_HEALTH_ROWS_ONLY") == "1":  # a child of an isolated sweep: the parent reports
+        return 1 if any(r["status"] in ("low", "error") for r in rows) else 0
     table = _health_table(rows, args.threshold)
     with open(os.path.join(args.out_dir, "health.json"), "w") as f:
         json.dump(

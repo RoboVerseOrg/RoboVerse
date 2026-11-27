@@ -92,6 +92,10 @@ _COMPANION_FILES = ("LICENSE", "LICENSE.txt", "LICENSE.md", "README.md")
 """Files fetched, when they exist, next to a robot / object description: the asset's licence and notes travel with it."""
 
 
+_COMPANIONS_PROBED: set[str] = set()
+"""Directories whose licence / README companions were already looked for in this process."""
+
+
 def _fetch_companions(filepath: str) -> None:
     """Fetch the licence / README that sit next to a freshly downloaded description file, from wherever it came.
 
@@ -100,6 +104,9 @@ def _fetch_companions(filepath: str) -> None:
     if not filepath.endswith(_DESCRIPTION_SUFFIXES):
         return
     directory = os.path.dirname(filepath)
+    if directory in _COMPANIONS_PROBED:  # one probe per directory, not per file of a scene
+        return
+    _COMPANIONS_PROBED.add(directory)
     for name in _COMPANION_FILES:
         companion = os.path.join(directory, name)
         if os.path.exists(companion):

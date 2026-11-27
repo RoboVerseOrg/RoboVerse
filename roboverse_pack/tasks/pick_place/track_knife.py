@@ -130,7 +130,7 @@ DEFAULT_CONFIG_TRACK["reward_config"]["scales"].update({
     "tracking_progress": 150.0,
     "rotation_tracking": 0.0,
 })
-# 移除不需要的奖励
+# Drop the reward terms this task does not use
 DEFAULT_CONFIG_TRACK["reward_config"]["scales"].pop("gripper_approach", None)
 DEFAULT_CONFIG_TRACK["reward_config"]["scales"].pop("gripper_close", None)
 # Disable randomization for exact state reproduction

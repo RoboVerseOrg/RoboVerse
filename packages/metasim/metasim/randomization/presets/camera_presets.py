@@ -20,7 +20,7 @@ class CameraProperties:
     POSITION_FAR = ((-3.0, 3.0), (-3.0, 3.0), (1.5, 3.5))  # Far view
     POSITION_EXTREME = ((-4.0, 4.0), (-4.0, 4.0), (0.5, 4.5))  # Extreme variation
 
-    # Position delta ranges (in meters) - for micro-adjustment mode (默认)
+    # Position delta ranges (in meters) - for micro-adjustment mode (default)
     DELTA_TINY = ((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1))  # Very small movements
     DELTA_SMALL = ((-0.3, 0.3), (-0.3, 0.3), (-0.2, 0.2))  # Small movements
     DELTA_MEDIUM = ((-0.5, 0.5), (-0.5, 0.5), (-0.3, 0.3))  # Medium movements
@@ -32,7 +32,7 @@ class CameraProperties:
     LOOKAT_WORKSPACE = ((-1.0, 1.0), (-1.0, 1.0), (-0.5, 0.5))  # Workspace area
     LOOKAT_WIDE = ((-2.0, 2.0), (-2.0, 2.0), (-1.0, 1.0))  # Wide area
 
-    # Look-at delta ranges (in meters) - for micro-adjustment mode (默认)
+    # Look-at delta ranges (in meters) - for micro-adjustment mode (default)
     LOOKAT_DELTA_TINY = ((-0.05, 0.05), (-0.05, 0.05), (-0.05, 0.05))  # Very small direction changes
     LOOKAT_DELTA_SMALL = ((-0.2, 0.2), (-0.2, 0.2), (-0.1, 0.1))  # Small direction changes
     LOOKAT_DELTA_MEDIUM = ((-0.5, 0.5), (-0.5, 0.5), (-0.3, 0.3))  # Medium direction changes

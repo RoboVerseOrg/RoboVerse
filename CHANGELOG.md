@@ -12,6 +12,13 @@ release.
 
 ## [Unreleased]
 
+### Fixed
+- Every comment, docstring, doc page and SVG id in the repository is English (24 files carried Chinese comments, full-width punctuation or Illustrator layer names; `metasim/utils/viser/README.md` is rewritten in English). `tests/test_repo_text_is_english.py` keeps it that way.
+- `ShadowHandCfg.mjcf_path` points at `robots/shadow_hand/mjcf/shadow_hand.xml`, the file the data set ships; it named `shadow_hand_right.xml`, which does not exist there (#309).
+- LIBERO-90 `On(obj, obj)` bounds the height difference to 10 cm (the band `site_supports` uses): without upstream's contact clause nothing bounded z, so a bowl carried over the plate counted as placed under the `first` rule.
+- `pynput`, imported by `scripts/advanced/teleop_keyboard.py`, is in the `examples` extra (#664).
+- `docs/source/features/support_matrix.rst` states the backend tiers (Tier 1 MuJoCo + Isaac Sim 6 verified every release; Tier 2 best effort; Tier 3 legacy) instead of promising that eight backends always work on `main`.
+
 ### Changed
 - `tools/install/isaacsim6.sh` replaces `isaacsim5.sh`: the Isaac backend is installed as Isaac Sim 6.0.1 + Isaac Lab release/3.0.0 (Python 3.12, torch 2.11+cu130), verified on RTX 5090 with the 595 driver. See MetaSim's changelog for the handler changes.
 

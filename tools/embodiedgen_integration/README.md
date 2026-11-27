@@ -4,7 +4,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-EmbodiedGen-black?logo=github)](https://github.com/HorizonRobotics/EmbodiedGen)
 [![📄 arXiv](https://img.shields.io/badge/📄-arXiv-b31b1b)](https://arxiv.org/abs/2506.10600)
 [![🎥 Video](https://img.shields.io/badge/🎥-Video-red)](https://www.youtube.com/watch?v=rG4odybuJRk)
-[![中文介绍](https://img.shields.io/badge/中文介绍-07C160?logo=wechat&logoColor=white)](https://mp.weixin.qq.com/s/HH1cPBhK2xcDbyCK4BBTbw)
+[![Chinese article](https://img.shields.io/badge/Chinese%20article-07C160?logo=wechat&logoColor=white)](https://mp.weixin.qq.com/s/HH1cPBhK2xcDbyCK4BBTbw)
 
 [![🤗 Asset Gallery](https://img.shields.io/badge/🤗-EmbodiedGen_Asset_Gallery-blue)](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Gallery-Explorer)
 [![🤗 Image-to-3D Demo](https://img.shields.io/badge/🤗-Image_to_3D_Demo-blue)](https://huggingface.co/spaces/HorizonRobotics/EmbodiedGen-Image-to-3D)
@@ -65,7 +65,7 @@ Generate visually rich textures for 3D mesh, detailed guide: [Texture Editing Tu
 ```sh
 texture-cli --mesh_path "apps/assets/example_texture/meshes/robot_text.obj" \
 "apps/assets/example_texture/meshes/horse.obj" \
---prompt "举着牌子的写实风格机器人，大眼睛，牌子上写着“Hello”的文字" \
+--prompt "A photorealistic robot with big eyes holding a sign that reads Hello" \
 "A gray horse head with flying mane and brown eyes" \
 --output_root "outputs/texture_gen" \
 --seed 0

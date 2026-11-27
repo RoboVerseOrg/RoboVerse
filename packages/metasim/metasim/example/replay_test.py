@@ -107,7 +107,7 @@ def main():  # noqa: D103
     traj_filepath = env.traj_filepath
     assert os.path.exists(traj_filepath), f"Trajectory file: {traj_filepath} does not exist."
     t0 = time.time()
-    init_states, all_actions, _ = get_traj(traj_filepath, scenario.robots[0], env.handler)  # 仅用 actions
+    init_states, all_actions, _ = get_traj(traj_filepath, scenario.robots[0], env.handler)  # only the actions are used
     log.trace(f"Time to load data: {time.time() - t0:.2f}s")
 
     os.makedirs("test_output", exist_ok=True)

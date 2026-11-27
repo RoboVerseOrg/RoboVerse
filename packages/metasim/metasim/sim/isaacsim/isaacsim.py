@@ -190,6 +190,18 @@ def _quat_to_sim(quat: torch.Tensor) -> torch.Tensor:
     return quat[..., [1, 2, 3, 0]] if _is_isaaclab3() else quat
 
 
+def _quat_cfg_to_sim(quat) -> tuple[float, float, float, float] | None:
+    """A config-level ``(w, x, y, z)`` quaternion (an initial pose, a camera offset, a light) in the simulator's order.
+
+    Isaac Lab 3 reads every cfg quaternion as ``(x, y, z, w)``; handing it MetaSim's ``(1, 0, 0, 0)`` identity would
+    be a half turn about x. ``None`` passes through (the spawner keeps the asset's own orientation).
+    """
+    if quat is None:
+        return None
+    w, x, y, z = (float(v) for v in quat)
+    return (x, y, z, w) if _is_isaaclab3() else (w, x, y, z)
+
+
 def _state13_from_sim(state) -> torch.Tensor:
     """A ``(..., 13)`` root/body state (pos, quat, lin vel, ang vel) as a fresh tensor with a ``wxyz`` quaternion."""
     out = _t(state).clone()
@@ -586,6 +598,33 @@ class IsaacsimHandler(BaseSimHandler):
                         except Exception as err:
                             log.debug(f"SimulationContext timeline.stop() failed during close: {err}")
 
+                if self.contact_sensor is not None:
+                    try:
+                        clear_callbacks = getattr(self.contact_sensor, "_clear_callbacks", None)
+                        if callable(clear_callbacks):
+                            clear_callbacks()
+                        invalidate = getattr(self.contact_sensor, "_invalidate_initialize_callback", None)
+                        if callable(invalidate):
+                            invalidate(None)
+                        for attr_name in (
+                            "_body_physx_view",
+                            "_contact_physx_view",
+                            "_physics_sim_view",
+                            "_data",
+                            "_is_outdated",
+                            "_timestamp",
+                            "_timestamp_last_update",
+                            "stage",
+                        ):
+                            if hasattr(self.contact_sensor, attr_name):
+                                setattr(self.contact_sensor, attr_name, None)
+                    except Exception as err:
+                        log.debug(f"Contact sensor cleanup failed during close: {err}")
+                    if self.scene is not None:
+                        try:
+                            self.scene.sensors.pop("contact_sensor", None)
+                        except Exception as err:
+                            log.debug(f"Failed to detach contact sensor from scene: {err}")
                 # Isaac Lab 3's own env.close() deletes the scene before clearing the context
                 # ("destructor is order-sensitive"): the asset views must be released first or the
                 # interpreter segfaults at exit.
@@ -656,37 +695,23 @@ class IsaacsimHandler(BaseSimHandler):
                 if "error" in close_error:
                     raise close_error["error"]
             elif simulation_app is not None and owns_simulation_app:
+                import sys
+
+                # Isaac Sim 6 ends the process inside close() (fast shutdown): the exception that is
+                # propagating through a failed launch would otherwise be reported as exit 0.
+                exit_code = 0
+                if sys.exc_info()[0] is not None:
+                    exit_code = 1
+                    log.error(f"closing Isaac Sim while {sys.exc_info()[0].__name__} propagates; the process exits 1")
+                sys.stdout.flush()
+                sys.stderr.flush()
                 try:
-                    simulation_app.close(wait_for_replicator=False)
+                    simulation_app.close(wait_for_replicator=False, exit_code=exit_code)
                 except TypeError:
-                    simulation_app.close()
-            if self.contact_sensor is not None:
-                try:
-                    clear_callbacks = getattr(self.contact_sensor, "_clear_callbacks", None)
-                    if callable(clear_callbacks):
-                        clear_callbacks()
-                    invalidate = getattr(self.contact_sensor, "_invalidate_initialize_callback", None)
-                    if callable(invalidate):
-                        invalidate(None)
-                    for attr_name in (
-                        "_body_physx_view",
-                        "_contact_physx_view",
-                        "_physics_sim_view",
-                        "_data",
-                        "_is_outdated",
-                        "_timestamp",
-                        "_timestamp_last_update",
-                        "stage",
-                    ):
-                        if hasattr(self.contact_sensor, attr_name):
-                            setattr(self.contact_sensor, attr_name, None)
-                except Exception as err:
-                    log.debug(f"Contact sensor cleanup failed during close: {err}")
-                if self.scene is not None:
                     try:
-                        self.scene.sensors.pop("contact_sensor", None)
-                    except Exception as err:
-                        log.debug(f"Failed to detach contact sensor from scene: {err}")
+                        simulation_app.close(wait_for_replicator=False)
+                    except TypeError:
+                        simulation_app.close()
             if self.scene is not None:
                 del self.scene
             if self.sim is not None:
@@ -1252,7 +1277,7 @@ class IsaacsimHandler(BaseSimHandler):
         cfg.prim_path = f"/World/envs/env_[0-9]+/{robot.name}"
         init_state = ArticulationCfg.InitialStateCfg(
             pos=robot.default_position,
-            rot=robot.default_orientation,
+            rot=_quat_cfg_to_sim(robot.default_orientation),
             joint_pos=robot.default_joint_positions,
             joint_vel={".*": 0.0},
         )
@@ -1284,7 +1309,7 @@ class IsaacsimHandler(BaseSimHandler):
                 ),
                 init_state=ArticulationCfg.InitialStateCfg(
                     pos=obj.default_position,
-                    rot=obj.default_orientation,
+                    rot=_quat_cfg_to_sim(obj.default_orientation),
                 ),
                 actuators={},
             )
@@ -1326,7 +1351,7 @@ class IsaacsimHandler(BaseSimHandler):
                     ),
                     init_state=RigidObjectCfg.InitialStateCfg(
                         pos=obj.default_position,
-                        rot=obj.default_orientation,
+                        rot=_quat_cfg_to_sim(obj.default_orientation),
                     ),
                 )
             )
@@ -1346,7 +1371,7 @@ class IsaacsimHandler(BaseSimHandler):
                     ),
                     init_state=RigidObjectCfg.InitialStateCfg(
                         pos=obj.default_position,
-                        rot=obj.default_orientation,
+                        rot=_quat_cfg_to_sim(obj.default_orientation),
                     ),
                 )
             )
@@ -1367,7 +1392,7 @@ class IsaacsimHandler(BaseSimHandler):
                     ),
                     init_state=RigidObjectCfg.InitialStateCfg(
                         pos=obj.default_position,
-                        rot=obj.default_orientation,
+                        rot=_quat_cfg_to_sim(obj.default_orientation),
                     ),
                 )
             )
@@ -1405,7 +1430,7 @@ class IsaacsimHandler(BaseSimHandler):
                         prim_path=prim_path,
                         spawn=usd_file_cfg,
                         init_state=RigidObjectCfg.InitialStateCfg(
-                            pos=obj.default_position, rot=obj.default_orientation
+                            pos=obj.default_position, rot=_quat_cfg_to_sim(obj.default_orientation)
                         ),
                     )
                 )
@@ -1824,7 +1849,7 @@ class IsaacsimHandler(BaseSimHandler):
             spawn_light(
                 "/World/DefaultLight",
                 sim_utils.DistantLightCfg(intensity=2000.0, angle=0.53),  # Increased default intensity
-                orientation=(1.0, 0.0, 0.0, 0.0),
+                orientation=_quat_cfg_to_sim((1.0, 0.0, 0.0, 0.0)),
                 translation=(0, 0, 10),
             )
 
@@ -1847,13 +1872,10 @@ class IsaacsimHandler(BaseSimHandler):
             color=light_cfg.color,
         )
 
-        # Use the quaternion from light configuration
-        orientation = light_cfg.quat
-
         spawn_light(
             light_name,
             isaac_light_cfg,
-            orientation=orientation,
+            orientation=_quat_cfg_to_sim(light_cfg.quat),  # the light cfg's wxyz quaternion, in the sim's order
             translation=(0, 0, 10),  # Distant lights don't need specific translation
         )
 
@@ -1882,7 +1904,7 @@ class IsaacsimHandler(BaseSimHandler):
         spawn_light(
             light_name,
             isaac_light_cfg,
-            orientation=light_cfg.rot,
+            orientation=_quat_cfg_to_sim(light_cfg.rot),
             translation=light_cfg.pos,
         )
 
@@ -1916,7 +1938,7 @@ class IsaacsimHandler(BaseSimHandler):
         spawn_light(
             light_name,
             isaac_light_cfg,
-            orientation=(1.0, 0.0, 0.0, 0.0),
+            orientation=_quat_cfg_to_sim((1.0, 0.0, 0.0, 0.0)),
             translation=(0, 0, 0),  # Dome lights are typically at origin
         )
 
@@ -1945,7 +1967,7 @@ class IsaacsimHandler(BaseSimHandler):
         spawn_light(
             light_name,
             isaac_light_cfg,
-            orientation=(1.0, 0.0, 0.0, 0.0),
+            orientation=_quat_cfg_to_sim((1.0, 0.0, 0.0, 0.0)),
             translation=light_cfg.pos,
         )
 
@@ -1977,7 +1999,7 @@ class IsaacsimHandler(BaseSimHandler):
         spawn_light(
             light_name,
             isaac_light_cfg,
-            orientation=light_cfg.rot,
+            orientation=_quat_cfg_to_sim(light_cfg.rot),
             translation=light_cfg.pos,
         )
 
@@ -2191,10 +2213,14 @@ class IsaacsimHandler(BaseSimHandler):
         if camera.mount_to is None:
             prim_path = f"/World/envs/env_[0-9]+/{camera.name}"
             # Use default offset, will be set by set_world_poses_from_view later
-            offset = CameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world")
+            offset = CameraCfg.OffsetCfg(
+                pos=(0.0, 0.0, 0.0), rot=_quat_cfg_to_sim((1.0, 0.0, 0.0, 0.0)), convention="world"
+            )
         else:
             prim_path = f"/World/envs/env_[0-9]+/{camera.mount_to}/{camera.mount_link}/{camera.name}"
-            offset = CameraCfg.OffsetCfg(pos=camera.mount_pos, rot=camera.mount_quat, convention="world")
+            offset = CameraCfg.OffsetCfg(
+                pos=camera.mount_pos, rot=_quat_cfg_to_sim(camera.mount_quat), convention="world"
+            )
 
         camera_inst = Camera(
             CameraCfg(

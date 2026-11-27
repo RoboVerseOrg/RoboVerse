@@ -116,3 +116,28 @@ def test_registering_a_task_twice_only_warns_and_a_registration_error_propagates
     monkeypatch.setattr(gym_registration, "register", _boom)
     with pytest.raises(ValueError, match="bad entry point"):
         gym_registration.register_task_with_gym("probe.task", "RoboVerseProbe/broken-v0")
+
+
+class _TaskRecordsReset:
+    def __init__(self):
+        self.calls = []
+
+    def reset(self, states=None, env_ids=None, seed: int | None = None):
+        self.calls.append({"states": states, "env_ids": env_ids, "seed": seed})
+        return "obs", {}
+
+
+def test_reset_options_are_forwarded_to_the_task_and_unknown_keys_are_refused():
+    """``gym.make(...).reset(options={"states": ..., "env_ids": ...})`` reaches the task's reset (#577)."""
+    from metasim.task.gym_registration import _reset_task
+
+    task = _TaskRecordsReset()
+    assert _reset_task(task, 3, {"states": ["s0"], "env_ids": [0]}) == ("obs", {})
+    assert task.calls == [{"states": ["s0"], "env_ids": [0], "seed": 3}]
+    _reset_task(task, None, None)
+    assert task.calls[-1] == {"states": None, "env_ids": None, "seed": None}
+    with pytest.raises(ValueError, match="unknown keys \\['camera'\\]"):
+        _reset_task(task, 0, {"camera": "front"})
+
+    no_seed = _TaskNoSeed()
+    _reset_task(no_seed, 7, {"env_ids": [1]})  # the seed is not forwarded to a reset that cannot take it

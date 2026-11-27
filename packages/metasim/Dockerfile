@@ -81,7 +81,7 @@ WORKDIR ${HOME}/MetaSim
 ## Install isaacsim, mujoco, sapien3, pybullet
 ########################################################
 ## Create conda environment
-RUN mamba create -n metasim python=3.11 -y \
+RUN mamba create -n metasim python=3.12 -y \
     && mamba clean -a -y
 RUN echo "mamba activate metasim" >> ${HOME}/.bashrc
 
@@ -95,15 +95,16 @@ RUN cd ${HOME}/MetaSim \
 # Test proxy connection
 # RUN wget --method=HEAD --output-document - https://www.google.com/
 
-## Install IsaacLab v2.2.1
+## Install Isaac Lab 3.0 (the Isaac Sim 6 line; mirrors tools/install/isaacsim6.sh)
 RUN mkdir -p ${HOME}/packages \
     && cd ${HOME}/packages \
     && eval "$(mamba shell hook --shell bash)" \
     && mamba activate metasim \
-    && git clone --depth 1 --branch v2.2.1 https://github.com/isaac-sim/IsaacLab.git IsaacLab221 \
-    && cd IsaacLab221 \
-    && ./isaaclab.sh -i none \
-    && pip cache purge
+    && git clone --depth 1 --branch release/3.0.0 https://github.com/isaac-sim/IsaacLab.git IsaacLab3 \
+    && cd IsaacLab3 \
+    && uv pip install -e source/isaaclab -e source/isaaclab_physx -e source/isaaclab_contrib \
+    && uv pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cu130 \
+    && uv cache clean
 
 ########################################################
 ## Install genesis

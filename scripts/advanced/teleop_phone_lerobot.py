@@ -93,11 +93,11 @@ class Args:
 
     ## Axis mapping (adjust if phone axes don't match robot axes)
     # Options:
-    #   "direct": phone_x -> robot_x, phone_y -> robot_y, phone_z -> robot_z (手机向前=机器人向前)
-    #   "lerobot_default": robot_x = -phone_y, robot_y = phone_x (lerobot默认，手机向前=机器人左右)
-    #   "swap_xy": phone_x -> robot_y, phone_y -> robot_x (交换x和y)
-    #   "invert_x": phone_x -> -robot_x, phone_y -> robot_y (反转x轴)
-    #   "invert_y": phone_x -> robot_x, phone_y -> -robot_y (反转y轴)
+    #   "direct": phone_x -> robot_x, phone_y -> robot_y, phone_z -> robot_z (phone forward = robot forward)
+    #   "lerobot_default": robot_x = -phone_y, robot_y = phone_x (lerobot default; phone forward = robot sideways)
+    #   "swap_xy": phone_x -> robot_y, phone_y -> robot_x (swap x and y)
+    #   "invert_x": phone_x -> -robot_x, phone_y -> robot_y (invert the x axis)
+    #   "invert_y": phone_x -> robot_x, phone_y -> -robot_y (invert the y axis)
     axis_mapping: str = "direct"  # Default: direct mapping for intuitive control
 
     def __post_init__(self):

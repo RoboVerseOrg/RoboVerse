@@ -7,7 +7,8 @@
 # of WoodenCabinet, Microwave and FlatStove (libero/libero/envs/objects/articulated_objects.py).
 # Changes: batched over envs in torch; the site's pose and size come from metasim.utils.site_util.site_pose
 # (the state plus the object's MJCF) instead of MuJoCo's data; the contact clauses of ``On`` (the object must
-# touch the site's parent, or the other object) are not checked.
+# touch the site's parent, or the other object) are not checked, and ``On(obj, obj)`` bounds the height
+# difference instead (upstream's contact check is what kept a carried object from counting).
 # Full license: roboverse_pack/tasks/libero_90/LICENSE.LIBERO
 """LIBERO's goal predicates on a site region, for the LIBERO-90 config ports.
 
@@ -80,9 +81,11 @@ def site_supports(site: SitePose, point: torch.Tensor, *, height: float = 0.10) 
     return in_height & (delta[:, :2].abs() < size[:2]).all(dim=-1)
 
 
-def object_on(point: torch.Tensor, base: torch.Tensor) -> torch.Tensor:
-    """``On(obj, other_obj)``: ``point`` (N, 3) is above ``base`` (N, 3) within 3 cm in xy.
+def object_on(point: torch.Tensor, base: torch.Tensor, *, height: float = 0.10) -> torch.Tensor:
+    """``On(obj, other_obj)``: ``point`` (N, 3) is above ``base`` (N, 3) within 3 cm in xy and ``height`` in z.
 
-    LIBERO's ``ObjectState.check_ontop``, without its contact clause.
+    LIBERO's ``ObjectState.check_ontop`` requires contact as well; without a contact query the height band
+    (the same 10 cm as :func:`site_supports`) is what keeps an object carried over the base from counting.
     """
-    return (base[:, 2] <= point[:, 2]) & ((point[:, :2] - base[:, :2]).norm(dim=-1) < 0.03)
+    dz = point[:, 2] - base[:, 2]
+    return (dz >= 0) & (dz < height) & ((point[:, :2] - base[:, :2]).norm(dim=-1) < 0.03)

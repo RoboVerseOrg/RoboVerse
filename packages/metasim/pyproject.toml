@@ -11,7 +11,7 @@ requires-python = ">=3.10,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
     "defusedxml",
-    "gymnasium",
+    "gymnasium>=1.0",  # AutoresetMode and vector_entry_point in task/gym_registration.py
     "huggingface-hub",
     "imageio[ffmpeg]",
     "loguru",

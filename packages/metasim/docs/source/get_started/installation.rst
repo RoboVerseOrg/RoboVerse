@@ -60,14 +60,10 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
      - ``uv pip install -e ".[superdex]"``
      - 3.12
      - 3.12
-   * - IsaacSim v4.5.0
+   * - IsaacSim v6.0.1 (Isaac Lab 3.0)
      - See below
-     - 3.10
-     - 3.10
-   * - IsaacSim v5.0.0
-     - See below
-     - 3.11
-     - 3.11
+     - 3.12
+     - 3.12
    * - IsaacGym
      - See below
      - 3.6-3.8
@@ -81,45 +77,32 @@ MuJoCo, SAPIEN2, SAPIEN3, Genesis, and PyBullet can be installed directly via ``
 
 Please also check the `prerequisites <./prerequisite.html>`__ for supported platforms.
 
-Install IsaacSim v5.0.0 (IsaacLab v2.2.1, Recommended)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Install IsaacSim v6.0.1 (IsaacLab v3.0.0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Isaac Sim 6.0 with Isaac Lab 3.0 is the supported Isaac line (Python 3.12). The verified sequence is
+scripted in ``tools/install/isaacsim6.sh`` at the repository root; it does, in a Python 3.12 environment:
 
 .. code-block:: bash
 
-    uv pip install -e ".[dev,isaacsim]"
+    uv pip install -e ".[dev,isaacsim]"          # isaacsim[all,extscache]==6.0.1.0 from pypi.nvidia.com
     mkdir -p third_party && cd third_party
-    git clone --depth 1 --branch v2.2.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab221 && cd IsaacLab221
-    ./isaaclab.sh -i none
+    git clone --depth 1 --branch release/3.0.0 https://github.com/isaac-sim/IsaacLab.git IsaacLab3 && cd IsaacLab3
+    uv pip install -e source/isaaclab -e source/isaaclab_physx -e source/isaaclab_contrib
+    uv pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cu130   # last: Isaac Lab pins an older torch
+    python -m metasim doctor --backend isaacsim
 
-If you use plain ``pip`` instead of ``uv``, pass the indexes that ``uv`` reads from ``pyproject.toml`` explicitly:
-
-.. code-block:: bash
-
-    python -m pip install -e ".[dev,isaacsim]" \
-        --extra-index-url https://download.pytorch.org/whl/cu128 \
-        --extra-index-url https://pypi.nvidia.com
+``python -m metasim doctor`` must report ``isaacsim`` and ``isaaclab`` as ``ok``. Launch headless with
+``ACCEPT_EULA=Y OMNI_KIT_ACCEPT_EULA=YES PRIVACY_CONSENT=Y``. ``packages/metasim/requirements/isaacsim6.txt``
+lists the exact versions.
 
 .. note::
-   This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`__.
+   Isaac Sim 5.x with Isaac Lab 2.x is no longer supported: the version policy in ``metasim/sim/_versions.py``
+   refuses it. The legacy code path still exists and can be forced with ``METASIM_SKIP_VERSION_CHECK=1``, but it
+   is not tested. Isaac Sim 4.5 (the ``isaacsim211`` extra) is likewise legacy.
 
 .. note::
    If you encounter an error such as 'GLIBCXX_3.4.30' not found when running Isaac Sim in a conda environment, try installing GCC 12.1.0 with ``conda install -c conda-forge gcc=12.1.0``. See `Stack Overflow thread <https://stackoverflow.com/questions/72540359/glibcxx-3-4-30-not-found-for-librosa-in-conda-virtual-environment-after-tryin>`__ for more details.
-
-Install IsaacSim v4.5.0 (IsaacLab v2.1.1)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-    uv pip install -e ".[isaacsim211]" \
-        --index-url https://download.pytorch.org/whl/cu118 \
-        --extra-index-url https://pypi.org/simple \
-        --extra-index-url https://pypi.nvidia.com
-    mkdir -p third_party && cd third_party
-    git clone --depth 1 --branch v2.1.1 git@github.com:isaac-sim/IsaacLab.git IsaacLab211 && cd IsaacLab211
-    ./isaaclab.sh -i none
-
-.. note::
-   This installation method is only guaranteed to work on Ubuntu 22.04. To install on other platforms, please refer to the `official guide <https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html>`__.
 
 
 Install IsaacGym
