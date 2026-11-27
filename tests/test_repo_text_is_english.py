@@ -7,9 +7,12 @@ import subprocess
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-# CJK unified ideographs, CJK punctuation and full-width ASCII variants (e.g. "，", "（", "："),
-# the ones that slip into comments and docs written with a CJK input method.
-CJK = re.compile(r"[一-鿿　-〿＀-￯]")
+# CJK unified ideographs (U+4E00-U+9FFF), CJK punctuation (U+3000-U+303F) and the full-width ASCII
+# variants (U+FF00-U+FFEF; full-width comma, parentheses, colon), the characters that slip into comments
+# and docs written with a CJK input method. Built from code points so this file never contains one.
+CJK = re.compile(
+    "[" + "".join(f"{chr(a)}-{chr(b)}" for a, b in ((0x4E00, 0x9FFF), (0x3000, 0x303F), (0xFF00, 0xFFEF))) + "]"
+)
 SKIP_SUFFIXES = {
     ".png",
     ".jpg",
