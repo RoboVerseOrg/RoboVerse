@@ -231,7 +231,7 @@ def _bench_run(args: argparse.Namespace) -> int:
             num_envs=args.num_envs,
             gui=args.gui,
             device=args.device,
-            cameras=args.camera,
+            cameras=getattr(args, "camera", None),
         )
     except (KeyError, ValueError) as err:
         raise SystemExit(f"cannot build {args.task} on {args.sim}: {err}") from err
@@ -258,7 +258,7 @@ def _bench_run(args: argparse.Namespace) -> int:
             )
         finally:
             env.close()
-    if args.camera:
+    if getattr(args, "camera", None):
         result.notes["cameras"] = list(args.camera)
     path = result.save(out)
     os.remove(partial)
@@ -358,7 +358,7 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
                 num_envs=args.num_envs,
                 gui=False,
                 device=args.device,
-                cameras=args.camera,
+                cameras=getattr(args, "camera", None),
             )
             try:
                 result = evaluate(
@@ -372,7 +372,7 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
             failures.append({"split": split, "task": entry.task, "error": detail})
             continue
         result.notes["suite"] = {"name": suite.name, "split": split}
-        if args.camera:
+        if getattr(args, "camera", None):
             result.notes["cameras"] = list(args.camera)
         robots = "+".join(result.robots) or "norobot"
         result.save(os.path.join(out_dir, f"{split}__{entry.task}__{robots}__{policy.name}.json"))
