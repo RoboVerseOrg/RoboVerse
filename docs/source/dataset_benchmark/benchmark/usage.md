@@ -148,6 +148,52 @@ lift_peg_upright (534). pick_cube and stack_cube keep their 250-step time-out, b
 demos run that long even when the task is solved by about step 120. Every task in the suite has a
 prompt bank with 8 training and 4 held-out paraphrases.
 
+## Information-access tiers
+
+Two policies are comparable only when they were given the same information. A VLA that sees two RGB
+cameras and its own joints is in a different class from an agent that may read object poses from the
+simulator or call a motion planner. `metasim.bench.AccessProfile` names that class and is part of the
+protocol, so every result records it and leaderboards partition on it instead of mixing tiers in one
+column.
+
+```bash
+python -m metasim bench access                      # the preset tiers
+python -m metasim bench run --task pick_cube --sim mujoco --policy-url http://127.0.0.1:8000 --access visual
+python -m metasim bench suite run --suite tabletop-mujoco --policy ... --access visual-depth
+```
+
+| preset | observation | tools | memory |
+|---|---|---|---|
+| `privileged` (default) | the full `TensorState` | simulator queries allowed | across episodes |
+| `visual` | RGB of every camera + the robot's own state | none | per episode |
+| `visual-depth` | RGB + depth + robot state | none | per episode |
+| `agent-skills` | RGB + robot state | scripted skills | per episode |
+| `agent-planner` | RGB + depth + robot state | motion planner | per episode |
+| `agent-privileged` | the full state | simulator queries | per episode |
+
+A JSON file with the same fields and a `name` of its own defines a tier (`cameras=["front"]` limits the
+views; `wall_time_s`, `llm_calls`, `llm_tokens`, `tool_calls` set per-episode budgets). A file may not
+reuse a preset's name for a different profile, and results are compared by the whole profile, not the
+name alone.
+
+What the harness enforces: below `privileged` the object states, the `TensorState.extras` and the
+segmentation masks never reach the policy, depth is kept only under `rgb_depth`, `policy.reset` is given
+the episode's instance without its initial state and demo actions (so the replay baseline degrades to
+holding still), and `PolicyContext.extras["scenario"]` carries no object list. A camera a tier names
+but the task does not render is an error, and so is an image tier on a task whose scenario has no
+camera. An episode over `wall_time_s` ends as a time-out at that step (`EpisodeResult.over_budget`),
+scored by the protocol's success rule over the steps taken, exactly like the step cap; the clock starts
+once the episode's reset has returned. What the harness records: a policy that implements `usage()` (a
+dict of `llm_calls`, `llm_tokens`, `tool_calls`; other values are dropped with a warning) has its
+per-episode means compared with the budgets in `notes["budget"]`, and `summary["over_budget"]` counts
+the episodes the clock ended. Budgets are per episode and are only comparable between runs with the
+same `num_envs`: in a batch, every episode's clock runs while the other slots step and reset, and
+usage is pooled over every policy call; the evaluator warns when a budget is set with `num_envs > 1`.
+What it cannot see: which tools an adapter really called — `tools` and `memory` are the declaration the
+adapter is expected to honour, and a served policy reads them from `PolicyContext.access`. A suite
+scores a result only under its own tier (`bench suite run --access` and `bench suite report --access`
+set it for the whole suite); `bench summarize` shows the tier of every row.
+
 ## Episode budgets and instructions
 
 - **Demo budget.** `--demo-budget 3` (`EvalProtocol.demo_budget_factor`) caps each episode at 3x the

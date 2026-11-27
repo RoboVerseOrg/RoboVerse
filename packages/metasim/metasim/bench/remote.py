@@ -156,6 +156,7 @@ def _context_to_json(ctx: PolicyContext) -> dict[str, Any]:
         "default_action": ctx.default_action.tolist(),
         "default_joint_positions": ctx.default_joint_positions,
         "instruction": ctx.instruction,
+        "access": ctx.access,
     }
 
 
@@ -179,6 +180,7 @@ def _context_from_json(data: dict[str, Any], device: str) -> PolicyContext:
         default_action=vec("default_action"),
         default_joint_positions=data.get("default_joint_positions") or {},
         instruction=data.get("instruction"),
+        access=data.get("access"),
     )
 
 

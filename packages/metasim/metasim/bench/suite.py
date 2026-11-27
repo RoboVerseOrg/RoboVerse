@@ -33,15 +33,19 @@ class SuiteTask:
         task: Registry name.
         robots: Robot config names to evaluate with; empty = the task's own.
         protocol: Field overrides on the suite protocol for this task (``{"episodes": 50}``).
+        dimensions: Capability tags the task tests (``"precision"``, ``"long_horizon"``, ``"articulation"``, …);
+            the report aggregates task-macro success per tag so a policy's profile is visible, not one number.
     """
 
     task: str
     robots: tuple[str, ...] = ()
     protocol: Mapping[str, Any] = field(default_factory=dict)
+    dimensions: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "robots", tuple(self.robots))
         object.__setattr__(self, "protocol", dict(self.protocol))
+        object.__setattr__(self, "dimensions", tuple(str(d) for d in self.dimensions))
 
 
 @dataclass(frozen=True)
@@ -152,6 +156,7 @@ SCORING_FIELDS = (
     "demo_budget_quantile",
     "prompt_split",
     "instances",
+    "access",
 )
 """Protocol fields a result must share with the suite to count for it (``episodes`` / ``seed`` / ``name`` may differ)."""
 
@@ -234,6 +239,7 @@ def suite_report(
             k, n = sum(1 for e in episodes if e.success), len(episodes)
             rows.append({
                 "task": entry.task,
+                "dimensions": list(entry.dimensions),
                 "robots": list(entry.robots) or (list(runs[0].robots) if runs else []),
                 "runs": len(runs),
                 "episodes": n,
@@ -254,8 +260,27 @@ def suite_report(
             "macro_success_rate_scored": (sum(r["success_rate"] for r in scored) / len(scored)) if scored else None,
             "pooled_success_rate": (k / n) if n else None,
             "episodes": n,
+            "dimensions": _dimension_macros(rows),
         }
     return report
+
+
+def _dimension_macros(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Task-macro success per capability tag over the tasks that carry it (``None`` while one is unscored)."""
+    tags: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        for tag in row.get("dimensions", ()):
+            tags.setdefault(tag, []).append(row)
+    out = {}
+    for tag, tagged in sorted(tags.items()):
+        scored = [r for r in tagged if r["success_rate"] is not None]
+        out[tag] = {
+            "tasks": [r["task"] for r in tagged],
+            "macro_success_rate": (sum(r["success_rate"] for r in scored) / len(scored))
+            if scored and len(scored) == len(tagged)
+            else None,
+        }
+    return out
 
 
 def suite_table(report: dict[str, Any]) -> str:
@@ -292,8 +317,11 @@ def suite_table(report: dict[str, Any]) -> str:
         lines += [
             "",
             f"{split}: {head}, pooled {pct(block['pooled_success_rate'])} over {block['episodes']} episodes",
-            "",
         ]
+        if block.get("dimensions"):
+            dims = ", ".join(f"{tag} {pct(d['macro_success_rate'])}" for tag, d in block["dimensions"].items())
+            lines.append(f"{split} by dimension: {dims}")
+        lines.append("")
     for r in report.get("rejected", []):
         lines.append(f"- not scored, protocol differs: {r['split']}/{r['task']}: {'; '.join(r['mismatch'])}")
     return "\n".join(lines).rstrip() + "\n"

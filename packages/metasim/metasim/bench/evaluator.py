@@ -8,8 +8,10 @@ function, so that "success rate" means one thing.
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import inspect
+import math
 import time
 from collections import deque
 from collections.abc import Callable
@@ -20,6 +22,7 @@ from loguru import logger as log
 
 from metasim.utils.log import warn_once
 
+from .access import AccessProfile, restrict_observation, usage_report
 from .instances import TaskInstance, demo_budget, instance_pool, plan_instances
 from .policy import Policy, PolicyContext
 from .prompts import DRAW_REVISION, task_prompt_bank
@@ -38,6 +41,8 @@ class _Running:
     flags: list[bool] = dataclasses.field(default_factory=list)
     steps: int = 0
     return_sum: float = 0.0
+    started_at: float = 0.0
+    """``time.perf_counter()`` when the episode started, for the access tier's wall-clock budget."""
 
 
 def _declared_action_box(env) -> tuple[list[float], list[float]] | None:
@@ -114,8 +119,36 @@ def build_context(env, protocol: EvalProtocol, *, max_episode_steps: int | None 
         instruction=None
         if protocol.prompt_split != "canonical"
         else (getattr(env, "task_desc", None) or (bank.canonical if (bank := task_prompt_bank(env)) else None)),
-        extras={"scenario": scenario},  # for adapters that need the robot configs or the camera set-up
+        # for adapters that need the robot configs or the camera set-up; below "privileged" the object
+        # list goes with the object states (names and default poses are state too)
+        extras={"scenario": _policy_scenario(scenario, protocol.access)},
+        access=protocol.access.to_dict() if protocol.access != AccessProfile() else None,
     )
+
+
+def _policy_scenario(scenario, access: AccessProfile):
+    """``scenario`` as a restricted tier may see it: a copy without ``objects``.
+
+    The scenario itself when the tier is unrestricted or the scenario has no object list.
+    """
+    if not access.restricts_observation or not hasattr(scenario, "objects"):
+        return scenario
+    if dataclasses.is_dataclass(scenario) and not isinstance(scenario, type):
+        return dataclasses.replace(scenario, objects=[])
+    stripped = copy.copy(scenario)
+    stripped.objects = []
+    return stripped
+
+
+def _policy_instance(inst: TaskInstance, access: AccessProfile) -> TaskInstance:
+    """``inst`` as the tier allows ``policy.reset`` to see it.
+
+    Below "privileged" the initial state and the demo actions are removed, which is what
+    :class:`~metasim.bench.remote.PolicyServer` already does for a served policy.
+    """
+    if not access.restricts_observation:
+        return inst
+    return dataclasses.replace(inst, state=None, actions=None)
 
 
 def _reset_kwargs(env) -> set[str]:
@@ -297,6 +330,21 @@ def evaluate(
             cap, cap_source = task_cap, "task (below the demo budget)"
     ctx = build_context(env, protocol, max_episode_steps=cap)
     auto_reset = bool(getattr(env, "auto_reset", False))
+    access = protocol.access
+    if num_envs > 1 and access.wall_time_s is not None:
+        warn_once(
+            ("bench.wall_time_shared", name),
+            f"bench: access profile {access.name!r} sets a per-episode wall-clock budget but num_envs={num_envs}; "
+            "the clock of every episode in a batch runs while the other slots step and reset, so a budget is "
+            "only comparable between runs with the same num_envs (use num_envs=1 for a fair budget)",
+        )
+    if num_envs > 1 and access.budgets:
+        warn_once(
+            ("bench.usage_shared", name),
+            f"bench: access profile {access.name!r} sets usage budgets but num_envs={num_envs}; usage is pooled "
+            "over every policy call, including the env slots that step idle while the plan drains, and divided "
+            "by the scored episodes, so the per-episode means overstate a batch (use num_envs=1 for a fair budget)",
+        )
 
     queue: deque[tuple[int, TaskInstance]] = deque(enumerate(plan))
     running: dict[int, _Running] = {}
@@ -318,11 +366,11 @@ def evaluate(
             started.append((env_id, episode, inst))
         seed = min((inst.seed for _, _, inst in started), default=protocol.seed)
         for env_id, episode, inst in started:
-            running[env_id] = _Running(episode=episode, instance=inst, seed=seed)
+            running[env_id] = _Running(episode=episode, instance=inst, seed=seed, started_at=time.perf_counter())
             slot_state[env_id] = inst.state
         started_ids = [env_id for env_id, _, _ in started]
         if started_ids:
-            policy.reset(started_ids, [inst for _, _, inst in started], ctx)
+            policy.reset(started_ids, [_policy_instance(inst, access) for _, _, inst in started], ctx)
         idle = [i for i in env_ids if i not in started_ids]
         explicit = [i for i in started_ids if slot_state[i] is not None]
         default = [i for i in started_ids if slot_state[i] is None] + ([] if auto_reset else idle)
@@ -336,6 +384,9 @@ def evaluate(
         if default:
             returned = _reset(env, default, None, seed)
             calls += 1
+        now = time.perf_counter()  # the wall-clock budget starts once the episode is ready to act
+        for env_id in started_ids:
+            running[env_id].started_at = now
         if calls == 0:
             return obs_before
         covered_all = calls == 1 and (sorted(explicit or default) == list(range(num_envs)) or auto_reset)
@@ -344,7 +395,7 @@ def evaluate(
     obs = start(list(range(num_envs)), None)
 
     while running:
-        actions = policy.act(obs, ctx)
+        actions = policy.act(restrict_observation(obs, access), ctx)
         obs, reward, terminated, time_out, info = env.step(actions)
         term, tout, succ, rew = _step_to_host(
             terminated, time_out, _step_success(env, info, terminated), reward, num_envs
@@ -355,7 +406,9 @@ def evaluate(
             run.steps += 1
             run.return_sum += rew[env_id]
             run.flags.append(succ[env_id])
-            capped = cap is not None and run.steps >= cap
+            elapsed = time.perf_counter() - run.started_at
+            over_time = access.wall_time_s is not None and elapsed > access.wall_time_s
+            capped = (cap is not None and run.steps >= cap) or over_time
             if term[env_id] or tout[env_id] or capped:
                 first_hit = next((i + 1 for i, f in enumerate(run.flags) if f), None)
                 episode = EpisodeResult(
@@ -372,6 +425,8 @@ def evaluate(
                     first_success_step=first_hit,
                     prompt=run.instance.prompt,
                     prompt_variant=run.instance.prompt_variant,
+                    wall_time_s=elapsed,
+                    over_budget=over_time or None,
                 )
                 results.append(episode)
                 if on_episode is not None:
@@ -387,6 +442,10 @@ def evaluate(
     results.sort(key=lambda e: e.index)
     policy_record = {"name": getattr(policy, "name", type(policy).__name__), "kind": type(policy).__qualname__}
     policy_record.update(policy_info or {})
+    usage = _policy_usage(policy)
+    if usage:
+        policy_record["usage"] = usage
+    budget = usage_report(usage, access, len(results))
     provenance = _provenance(env, protocol.seed)
     scenario = env.scenario
     return BenchmarkResult(
@@ -406,9 +465,49 @@ def evaluate(
             "success_defined": success_defined,
             "episode_cap": cap or (ctx.max_episode_steps or None),
             "episode_cap_source": cap_source,
+            "access": access.name,
+            **({"budget": budget} if budget else {}),
             **({"prompt_draw_revision": DRAW_REVISION} if protocol.prompt_split != "canonical" else {}),
         },
     )
+
+
+def _policy_usage(policy) -> dict[str, Any] | None:
+    """``policy.usage()`` when the policy reports its tool / model consumption; a failure is logged, not raised."""
+    usage = getattr(policy, "usage", None)
+    if not callable(usage):
+        return None
+    try:
+        report = usage()
+    except Exception as err:  # the scores are in hand; a broken counter must not lose them
+        log.warning(f"bench: policy.usage() failed ({type(err).__name__}: {err})")
+        return None
+    if not isinstance(report, dict):
+        log.warning(f"bench: policy.usage() returned a {type(report).__name__}, not a dict; usage not recorded")
+        return None
+    clean: dict[str, Any] = {}
+    for key, value in report.items():
+        number = _usage_number(value)
+        if number is None:
+            log.warning(f"bench: policy.usage()[{key!r}] is {value!r}, not a finite number; dropped")
+            continue
+        clean[str(key)] = number
+    return clean or None
+
+
+def _usage_number(value: Any) -> int | float | None:
+    """``value`` as a finite int / float (a one-element tensor or array counts), else ``None``."""
+    if isinstance(value, bool):
+        return int(value)
+    if not isinstance(value, (int, float)):
+        item = getattr(value, "item", None)
+        try:
+            value = item() if callable(item) else None
+        except (TypeError, ValueError, RuntimeError):
+            return None
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            return None
+    return value if math.isfinite(value) else None
 
 
 def _provenance(env, seed: int) -> dict[str, Any]:

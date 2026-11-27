@@ -10,8 +10,10 @@ each evaluation script.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Literal
+
+from .access import AccessProfile
 
 SuccessRule = Literal["first", "final", "held"]
 SUCCESS_RULES: tuple[str, ...] = ("first", "final", "held")
@@ -65,8 +67,15 @@ class EvalProtocol:
     demo_budget_factor: float | None = None
     demo_budget_quantile: float = 0.75
     prompt_split: PromptSplit = "canonical"
+    access: AccessProfile = field(default_factory=AccessProfile)
+    """The information-access tier the policy is evaluated under (:mod:`metasim.bench.access`); the default is
+    today's unrestricted evaluation. Enforced where the harness can (observation, wall time), recorded always."""
 
     def __post_init__(self) -> None:
+        if isinstance(self.access, dict):
+            object.__setattr__(self, "access", AccessProfile.from_dict(self.access))
+        if not isinstance(self.access, AccessProfile):
+            raise ValueError(f"access must be an AccessProfile, got {type(self.access).__name__}")
         if self.success_rule not in SUCCESS_RULES:
             raise ValueError(f"success_rule must be one of {SUCCESS_RULES}, got {self.success_rule!r}")
         if self.prompt_split not in PROMPT_SPLITS:
@@ -126,4 +135,6 @@ class EvalProtocol:
         kwargs = dict(data)
         if kwargs.get("instances") is not None:
             kwargs["instances"] = tuple(kwargs["instances"])
+        if isinstance(kwargs.get("access"), dict):
+            kwargs["access"] = AccessProfile.from_dict(kwargs["access"])
         return cls(**kwargs)
