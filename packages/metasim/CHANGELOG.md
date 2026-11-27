@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Replay comparisons report an infinite deviation for non-finite physical state values, so NaNs or matching infinities cannot silently pass a replay check. Finite comparisons and public signatures are unchanged.
+- `get_cam_params` constructs valid camera rotations for three-camera batches and vertical viewing directions; vertical views use world +Y as the reference up direction. Public signatures are unchanged.
 
 - `RLTaskEnv.step` clips a dict action's `dof_pos_target` entries to the joint limits, as it already did for a tensor action, for the robots every backend drives by position. `step` clips a tensor action to the joint-limit box, but handed a dict action straight to `set_dof_targets`, so a replayed v2 demo or any name-based caller drove the engine with an unbounded target while the tensor of the same numbers was clipped. Both paths now clip to the same float32 numbers, `dof_vel_target` / `dof_effort_target` entries are passed through, an action already in bounds (NaN included) reaches the handler as the caller's own object, and a clip that fires is warned about once per robot and joint, because a demo recorded outside the configured limits replays as a different trajectory: a gripper commanded past its configured close position now closes to that position instead, which can move a measured success rate, so check the warning before comparing an evaluation with an older one.
 
