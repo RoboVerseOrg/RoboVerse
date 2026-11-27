@@ -73,7 +73,7 @@ jobs:
         run: |
           echo "### MetaSim coverage (py${{ matrix.python-version }})" >> "$GITHUB_STEP_SUMMARY"
           python -m coverage report --format=markdown --skip-covered --sort=cover | head -60 >> "$GITHUB_STEP_SUMMARY" || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-metasim-py${{ matrix.python-version }}
@@ -110,7 +110,7 @@ jobs:
         run: |
           echo "### RoboVerse coverage" >> "$GITHUB_STEP_SUMMARY"
           python -m coverage report --format=markdown --skip-covered --sort=cover | head -60 >> "$GITHUB_STEP_SUMMARY" || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-roboverse
