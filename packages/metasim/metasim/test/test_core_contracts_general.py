@@ -250,3 +250,14 @@ def test_joint_pos_target_is_derived_from_the_action_cache_for_tensor_and_dict_a
     applied(torch.zeros(3, 3))  # neither one row nor one per env
     with pytest.raises(ValueError, match="3 action rows for 2 envs"):
         h._joint_pos_target_from_action_cache("arm")
+
+
+def test_state_tensor_to_nested_accepts_a_scene_only_state():
+    """A scenario whose articulation lives in the scene MJCF has no objects and no robots; the conversion used to
+    raise StopIteration at reset. The batch size then comes from the handler and every env state is empty."""
+    from types import SimpleNamespace
+
+    from metasim.utils.state import TensorState, state_tensor_to_nested
+
+    states = state_tensor_to_nested(SimpleNamespace(num_envs=3), TensorState(objects={}, robots={}, cameras={}))
+    assert len(states) == 3 and all(st["objects"] == {} and st["robots"] == {} for st in states)
