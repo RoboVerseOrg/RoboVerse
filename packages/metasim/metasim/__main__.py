@@ -73,6 +73,22 @@ def _api_snapshot(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bench_access(args: argparse.Namespace) -> int:
+    """``bench access``: the preset tiers, one row each."""
+    from metasim.bench import ACCESS_PROFILES
+
+    print("| name | observation | cameras | proprioception | tools | memory | wall time | budgets |")
+    print("|---|---|---|---|---|---|---|---|")
+    for name, p in ACCESS_PROFILES.items():
+        cams = "all" if p.cameras is None else ", ".join(p.cameras)
+        wall = "-" if p.wall_time_s is None else f"{p.wall_time_s:g}s"
+        budgets = ", ".join(f"{k}={v}" for k, v in p.budgets.items()) or "-"
+        print(
+            f"| {name} | {p.observation} | {cams} | {p.proprioception} | {p.tools} | {p.memory} | {wall} | {budgets} |"
+        )
+    return 0
+
+
 def _bench_list(args: argparse.Namespace) -> int:
     from metasim.task.registry import list_tasks
 
@@ -174,7 +190,7 @@ def _bench_run(args: argparse.Namespace) -> int:
     import re
     import time
 
-    from metasim.bench import EvalProtocol, evaluate
+    from metasim.bench import EvalProtocol, evaluate, get_access_profile
 
     try:
         protocol = EvalProtocol(
@@ -188,6 +204,7 @@ def _bench_run(args: argparse.Namespace) -> int:
             demo_budget_factor=args.demo_budget,
             demo_budget_quantile=args.demo_budget_quantile,
             prompt_split=args.prompt_split,
+            access=get_access_profile(args.access),
         )
     except ValueError as err:
         raise SystemExit(f"invalid protocol: {err}") from err
@@ -282,6 +299,10 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
         raise SystemExit(f"suite {suite.name!r} names no simulator; pass --sim")
     out_dir = args.out_dir or os.path.join("bench_results", "suites", suite.name, sim)
     overrides = {k: v for k, v in {"episodes": args.episodes, "seed": args.seed}.items() if v is not None}
+    if args.access:
+        from metasim.bench import get_access_profile
+
+        overrides["access"] = get_access_profile(args.access)
     results, failures = [], []
     for split, entry in suite.entries(args.split):
         print(f"=== {suite.name}/{split}: {entry.task}", file=sys.stderr, flush=True)
@@ -640,6 +661,10 @@ def _add_bench(sub) -> None:
         default="canonical",
         help="instruction per episode: the task's own, a training paraphrase, or a held-out one",
     )
+    r.add_argument(
+        "--access",
+        help="information-access tier: a preset (`bench access`) or a JSON file; default privileged",
+    )
     r.add_argument("--device", help="torch device (default: cuda if available)")
     r.add_argument("--gui", action="store_true", help="run with the simulator viewer (default headless)")
     r.add_argument("--out", help="result path (default: bench_results/<task>__<robot>__<sim>__<policy>__<time>.json)")
@@ -669,6 +694,7 @@ def _add_bench(sub) -> None:
     sr.add_argument("--policy", default="hold", help=f"one of {list(_BUILTIN_POLICIES)} or 'pkg.module:attr'")
     sr.add_argument("--policy-arg", action="append", metavar="KEY=VALUE", help="constructor argument (repeatable)")
     sr.add_argument("--checkpoint", help="checkpoint path; passed to the policy and hashed into the results")
+    sr.add_argument("--access", help="information-access tier for every task (preset name or JSON file)")
     sr.add_argument("--device", help="torch device (default: cuda if available)")
     sr.add_argument("--out-dir", help="default: bench_results/suites/<suite>/<sim>")
     _add_remote_args(sr)
@@ -679,6 +705,8 @@ def _add_bench(sub) -> None:
     sp.add_argument("--out-dir", help="also write suite.json / suite.md here")
     sp.add_argument("--policy", help="policy name to score when the results hold several")
     sp.set_defaults(func=_bench_suite_report)
+    a = bs.add_parser("access", help="list the information-access tiers (`--access` presets)")
+    a.set_defaults(func=_bench_access)
     h = bs.add_parser("health", help="task health gate: the replay baseline on every task that ships demos")
     h.add_argument("--sim", required=True, help="simulator backend the demos were recorded on, e.g. mujoco")
     h.add_argument("--task", action="append", help="task(s) to check (repeatable; default: every task with demos)")

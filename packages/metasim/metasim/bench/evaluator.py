@@ -20,6 +20,7 @@ from loguru import logger as log
 
 from metasim.utils.log import warn_once
 
+from .access import AccessProfile, restrict_observation, usage_report
 from .instances import TaskInstance, demo_budget, instance_pool, plan_instances
 from .policy import Policy, PolicyContext
 from .prompts import DRAW_REVISION, task_prompt_bank
@@ -38,6 +39,8 @@ class _Running:
     flags: list[bool] = dataclasses.field(default_factory=list)
     steps: int = 0
     return_sum: float = 0.0
+    started_at: float = 0.0
+    """``time.perf_counter()`` when the episode started, for the access tier's wall-clock budget."""
 
 
 def _declared_action_box(env) -> tuple[list[float], list[float]] | None:
@@ -115,6 +118,7 @@ def build_context(env, protocol: EvalProtocol, *, max_episode_steps: int | None 
         if protocol.prompt_split != "canonical"
         else (getattr(env, "task_desc", None) or (bank.canonical if (bank := task_prompt_bank(env)) else None)),
         extras={"scenario": scenario},  # for adapters that need the robot configs or the camera set-up
+        access=protocol.access.to_dict() if protocol.access != AccessProfile() else None,
     )
 
 
@@ -318,7 +322,7 @@ def evaluate(
             started.append((env_id, episode, inst))
         seed = min((inst.seed for _, _, inst in started), default=protocol.seed)
         for env_id, episode, inst in started:
-            running[env_id] = _Running(episode=episode, instance=inst, seed=seed)
+            running[env_id] = _Running(episode=episode, instance=inst, seed=seed, started_at=time.perf_counter())
             slot_state[env_id] = inst.state
         started_ids = [env_id for env_id, _, _ in started]
         if started_ids:
@@ -343,8 +347,9 @@ def evaluate(
 
     obs = start(list(range(num_envs)), None)
 
+    access = protocol.access
     while running:
-        actions = policy.act(obs, ctx)
+        actions = policy.act(restrict_observation(obs, access), ctx)
         obs, reward, terminated, time_out, info = env.step(actions)
         term, tout, succ, rew = _step_to_host(
             terminated, time_out, _step_success(env, info, terminated), reward, num_envs
@@ -355,7 +360,9 @@ def evaluate(
             run.steps += 1
             run.return_sum += rew[env_id]
             run.flags.append(succ[env_id])
-            capped = cap is not None and run.steps >= cap
+            elapsed = time.perf_counter() - run.started_at
+            over_time = access.wall_time_s is not None and elapsed > access.wall_time_s
+            capped = (cap is not None and run.steps >= cap) or over_time
             if term[env_id] or tout[env_id] or capped:
                 first_hit = next((i + 1 for i, f in enumerate(run.flags) if f), None)
                 episode = EpisodeResult(
@@ -372,6 +379,8 @@ def evaluate(
                     first_success_step=first_hit,
                     prompt=run.instance.prompt,
                     prompt_variant=run.instance.prompt_variant,
+                    wall_time_s=elapsed,
+                    over_budget=over_time or None,
                 )
                 results.append(episode)
                 if on_episode is not None:
@@ -387,6 +396,10 @@ def evaluate(
     results.sort(key=lambda e: e.index)
     policy_record = {"name": getattr(policy, "name", type(policy).__name__), "kind": type(policy).__qualname__}
     policy_record.update(policy_info or {})
+    usage = _policy_usage(policy)
+    if usage:
+        policy_record["usage"] = usage
+    budget = usage_report(usage, access, len(results))
     provenance = _provenance(env, protocol.seed)
     scenario = env.scenario
     return BenchmarkResult(
@@ -406,9 +419,24 @@ def evaluate(
             "success_defined": success_defined,
             "episode_cap": cap or (ctx.max_episode_steps or None),
             "episode_cap_source": cap_source,
+            "access": access.name,
+            **({"budget": budget} if budget else {}),
             **({"prompt_draw_revision": DRAW_REVISION} if protocol.prompt_split != "canonical" else {}),
         },
     )
+
+
+def _policy_usage(policy) -> dict[str, Any] | None:
+    """``policy.usage()`` when the policy reports its tool / model consumption; a failure is logged, not raised."""
+    usage = getattr(policy, "usage", None)
+    if not callable(usage):
+        return None
+    try:
+        report = usage()
+    except Exception as err:  # the scores are in hand; a broken counter must not lose them
+        log.warning(f"bench: policy.usage() failed ({type(err).__name__}: {err})")
+        return None
+    return dict(report) if isinstance(report, dict) and report else None
 
 
 def _provenance(env, seed: int) -> dict[str, Any]:

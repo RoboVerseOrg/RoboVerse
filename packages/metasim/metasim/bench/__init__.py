@@ -11,6 +11,7 @@ task-macro scoring (:mod:`~metasim.bench.suite`), per-episode instructions with 
 
 from __future__ import annotations
 
+from .access import ACCESS_PROFILES, AccessProfile, get_access_profile, restrict_observation
 from .evaluator import build_context, evaluate
 from .instances import TaskInstance, demo_budget, hash_state, instance_pool, plan_instances
 from .policy import (
@@ -30,11 +31,13 @@ from .result import SCHEMA, SCHEMA_VERSION, BenchmarkResult, EpisodeResult, summ
 from .suite import BenchmarkSuite, SuiteTask, get_suite, list_suites, register_suite, suite_report, suite_table
 
 __all__ = [
+    "ACCESS_PROFILES",
     "BUILTIN_POLICIES",
     "PROMPT_SPLITS",
     "SCHEMA",
     "SCHEMA_VERSION",
     "SUCCESS_RULES",
+    "AccessProfile",
     "BenchmarkResult",
     "BenchmarkSuite",
     "EpisodeResult",
@@ -54,6 +57,7 @@ __all__ = [
     "checkpoint_sha256",
     "demo_budget",
     "evaluate",
+    "get_access_profile",
     "get_suite",
     "hash_state",
     "instance_pool",
@@ -61,6 +65,7 @@ __all__ = [
     "load_policy",
     "plan_instances",
     "register_suite",
+    "restrict_observation",
     "suite_report",
     "suite_table",
     "summarize",

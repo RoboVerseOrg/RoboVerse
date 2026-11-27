@@ -48,6 +48,9 @@ class PolicyContext:
     instruction is its ``TaskInstance.prompt`` (given to ``reset``)."""
     extras: dict[str, Any] = field(default_factory=dict)
     """Harness-provided objects a policy adapter may need: ``"scenario"`` is the env's ``ScenarioCfg``."""
+    access: dict[str, Any] | None = None
+    """The :class:`~metasim.bench.access.AccessProfile` of the run as a dict (``None`` = privileged): the tools and
+    memory an adapter may use. The observation it receives is already filtered to the tier."""
 
     @property
     def action_dim(self) -> int:

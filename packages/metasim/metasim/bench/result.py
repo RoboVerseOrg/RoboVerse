@@ -20,7 +20,7 @@ from typing import Any
 SCHEMA = "roboverse.bench.result"
 SCHEMA_VERSION = 1
 
-_EPISODE_OPTIONAL = ("first_success_step", "prompt", "prompt_variant")
+_EPISODE_OPTIONAL = ("first_success_step", "prompt", "prompt_variant", "wall_time_s", "over_budget")
 """Episode fields a reader accepts as absent (results written before they existed)."""
 _REQUIRED = ("schema", "schema_version", "task", "simulator", "robots", "num_envs", "protocol", "policy", "episodes")
 
@@ -49,6 +49,10 @@ class EpisodeResult:
     prompt: str | None = None
     """The instruction the episode was given (``EvalProtocol.prompt_split``); ``None`` for a task without one."""
     prompt_variant: str | None = None
+    wall_time_s: float | None = None
+    """Wall-clock seconds the episode took (policy and simulator together)."""
+    over_budget: bool | None = None
+    """``True`` when the access tier's wall-clock budget ended the episode (a failed time-out)."""
     """Which entry of the task's prompt bank ``prompt`` is."""
 
 
@@ -109,7 +113,7 @@ class BenchmarkResult:
         data = asdict(self)
         for episode in data["episodes"]:
             # unset optional fields stay out of the file, so a reader that predates them still accepts it
-            for key in ("prompt", "prompt_variant"):
+            for key in ("prompt", "prompt_variant", "wall_time_s", "over_budget"):
                 if episode.get(key) is None:
                     episode.pop(key, None)
         data["summary"] = self.summary
@@ -192,6 +196,7 @@ def result_key(result: BenchmarkResult) -> tuple:
         protocol.get("demo_budget_factor"),
         protocol.get("demo_budget_quantile", 0.75) if protocol.get("demo_budget_factor") is not None else None,
         protocol.get("prompt_split", "canonical"),
+        (protocol.get("access") or {}).get("name", "privileged"),
     )
 
 
@@ -206,12 +211,12 @@ def summarize(results: list[BenchmarkResult]) -> str:
     for r in results:
         groups.setdefault(result_key(r) + (r.policy.get("name"),), []).append(r)
     lines = [
-        "| task | robots | simulator | rule | policy | runs | episodes | success rate | 95% CI | mean steps |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| task | robots | simulator | rule | access | policy | runs | episodes | success rate | 95% CI | mean steps |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for key in sorted(groups, key=lambda k: tuple(str(x) for x in k)):
         runs = groups[key]
-        task, robots, simulator, rule, hold, cap, instances, budget, quantile, prompt_split, policy = key
+        task, robots, simulator, rule, hold, cap, instances, budget, quantile, prompt_split, access, policy = key
         episodes = [e for r in runs for e in r.episodes]
         n = len(episodes)
         k = sum(1 for e in episodes if e.success)
@@ -225,7 +230,9 @@ def summarize(results: list[BenchmarkResult]) -> str:
         if prompt_split != "canonical":
             rule_label += f", prompts {prompt_split}"
         mean_steps = sum(e.steps for e in episodes) / n if n else 0.0
-        head = f"| {task} | {', '.join(robots)} | {simulator} | {rule_label} | {policy} | {len(runs)} | {n} |"
+        head = (
+            f"| {task} | {', '.join(robots)} | {simulator} | {rule_label} | {access} | {policy} | {len(runs)} | {n} |"
+        )
         if not n:
             lines.append(f"{head} - | - | - |")
         elif not defined:
