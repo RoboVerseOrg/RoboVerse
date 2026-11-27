@@ -70,35 +70,26 @@ def _parse_registrations(path: str) -> tuple[list[str], bool]:
     with open(path, encoding="utf-8") as f:
         source = f.read()
     tree = ast.parse(source, filename=path)
-    # identifiers are NFKC-normalized by the parser; hits[n] = source lines 1..n spelling register_task
-    text = source if source.isascii() else unicodedata.normalize("NFKC", source)
+    # the parser NFKC-normalizes identifiers; hits[n] = how many of the source lines 1..n spell register_task
+    lines = unicodedata.normalize("NFKC", source).split("\n")
+    hits = list(accumulate(("register_task" in line for line in lines), initial=0))
+
+    def may_hold_call(node: ast.AST) -> bool:
+        """False if no source line of ``node`` spells register_task (nodes without a position are kept)."""
+        first = (getattr(node, "decorator_list", None) or [node])[0]  # decorators sit above the def/class line
+        return not hasattr(first, "lineno") or hits[node.end_lineno] != hits[first.lineno - 1]
+
     names: list[str] = []
     dynamic = False
-    if "register_task" not in text:
-        return names, dynamic
-    hits = list(accumulate(("register_task" in line for line in text.split("\n")), initial=0))
-
-    def may_hold_call(first: object, last: object) -> bool:
-        """False if the source lines from ``first`` to ``last`` cannot spell register_task."""
-        end = getattr(last, "end_lineno", None)
-        decorators = getattr(first, "decorator_list", None)
-        start = decorators[0].lineno if decorators else getattr(first, "lineno", None)  # decorators sit above
-        return end is None or start is None or hits[end] != hits[start - 1]
-
     todo = [tree]
-    for node in todo:  # breadth-first like ast.walk, skipping fields and lists whose lines cannot hold a call
+    for node in todo:  # breadth-first like ast.walk, without the children that cannot hold a call
+        todo.extend(child for child in ast.iter_child_nodes(node) if may_hold_call(child))
         found = _decorator_names(node)
-        if found:
-            names.extend(found)
-        elif found is not None:
+        if found is None:
+            continue
+        if not found:
             dynamic = True
-        for name in node._fields:
-            value = getattr(node, name, None)
-            if isinstance(value, ast.AST):
-                if value._fields and may_hold_call(value, value):  # skip leaves such as Load() and Add()
-                    todo.append(value)
-            elif isinstance(value, list) and value and may_hold_call(value[0], value[-1]):
-                todo.extend(item for item in value if isinstance(item, ast.AST) and may_hold_call(item, item))
+        names.extend(found)
     return names, dynamic
 
 
@@ -127,16 +118,9 @@ def _load_cache(path: str) -> dict:
 def _save_cache(path: str, entries: dict) -> None:
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        text = json.dumps({"version": 1, "files": entries})
-        try:
-            with open(path, encoding="utf-8") as f:
-                if f.read() == text:  # nothing changed since the last save
-                    return
-        except (OSError, ValueError):
-            pass
         tmp = f"{path}.tmp-{os.getpid()}"
         with open(tmp, "w", encoding="utf-8") as f:
-            f.write(text)
+            f.write(json.dumps({"version": 1, "files": entries}))
         os.replace(tmp, path)
     except OSError:  # a read-only or full cache location must not break lookups
         pass
@@ -220,17 +204,6 @@ def build_static_index(
     cache_path = default_cache_path() if cache_path is None else cache_path
     cache: dict | None = _load_cache(cache_path).get("files", {}) if cache_path else None
     seen_paths: set[str] = set()
-    real_dirs: dict[str, str] = {}
-
-    def realpath(path: str) -> str:
-        """``os.path.realpath`` that resolves each directory once; only symlinked files need a full walk."""
-        if os.path.islink(path):
-            return os.path.realpath(path)
-        dirname, basename = os.path.split(path)
-        if dirname not in real_dirs:
-            real_dirs[dirname] = os.path.realpath(dirname)
-        return os.path.join(real_dirs[dirname], basename)
-
     for pkg_name in package_names:
         if "." not in pkg_name and pkg_name in local_modules:
             continue
@@ -244,22 +217,21 @@ def build_static_index(
             continue
         if spec.submodule_search_locations:
             for module_name, src in _iter_package_sources(pkg_name, list(spec.submodule_search_locations)):
-                real = realpath(src)
+                real = os.path.realpath(src)
                 if real in seen_paths:
                     continue
                 seen_paths.add(real)
                 _scan_source(module_name, src, index, cache)
         elif spec.origin and spec.origin.endswith(".py"):
-            seen_paths.add(realpath(spec.origin))
+            seen_paths.add(os.path.realpath(spec.origin))
             _scan_source(pkg_name, spec.origin, index, cache)
     for mod in local_modules:
         src = _module_source_path(mod)
         if src is None and os.path.isfile(mod + ".py"):
             src = mod + ".py"
         # a file reachable both as a package module and as a cwd module (symlinks resolved) is one registration
-        real = realpath(src) if src else None
-        if real and real not in seen_paths:
-            seen_paths.add(real)
+        if src and os.path.realpath(src) not in seen_paths:
+            seen_paths.add(os.path.realpath(src))
             _scan_source(mod, src, index, cache)
     if cache is not None:
         _save_cache(cache_path, cache)
