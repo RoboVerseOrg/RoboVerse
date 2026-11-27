@@ -236,7 +236,7 @@ Measured on 2026-11-27 (`bench matrix` output, 10 episodes per task; the suite p
 | llm-agent (agent) |  | 0.880 (5 tasks, 50 ep) | 0.120 (5 tasks, 50 ep) |  |
 | scripted (scripted) | 0.900 (5 tasks, 50 ep) |  |  |  |
 | hold | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
-| openvla-7b[bridge_orig] |  |  |  | 0.000* (1 tasks, 10 ep) |
+| openvla-7b[bridge_orig] |  |  |  | 0.000 (5 tasks, 50 ep) |
 | random | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
 | replay | 0.960 (5 tasks, 50 ep) |  |  |  |
 
@@ -249,6 +249,7 @@ Measured on 2026-11-27 (`bench matrix` output, 10 episodes per task; the suite p
 | lift_peg_upright | llm-agent (agent) |  | 0.700 [0.40, 0.89] n=10 | 0.000 [0.00, 0.28] n=10 |  |
 | lift_peg_upright | scripted (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
 | lift_peg_upright | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| lift_peg_upright | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
 | lift_peg_upright | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
 | lift_peg_upright | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | pick_cube | llm-agent (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.000 [0.00, 0.28] n=10 |  |
@@ -260,16 +261,19 @@ Measured on 2026-11-27 (`bench matrix` output, 10 episodes per task; the suite p
 | pull_cube | llm-agent (agent) |  | 0.800 [0.49, 0.94] n=10 | 0.000 [0.00, 0.28] n=10 |  |
 | pull_cube | scripted (scripted) | 0.700 [0.40, 0.89] n=10 |  |  |  |
 | pull_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pull_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
 | pull_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
 | pull_cube | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | push_cube | llm-agent (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.600 [0.31, 0.83] n=10 |  |
 | push_cube | scripted (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | push_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| push_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
 | push_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
 | push_cube | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | stack_cube | llm-agent (agent) |  | 0.900 [0.60, 0.98] n=10 | 0.000 [0.00, 0.28] n=10 |  |
 | stack_cube | scripted (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
 | stack_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| stack_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
 | stack_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
 | stack_cube | replay | 0.900 [0.60, 0.98] n=10 |  |  |  |
 
