@@ -357,3 +357,22 @@ def test_absolute_path_from_another_machine_is_explained(monkeypatch, tmp_path):
     monkeypatch.setattr(hf_util, "LOCAL_DIR", str(local_dir))
     with pytest.raises(ValueError, match="belongs to the machine the asset was authored on"):
         check_and_download_single("/home/someone/RoboVerse/roboverse_data/assets/x/mjcf/bin.stl")
+
+
+def test_companions_are_looked_for_once_per_directory(monkeypatch, tmp_path):
+    """A scene downloads dozens of MJCFs from one directory; its licence / README are probed once, not per file."""
+    probes = []
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(tmp_path))
+    monkeypatch.setattr(hf_util, "_find_data_repo", lambda rel, **kw: probes.append(rel) or None)
+    monkeypatch.setattr(hf_util, "_upstream_url", lambda rel: None)
+    monkeypatch.setattr(hf_util, "_COMPANIONS_PROBED", set())
+    scene = tmp_path / "assets" / "scene"
+    scene.mkdir(parents=True)
+    hf_util._fetch_companions(str(scene / "a.xml"))
+    first = list(probes)
+    assert first and all(rel.startswith("assets/scene/") for rel in first)
+    hf_util._fetch_companions(str(scene / "b.xml"))
+    hf_util._fetch_companions(str(scene / "c.urdf"))
+    assert probes == first
+    hf_util._fetch_companions(str(scene / "mesh.obj"))  # not a description file: never probed
+    assert probes == first

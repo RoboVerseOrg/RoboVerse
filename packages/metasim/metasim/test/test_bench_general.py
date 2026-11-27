@@ -90,6 +90,8 @@ def test_plan_instances_cycles_pool_and_seeds_per_episode():
     plan = plan_instances(pool, EvalProtocol(episodes=5, seed=10))
     assert [p.index for p in plan] == [0, 1, 0, 1, 0]
     assert [p.seed for p in plan] == [10, 11, 12, 13, 14]
+    # the round-robin starts at the seed: another seed covers the pool from another instance
+    assert [p.index for p in plan_instances(pool, EvalProtocol(episodes=3, seed=11))] == [1, 0, 1]
     assert plan[0].instance_id.startswith("0:10:") and plan[2].instance_id.startswith("0:12:")
     explicit = plan_instances(pool, EvalProtocol(instances=(1, 1)))
     assert [p.index for p in explicit] == [1, 1]
@@ -809,3 +811,21 @@ def test_bench_health_gates_on_low_and_error(monkeypatch, tmp_path):
     assert cli.main(["bench", "health", "--sim", "mujoco", "--task", "b", "--task", "c", "--out-dir", str(out)]) == 0
     data = json.loads((out / "health.json").read_text())
     assert [r["task"] for r in data["rows"]] == ["b", "c"], "an explicit --task is always reported"
+
+
+def test_health_error_status_tells_unsupported_and_missing_demos_from_errors():
+    from metasim.__main__ import _health_error_status
+
+    assert (
+        _health_error_status("ValueError: object cube has no mujoco asset path set for the mujoco backend")
+        == "unsupported"
+    )
+    assert (
+        _health_error_status(
+            "Exception: File roboverse_data/trajs/maniskill/peg_insertion_side_9/v2/franka_v2.pkl neither exists in the "
+            "local directory nor exists in the HuggingFace dataset"
+        )
+        == "no-demos"
+    )
+    assert _health_error_status("Exception: File roboverse_data/robots/g1/mjcf/g1.xml neither exists ...") == "error"
+    assert _health_error_status("RuntimeError: boom") == "error"

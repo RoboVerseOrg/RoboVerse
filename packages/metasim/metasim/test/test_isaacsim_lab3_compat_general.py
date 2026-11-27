@@ -135,3 +135,28 @@ def test_kit_boots_without_the_telemetry_extension(monkeypatch):
     assert isaac._kit_args_without_telemetry(merged) == merged  # idempotent
     monkeypatch.setenv("METASIM_ISAAC_TELEMETRY", "1")
     assert isaac._kit_args_without_telemetry("--x") == "--x"
+
+
+def test_cfg_quaternions_follow_the_simulator_order(lab3):
+    """Initial poses, camera offsets and lights are cfg tuples in MetaSim's wxyz; Isaac Lab 3 reads them as xyzw."""
+    identity = isaac._quat_cfg_to_sim((1.0, 0.0, 0.0, 0.0))
+    assert identity == ((0.0, 0.0, 0.0, 1.0) if lab3 else (1.0, 0.0, 0.0, 0.0))
+    assert isaac._quat_cfg_to_sim([0.5, 0.5, -0.5, 0.5]) == ((0.5, -0.5, 0.5, 0.5) if lab3 else (0.5, 0.5, -0.5, 0.5))
+    assert isaac._quat_cfg_to_sim(torch.tensor([0.0, 1.0, 0.0, 0.0])) == (
+        (1.0, 0.0, 0.0, 0.0) if lab3 else (0.0, 1.0, 0.0, 0.0)
+    )
+    assert isaac._quat_cfg_to_sim(None) is None
+
+
+def test_every_cfg_quaternion_write_goes_through_the_helper():
+    """No ``rot=`` / ``orientation=`` cfg field in the handler takes a raw MetaSim quaternion."""
+    import inspect
+    import re
+
+    source = inspect.getsource(isaac)
+    raw = [
+        ln.strip()
+        for ln in source.splitlines()
+        if re.search(r"\b(rot|orientation)=", ln) and "_quat_cfg_to_sim(" not in ln and not ln.strip().startswith("#")
+    ]
+    assert raw == [], raw

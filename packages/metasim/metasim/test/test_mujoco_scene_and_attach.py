@@ -433,3 +433,27 @@ def test_actuator_not_named_after_a_joint_is_rejected(tmp_path):
     )
     with pytest.raises(ValueError, match=r"actuators \['elbow_drive'\] are not named after a joint"):
         MujocoHandler(scenario).launch()  # checked at launch, when the passive joints are listed
+
+
+def test_set_states_refuses_a_none_or_non_finite_joint_value(tmp_path):
+    """``np.asarray(None, dtype=float)`` is NaN: a demo with a missing joint value must fail loudly, not poison qpos."""
+    from metasim.scenario.robot import BaseActuatorCfg
+    from metasim.sim.sim_context import HandlerContext
+
+    scenario = _arm_scenario(
+        tmp_path,
+        actuators_xml='<actuator><position name="shoulder" joint="shoulder" kp="50" kv="5"/></actuator>',
+        actuators={"shoulder": BaseActuatorCfg(stiffness=50.0, damping=5.0)},
+        control_type={"shoulder": "position"},
+    )
+    with HandlerContext(scenario) as handler:
+        state = handler.get_states(mode="dict")[0]
+        state["robots"]["arm"]["dof_pos"]["elbow"] = None
+        with pytest.raises(ValueError, match="arm/elbow: dof_pos is None"):
+            handler.set_states([state])
+        state["robots"]["arm"]["dof_pos"]["elbow"] = float("nan")
+        with pytest.raises(ValueError, match="not finite"):
+            handler.set_states([state])
+        state["robots"]["arm"]["dof_pos"]["elbow"] = 0.25
+        handler.set_states([state])
+        assert float(handler.get_states(mode="tensor").robots["arm"].joint_pos[0, 0]) == pytest.approx(0.25)

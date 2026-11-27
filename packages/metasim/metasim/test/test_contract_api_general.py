@@ -124,7 +124,7 @@ def test_pyproject_runtime_dependencies_are_metasim_owned():
 
     assert pyproject["project"]["dependencies"] == [
         "defusedxml",  # M4: hardened XML parser for untrusted MJCF/URDF
-        "gymnasium",
+        "gymnasium>=1.0",  # AutoresetMode / vector_entry_point in the Gym adapters
         "huggingface-hub",
         "imageio[ffmpeg]",
         "loguru",

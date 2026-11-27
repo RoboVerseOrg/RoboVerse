@@ -147,3 +147,20 @@ def test_goal_is_the_conjunction_per_env():
     goal = (("Turnon", "flat_stove", "button"), ("On", "pan", "flat_stove", "cook_region"))
     states.objects["flat_stove"] = states.objects.pop("stove")
     assert goal_holds(task, states, goal).tolist() == [True, False]  # env 1's pan is 20 cm off the region
+
+
+def test_on_object_is_bounded_in_height():
+    """``On(obj, obj)`` holds within 3 cm in xy and from the base's height to 10 cm above it: an object carried
+    over the base does not count, which upstream's contact clause took care of."""
+    from roboverse_pack.tasks.libero_90._site_predicates import object_on
+
+    base = torch.tensor([[0.0, 0.0, 0.0]] * 5)
+    point = torch.tensor([
+        [0.01, 0.0, 0.03],  # resting on it
+        [0.0, 0.02, 0.099],  # just inside the band
+        [0.0, 0.0, 0.20],  # carried 20 cm above
+        [0.0, 0.0, -0.01],  # below the base
+        [0.04, 0.0, 0.03],  # off to the side
+    ])
+    assert object_on(point, base).tolist() == [True, True, False, False, False]
+    assert object_on(point, base, height=0.25).tolist() == [True, True, True, False, False]

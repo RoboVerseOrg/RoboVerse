@@ -269,7 +269,11 @@ class RemotePolicy:
             try:
                 req = urllib.request.Request(url, data=body, method=method, headers={"Content-Type": content_type})
                 with self._opener.open(req, timeout=self.timeout) as response:
-                    return json.loads(response.read().decode())
+                    raw = response.read().decode(errors="replace")
+                try:
+                    return json.loads(raw)
+                except ValueError as err:
+                    raise ValueError(f"policy server {method} {url} answered with non-JSON: {raw[:200]!r}") from err
             except urllib.error.HTTPError as err:
                 detail = err.read().decode(errors="replace")[:2000]
                 raise RuntimeError(f"policy server {method} {url} answered {err.code}: {detail}") from err
@@ -319,7 +323,12 @@ class RemotePolicy:
         np.savez(buf, **arrays)
         reply = self._request("POST", "/act", buf.getvalue(), content_type="application/octet-stream")
         self._requests += 1
-        actions = np.asarray(reply["actions"], dtype=np.float32)
+        if not isinstance(reply, dict) or "actions" not in reply:
+            raise ValueError(f"policy server {self.url}/act answered without 'actions': {str(reply)[:200]!r}")
+        try:
+            actions = np.asarray(reply["actions"], dtype=np.float32)
+        except (TypeError, ValueError) as err:
+            raise ValueError(f"policy server {self.url}/act: 'actions' is not a numeric array: {err}") from err
         if actions.ndim == 2:
             actions = actions[:, None, :]
         if actions.ndim != 3 or actions.shape[0] != ctx.num_envs or actions.shape[2] != ctx.action_dim:

@@ -13,7 +13,7 @@ requires-python = ">=3.10,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
     "roboverse-metasim>=1.0.0,<1.1",
-    "gymnasium",
+    "gymnasium>=1.0",  # AutoresetMode and vector_entry_point in the Gym adapters
     "loguru",
     "numpy",
     "pyyaml",
@@ -33,6 +33,7 @@ examples = [
     "imageio[ffmpeg]",
     "opencv-python",
     "pygame",
+    "pynput",
     "rich",
     "rootutils",
     "stable-baselines3",

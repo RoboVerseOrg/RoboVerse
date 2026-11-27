@@ -11,6 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
+pytestmark = pytest.mark.newton
+
 newton_handler = pytest.importorskip("metasim.sim.newton.newton")
 NewtonHandler = newton_handler.NewtonHandler
 

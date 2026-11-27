@@ -51,7 +51,9 @@ def _masses(handler, sim, obj):
     return float(handler._model.body_mass.numpy()[handler._get_body_indices(0, obj)].sum())
 
 
-@pytest.mark.parametrize("sim", [pytest.param("mujoco", marks=pytest.mark.mujoco), "newton"])
+@pytest.mark.parametrize(
+    "sim", [pytest.param("mujoco", marks=pytest.mark.mujoco), pytest.param("newton", marks=pytest.mark.newton)]
+)
 def test_primitives_weigh_their_mass_and_rest_at_their_half_height(sim):
     if sim == "newton":
         pytest.importorskip("metasim.sim.newton.newton")

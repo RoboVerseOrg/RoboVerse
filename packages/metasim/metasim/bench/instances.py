@@ -166,7 +166,9 @@ def plan_instances(
             raise ValueError(f"instance indices {bad} are outside the pool of {len(pool)}")
         chosen = [pool[i] for i in protocol.instances]
     elif pool:
-        chosen = [pool[i % len(pool)] for i in range(protocol.episodes)]
+        # the round-robin starts at the seed, so runs under different seeds cover different instances and
+        # pooling them (``summarize``) adds trials instead of repeating the same ones
+        chosen = [pool[(protocol.seed + i) % len(pool)] for i in range(protocol.episodes)]
     else:
         chosen = [TaskInstance(index=i, seed=0) for i in range(protocol.episodes)]
     for episode, inst in enumerate(chosen):

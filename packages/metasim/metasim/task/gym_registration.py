@@ -16,6 +16,28 @@ from loguru import logger as log
 
 from .registry import get_task_class, list_tasks
 
+_RESET_OPTIONS = ("states", "env_ids")
+"""``reset(options=...)`` keys the Gym adapters forward to the task's ``reset``."""
+
+
+def _reset_task(task_env, seed, options):
+    """``task_env.reset`` with the seed (when its signature takes one) and the ``options`` the task understands.
+
+    Gymnasium's ``options`` dict is the only way through ``gym.make`` to hand a task its initial ``states`` or the
+    ``env_ids`` to reset; an unknown key is an error rather than a silently ignored request.
+    """
+    kwargs = {}
+    if options:
+        unknown = sorted(set(options) - set(_RESET_OPTIONS))
+        if unknown:
+            raise ValueError(
+                f"reset(options=...) has unknown keys {unknown}; the task's reset takes {list(_RESET_OPTIONS)}"
+            )
+        kwargs.update(options)
+    if _task_reset_accepts_seed(task_env):
+        kwargs["seed"] = seed
+    return task_env.reset(**kwargs)
+
 
 def _task_reset_accepts_seed(task_env) -> bool:
     """Return True iff ``task_env.reset`` accepts a ``seed`` keyword arg.
@@ -101,10 +123,7 @@ class GymEnvWrapper(gym.Env):
         # parameter — passing ``seed=`` unconditionally would TypeError on
         # those. Detect support via ``inspect.signature`` so the seed is
         # only forwarded when the target's signature accepts it.
-        if _task_reset_accepts_seed(self.task_env):
-            obs, info = self.task_env.reset(seed=seed)
-        else:
-            obs, info = self.task_env.reset()
+        obs, info = _reset_task(self.task_env, seed, options)
         return obs, info
 
     def step(self, action):
@@ -168,10 +187,7 @@ class GymVectorEnvAdapter(VectorEnv):
         """Reset all environments and return initial observations."""
         # Forward the seed so it can propagate to the handler — see the
         # single-env adapter above for the subclass-signature rationale.
-        if _task_reset_accepts_seed(self.task_env):
-            obs, info = self.task_env.reset(seed=seed)
-        else:
-            obs, info = self.task_env.reset()
+        obs, info = _reset_task(self.task_env, seed, options)
         return obs, info
 
     def step_async(self, actions) -> None:

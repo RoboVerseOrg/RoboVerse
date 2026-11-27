@@ -77,10 +77,12 @@ class BenchmarkSuite:
                 raise ValueError(f"suite {self.name!r}: split {split!r} lists no tasks")
             for entry in entries:
                 key = (entry.task, entry.robots)
-                if key in seen:
+                # an entry without robots matches every robot, so it collides with a pinned one of the same task
+                clashes = [k for k in seen if k[0] == entry.task and (k == key or not k[1] or not entry.robots)]
+                if clashes:
                     raise ValueError(
                         f"suite {self.name!r}: {entry.task} {list(entry.robots) or ''} is in both "
-                        f"{seen[key]!r} and {split!r}; a task belongs to one split"
+                        f"{seen[clashes[0]]!r} and {split!r}; a task belongs to one split"
                     )
                 seen[key] = split
                 bad = set(entry.protocol) - set(EvalProtocol.__dataclass_fields__)
@@ -90,6 +92,12 @@ class BenchmarkSuite:
                     )
             normalized[str(split)] = entries
         object.__setattr__(self, "splits", normalized)
+        for split, entries in normalized.items():
+            for entry in entries:
+                try:
+                    self.protocol_for(entry)
+                except ValueError as err:
+                    raise ValueError(f"suite {self.name!r}: {split}/{entry.task} protocol: {err}") from err
 
     def entries(self, split: str | None = None) -> list[tuple[str, SuiteTask]]:
         """``(split, task)`` pairs in suite order, optionally of one split."""
@@ -98,9 +106,18 @@ class BenchmarkSuite:
         return [(s, t) for s, tasks in self.splits.items() if split in (None, s) for t in tasks]
 
     def protocol_for(self, entry: SuiteTask) -> EvalProtocol:
-        """The suite protocol with ``entry``'s overrides, named after the suite."""
+        """The suite protocol with ``entry``'s overrides, named after the suite.
+
+        An override that names ``instances`` without ``episodes`` takes its episode count from them (the
+        suite's count would contradict it).
+        """
         base = replace(self.protocol, name=self.name) if self.protocol.name == "default" else self.protocol
-        return replace(base, **entry.protocol) if entry.protocol else base
+        if not entry.protocol:
+            return base
+        overrides = dict(entry.protocol)
+        if overrides.get("instances") is not None and "episodes" not in overrides:
+            overrides["episodes"] = None
+        return replace(base, **overrides)
 
 
 _SUITES: dict[str, BenchmarkSuite] = {}
@@ -234,6 +251,12 @@ def suite_report(
                     report["rejected"].append({"split": split_name, "task": entry.task, "mismatch": mismatch})
                 else:
                     runs.append(r)
+            robots_seen = sorted({tuple(r.robots) for r in runs})
+            if len(robots_seen) > 1:
+                raise ValueError(
+                    f"{suite.name}/{split_name}: {entry.task} has results on several robots "
+                    f"{[list(r) for r in robots_seen]}; pin the robots in the suite or score one robot's files at a time"
+                )
             episodes = [e for r in runs for e in r.episodes]
             defined = bool(runs) and all(r.notes.get("success_defined", True) for r in runs)
             k, n = sum(1 for e in episodes if e.success), len(episodes)

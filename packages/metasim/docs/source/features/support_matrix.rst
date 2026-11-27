@@ -7,11 +7,19 @@ This page provides an overview of the support for different simulators in MetaSi
 Supported Simulators
 --------------------
 
-There are 3 levels of supportance for each simulator:
+Backends come in three tiers (``python -m metasim doctor`` prints the installed and tested versions):
 
-- **Actively supported**: ``isaacsim``, ``isaacgym``, ``mujoco``, ``sapien2``, ``sapien3``, ``genesis``, ``pybullet``, ``newton`` . These simulators should always be guaranteed to work on the main branch.
-- **Inactively supported**: ``pyrep``. These simulators won't be actively supported. They will only be guaranteed to work when a major version is released.
-- **Experimental**: ``mjx``, ``blender``. These simulators (renderers) are still in experimental stage and will be added to "actively supported" list in the future.
+- **Tier 1 — verified every release**: ``mujoco`` and ``isaacsim`` (Isaac Sim 6.0 / Isaac Lab 3.0). The benchmark
+  suites are replayed on both before a tag; a task that differs between them is a bug.
+- **Tier 2 — best effort, run on demand**: ``newton``, ``sapien3``, ``genesis``, ``mjx``, ``superdex``. The handlers are
+  maintained and tested when a change touches them; known gaps are listed in the CHANGELOG and ``bench health``
+  reports them as ``low`` / ``unsupported`` rather than hiding them.
+- **Tier 3 — legacy**: ``isaacgym``, ``pybullet``, ``sapien2``, ``blender``, ``pyrep``. Kept importable, not run in
+  CI; fixes are welcome.
+
+The rule across tiers is fail fast, never silently differ: a feature a backend lacks raises or warns once with the
+backend named (``unsupported_body_properties``, ``METASIM_SKIP_VERSION_CHECK``), it does not quietly return
+something else.
 
 
 Supported Features

@@ -19,6 +19,8 @@ import textwrap
 
 import numpy as np
 import pytest
+
+pytestmark = pytest.mark.newton
 import torch
 
 pytest.importorskip("metasim.sim.newton.newton")
