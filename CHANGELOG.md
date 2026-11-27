@@ -12,17 +12,7 @@ release.
 
 ## [Unreleased]
 
-### Fixed
-- Every comment, docstring, doc page and SVG id in the repository is English (24 files carried Chinese comments, full-width punctuation or Illustrator layer names; `metasim/utils/viser/README.md` is rewritten in English). `tests/test_repo_text_is_english.py` keeps it that way.
-- `ShadowHandCfg.mjcf_path` points at `robots/shadow_hand/mjcf/shadow_hand.xml`, the file the data set ships; it named `shadow_hand_right.xml`, which does not exist there (#309).
-- LIBERO-90 `On(obj, obj)` bounds the height difference to 10 cm (the band `site_supports` uses): without upstream's contact clause nothing bounded z, so a bowl carried over the plate counted as placed under the `first` rule.
-- `pynput`, imported by `scripts/advanced/teleop_keyboard.py`, is in the `examples` extra (#664).
-- `docs/source/features/support_matrix.rst` states the backend tiers (Tier 1 MuJoCo + Isaac Sim 6 verified every release; Tier 2 best effort; Tier 3 legacy) instead of promising that eight backends always work on `main`.
-
-### Changed
-- `tools/install/isaacsim6.sh` replaces `isaacsim5.sh`: the Isaac backend is installed as Isaac Sim 6.0.1 + Isaac Lab release/3.0.0 (Python 3.12, torch 2.11+cu130), verified on RTX 5090 with the 595 driver. See MetaSim's changelog for the handler changes.
-
-## [1.0.0] - 2026-10-25
+## [1.0.0] - 2026-11-27
 
 ### Added
 - `tests/test_kernel_boundary.py`: content reads simulators through `BaseSimHandler`'s public surface; reach-ins past it (`handler.physics`, `handler.gym`, `handler.scene`, `object_ids`, …) are counted per content area and held to a budget that only goes down (354 in 11 areas at 1.0.0, listed in MetaSim's `concept/kernel` page).
@@ -31,7 +21,23 @@ release.
 - Reference embodiments (`ROADMAP.md` §4): `YamCfg` (`--robot yam`) is the I2RT YAM arm with its parallel-jaw gripper from the Menagerie-derived MJCF in `roboverse_data/robots/Yet_Another_Manipulator_YAM` — eight joints, the asset's servo gains and home pose, `left_finger` driven and `right_finger` passive through the asset's equality constraint, gripper open/close targets for the IK helpers — verified holding, tracking and closing the gripper on MuJoCo (1 and 2 envs) and Newton. `SharpaWaveRightCfg` / `SharpaWaveLeftCfg` (`--robot sharpa_wave_right|left`) are the Sharpa Wave 22-DoF tactile hands from MuJoCo Menagerie `sharpa_wave` (Apache-2.0, pinned revision in the config): one servo per joint with the asset's compiled gains written into the config so Newton drives them identically; the asset is fetched from the pinned Menagerie revision until it is mirrored into `roboverse_data`. On Newton the handler sizes the constraint buffer for the hand when `njmax` is unset (a closed fist uses 137 rows). `tests/test_embodiments.py` pins the contract for Franka, YAM and both hands (name resolution, joints = asset joints, hold, tracking, YAM gripper coupling, parallel wrapper, a `metasim.bench` evaluation).
 - Benchmark protocol docs (`docs/source/dataset_benchmark/benchmark/usage.md`): how a policy is scored on RoboVerse with `python -m metasim bench` — the success contract (`info["success"]`), task instances, the `first` / `final` / `held` scoring rules, the result JSON, and the `replay` / `hold` / `random` baselines every task should be checked against. The page replaces a description of a `RandomizationCfg` / `ScenarioCfg(task=, robot=, randomization=)` API that no longer exists; domain randomization is documented against `metasim.randomization.dr_manager.DRConfig` as it is.
 
+- `tests/test_examples_smoke.py`: the nine getting-started examples run headless on MuJoCo as subprocesses and must exit 0 without a traceback, including at interpreter exit. Hosted CI disables MuJoCo rendering (`MUJOCO_GL=disable`), where the lane skips with that reason; elsewhere the examples run with `MUJOCO_GL=egl`, so the lane runs on any machine with EGL. The two examples that never closed their handler now do.
+- `backend-compat.yml`: weekly workflow that installs the newest release of each CPU-installable simulator backend (MuJoCo, PyBullet, SuperDex), runs `metasim doctor` and the backend's suite, and opens a `backend-compat` issue on failure; `.github/dependabot.yml` groups simulator bumps into weekly PRs.
+- Third-party attribution: `NOTICE` and `THIRD_PARTY_NOTICES.md` index every vendored or adapted component (FastTD3, CleanRL, stable-baselines3, diffusion_policy, BeT/minGPT, ACT/DETR, Isaac Lab, RSL-RL, BeyondMimic, gsnet/pointnet2, MuJoCo mesh tools, …) with its license text in-tree; adapted files carry a header naming upstream, license, changes and the license path; `tests/test_attribution.py` fails the build when a header or an index row is missing; wheels ship `NOTICE`, the index and the vendored `LICENSE*` files (`setuptools>=77`, PEP 639 `license-files`).
+
+- `--sim superdex` in every MuJoCo-capable `get_started` tutorial and a `roboverse-py[superdex]`
+  extra (needs the MetaSim SuperDex backend, Python >= 3.12).
+- `scripts/parity_superdex_tracking.py`: seeded joint-target tracking and rigid-object drop
+  comparisons between two backends (record per backend, compare + plot).
+- CI (`.github/workflows/tests.yml`): ruff lint job + the whole `tests/` suite on CPU for every PR;
+  `tests/conftest.py` markers `requires_optional` / `requires_asset` skip with a reason instead of
+  failing when optional deps or `roboverse_data` assets are absent.
+- `RELEASING.md`: branches, PR gates, SemVer, release checklist, PyPI publishing, branch
+  protection. `pr-title.yml`, `changelog.yml`, `release.yml`, `CODEOWNERS`.
+
 ### Changed
+- `tools/install/isaacsim6.sh` replaces `isaacsim5.sh`: the Isaac backend is installed as Isaac Sim 6.0.1 + Isaac Lab release/3.0.0 (Python 3.12, torch 2.11+cu130), verified on RTX 5090 with the 595 driver. See MetaSim's changelog for the handler changes.
+
 - `MaterialRandomizer` (`roboverse_pack.randomization.humanoid`) is one backend-agnostic class on `set_body_friction` / `set_body_restitution`: each call gives every selected body one of `num_buckets` materials. New `friction_range` (one coefficient per body); `static_friction_range` / `dynamic_friction_range` / `make_consistent` are deprecated (the dynamic range is used, with a warning). Migration: pass `friction_range=<your dynamic range>`. The humanoid and BeyondMimic configs now do; BeyondMimic's upstream static range (0.3, 1.6) is no longer applied separately on PhysX. Restitution on MuJoCo / Newton is skipped with a warning. Bodies are selected by name among those with a collision shape (naming one without raises). Also changed: torsional and rolling friction are no longer randomized (they were set to a fixed fraction of the sampled dynamic friction; they now keep the asset's values); rigid, non-articulated objects are not supported (the old Isaac Sim path took them); the arguments after `body_names` are keyword-only, so an old positional call fails instead of shifting ranges. Kernel boundary: randomization 24 -> 0 handler reach-ins.
 - mjlab `body_mass` DR goes through `get_body_masses` / `set_body_masses` instead of per-backend model writes, so it also runs on Isaac Sim and Isaac Gym. A massless body still gets its sampled mass without inertia scaling, as in mjlab; a sample that makes a mass negative now raises instead of being written.
 - `roboverse_pack.tasks.beyondmimic.metasim.configs.cfg_randomizers` re-exports `MassRandomizer`, `MaterialRandomizer` and `randomize_prop_by_op` from `roboverse_pack.randomization.humanoid` instead of keeping a second copy (the copies had drifted: no Newton support in the BeyondMimic one). The Isaac Lab-derived helpers in `humanoid.py` now carry their BSD-3-Clause notice (`roboverse_pack/randomization/LICENSE.isaaclab`). Kernel boundary: randomization 49 -> 24, BeyondMimic 55 -> 10 handler reach-ins.
@@ -49,7 +55,16 @@ release.
 - `roboverse_learn` is linted and formatted by ruff like the rest of the tree (it was in `extend-exclude`, so CI never parsed its 26k lines): 97 auto-fixes applied (unused imports, import order, f-strings), `super(__class__, self)` / nested `max` / `stacklevel` / mutable-default findings fixed, an undefined `lighten` removed from `pymunk_override.__all__`; the remaining style families (`FA100`, `UP006`, `UP045`, `E731`, `B006`, `RUF013`, `F811`) are per-file-ignored for that directory as tracked debt.
 - MetaSim now lives in this repository under `packages/metasim` (imported with `git subtree`, history preserved) and is released in lockstep as `roboverse-metasim`; `roboverse-py` depends on `roboverse-metasim>=1.0.0b0,<1.1` instead of a git `@main` URL. Install with `pip install -e "packages/metasim[mujoco]" -e ".[mujoco]"` (MetaSim first). CI runs MetaSim's simulator-free suite on 3.10/3.11 alongside the RoboVerse suite; `changelog.yml` guards one CHANGELOG per package; `release.yml` builds and publishes both from one tag.
 
+- MetaSim dependency renamed to `roboverse-metasim @ git+...` (MetaSim's distribution was renamed;
+  import name `metasim` unchanged). The pin moves to a MetaSim tag with the next release.
+
 ### Fixed
+- Every comment, docstring, doc page and SVG id in the repository is English (24 files carried Chinese comments, full-width punctuation or Illustrator layer names; `metasim/utils/viser/README.md` is rewritten in English). `tests/test_repo_text_is_english.py` keeps it that way.
+- `ShadowHandCfg.mjcf_path` points at `robots/shadow_hand/mjcf/shadow_hand.xml`, the file the data set ships; it named `shadow_hand_right.xml`, which does not exist there (#309).
+- LIBERO-90 `On(obj, obj)` bounds the height difference to 10 cm (the band `site_supports` uses): without upstream's contact clause nothing bounded z, so a bowl carried over the plate counted as placed under the `first` rule.
+- `pynput`, imported by `scripts/advanced/teleop_keyboard.py`, is in the `examples` extra (#664).
+- `docs/source/features/support_matrix.rst` states the backend tiers (Tier 1 MuJoCo + Isaac Sim 6 verified every release; Tier 2 best effort; Tier 3 legacy) instead of promising that eight backends always work on `main`.
+
 - `tests/test_bench_policies.py` skips the FastTD3 cases when `tensordict` is not installed (it comes with the `[learn]` extra), and `tests/test_mjlab_dr_backend_support.py` skips the four cases that resolve Newton field names when `newton` is not installed; both failed in CI, which installs neither.
 - ManiSkill config ports declared primitive masses ManiSkill never used (cubes 0.02 kg, peg 0.04 kg, sphere 0.001 kg); ManiSkill builds every actor at 1000 kg/m^3, which the native tier (`_native/specs.py`) already follows. MuJoCo ignored the declared mass until now, which is why the demos replayed there. The ports now declare the upstream masses (4 cm cube 0.064 kg, peg 0.6 kg, ...), and with MuJoCo honouring them the 8 ports with MuJoCo-replayable demos replay as before (5 ok, 3 low; `lift_peg_upright` drops from 1.0 to 0.0 with the old 0.04 kg peg). The new masses also apply on Isaac Sim, PyBullet and SAPIEN, which honoured the old ones (not re-measured there). mujoco_playground `pick` / `handover` declared a 0.02 kg box; Playground's cube sets no mass, so it is 0.064 kg, what MJX simulated before. Content that relied on the backends ignoring `mass` changes on MuJoCo / Newton / Isaac Gym: the `pick_place` family (trained on Isaac Gym by the `fast_td3/configs/pick_place_*.yaml` configs) now runs at its declared 0.01-0.02 kg objects and 100-1000 kg walls instead of 0.06-0.1 kg and 4-24 kg, and RLBench primitives without a mass weigh 0.1 kg (sweep_to_dustpan's dirt was 1 g); retrain or re-check those before comparing with older runs.
 - `MaterialRandomizer` wrote wrong things on three backends: on MuJoCo it put 0.1 x "static friction" into each geom's `solimp` (contact softness) and a restitution-derived damping into `solref`, and located a body's geoms by its index in the object's own body list counted over the whole model's bodies (another body's geoms on any scene with more than one model); on Isaac Gym it passed a dict as the actor handle; on Newton it never told `SolverMuJoCo`, so the friction it wrote never reached the contacts. mjlab `body_mass` on MuJoCo matched body names across the whole scene (any object's body) and skipped `mj_setConst`, and on Newton (as `geom_friction` and `body_com_offset`) did not notify the solver, so the randomization never reached the simulation; `geom_friction` on Newton >= 1.6 also raised for the torsion / roll axes (renamed fields).
@@ -78,28 +93,6 @@ release.
 - `roboverse_pack.tasks.mjlab` no longer downloads assets from HuggingFace at import time; the
   handler's `check_assets()` fetches them when a task is used.
 
-### Changed
-
-- MetaSim dependency renamed to `roboverse-metasim @ git+...` (MetaSim's distribution was renamed;
-  import name `metasim` unchanged). The pin moves to a MetaSim tag with the next release.
-
-### Added
-- `tests/test_examples_smoke.py`: the nine getting-started examples run headless on MuJoCo as subprocesses and must exit 0 without a traceback, including at interpreter exit. Hosted CI disables MuJoCo rendering (`MUJOCO_GL=disable`), where the lane skips with that reason; elsewhere the examples run with `MUJOCO_GL=egl`, so the lane runs on any machine with EGL. The two examples that never closed their handler now do.
-- `backend-compat.yml`: weekly workflow that installs the newest release of each CPU-installable simulator backend (MuJoCo, PyBullet, SuperDex), runs `metasim doctor` and the backend's suite, and opens a `backend-compat` issue on failure; `.github/dependabot.yml` groups simulator bumps into weekly PRs.
-- Third-party attribution: `NOTICE` and `THIRD_PARTY_NOTICES.md` index every vendored or adapted component (FastTD3, CleanRL, stable-baselines3, diffusion_policy, BeT/minGPT, ACT/DETR, Isaac Lab, RSL-RL, BeyondMimic, gsnet/pointnet2, MuJoCo mesh tools, …) with its license text in-tree; adapted files carry a header naming upstream, license, changes and the license path; `tests/test_attribution.py` fails the build when a header or an index row is missing; wheels ship `NOTICE`, the index and the vendored `LICENSE*` files (`setuptools>=77`, PEP 639 `license-files`).
-
-- `--sim superdex` in every MuJoCo-capable `get_started` tutorial and a `roboverse-py[superdex]`
-  extra (needs the MetaSim SuperDex backend, Python >= 3.12).
-- `scripts/parity_superdex_tracking.py`: seeded joint-target tracking and rigid-object drop
-  comparisons between two backends (record per backend, compare + plot).
-- CI (`.github/workflows/tests.yml`): ruff lint job + the whole `tests/` suite on CPU for every PR;
-  `tests/conftest.py` markers `requires_optional` / `requires_asset` skip with a reason instead of
-  failing when optional deps or `roboverse_data` assets are absent.
-- `RELEASING.md`: branches, PR gates, SemVer, release checklist, PyPI publishing, branch
-  protection. `pr-title.yml`, `changelog.yml`, `release.yml`, `CODEOWNERS`.
-
-### Fixed
-
 - `g1_feet` robot cfg crashed at import (wrong `BaseActuatorCfg` keywords) and `unitree_dex3_1` had a degenerate thumb joint limit; a config validation test now guards both.
 - Eight Tier-1 task `reset` overrides (humanoid, beyondmimic, six SimplerEnv tasks) dropped `states=`, so `env.reset(states=...)` from the IL/VLA eval runners raised `TypeError`; the contract test now checks full signature substitutability.
 - FastTD3: the nine stub configs that say `# Inherits from base.yaml` now actually inherit (`load_config` deep-merges over `configs/base.yaml`; previously `float(None)` at startup); `mjx_walk.yaml` `headless: flase` typo.
@@ -119,7 +112,6 @@ release.
   `requires-python >= 3.8` (now 3.10), wheels missing LIBERO json/npz bundles, stale ruff ignores.
 
 ### Security
-
 - `hydra-core` pinned to 1.3.4 in the dp / vita / fm IL policy requirements (Dependabot: `hydra.utils.instantiate` code execution with untrusted configs in <=1.3.3).
 
 ## [1.0.0b0] - 2026-05-31
