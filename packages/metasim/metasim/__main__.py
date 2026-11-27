@@ -299,10 +299,7 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
         raise SystemExit(f"suite {suite.name!r} names no simulator; pass --sim")
     out_dir = args.out_dir or os.path.join("bench_results", "suites", suite.name, sim)
     overrides = {k: v for k, v in {"episodes": args.episodes, "seed": args.seed}.items() if v is not None}
-    if args.access:
-        from metasim.bench import get_access_profile
-
-        overrides["access"] = get_access_profile(args.access)
+    suite = _suite_under_access(suite, args.access)
     results, failures = [], []
     for split, entry in suite.entries(args.split):
         print(f"=== {suite.name}/{split}: {entry.task}", file=sys.stderr, flush=True)
@@ -343,10 +340,29 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
     return 0 if complete and not failures else 1
 
 
+def _suite_under_access(suite, spec: str | None):
+    """``suite`` evaluated and scored under the access tier ``spec``; ``suite`` itself when ``spec`` is None.
+
+    ``spec`` is a preset name or a JSON file. The tier is part of the protocol a suite scores against, so
+    running and reporting must see the same one.
+    """
+    if not spec:
+        return suite
+    import dataclasses
+
+    from metasim.bench import get_access_profile
+
+    try:
+        access = get_access_profile(spec)
+    except ValueError as err:
+        raise SystemExit(f"invalid --access: {err}") from err
+    return dataclasses.replace(suite, protocol=dataclasses.replace(suite.protocol, access=access))
+
+
 def _bench_suite_report(args: argparse.Namespace) -> int:
     from metasim.bench import get_suite
 
-    suite = get_suite(args.suite)
+    suite = _suite_under_access(get_suite(args.suite), args.access)
     results, _ = _load_results(args.paths)
     try:
         if args.out_dir:
@@ -701,6 +717,7 @@ def _add_bench(sub) -> None:
     sr.set_defaults(func=_bench_suite_run)
     sp = sus.add_parser("report", help="score existing result files against a suite")
     sp.add_argument("--suite", required=True)
+    sp.add_argument("--access", help="information-access tier the results were run under (as in `suite run`)")
     sp.add_argument("paths", nargs="+")
     sp.add_argument("--out-dir", help="also write suite.json / suite.md here")
     sp.add_argument("--policy", help="policy name to score when the results hold several")

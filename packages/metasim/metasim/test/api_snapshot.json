@@ -6,6 +6,179 @@
    "signature": "() -> 'None'"
   }
  },
+ "metasim.bench.access": {
+  "AccessProfile": {
+   "attributes": {
+    "cameras": "NoneType",
+    "llm_calls": "NoneType",
+    "llm_tokens": "NoneType",
+    "memory": "str",
+    "name": "str",
+    "observation": "str",
+    "proprioception": "bool",
+    "tool_calls": "NoneType",
+    "tools": "str",
+    "wall_time_s": "NoneType"
+   },
+   "bases": [],
+   "fields": [
+    "name",
+    "observation",
+    "cameras",
+    "proprioception",
+    "tools",
+    "memory",
+    "wall_time_s",
+    "llm_calls",
+    "llm_tokens",
+    "tool_calls"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "name"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "observation"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "cameras"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "proprioception"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "tools"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "memory"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "wall_time_s"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "llm_calls"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "llm_tokens"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "tool_calls"
+      }
+     ],
+     "signature": "(self, name: 'str' = 'privileged', observation: 'Observation' = 'privileged', cameras: 'tuple[str, ...] | None' = None, proprioception: 'bool' = True, tools: 'Tools' = 'sim_queries', memory: 'Memory' = 'persistent', wall_time_s: 'float | None' = None, llm_calls: 'int | None' = None, llm_tokens: 'int | None' = None, tool_calls: 'int | None' = None) -> None"
+    },
+    "budgets": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "from_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "cls"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "data"
+      }
+     ],
+     "signature": "(cls, data: 'dict[str, Any]') -> 'AccessProfile'"
+    },
+    "restricts_observation": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'dict[str, Any]'"
+    }
+   }
+  },
+  "get_access_profile": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "spec"
+    }
+   ],
+   "signature": "(spec: 'str | AccessProfile | None') -> 'AccessProfile'"
+  },
+  "restrict_observation": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "obs"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "access"
+    }
+   ],
+   "signature": "(obs: 'Any', access: 'AccessProfile') -> 'Any'"
+  },
+  "usage_report": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "usage"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "access"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "episodes"
+    }
+   ],
+   "signature": "(usage: 'dict[str, Any] | None', access: 'AccessProfile', episodes: 'int') -> 'dict[str, Any] | None'"
+  }
+ },
  "metasim.bench.evaluator": {
   "build_context": {
    "kind": "function",

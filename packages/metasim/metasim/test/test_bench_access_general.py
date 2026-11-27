@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import time
+from types import SimpleNamespace
 
 import pytest
 import torch
@@ -12,6 +14,7 @@ from metasim.bench import (
     AccessProfile,
     EvalProtocol,
     PolicyContext,
+    evaluate,
     get_access_profile,
     restrict_observation,
 )
@@ -19,6 +22,7 @@ from metasim.bench.access import usage_report
 from metasim.bench.remote import _context_from_json, _context_to_json
 from metasim.bench.result import BenchmarkResult, EpisodeResult, result_key, summarize
 from metasim.bench.suite import BenchmarkSuite, SuiteTask, _protocol_mismatch, suite_report, suite_table
+from metasim.test.test_bench_general import _ScriptedEnv
 from metasim.types import CameraState, ObjectState, RobotState, TensorState
 
 
@@ -224,3 +228,155 @@ def test_usage_report_compares_per_episode_means_with_the_budgets():
     assert usage_report({"llm_calls": 3}, access, episodes=1)["unreported"] == ["llm_tokens"]
     assert usage_report(None, AccessProfile(), episodes=3) is None
     assert usage_report(None, access, episodes=3)["unreported"] == ["llm_calls", "llm_tokens"]
+
+
+# --- the evaluator under a tier -------------------------------------------------------------------------
+
+
+class _ImageEnv(_ScriptedEnv):
+    """The scripted env observing a ``TensorState`` with cameras, so a tier below privileged can be enforced."""
+
+    def __init__(self, num_envs, schedule, pool_size=0, reset_sleep=0.0, cameras=("front", "wrist")):
+        super().__init__(num_envs, schedule, pool_size)
+        self.scenario = SimpleNamespace(simulator="fake", robots=self.scenario.robots, objects=["cube"])
+        self.reset_sleep = reset_sleep
+        self.cameras = cameras
+
+    def _obs(self):
+        return _tensor_state(self.num_envs, cameras=self.cameras)
+
+    def reset(self, states=None, env_ids=None, seed=None):
+        super().reset(states, env_ids, seed)
+        time.sleep(self.reset_sleep)
+        return self._obs(), {}
+
+    def _observation(self, states):
+        return self._obs()
+
+    def step(self, actions):
+        _, reward, terminated, time_out, info = super().step(actions)
+        return self._obs(), reward, terminated, time_out, info
+
+
+class _Spy:
+    """Records what ``reset`` and ``act`` are given; optionally slow, optionally reporting usage."""
+
+    name = "spy"
+
+    def __init__(self, act_sleep=0.0, usage=None):
+        self.resets: list[list] = []
+        self.ctx = None
+        self.seen = []
+        self.act_sleep = act_sleep
+        self._usage = usage
+
+    def reset(self, env_ids, instances, ctx):
+        self.resets.append(list(instances))
+        self.ctx = ctx
+
+    def act(self, obs, ctx):
+        time.sleep(self.act_sleep)
+        self.seen.append(obs)
+        return torch.zeros(ctx.num_envs, 2)
+
+    def usage(self):
+        return self._usage
+
+
+@pytest.mark.general
+def test_a_restricted_tier_hides_the_instance_state_and_the_object_list_at_reset():
+    for access, hidden in [(ACCESS_PROFILES["visual"], True), (AccessProfile(), False)]:
+        env, policy = _ImageEnv(1, [(1, 2, False)], pool_size=2), _Spy()
+        result = evaluate(env, policy, EvalProtocol(episodes=2, access=access))
+        assert [e.success for e in result.episodes] == [True, True]
+        instances = [inst for batch in policy.resets for inst in batch]
+        assert len(instances) == 2
+        assert all((inst.state is None) is hidden for inst in instances)
+        assert all((inst.actions is None) is hidden or inst.actions is None for inst in instances)
+        assert (policy.ctx.extras["scenario"].objects == []) is hidden
+        # the env itself was still reset from the explicit instance states
+        assert all(states is not None for _, states, _ in env.resets)
+        if hidden:
+            assert all(obs.objects == {} and obs.cameras["front"].depth is None for obs in policy.seen)
+
+
+@pytest.mark.general
+def test_wall_clock_budget_starts_after_the_reset_and_ends_the_episode_as_a_time_out():
+    budget = AccessProfile(name="clock", wall_time_s=0.1)
+    slow_reset = evaluate(
+        _ImageEnv(1, [(1, 2, False)], reset_sleep=0.25), _Spy(), EvalProtocol(episodes=1, access=budget)
+    )
+    (episode,) = slow_reset.episodes
+    assert episode.over_budget is None and episode.steps == 2 and episode.wall_time_s < 0.1
+    assert slow_reset.summary["over_budget"] == 0
+
+    slow_policy = evaluate(_ImageEnv(1, [(1, 5, False)]), _Spy(act_sleep=0.15), EvalProtocol(episodes=1, access=budget))
+    (episode,) = slow_policy.episodes
+    # the budget ends the episode at the first step past it; the success rule still judges the steps taken
+    assert episode.over_budget is True and episode.time_out is True and episode.steps == 1 and episode.success is True
+    assert slow_policy.summary["over_budget"] == 1 and slow_policy.notes["access"] == "clock"
+    back = BenchmarkResult.from_dict(json.loads(json.dumps(slow_policy.to_dict())))
+    assert back.episodes[0].over_budget is True and back.summary["over_budget"] == 1
+
+
+@pytest.mark.general
+def test_usage_keeps_finite_numbers_only():
+    usage = {"llm_calls": "n/a", "llm_tokens": torch.tensor(3), "tool_calls": 2.0, "nan": float("nan"), "ok": True}
+    access = AccessProfile(name="budgeted", llm_calls=1, llm_tokens=10)
+    result = evaluate(_ImageEnv(1, [(1, 2, False)]), _Spy(usage=usage), EvalProtocol(episodes=1, access=access))
+    assert result.policy["usage"] == {"llm_tokens": 3, "tool_calls": 2.0, "ok": 1}
+    assert result.notes["budget"]["exceeded"] == [] and result.notes["budget"]["unreported"] == ["llm_calls"]
+    assert result.save  # the record is JSON-serialisable
+    json.dumps(result.to_dict())
+
+
+@pytest.mark.general
+def test_tiers_are_compared_by_the_whole_profile_not_the_name():
+    relabelled = AccessProfile(name="visual", observation="privileged", tools="sim_queries")
+    assert result_key(_result(relabelled)) != result_key(_result(ACCESS_PROFILES["visual"]))
+    assert result_key(_result(AccessProfile())) == result_key(_result(ACCESS_PROFILES["privileged"]))
+    old = _result(AccessProfile())
+    old.protocol.pop("access")  # a result written before tiers existed is the privileged tier
+    assert result_key(old) == result_key(_result(AccessProfile()))
+
+
+@pytest.mark.general
+def test_profile_files_need_a_name_and_cannot_shadow_a_preset(tmp_path):
+    nameless = tmp_path / "nameless.json"
+    nameless.write_text(json.dumps({"observation": "rgb"}))
+    with pytest.raises(ValueError, match="name"):
+        get_access_profile(str(nameless))
+    shadow = tmp_path / "shadow.json"
+    shadow.write_text(json.dumps({"name": "visual", "observation": "privileged"}))
+    with pytest.raises(ValueError, match="preset"):
+        get_access_profile(str(shadow))
+    same = tmp_path / "same.json"
+    same.write_text(json.dumps(ACCESS_PROFILES["visual"].to_dict()))
+    assert get_access_profile(str(same)) == ACCESS_PROFILES["visual"]
+    with pytest.raises(ValueError, match="unknown fields"):
+        AccessProfile.from_dict({"name": "x", "observations": "rgb"})
+    with pytest.raises(ValueError, match="cameras must be a list"):
+        AccessProfile.from_dict({"name": "x", "cameras": "front"})
+
+
+@pytest.mark.general
+def test_an_image_tier_on_a_task_without_cameras_is_an_error():
+    with pytest.raises(ValueError, match="renders no camera"):
+        restrict_observation(_tensor_state(cameras=()), ACCESS_PROFILES["visual"])
+    assert restrict_observation(_tensor_state(cameras=()), AccessProfile()).cameras == {}
+    restricted = restrict_observation(_tensor_state(), ACCESS_PROFILES["visual"])
+    assert restricted.cameras["front"].instance_seg_id2label is None
+
+
+@pytest.mark.general
+def test_a_suite_run_under_a_tier_is_scored_under_that_tier():
+    from metasim.__main__ import _suite_under_access
+
+    suite = BenchmarkSuite(name="s", splits={"core": ("t",)}, protocol=EvalProtocol(episodes=1))
+    assert _suite_under_access(suite, None) is suite
+    tiered = _suite_under_access(suite, "visual")
+    assert tiered.protocol_for(tiered.entries("core")[0][1]).access == ACCESS_PROFILES["visual"]
+    assert suite_report(tiered, [_result(ACCESS_PROFILES["visual"])])["splits"]["core"]["complete"]
+    assert not suite_report(suite, [_result(ACCESS_PROFILES["visual"])])["splits"]["core"]["complete"]
+    with pytest.raises(SystemExit, match="invalid --access"):
+        _suite_under_access(suite, "no-such-tier")

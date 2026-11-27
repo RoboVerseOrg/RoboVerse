@@ -104,10 +104,18 @@ class AccessProfile:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> AccessProfile:
-        """Inverse of :meth:`to_dict`."""
+        """Inverse of :meth:`to_dict`; an unknown field or a ``cameras`` entry that is not a list is an error."""
         kwargs = dict(data)
-        if kwargs.get("cameras") is not None:
-            kwargs["cameras"] = tuple(kwargs["cameras"])
+        unknown = sorted(set(kwargs) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ValueError(
+                f"access profile has unknown fields {unknown}; the fields are {list(cls.__dataclass_fields__)}"
+            )
+        cameras = kwargs.get("cameras")
+        if cameras is not None:
+            if isinstance(cameras, (str, bytes)) or not isinstance(cameras, (list, tuple)):
+                raise ValueError(f"cameras must be a list of camera names or null, got {cameras!r}")
+            kwargs["cameras"] = tuple(cameras)
         return cls(**kwargs)
 
 
@@ -126,7 +134,11 @@ ACCESS_PROFILES: dict[str, AccessProfile] = {
 
 
 def get_access_profile(spec: str | AccessProfile | None) -> AccessProfile:
-    """A profile by preset name, from a JSON file, or passed through; ``None`` is the default tier."""
+    """A profile by preset name, from a JSON file, or passed through; ``None`` is the default tier.
+
+    A file must carry a ``name`` (results are compared by the whole profile, but the name labels them)
+    and may not reuse a preset's name for a different profile.
+    """
     if spec is None:
         return ACCESS_PROFILES["privileged"]
     if isinstance(spec, AccessProfile):
@@ -136,7 +148,16 @@ def get_access_profile(spec: str | AccessProfile | None) -> AccessProfile:
     path = Path(spec)
     if path.suffix == ".json" and path.exists():
         with open(path) as f:
-            return AccessProfile.from_dict(json.load(f))
+            data = json.load(f)
+        if not isinstance(data, dict) or not data.get("name"):
+            raise ValueError(f'{path}: an access profile file is a JSON object with a "name" field')
+        profile = AccessProfile.from_dict(data)
+        preset = ACCESS_PROFILES.get(profile.name)
+        if preset is not None and profile != preset:
+            raise ValueError(
+                f"{path} names the preset tier {profile.name!r} but differs from it; give the profile its own name"
+            )
+        return profile
     raise ValueError(f"unknown access profile {spec!r}; one of {sorted(ACCESS_PROFILES)} or a JSON file")
 
 
@@ -147,7 +168,7 @@ def restrict_observation(obs: Any, access: AccessProfile) -> Any:
     segmentation masks go too, depth stays only under ``"rgb_depth"``, cameras are limited to
     ``access.cameras`` and the robots' state to ``access.proprioception``. An observation that is not a
     ``TensorState`` (an RL env's flat tensor) cannot be filtered field by field; restricting it is an error
-    rather than a silently unrestricted run.
+    rather than a silently unrestricted run, and so is an image tier on a task that renders no camera.
     """
     if not access.restricts_observation:
         return obs
@@ -174,7 +195,14 @@ def restrict_observation(obs: Any, access: AccessProfile) -> Any:
                 depth=cam.depth if access.observation == "rgb_depth" else None,
                 instance_id_seg=None,
                 instance_seg=None,
+                instance_id_seg_id2label=None,
+                instance_seg_id2label=None,
             )
+    if access.observation != "privileged" and not cameras:
+        raise ValueError(
+            f"access profile {access.name!r} observes images only, but this task renders no camera; add cameras "
+            "to the task's scenario or evaluate it under 'privileged'"
+        )
     robots = dict(obs.robots) if access.proprioception else {}
     if access.observation == "privileged":
         return replace(obs, robots=robots, cameras=cameras)

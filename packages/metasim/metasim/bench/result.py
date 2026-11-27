@@ -49,11 +49,12 @@ class EpisodeResult:
     prompt: str | None = None
     """The instruction the episode was given (``EvalProtocol.prompt_split``); ``None`` for a task without one."""
     prompt_variant: str | None = None
-    wall_time_s: float | None = None
-    """Wall-clock seconds the episode took (policy and simulator together)."""
-    over_budget: bool | None = None
-    """``True`` when the access tier's wall-clock budget ended the episode (a failed time-out)."""
     """Which entry of the task's prompt bank ``prompt`` is."""
+    wall_time_s: float | None = None
+    """Wall-clock seconds from the episode's reset to its end (policy and simulator together)."""
+    over_budget: bool | None = None
+    """``True`` when the access tier's wall-clock budget ended the episode: a time-out at that step, scored
+    by the protocol's success rule over the steps taken, exactly like the step cap."""
 
 
 _EPISODE_REQUIRED = tuple(f for f in EpisodeResult.__dataclass_fields__ if f not in _EPISODE_OPTIONAL)
@@ -106,6 +107,7 @@ class BenchmarkResult:
             "mean_steps": sum(e.steps for e in self.episodes) / n if n else 0.0,
             "mean_return": sum(e.return_sum for e in self.episodes) / n if n else 0.0,
             "time_outs": sum(1 for e in self.episodes if e.time_out),
+            "over_budget": sum(1 for e in self.episodes if e.over_budget),
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -196,8 +198,26 @@ def result_key(result: BenchmarkResult) -> tuple:
         protocol.get("demo_budget_factor"),
         protocol.get("demo_budget_quantile", 0.75) if protocol.get("demo_budget_factor") is not None else None,
         protocol.get("prompt_split", "canonical"),
-        (protocol.get("access") or {}).get("name", "privileged"),
+        _access_key(protocol.get("access")),
     )
+
+
+def _access_key(access: dict[str, Any] | None) -> tuple:
+    """The whole access profile as a hashable key: two tiers that share a name but differ are not pooled."""
+    from metasim.bench.access import AccessProfile
+
+    data = AccessProfile().to_dict() if not access else access
+    return tuple(sorted((k, tuple(v) if isinstance(v, list) else v) for k, v in data.items()))
+
+
+def _access_label(key: tuple) -> str:
+    """The tier name for a table; a profile that borrows a preset's name but differs from it is marked ``*``."""
+    from metasim.bench.access import ACCESS_PROFILES
+
+    data = dict(key)
+    name = str(data.get("name", "privileged"))
+    preset = ACCESS_PROFILES.get(name)
+    return name if preset is None or _access_key(preset.to_dict()) == key else f"{name}*"
 
 
 def summarize(results: list[BenchmarkResult]) -> str:
@@ -217,6 +237,7 @@ def summarize(results: list[BenchmarkResult]) -> str:
     for key in sorted(groups, key=lambda k: tuple(str(x) for x in k)):
         runs = groups[key]
         task, robots, simulator, rule, hold, cap, instances, budget, quantile, prompt_split, access, policy = key
+        access_label = _access_label(access)
         episodes = [e for r in runs for e in r.episodes]
         n = len(episodes)
         k = sum(1 for e in episodes if e.success)
@@ -230,9 +251,7 @@ def summarize(results: list[BenchmarkResult]) -> str:
         if prompt_split != "canonical":
             rule_label += f", prompts {prompt_split}"
         mean_steps = sum(e.steps for e in episodes) / n if n else 0.0
-        head = (
-            f"| {task} | {', '.join(robots)} | {simulator} | {rule_label} | {access} | {policy} | {len(runs)} | {n} |"
-        )
+        head = f"| {task} | {', '.join(robots)} | {simulator} | {rule_label} | {access_label} | {policy} | {len(runs)} | {n} |"
         if not n:
             lines.append(f"{head} - | - | - |")
         elif not defined:
