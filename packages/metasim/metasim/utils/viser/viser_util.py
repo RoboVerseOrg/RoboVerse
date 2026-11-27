@@ -531,7 +531,7 @@ class ViserVisualizer:
                 urdf_handle.update_cfg(np.array(dof_pos_list, dtype=np.float32))
             return
 
-        # 2. Primitive mesh (cube/sphere/etc.）
+        # 2. Primitive mesh (cube/sphere/etc.)
         mesh_name = f"/{name}"
         if mesh_name in self._mesh_handles:
             mesh = self._mesh_handles[mesh_name]

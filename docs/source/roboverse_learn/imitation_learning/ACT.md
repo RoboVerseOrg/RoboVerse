@@ -110,7 +110,7 @@ pip install pandas wandb
 ## Initial test results
 ### Task: close_box
 **Setup:** `temporal_agg=True, num_episodes=100, num_epochs=100`
-| Chunking size | 成功率 |
+| Chunking size | Success rate |
 | ------------- | ------ |
 | 1             | 0.17   |
 | 10            | 0.17   |
@@ -125,7 +125,7 @@ pip install pandas wandb
 
 ### Task: pick_butter
 **Setup:** `temporal_agg=True, num_episodes=100, num_epochs=100`
-| Chunking size | 成功率 |
+| Chunking size | Success rate |
 | ------------- | ------ |
 | 1             | 0      |
 | 10            | 0.5    |

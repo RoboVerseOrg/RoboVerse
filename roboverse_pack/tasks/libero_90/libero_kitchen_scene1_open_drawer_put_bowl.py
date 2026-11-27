@@ -60,7 +60,7 @@ class LiberoKitchenOpenDrawerPutBowlTask(Libero90BaseTask):
         objects=[
             # Movable objects (from BDDL :objects section)
             RigidObjCfg(
-                name="akita_black_bowl",  # 碗的位置似乎不对，在libero里换角度观察
+                name="akita_black_bowl",  # TODO: verify the bowl's pose against LIBERO from another viewpoint; it looks off
                 physics=PhysicStateType.RIGIDBODY,
                 usd_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/akita_black_bowl/usd/akita_black_bowl.usd",
                 urdf_path="roboverse_data/assets/libero/COMMON/stable_scanned_objects/akita_black_bowl/urdf/akita_black_bowl.urdf",

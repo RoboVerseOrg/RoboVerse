@@ -47,12 +47,12 @@ On RTX 4090, the ideal num_envs is 64.
 ## Domain Randomization
                                                  
 ### Domain randomization options:
-- `enable_randomization`（bool）: Enable domain randomization during demo collection.
-- `randomize_materials`（bool）: Enable material randomization (when randomization is enabled).
-- `randomize_lights`（bool）: Enable light randomization (when randomization is enabled).
-- `randomize_cameras`（bool）: Enable camera randomization (when randomization is enabled).
-- `randomize_physics`（bool）: Enable physics (mass/friction/pose) randomization using ObjectRandomizer.
-- `randomization_frequency`（Literal）: When to apply randomization: per_demo (once at start) or per_episode (every episode).
+- `enable_randomization` (bool): Enable domain randomization during demo collection.
+- `randomize_materials` (bool): Enable material randomization (when randomization is enabled).
+- `randomize_lights` (bool): Enable light randomization (when randomization is enabled).
+- `randomize_cameras` (bool): Enable camera randomization (when randomization is enabled).
+- `randomize_physics` (bool): Enable physics (mass/friction/pose) randomization using ObjectRandomizer.
+- `randomization_frequency` (Literal): When to apply randomization: per_demo (once at start) or per_episode (every episode).
 - `randomization_seed` (int): Seed for reproducible randomization. If None, uses random seed.
 
 ### Steps to add DR in custom .py (for developer):
@@ -64,10 +64,10 @@ On RTX 4090, the ideal num_envs is 64.
 **Step 3:** Adding class `DomainRandomizationManager` and other auxiliary functions. Refer to Lines 148-402 in collect_demo.py.
 
 **Step 4:** Adding key DR callbacks in mian(). 
-- Initialize `DomainRandomizationManager`： line 677. 
-- Randomization for initial parallel demos： lines 737-739. 
-- Randomization for next parallel demos： lines 789, 837. 
-- Randomization for failed parallel demos： line 821. 
+- Initialize `DomainRandomizationManager`: line 677. 
+- Randomization for initial parallel demos: lines 737-739. 
+- Randomization for next parallel demos: lines 789, 837. 
+- Randomization for failed parallel demos: line 821. 
 
 
 

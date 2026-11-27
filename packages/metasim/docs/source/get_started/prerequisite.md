@@ -6,7 +6,7 @@ You can [directly install](./installation.rst) the specific simulator backends a
 
 You may choose one or more of the following simulators, according to your operating system.
 
- For beginners， we recommend choosing one specific simulator for each environment, which makes environment configuration simpler and provides better isolation.
+ For beginners, we recommend choosing one specific simulator for each environment, which makes environment configuration simpler and provides better isolation.
 
 | OS      | IsaacSim | IsaacGym | MuJoCo | SAPIEN2 | SAPIEN3 | Genesis | PyBullet | Newton |
 |---------|----------|----------|--------|---------|---------|---------|----------|--------|

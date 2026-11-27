@@ -142,6 +142,6 @@ handler.simulate()
 ```
 
 **Key Points**:
-- Can also use direct tensor actions instead of dictionary format ，Action order matches `robot.actuators` and `robot.joint_limits` configuration
+- Can also use direct tensor actions instead of dictionary format; action order matches `robot.actuators` and `robot.joint_limits` configuration
 - `set_dof_targets()` only sets targets - call `handler.simulate()` to step physics
 - Unlike Task's `step()`, Handler requires separate `simulate()` call

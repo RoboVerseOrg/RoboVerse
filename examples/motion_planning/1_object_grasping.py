@@ -240,11 +240,11 @@ for step in range(1):
     gripper_out = gripper_out / np.linalg.norm(gripper_out)
     gripper_short = gripper_short / np.linalg.norm(gripper_short)
 
-    # 计算 y = z × x
+    # y = z x x
     gripper_long = np.cross(gripper_short, gripper_out)
     gripper_long = gripper_long / np.linalg.norm(gripper_long)
 
-    # 重新计算 z，使得 x、y 完全正交（防止数值误差）
+    # recompute z so that x and y are exactly orthogonal (guards against numerical drift)
     gripper_long = np.cross(gripper_out, gripper_short)
     gripper_long = gripper_long / np.linalg.norm(gripper_long)
     gripper_long = torch.tensor(gripper_long)

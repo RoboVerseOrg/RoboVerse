@@ -283,7 +283,7 @@ def quaternion_conjugate(q):
 
 
 def rotate_vector_with_quaternion(q, v):
-    v_quaternion = np.array([0, v[0], v[1], v[2]])  # 将向量 v 转化为四元数
+    v_quaternion = np.array([0, v[0], v[1], v[2]])  # embed the vector v as a pure quaternion
     q_conjugate = quaternion_conjugate(q)
     # v' = q * v * q^-1
     rotated_quaternion = quaternion_multiply(quaternion_multiply(q, v_quaternion), q_conjugate)

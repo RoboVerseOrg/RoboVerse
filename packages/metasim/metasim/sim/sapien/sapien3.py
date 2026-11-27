@@ -515,7 +515,7 @@ class Sapien3Handler(BaseSimHandler):
             yaw = math.atan2(direction_vector[1], direction_vector[0])
             pitch = math.atan2(
                 direction_vector[2], math.sqrt(direction_vector[0] ** 2 + direction_vector[1] ** 2)
-            )  # 计算 roll 角（绕 X 轴的旋转角度）
+            )  # roll (rotation about X) is not derived from the view direction
             roll = 0
             # The coordinate frame in Sapien is: x(forward), y(left), z(upward)
             # The principle axis of the camera is the x-axis

@@ -1,42 +1,41 @@
-# TaskViserWrapper 使用说明
+# TaskViserWrapper
 
-TaskViserWrapper 是一个包装器，用于为 RLTaskEnv 添加实时 Viser 可视化功能。
+`TaskViserWrapper` wraps an `RLTaskEnv` and streams the first environment to a live Viser viewer.
 
-## 主要特性
+## What it does
 
-- 自动设置 Viser 可视化
-- 实时更新机器人和物体状态
-- 只渲染第一个环境（避免多环境复杂性）
-- 透明代理所有环境属性和方法
-- 错误处理：可视化失败不影响训练
+- sets up the Viser visualizer for the scenario
+- updates robot and object poses after every `reset()` and `step()`
+- renders the first environment only (keeps the viewer independent of `num_envs`)
+- forwards every other attribute and method to the wrapped environment
+- never interrupts training: a visualization failure is logged and skipped
 
-## 使用方法
+## Usage
 
-### 1. 基本使用
+### 1. Wrap an environment
 
 ```python
 from metasim.task.registry import get_task_class
 from metasim.utils.viser.viser_env_wrapper import TaskViserWrapper
 
-# 创建环境
-task_cls = get_task_class('reach_origin')
+task_cls = get_task_class("reach_origin")
 scenario = task_cls.scenario.update(
-    robots=['franka'],
-    simulator='mujoco',
+    robots=["franka"],
+    simulator="mujoco",
     num_envs=1024,
-    headless=False,  # 启用渲染以支持 Viser
-    cameras=[]
+    headless=False,  # rendering must be on for Viser
+    cameras=[],
 )
 
-env = task_cls(scenario, device='cuda')
+env = task_cls(scenario, device="cuda")
 
-# 包装环境以启用可视化
+# wrap the environment to enable the viewer
 viser_env = TaskViserWrapper(env, port=8080)
 
-# 正常使用环境
+# use it like the plain environment
 obs = viser_env.reset()
 for _ in range(100):
-    actions = policy(obs)  # 你的策略
+    actions = policy(obs)  # your policy
     obs, reward, terminated, timeout, info = viser_env.step(actions)
     if terminated.any() or timeout.any():
         obs = viser_env.reset()
@@ -44,63 +43,63 @@ for _ in range(100):
 viser_env.close()
 ```
 
-### 2. 与 fast_td3 集成
+### 2. With fast_td3
 
-在 fast_td3 中启用可视化：
+Enable the viewer from the fast_td3 example:
 
 ```bash
-# 启用 Viser 可视化
+# with the Viser viewer
 python examples/rl/fast_td3/1_fttd3.py --viser-port 8080
 
-# 不使用可视化（默认）
+# without it (default)
 python examples/rl/fast_td3/1_fttd3.py
 ```
 
-配置示例：
+Configuration example:
+
 ```python
 CONFIG = {
     "sim": "mujoco",
     "robots": ["franka"],
     "task": "reach_origin",
     "headless": True,
-    "viser_port": 8080,  # 设置 > 0 启用可视化
-    # ... 其他配置
+    "viser_port": 8080,  # > 0 enables the viewer
+    # ... other settings
 }
 ```
 
-## 工作原理
+## How it works
 
-1. **初始化时**：
-   - 创建 ViserVisualizer 实例
-   - 下载必要的 URDF 文件
-   - 可视化场景中的所有机器人和物体
-   - 设置摄像头控制
+1. **At construction**:
+   - creates a `ViserVisualizer`
+   - downloads the URDF files it needs
+   - adds every robot and object of the scene to the viewer
+   - sets up the camera controls
 
-2. **运行时**：
-   - 每次 `reset()` 和 `step()` 后更新可视化
-   - 提取第一个环境的状态
-   - 更新所有机器人和物体的位置和姿态
+2. **At run time**:
+   - refreshes the viewer after each `reset()` and `step()`
+   - extracts the state of the first environment
+   - updates the position and orientation of every robot and object
 
-3. **错误处理**：
-   - 可视化失败不影响训练
-   - 静默处理导入错误
+3. **On errors**:
+   - a visualization failure does not stop training
+   - import errors are handled quietly
 
-## 环境属性代理
+## Attribute forwarding
 
-TaskViserWrapper 透明代理所有环境属性：
+`TaskViserWrapper` forwards every environment attribute:
 
 ```python
 wrapper = TaskViserWrapper(env)
-print(wrapper.num_envs)      # 代理到 env.num_envs
-print(wrapper.num_actions)   # 代理到 env.num_actions
-print(wrapper.num_obs)       # 代理到 env.num_obs
-print(wrapper.action_space)  # 代理到 env.action_space
+print(wrapper.num_envs)      # forwarded to env.num_envs
+print(wrapper.num_actions)   # forwarded to env.num_actions
+print(wrapper.num_obs)       # forwarded to env.num_obs
+print(wrapper.action_space)  # forwarded to env.action_space
 ```
 
-## 技术细节
+## Details
 
-- 使用与 `viser_demo.py` 相同的状态提取逻辑
-- 支持所有模拟器后端（MuJoCo、Isaac Sim 等）
-- 只渲染第一个环境以保持性能
-- 自动处理多环境张量的索引
-
+- uses the same state extraction as `viser_demo.py`
+- works with every simulator backend (MuJoCo, Isaac Sim, ...)
+- renders the first environment only, for performance
+- indexes multi-environment tensors itself

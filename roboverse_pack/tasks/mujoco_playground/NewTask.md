@@ -641,7 +641,7 @@ cameras: dict[str, dict[str, torch.Tensor]]
 extras: dict[str, Any]      # States of Extra information`
 ```
 
-**4. Normal API → schema mapping**。
+**4. Normal API → schema mapping**.
 
 | MuJoCo `data` field             | RoboVerse state path                                         |
 | ------------------------------- | ------------------------------------------------------------ |
