@@ -229,7 +229,51 @@ tier, with task and episode counts; a method scored on fewer tasks is starred) f
 rows with Wilson intervals. A policy declares its family with a class attribute (`family = "vla"`), which
 the result records under `policy["family"]`.
 
-TODO(matrix-numbers)
+Measured on 2026-11-27 (`bench matrix` output, 10 episodes per task; the suite protocol is 50):
+
+| method | privileged | agent-privileged | agent-skills | visual |
+|---|---|---|---|---|
+| llm-agent (agent) |  | 0.880 (5 tasks, 50 ep) | 0.120 (5 tasks, 50 ep) |  |
+| scripted (scripted) | 0.900 (5 tasks, 50 ep) |  |  |  |
+| hold | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
+| openvla-7b[bridge_orig] |  |  |  | 0.000* (1 tasks, 10 ep) |
+| random | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
+| replay | 0.960 (5 tasks, 50 ep) |  |  |  |
+
+`*`: fewer tasks than the full set; macros are not comparable across such cells.
+
+<details><summary>Per task, with 95 % Wilson intervals</summary>
+
+| task | method | privileged | agent-privileged | agent-skills | visual |
+|---|---|---|---|---|---|
+| lift_peg_upright | llm-agent (agent) |  | 0.700 [0.40, 0.89] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| lift_peg_upright | scripted (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| lift_peg_upright | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| lift_peg_upright | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| lift_peg_upright | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| pick_cube | llm-agent (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| pick_cube | scripted (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| pick_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pick_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| pick_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pick_cube | replay | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| pull_cube | llm-agent (agent) |  | 0.800 [0.49, 0.94] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| pull_cube | scripted (scripted) | 0.700 [0.40, 0.89] n=10 |  |  |  |
+| pull_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pull_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pull_cube | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| push_cube | llm-agent (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.600 [0.31, 0.83] n=10 |  |
+| push_cube | scripted (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| push_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| push_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| push_cube | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| stack_cube | llm-agent (agent) |  | 0.900 [0.60, 0.98] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| stack_cube | scripted (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| stack_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| stack_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| stack_cube | replay | 0.900 [0.60, 0.98] n=10 |  |  |  |
+
+</details>
 
 What the matrix is meant to show, and what the first one does show: the replay ceiling and the scripted
 oracle bound what a perfect perception stack could reach; the same agent drops from near the oracle to
