@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `bench run` crashed with `AttributeError` when its first episode finished: the per-episode stream (`<out>.episodes.jsonl`) serialised `EpisodeResult` through a `to_dict()` it does not have. It uses `dataclasses.asdict`; a CLI test now drives `_bench_run` through a finished episode.
+
 ## [1.0.0] - 2026-11-27
 
 ### Added
