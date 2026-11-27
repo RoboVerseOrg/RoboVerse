@@ -15,10 +15,13 @@ the registry can fall back to the full import for those packages.
 from __future__ import annotations
 
 import ast
+import gc
 import json
 import os
+import unicodedata
 from dataclasses import dataclass, field
 from importlib.util import find_spec
+from itertools import accumulate
 
 
 @dataclass
@@ -65,10 +68,22 @@ def _parse_registrations(path: str) -> tuple[list[str], bool]:
     cannot see is flagged dynamic and imported when the full name list is needed.
     """
     with open(path, encoding="utf-8") as f:
-        tree = ast.parse(f.read(), filename=path)
+        source = f.read()
+    tree = ast.parse(source, filename=path)
+    # the parser NFKC-normalizes identifiers; hits[n] = how many of the source lines 1..n spell register_task
+    lines = unicodedata.normalize("NFKC", source).split("\n")
+    hits = list(accumulate(("register_task" in line for line in lines), initial=0))
+
+    def may_hold_call(node: ast.AST) -> bool:
+        """False if no source line of ``node`` spells register_task (nodes without a position are kept)."""
+        first = (getattr(node, "decorator_list", None) or [node])[0]  # decorators sit above the def/class line
+        return not hasattr(first, "lineno") or hits[node.end_lineno] != hits[first.lineno - 1]
+
     names: list[str] = []
     dynamic = False
-    for node in ast.walk(tree):
+    todo = [tree]
+    for node in todo:  # breadth-first like ast.walk, without the children that cannot hold a call
+        todo.extend(child for child in ast.iter_child_nodes(node) if may_hold_call(child))
         found = _decorator_names(node)
         if found is None:
             continue
@@ -105,7 +120,7 @@ def _save_cache(path: str, entries: dict) -> None:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         tmp = f"{path}.tmp-{os.getpid()}"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"version": 1, "files": entries}, f)
+            f.write(json.dumps({"version": 1, "files": entries}))
         os.replace(tmp, path)
     except OSError:  # a read-only or full cache location must not break lookups
         pass
@@ -119,7 +134,14 @@ def _scan_source(module_name: str, path: str, index: StaticIndex, cache: dict | 
         if entry is not None and entry.get("stamp") == stamp:
             names, dynamic = entry["names"], entry["dynamic"]
         else:
-            names, dynamic = _parse_registrations(path)
+            # the syntax tree is acyclic and freed on return: collections while it is alive are wasted work
+            resume_gc = gc.isenabled()
+            gc.disable()
+            try:
+                names, dynamic = _parse_registrations(path)
+            finally:
+                if resume_gc:
+                    gc.enable()
             if cache is not None:
                 cache[path] = {"stamp": stamp, "names": names, "dynamic": dynamic}
     except (OSError, SyntaxError, ValueError) as exc:
@@ -195,9 +217,10 @@ def build_static_index(
             continue
         if spec.submodule_search_locations:
             for module_name, src in _iter_package_sources(pkg_name, list(spec.submodule_search_locations)):
-                if os.path.realpath(src) in seen_paths:
+                real = os.path.realpath(src)
+                if real in seen_paths:
                     continue
-                seen_paths.add(os.path.realpath(src))
+                seen_paths.add(real)
                 _scan_source(module_name, src, index, cache)
         elif spec.origin and spec.origin.endswith(".py"):
             seen_paths.add(os.path.realpath(spec.origin))

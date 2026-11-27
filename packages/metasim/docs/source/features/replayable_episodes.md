@@ -42,6 +42,9 @@ hashes changed and the backend packages whose versions differ. Only the asset fi
 actually loads (`cfg.file_name(simulator)`) and `extra_resources` are hashed, so the note never blames
 a file the replay did not read.
 
+Non-finite physical state values fail replay validation: `state_distance` reports an infinite
+deviation and the affected quantity, including when both states contain the same infinity.
+
 ## Measured
 
 On MuJoCo a 30-step Franka episode saved to disk and loaded back replays with a maximum deviation of

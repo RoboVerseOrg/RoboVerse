@@ -266,6 +266,32 @@ def test_asset_files_distinguish_primitives_from_missing_files(tmp_path):
     assert files == {} and unresolved == [str(tmp_path / "missing.xml")]
 
 
+@pytest.mark.parametrize("field,key", [("root_state", "root"), ("joint_pos", "q"), ("joint_vel", "qd")])
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
+def test_replay_nonfinite_states_never_pass(field, key, value):
+    """An invalid physical quantity cannot count as a matching replay state."""
+    from metasim.utils.replay import Trajectory, state_distance, verify_action_replay
+
+    good, bad = _state(0.0), _state(0.0)
+    getattr(bad.robots["arm"], field)[0, 0] = value
+    for a, b in [(good, bad), (bad, good), (bad, bad)]:
+        distance, where = state_distance(a, b)
+        assert distance == float("inf")
+        assert where == f"robots/arm/{key}"
+
+    class _Reader:
+        def set_states(self, state):
+            pass
+
+        def get_states(self, mode="tensor"):
+            return bad
+
+    report = verify_action_replay(_Reader(), Trajectory(states=[good], actions=[]))
+    assert report.passed is False
+    assert report.worst == float("inf")
+    assert report.worst_key == f"robots/arm/{key}"
+
+
 def test_assets_configured_relative_to_home_are_checked_on_another_home(tmp_path, monkeypatch):
     """The record keeps the *configured* path and re-resolves it where it is replayed: a ``~``-relative
     asset recorded under one home is found under another home that holds the same file."""
