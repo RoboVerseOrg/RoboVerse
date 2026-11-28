@@ -229,9 +229,7 @@ roboverse_pack = [
 "roboverse_pack/tasks/calvin/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
 "roboverse_pack/tasks/libero/**.py" = ["D"]  # FIXME: Peihao add docstring and remove this
 "roboverse_pack/tasks/rlbench/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"roboverse_pack/tasks/robosuite/**.py" = ["D"]  # FIXME: Jiangran add docstring and remove this
 "roboverse_pack/tasks/simpler_env/**.py" = ["D"]  # FIXME: Boshi add docstring and remove this
-"roboverse_pack/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
 
 [tool.ruff.lint.isort]
 known-first-party = ["metasim", "roboverse_learn", "roboverse_pack", "scripts"]

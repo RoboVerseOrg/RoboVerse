@@ -43,3 +43,9 @@ Every `roboverse_data/...` path you write must exist on the Hub (`python tools/a
 --hub-only`), and a module may register at most 16 task classes (variants are parameters). A task that goes
 red on the nightly gate twice is unregistered by the next pull request and listed in
 `roboverse_pack/tasks/RETIRED_TASKS.md` with the commit to restore it from.
+
+A pack under `roboverse_pack/tasks/` is one of two things: a task pack, which registers MetaSim tasks the gate
+runs, or an integration pack, which bridges an external benchmark's data or environments into MetaSim formats
+(demos the task bases load, assets on the Hub, a conversion tool) and comes with tests and a docs page under
+`docs/source/dataset_benchmark/integrations/`. A module that re-registers another library's `gym` ids under a
+RoboVerse prefix is neither and is not accepted; the five that existed were retired on 2026-11-28.

@@ -67,7 +67,6 @@ _CONTRACT_PARAMS = ("states", "env_ids", "seed")
 # Family base classes / tasks fixed in the reset-contract unification — must stay conformant.
 _FIXED_BASES = {
     "libero/libero_base.py",
-    "libero_90/libero_90_base.py",
     "maniskill/maniskill_base.py",
     "rlbench/rl_bench.py",
     "embodiedgen/base.py",
@@ -96,11 +95,8 @@ KNOWN_STEP_OVERRIDES = frozenset({
     "mjlab/cartpole_train.py",
     "pick_place/approach_grasp.py",
     "pick_place/base.py",
-    "robosuite/robosuite_env.py",
 })
-KNOWN_CLOSE_OVERRIDES = frozenset({
-    "robosuite/robosuite_env.py",
-})
+KNOWN_CLOSE_OVERRIDES = frozenset()
 
 
 def _base_name(node: ast.expr) -> str | None:
