@@ -34,22 +34,26 @@ class SoArm100Cfg(RobotCfg):
         "Jaw": BaseActuatorCfg(velocity_limit=2.61),
     }
 
+    # The ranges the MJCF declares (``so_arm100.xml`` ``<default class=...>`` joints); the previous values were
+    # another arm's and put the Wrist_Pitch default 0.7 rad outside the reachable range (robot check, 2026-11-28).
     joint_limits: dict[str, tuple[float, float]] = {
-        "Rotation": (-2.618, 2.618),
-        "Pitch": (-2.059, 2.0944),
-        "Elbow": (-2.697, 0),
-        "Wrist_Pitch": (-0.19198, 3.927),
-        "Wrist_Roll": (-1.22, 1.22),
-        "Jaw": (-1.69297, 3.14159),
+        "Rotation": (-1.92, 1.92),
+        "Pitch": (-3.32, 0.174),
+        "Elbow": (-0.174, 3.14),
+        "Wrist_Pitch": (-1.66, 1.66),
+        "Wrist_Roll": (-2.79, 2.79),
+        "Jaw": (-0.174, 1.75),
     }
 
-    ee_body_name: str = "tool0"
+    ee_body_name: str = (
+        "Fixed_Jaw"  # the MJCF has no "tool0"; this is its last link before the tool (robot check, 2026-11-28)
+    )
 
     default_joint_positions: dict[str, float] = {
         "Rotation": 0.0,
         "Pitch": -0.785398,
         "Elbow": 0.0,
-        "Wrist_Pitch": -2.356194,
+        "Wrist_Pitch": -1.570796,  # the nearest right angle inside the MJCF range (-2.356 was unreachable)
         "Wrist_Roll": 0.0,
         "Jaw": 1.570796,
     }

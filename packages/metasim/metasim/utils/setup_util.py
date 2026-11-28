@@ -367,7 +367,58 @@ def get_robot(robot_name: str) -> RobotCfg:
         local_modules=local_modules,
         cwd=cwd,
     )
-    return _lookup_cfg(attr_name, candidate_packages, "Robot", extra_errors=local_errors)
+    try:
+        return _lookup_cfg(attr_name, candidate_packages, "Robot", extra_errors=local_errors)
+    except ValueError as err:
+        # The class is not named after the robot (``KochCfg`` for ``koch_1``, ``MjlabG1Cfg`` for ``g1``): the
+        # ``name`` field is the key every task and result uses, so it must resolve too.
+        by_name = _lookup_robot_by_name(robot_name, candidate_packages)
+        if by_name is None:
+            raise ValueError(f"{err} No robot config in those packages declares name={robot_name!r} either.") from err
+        return by_name
+
+
+def _robot_cfg_default_name(cls) -> str | None:
+    """The ``name`` a config class instantiates with, read without instantiating it.
+
+    ``@configclass`` turns every default into a ``default_factory``, so the value is neither a class attribute nor
+    ``field.default``; the factory is called (it is a plain return of the literal).
+    """
+    import dataclasses
+
+    value = getattr(cls, "name", None)
+    if isinstance(value, str):
+        return value
+    field = getattr(cls, "__dataclass_fields__", {}).get("name")
+    if field is None:
+        return None
+    if field.default is not dataclasses.MISSING:
+        return field.default if isinstance(field.default, str) else None
+    if field.default_factory is not dataclasses.MISSING:
+        try:
+            made = field.default_factory()
+        except Exception:
+            return None
+        return made if isinstance(made, str) else None
+    return None
+
+
+def _lookup_robot_by_name(robot_name: str, candidate_packages: list[str]):
+    """The first ``RobotCfg`` subclass exported by a candidate package whose ``name`` default is ``robot_name``."""
+    from metasim.scenario.robot import RobotCfg
+
+    for pkg_name in candidate_packages:
+        try:
+            pkg = importlib.import_module(pkg_name)
+        except Exception:
+            continue
+        for attr in dir(pkg):
+            cls = getattr(pkg, attr, None)
+            if not (isinstance(cls, type) and issubclass(cls, RobotCfg) and cls is not RobotCfg):
+                continue
+            if _robot_cfg_default_name(cls) == robot_name:
+                return cls()
+    return None
 
 
 def get_scene(scene_name: str) -> SceneCfg:

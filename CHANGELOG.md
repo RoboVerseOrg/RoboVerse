@@ -21,6 +21,9 @@ release.
 - Three start pages (`docs/source/start/`): evaluate a policy in ten minutes, add a task, add a robot: the contract and the commands, with the gate as the review.
 - `docs/source/dataset_benchmark/dataset/generate_robot_docs.py` regenerates `robots.md` from the robot configs; the hand-written table listed robots that had no config.
 
+### Fixed
+- Robot configs corrected by `python -m metasim robot check` (2026-11-28 sweep of all 43 configs on MuJoCo): so_arm100, koch_1, ur5e, ur10e, lite6 and arx_l5 named a tool body (`tool0`) their MJCF does not have and now name the real last link; so_arm100, koch_1, gen3 and iiwa14 carried another arm's joint limits and now match their MJCF ranges (so_arm100's wrist default was 0.7 rad outside the reachable range); the ARX L5 gripper actuator is keyed by its joint (`joint7`). `AlohaAgilexCfg`, `ArxL5Cfg` and `Z1Cfg` are exported from `roboverse_pack.robots` (they were unreachable by name). The sweep table and the remaining backlog are in `docs/source/start/add_a_robot.md`.
+
 ### Changed
 - Dependency floors raised past the open advisories: `torch>=2.6` at run time, `setuptools>=78.1.1` at build time, the `robosplatter` extra no longer pins `setuptools==59.5.0`.
 

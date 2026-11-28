@@ -44,7 +44,7 @@ class Iiwa14Cfg(RobotCfg):
     joint_limits: dict[str, tuple[float, float]] = {
         "joint1": (-2.96706, 2.96706),  # ±170°
         "joint2": (-2.0944, 2.0944),  # ±120°
-        "joint3": (-3.05433, 3.05433),  # ±175°
+        "joint3": (-2.96706, 2.96706),  # ±170°, the MJCF range (robot check, 2026-11-28)
         "joint4": (-2.0944, 2.0944),  # ±120°
         "joint5": (-2.96706, 2.96706),  # ±170°
         "joint6": (-2.0944, 2.0944),  # ±120°

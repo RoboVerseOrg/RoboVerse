@@ -50,11 +50,11 @@ class Gen3Cfg(RobotCfg):
     # Some joints are continuous (unlimited rotation)
     joint_limits: dict[str, tuple[float, float]] = {
         "joint_1": (-6.28319, 6.28319),  # Continuous joint (~±360°)
-        "joint_2": (-2.41, 2.41),  # ±138°
+        "joint_2": (-2.24, 2.24),  # the MJCF range (robot check, 2026-11-28)
         "joint_3": (-6.28319, 6.28319),  # Continuous joint (~±360°)
-        "joint_4": (-2.66, 2.66),  # ±152°
+        "joint_4": (-2.57, 2.57),  # the MJCF range
         "joint_5": (-6.28319, 6.28319),  # Continuous joint (~±360°)
-        "joint_6": (-2.23, 2.23),  # ±128°
+        "joint_6": (-2.09, 2.09),  # the MJCF range
         "joint_7": (-6.28319, 6.28319),  # Continuous joint (~±360°)
     }
 

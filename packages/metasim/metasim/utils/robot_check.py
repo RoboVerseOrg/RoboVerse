@@ -6,6 +6,8 @@
 - **assets**: the asset files the config names for the chosen backend exist (locally or on the Hub);
 - **kinematics**: the MJCF loads in MuJoCo's model, the end-effector body is found and forward kinematics of the
   default pose is finite (the skill library and the IL adapters depend on this);
+- **limits**: the config's ``joint_limits`` agree with the ranges the MJCF declares (a config copied from another
+  robot passes the config check and still commands poses the model cannot reach);
 - **hold**: on the backend, commanding the default joint positions for ``steps`` steps leaves every joint within
   ``joint_tol`` radians of its target and a fixed base within ``base_tol`` metres (a robot that drifts or explodes
   at rest cannot be evaluated).
@@ -125,9 +127,13 @@ def check_assets(cfg, sim: str) -> CheckRow:
     missing = [p for _, p in declared if not os.path.exists(p)]
     if missing:
         try:
-            from metasim.utils.hf_util import check_and_download_single
+            from metasim.utils.hf_util import LOCAL_DIR, _download_tree, check_and_download_single
 
             for p in list(missing):
+                # the whole asset folder, not just the descriptor: an MJCF/URDF names meshes next to it
+                rel_dir = os.path.relpath(os.path.realpath(os.path.dirname(p)), os.path.realpath(LOCAL_DIR))
+                if not rel_dir.startswith(".."):
+                    _download_tree(rel_dir.replace(os.sep, "/"))
                 check_and_download_single(p)
                 if os.path.exists(p):
                     missing.remove(p)
@@ -140,6 +146,12 @@ def check_assets(cfg, sim: str) -> CheckRow:
 
 def check_kinematics(cfg) -> CheckRow:
     """The MJCF loads, the end-effector body exists and forward kinematics of the default pose is finite."""
+    if not isinstance(getattr(cfg, "mjcf_path", None), str) or not cfg.mjcf_path:
+        return CheckRow(
+            "kinematics", False, "no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model"
+        )
+    if not getattr(cfg, "ee_body_name", None):
+        return CheckRow("kinematics", True, "no ee_body_name (not an arm): tool kinematics not judged")
     try:
         from metasim.bench.skills import ArmModel
 
@@ -156,6 +168,36 @@ def check_kinematics(cfg) -> CheckRow:
         )
     except Exception as err:
         return CheckRow("kinematics", False, f"{type(err).__name__}: {str(err)[:160]}")
+
+
+def check_limits(cfg, tol: float = 1e-3) -> CheckRow:
+    """The config's joint limits agree with the MJCF's joint ranges (limited joints only)."""
+    path = getattr(cfg, "mjcf_path", None)
+    limits = getattr(cfg, "joint_limits", None) or {}
+    if not isinstance(path, str) or not path or not limits:
+        return CheckRow("limits", True, "no mjcf_path or no joint_limits: not judged")
+    try:
+        import mujoco
+
+        model = mujoco.MjModel.from_xml_path(path)
+    except Exception as err:
+        return CheckRow("limits", False, f"MJCF did not load: {type(err).__name__}: {str(err)[:140]}")
+    mismatches, compared = [], 0
+    for joint, (lo, hi) in limits.items():
+        jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint)
+        if jid < 0 or not model.jnt_limited[jid]:
+            continue
+        compared += 1
+        mlo, mhi = (float(x) for x in model.jnt_range[jid])
+        if abs(mlo - float(lo)) > tol or abs(mhi - float(hi)) > tol:
+            mismatches.append(f"{joint} cfg [{float(lo):.3f}, {float(hi):.3f}] vs mjcf [{mlo:.3f}, {mhi:.3f}]")
+    if mismatches:
+        return CheckRow(
+            "limits",
+            False,
+            f"{len(mismatches)} of {compared} limited joints disagree with the MJCF: " + "; ".join(mismatches[:4]),
+        )
+    return CheckRow("limits", True, f"{compared} limited joints match the MJCF ranges")
 
 
 def check_hold(cfg, sim: str, *, steps: int = 200, joint_tol: float = 0.05, base_tol: float = 0.01) -> CheckRow:
@@ -190,12 +232,21 @@ def check_hold(cfg, sim: str, *, steps: int = 200, joint_tol: float = 0.05, base
         worst_joint, worst_dev = joints[i], float(dev[i])
         base_drift = float(np.linalg.norm(state.root_state[0, :3].detach().cpu().numpy() - base0))
         fixed = bool(getattr(cfg, "fix_base_link", True))
-        ok = worst_dev <= joint_tol and (not fixed or base_drift <= base_tol)
+        if not fixed:
+            # a floating-base robot (legged, humanoid) at its default pose falls under gravity without a controller;
+            # that is not a config defect, so only finiteness is judged and the drift is reported for the record
+            return CheckRow(
+                "hold",
+                True,
+                f"floating base: not judged; after {steps} steps max joint deviation {worst_dev:.4f} rad "
+                f"({worst_joint}), base moved {base_drift:.4f} m",
+            )
+        ok = worst_dev <= joint_tol and base_drift <= base_tol
         return CheckRow(
             "hold",
             ok,
             f"after {steps} steps at the default pose: max joint deviation {worst_dev:.4f} rad ({worst_joint}), "
-            f"base moved {base_drift:.4f} m" + ("" if fixed else " (floating base, not judged)"),
+            f"base moved {base_drift:.4f} m",
         )
     except Exception as err:
         return CheckRow("hold", False, f"{type(err).__name__}: {str(err)[:160]}")
@@ -214,6 +265,7 @@ def check_robot(name: str, *, sim: str = "mujoco", steps: int = 200, hold: bool 
     report.rows.append(check_config(cfg))
     report.rows.append(check_assets(cfg, sim))
     report.rows.append(check_kinematics(cfg))
+    report.rows.append(check_limits(cfg))
     if hold:
         report.rows.append(check_hold(cfg, sim, steps=steps))
     return report

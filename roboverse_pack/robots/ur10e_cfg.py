@@ -51,7 +51,9 @@ class Ur10ECfg(RobotCfg):
     }
 
     # End-effector body name - UR tool flange
-    ee_body_name: str = "tool0"
+    ee_body_name: str = (
+        "wrist_3_link"  # the MJCF has no "tool0"; this is its last link before the tool (robot check, 2026-11-28)
+    )
 
     # Default joint positions - UR10e standard home position
     default_joint_positions: dict[str, float] = {

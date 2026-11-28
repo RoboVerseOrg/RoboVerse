@@ -34,22 +34,24 @@ class KochCfg(RobotCfg):
         "gripper": BaseActuatorCfg(velocity_limit=0.2, is_ee=True),
     }
 
+    # The ranges the MJCF declares (``low_cost_robot_arm.xml``); the previous values were another arm's and put the
+    # wrist_pitch default outside the reachable range (robot check, 2026-11-28).
     joint_limits: dict[str, tuple[float, float]] = {
-        "base_rotation": (-2.618, 2.618),
-        "pitch": (-2.059, 2.0944),
-        "elbow": (-2.697, 0),
-        "wrist_pitch": (-0.19198, 3.927),
-        "wrist_roll": (-1.22, 1.22),
-        "gripper": (0, 0.035),
+        "base_rotation": (-2.2, 2.2),
+        "pitch": (-1.57, 0.6),
+        "elbow": (-1.57, 1.45),
+        "wrist_pitch": (-2.0, 2.0),
+        "wrist_roll": (-3.14, 3.14),
+        "gripper": (-1.6, 0.032),
     }
 
-    ee_body_name: str = "tool0"
+    ee_body_name: str = "gripper_static_finger"  # the MJCF has no "tool0"; this is its last link before the tool (robot check, 2026-11-28)
 
     default_joint_positions: dict[str, float] = {
         "base_rotation": 0.0,
         "pitch": -0.785398,
         "elbow": 0.0,
-        "wrist_pitch": -2.356194,
+        "wrist_pitch": -1.570796,  # the nearest right angle inside the MJCF range (-2.356 was unreachable)
         "wrist_roll": 0.0,
         "gripper": 0,
     }

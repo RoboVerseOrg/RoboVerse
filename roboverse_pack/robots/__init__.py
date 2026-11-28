@@ -3,6 +3,8 @@
 from metasim.scenario.robot import RobotCfg
 
 from .aloha import AlohaCfg
+from .aloha_agilex_cfg import AlohaAgilexCfg
+from .arx_l5_mjcf_cfg import ArxL5Cfg
 from .fetch_cfg import FetchCfg
 from .franka_cfg import FrankaCfg
 from .franka_slide_urdf_cfg import FrankaSlideUrdfCfg
@@ -42,3 +44,4 @@ from .ur10e_cfg import Ur10ECfg
 from .vega_cfg import VegaCfg
 from .xhand_cfg import XhandRightCfg
 from .yam_mjcf_cfg import YamCfg
+from .z1_cfg import Z1Cfg
