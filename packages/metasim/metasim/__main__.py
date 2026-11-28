@@ -534,9 +534,12 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
         print(f"{entry.task}: {_score_line(result.summary)}", file=sys.stderr)
         results.append(result)
     report = _write_suite_report(suite, results, out_dir)
+    errors_path = os.path.join(out_dir, "errors.json")
     if failures:
-        with open(os.path.join(out_dir, "errors.json"), "w") as f:
+        with open(errors_path, "w") as f:
             json.dump(failures, f, indent=2)
+    elif os.path.exists(errors_path):
+        os.remove(errors_path)  # a clean re-run into the same directory must not keep the last run's failures
     complete = all(block["complete"] for block in report["splits"].values())
     return 0 if complete and not failures else 1
 

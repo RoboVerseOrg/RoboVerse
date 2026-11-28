@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import threading
 from collections import Counter
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -800,3 +801,145 @@ def test_cli_conformance_exits_on_the_verdict(capsys):
         server.shutdown()
     assert cli.main(["bench", "conformance", "--policy-url", "http://127.0.0.1:9", "--timeout", "1"]) == 1
     assert "unreachable" in capsys.readouterr().out
+
+
+def test_cli_suite_run_writes_one_result_per_task_and_reports_a_broken_one(monkeypatch, tmp_path, capsys):
+    """`bench suite run` (in-process path): a result file per task, the suite report, errors.json, exit 1 when a task breaks."""
+    import json as _json
+
+    import metasim.__main__ as cli
+    import metasim.bench as bench
+
+    class _Env:
+        def __init__(self, task):
+            self.task = task
+            self.scenario = SimpleNamespace(robots=[SimpleNamespace(name="bot")], simulator="fake")
+
+        def close(self):
+            pass
+
+    def fake_make_env(task, **kwargs):
+        if task == "c":
+            raise RuntimeError("asset missing for c")
+        return _Env(task)
+
+    def fake_evaluate(env, policy, protocol, policy_info=None, on_episode=None, task_name=None):
+        return _result(task_name, 2, protocol.episodes, policy=policy.name, protocol=protocol)
+
+    monkeypatch.setattr(bench, "get_suite", lambda name: SUITE)
+    monkeypatch.setattr(bench, "evaluate", fake_evaluate)
+    monkeypatch.setattr(cli, "_make_env", fake_make_env)
+    monkeypatch.setattr(cli, "_make_policy", lambda args: (HoldPolicy(), {}))
+    out = tmp_path / "suite"
+    code = cli.main([
+        "bench",
+        "suite",
+        "run",
+        "--suite",
+        "toy",
+        "--policy",
+        "hold",
+        "--out-dir",
+        str(out),
+        "--episodes",
+        "3",
+        "--isolate",
+        "never",
+    ])
+    assert code == 1, "a task that cannot be built fails the run"
+    files = sorted(p.name for p in out.glob("*.json"))
+    assert files == ["core__a__bot__hold.json", "core__b__bot__hold.json", "errors.json", "suite.json"], files
+    assert _json.loads((out / "errors.json").read_text()) == [
+        {"split": "heldout", "task": "c", "error": "RuntimeError: asset missing for c"}
+    ]
+    saved = _json.loads((out / "core__a__bot__hold.json").read_text())
+    assert saved["notes"]["suite"] == {"name": "toy", "split": "core"} and saved["protocol"]["episodes"] == 3
+    report = _json.loads((out / "suite.json").read_text())
+    assert report["splits"]["core"]["complete"] and not report["splits"]["heldout"]["complete"]
+    err = capsys.readouterr().err
+    assert "=== toy/core: a" in err and "c: ERROR RuntimeError: asset missing for c" in err
+
+    monkeypatch.setattr(cli, "_make_env", lambda task, **kw: _Env(task))
+    assert (
+        cli.main([
+            "bench",
+            "suite",
+            "run",
+            "--suite",
+            "toy",
+            "--policy",
+            "hold",
+            "--out-dir",
+            str(out),
+            "--isolate",
+            "never",
+        ])
+        == 0
+    )
+    assert not (out / "errors.json").exists() or _json.loads((out / "errors.json").read_text()) == [], (
+        "a clean run leaves no stale errors"
+    )
+
+
+def test_cli_record_drives_the_recorder_and_prints_what_was_kept(monkeypatch, tmp_path, capsys):
+    """`bench record` builds the env, hands the policy and provenance to record_demos and reports the summary."""
+    import metasim.__main__ as cli
+    import metasim.bench.record as record_mod
+
+    class _Env:
+        scenario = SimpleNamespace(robots=[SimpleNamespace(name="bot")], simulator="fake")
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    env = _Env()
+    calls = {}
+
+    def fake_record(env_, policy, protocol, *, out, success_only, task_name, on_episode, policy_info):
+        calls.update(policy=policy.name, out=out, success_only=success_only, task=task_name, info=policy_info)
+        result = _result(task_name, 3, protocol.episodes, policy=policy.name, protocol=protocol)
+        return result, {"robot": "bot", "kept": 3, "dropped": protocol.episodes - 3, "path": out}
+
+    monkeypatch.setattr(record_mod, "record_demos", fake_record)
+    monkeypatch.setattr(cli, "_make_env", lambda *a, **k: env)
+    monkeypatch.setattr(cli, "_make_policy", lambda args: (HoldPolicy(), {"spec": "hold"}))
+    monkeypatch.setattr(cli, "_apply_demos_override", lambda env, demos: None)
+    out = str(tmp_path / "demos.pkl.gz")
+    code = cli.main([
+        "bench",
+        "record",
+        "--task",
+        "t",
+        "--sim",
+        "fake",
+        "--policy",
+        "hold",
+        "--episodes",
+        "4",
+        "--out",
+        out,
+    ])
+    assert code == 0 and env.closed
+    assert calls == {"policy": "hold", "out": out, "success_only": True, "task": "t", "info": {"spec": "hold"}}
+    line = capsys.readouterr().out
+    assert line.startswith("t [bot @ fake] hold:") and "kept 3 demo(s), dropped 1" in line, line
+    assert (
+        cli.main([
+            "bench",
+            "record",
+            "--task",
+            "t",
+            "--sim",
+            "fake",
+            "--policy",
+            "hold",
+            "--episodes",
+            "4",
+            "--out",
+            out,
+            "--keep-failures",
+        ])
+        == 0
+    )
+    assert calls["success_only"] is False
