@@ -26,6 +26,7 @@ from .policy import (
 )
 from .prompts import PromptBank, PromptDraw, task_prompt_bank
 from .protocol import PROMPT_SPLITS, SUCCESS_RULES, EvalProtocol
+from .record import RecordingPolicy, flatten_initial_state, record_demos
 from .remote import PolicyServer, RemotePolicy
 from .result import (
     SCHEMA,
@@ -58,6 +59,7 @@ __all__ = [
     "PromptBank",
     "PromptDraw",
     "RandomPolicy",
+    "RecordingPolicy",
     "RemotePolicy",
     "ReplayPolicy",
     "SuiteTask",
@@ -66,6 +68,7 @@ __all__ = [
     "checkpoint_sha256",
     "demo_budget",
     "evaluate",
+    "flatten_initial_state",
     "get_access_profile",
     "get_suite",
     "hash_state",
@@ -74,6 +77,7 @@ __all__ = [
     "load_policy",
     "matrix",
     "plan_instances",
+    "record_demos",
     "register_suite",
     "restrict_observation",
     "suite_report",

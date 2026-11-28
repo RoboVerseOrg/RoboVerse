@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `python -m metasim bench record`: record demos with any policy (the scripted skills by default) into the `{robot: [demos]}` file the task bases load and the gate replays; `bench run` / `bench health --demos PATH` evaluate against another demo file than the task's own, so a recorded set is gated before it is published (`metasim.bench.record_demos`, `RecordingPolicy`, `flatten_initial_state`).
 - `python -m metasim bench health --floor --repeat N`: a passing replay must also survive the hold policy scoring zero (`unreliable` otherwise: the checker accepts the initial state) and N identical replays of the same instances (`flaky` otherwise); both fail the gate.
 - `python -m metasim bench run|suite run --camera <preset>` adds a named camera (`front`, `side`, `top`; `metasim.bench.cameras.CAMERA_PRESETS`) to a task whose scenario has none, so the visual access tiers have something to observe; the preset names are recorded in the result's `notes["cameras"]`.
 - `metasim.bench.skills`: scripted manipulation skills on the policy contract (`ArmModel`: forward kinematics and damped-least-squares IK from the robot's own MJCF; `MoveTo`, `MoveJoints`, `Gripper`; `pick`, `place_on`, `push_to`, `stand_upright` plans) and `ScriptedPolicy`, the privileged "knows the poses" baseline: on the tabletop-mujoco suite it scores 0.90 task-macro over 10 episodes per task (pick 1.0, stack 0.9, push 1.0, pull 0.7, peg 0.9) against the replay ceiling of 0.96.

@@ -194,6 +194,28 @@ adapter is expected to honour, and a served policy reads them from `PolicyContex
 scores a result only under its own tier (`bench suite run --access` and `bench suite report --access`
 set it for the whole suite); `bench summarize` shows the tier of every row.
 
+## Recording demos with a policy
+
+A task needs demos before the replay gate can judge it. `bench record` drives a task with any policy
+through the same evaluator, keeps the episodes the task scores as successful, and writes the
+`{robot: [{"init_state", "actions", "states"}]}` file that `get_traj` loads and `bench health` replays.
+The default policy is the scripted skills, so a new tabletop task gets a gated demo set without a human
+in the loop:
+
+```bash
+python -m metasim bench record --task pick_cube --sim mujoco --episodes 50 \
+    --out roboverse_data/trajs/maniskill/pick_cube/v2/franka_v2.pkl.gz          # scripted skills by default
+python -m metasim bench health --sim mujoco --task pick_cube --floor --repeat 2 \
+    --demos roboverse_data/trajs/maniskill/pick_cube/v2                          # gate the recorded set
+python -m metasim bench run --task pick_cube --sim mujoco --policy replay --demos <dir>   # evaluate against it
+```
+
+`--demos` on `bench run` and `bench health` points the instance pool at another demo file or directory
+than the task's own, so a recorded set is checked before it replaces the published one. `--keep-failures`
+also writes the failed episodes (for failure datasets); a JSON sidecar next to the file records the
+policy, protocol, and how many episodes were kept. Recorded this way on 2026-11-28: the five tabletop
+tasks, 20 episodes each with the scripted skills, every set replaying at 1.0 under the gate.
+
 ## Methods x perspectives: the first matrix
 
 The tiers only pay off when several *method families* are scored under several of them with one

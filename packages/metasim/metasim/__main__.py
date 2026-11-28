@@ -235,6 +235,7 @@ def _bench_run(args: argparse.Namespace) -> int:
         )
     except (KeyError, ValueError) as err:
         raise SystemExit(f"cannot build {args.task} on {args.sim}: {err}") from err
+    _apply_demos_override(env, getattr(args, "demos", None))
     out = args.out
     if out is None:
         robots = "+".join(r.name for r in env.scenario.robots) or "norobot"
@@ -267,6 +268,62 @@ def _bench_run(args: argparse.Namespace) -> int:
         f"mean {result.summary['mean_steps']:.1f} steps -> {path}"
     )
     return 0
+
+
+def _apply_demos_override(env, demos: str | None) -> None:
+    """``--demos PATH``: evaluate against another demo file / directory than the task's own (a freshly recorded set)."""
+    if demos:
+        env.traj_filepath = demos
+        env.__dict__.pop("_bench_instance_pool", None)
+
+
+def _bench_record(args: argparse.Namespace) -> int:
+    """Record demos with a policy and write the ``{robot: [demos]}`` file the gate replays."""
+    from metasim.bench import EvalProtocol
+    from metasim.bench.record import record_demos
+
+    try:
+        protocol = EvalProtocol(
+            episodes=args.episodes,
+            success_rule=args.success_rule,
+            hold_steps=args.hold_steps,
+            max_episode_steps=args.max_steps,
+            seed=args.seed,
+            name="record",
+        )
+    except ValueError as err:
+        raise SystemExit(f"invalid protocol: {err}") from err
+    policy, _ = _make_policy(args)
+    try:
+        env = _make_env(
+            args.task,
+            sim=args.sim,
+            robots=args.robot,
+            num_envs=args.num_envs,
+            gui=False,
+            device=args.device,
+            cameras=getattr(args, "camera", None),
+        )
+    except (KeyError, ValueError) as err:
+        raise SystemExit(f"cannot build {args.task} on {args.sim}: {err}") from err
+    _apply_demos_override(env, getattr(args, "demos", None))
+    try:
+        result, summary = record_demos(
+            env,
+            policy,
+            protocol,
+            out=args.out,
+            success_only=not args.keep_failures,
+            task_name=args.task,
+            on_episode=_report_episode,
+        )
+    finally:
+        env.close()
+    print(
+        f"{args.task} [{summary['robot']} @ {args.sim}] {policy.name}: {_score_line(result.summary)}; "
+        f"kept {summary['kept']} demo(s), dropped {summary['dropped']} -> {summary['path']}"
+    )
+    return 0 if summary["kept"] else 1
 
 
 def _bench_serve(args: argparse.Namespace) -> int:
@@ -560,6 +617,7 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
         device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
         protocol = EvalProtocol(episodes=args.episodes, max_episode_steps=args.max_steps, seed=args.seed, name="health")
         env = task_cls(scenario, device)
+        _apply_demos_override(env, getattr(args, "demos", None))
         try:
             try:
                 # the demo file is a property of the built task: some tasks pick it per robot or in __init__
@@ -810,11 +868,36 @@ def _add_bench(sub) -> None:
         action="append",
         help="add a preset camera to the scenario (`front`, `side`, `top`; repeatable), for the visual tiers",
     )
+    r.add_argument("--demos", help="demo file or directory to take the instances from instead of the task's own")
     r.add_argument("--device", help="torch device (default: cuda if available)")
     r.add_argument("--gui", action="store_true", help="run with the simulator viewer (default headless)")
     r.add_argument("--out", help="result path (default: bench_results/<task>__<robot>__<sim>__<policy>__<time>.json)")
     _add_remote_args(r)
     r.set_defaults(func=_bench_run)
+    rc = bs.add_parser("record", help="record demos with a policy into the {robot: [demos]} file the gate replays")
+    rc.add_argument("--task", required=True)
+    rc.add_argument("--sim", required=True)
+    rc.add_argument("--robot", action="append", help="robot config name (one robot per demo file)")
+    rc.add_argument("--num-envs", type=int, default=1)
+    rc.add_argument("--episodes", type=int, default=50, help="episodes to attempt")
+    rc.add_argument(
+        "--policy", default="metasim.bench.skills:ScriptedPolicy", help="policy spec (default: the scripted skills)"
+    )
+    rc.add_argument("--policy-arg", action="append", metavar="KEY=VALUE")
+    rc.add_argument("--checkpoint")
+    rc.add_argument("--success-rule", choices=_SUCCESS_RULES, default="first")
+    rc.add_argument("--hold-steps", type=int, default=1)
+    rc.add_argument("--max-steps", type=int, help="episode cap (default: the task's)")
+    rc.add_argument("--seed", type=int, default=0)
+    rc.add_argument("--demos", help="start the episodes from the instances of this demo file instead of the task's")
+    rc.add_argument(
+        "--keep-failures", action="store_true", help="also write the episodes the task did not score as success"
+    )
+    rc.add_argument("--camera", action="append", help="preset camera to add (for policies that need an image)")
+    rc.add_argument("--device", help="torch device (default: cuda if available)")
+    rc.add_argument("--out", required=True, help="output file, e.g. demos/pick_cube/v2/franka_v2.pkl.gz")
+    _add_remote_args(rc)
+    rc.set_defaults(func=_bench_record)
     sv = bs.add_parser("serve", help="serve a policy over HTTP for `bench run --policy-url` (run in the policy's env)")
     sv.add_argument("--policy", required=True, help=f"one of {list(_BUILTIN_POLICIES)} or 'pkg.module:attr'")
     sv.add_argument("--policy-arg", action="append", metavar="KEY=VALUE", help="constructor argument (repeatable)")
@@ -866,6 +949,7 @@ def _add_bench(sub) -> None:
     h.add_argument("--episodes", type=int, default=5)
     h.add_argument("--max-steps", type=int, help="evaluator-side episode cap (default: the task's)")
     h.add_argument("--seed", type=int, default=0)
+    h.add_argument("--demos", help="demo file or directory to replay instead of the task's own (one --task only)")
     h.add_argument("--threshold", type=float, default=0.8, help="replay success rate a healthy task reaches")
     h.add_argument(
         "--floor",

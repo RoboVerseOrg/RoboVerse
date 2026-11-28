@@ -926,3 +926,46 @@ def test_bench_run_streams_each_episode_then_saves_the_result(monkeypatch, tmp_p
     assert seen == [1, 2], "one JSON line per finished episode, written as each ends"
     assert (tmp_path / "r.json").exists() and not (tmp_path / "r.json.episodes.jsonl").exists()
     assert capsys.readouterr().out.startswith("t [bot @ mujoco] hold:"), "the score line names task, robot, sim, policy"
+
+
+def test_record_demos_writes_the_v2_layout_the_gate_replays(tmp_path):
+    """Successful episodes become ``{robot: [{"init_state", "actions", "states"}]}``; failures are dropped by default."""
+    import gzip
+    import pickle
+
+    from metasim.bench import record_demos
+
+    env = _ScriptedEnv(num_envs=1, schedule=[(3, 5, True), (None, 4, False)], pool_size=2)
+    out = tmp_path / "demos" / "v2" / "bot_v2.pkl.gz"
+    result, summary = record_demos(env, HoldPolicy(), EvalProtocol(episodes=4, seed=3), out=out, task_name="t")
+    assert summary["kept"] == 2 and summary["dropped"] == 2 and result.summary["episodes"] == 4
+    data = pickle.load(gzip.open(out))
+    assert list(data) == ["bot"] and len(data["bot"]) == 2
+    demo = data["bot"][0]
+    assert set(demo) == {"init_state", "actions", "states"} and demo["states"] is None
+    assert demo["init_state"]["cube"]["pos"] == [0.0, 0.0, 0.0] or isinstance(demo["init_state"]["cube"]["pos"], list)
+    assert len(demo["actions"]) == 5, "one action per step of the successful 5-step episode"
+    assert demo["actions"][0] == {"dof_pos_target": {"j0": 0.5, "j1": 1.0}}, "v2 layout: the robot's own dict"
+    sidecar = out.with_name(out.name + ".json")
+    assert sidecar.exists() and '"kept": 2' in sidecar.read_text()
+    # --keep-failures keeps every episode
+    _, summary_all = record_demos(
+        _ScriptedEnv(num_envs=1, schedule=[(3, 5, True), (None, 4, False)], pool_size=2), HoldPolicy(),
+        EvalProtocol(episodes=4, seed=3), out=tmp_path / "all.pkl", success_only=False, task_name="t",
+    )  # fmt: skip
+    assert summary_all["kept"] == 4 and len(pickle.load(open(tmp_path / "all.pkl", "rb"))["bot"]) == 4
+
+
+def test_flatten_initial_state_accepts_both_layouts():
+    from metasim.bench import flatten_initial_state
+
+    nested = {
+        "objects": {"cube": {"pos": torch.tensor([1.0, 2.0, 3.0]), "rot": torch.tensor([1.0, 0, 0, 0]), "vel": torch.zeros(3)}},
+        "robots": {"bot": {"pos": torch.zeros(3), "rot": torch.tensor([1.0, 0, 0, 0]), "dof_pos": {"j0": torch.tensor(0.5)}}},
+    }  # fmt: skip
+    flat = flatten_initial_state(nested)
+    assert flat == {
+        "cube": {"pos": [1.0, 2.0, 3.0], "rot": [1.0, 0.0, 0.0, 0.0]},
+        "bot": {"pos": [0.0, 0.0, 0.0], "rot": [1.0, 0.0, 0.0, 0.0], "dof_pos": {"j0": 0.5}},
+    }
+    assert flatten_initial_state(flat) == flat, "the flat layout passes through unchanged"
