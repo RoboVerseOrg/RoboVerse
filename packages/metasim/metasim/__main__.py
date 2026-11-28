@@ -1074,7 +1074,12 @@ def _robot_check(args: argparse.Namespace) -> int:
         print(json.dumps([r.to_dict() for r in reports], indent=2))
     else:
         print("\n\n".join(r.table() for r in reports))
-    return 0 if all(r.ok for r in reports) else 1
+    sys.stdout.flush()
+    code = 0 if all(r.ok for r in reports) else 1
+    from metasim.utils.robot_check import close_handlers
+
+    close_handlers()  # on Isaac Sim this ends the process (exit 0 unless an exception propagates); the report is out
+    return code
 
 
 def _add_robot(sub) -> None:

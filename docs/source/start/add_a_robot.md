@@ -39,7 +39,7 @@ Hub); the MJCF loads in MuJoCo's model, the end-effector body is found and forwa
 pose is finite (the skill library and the IL adapters depend on this); and holding the default pose for 200
 steps leaves every joint within 0.05 rad and a fixed base within 1 cm. `tests/test_roboverse_robot_cfg_validation.py`
 runs the config part on every pull request. On 2026-11-28 Franka, YAM and the Sharpa hand pass all four on
-MuJoCo.
+MuJoCo, and Franka passes them on Isaac Sim 6 (YAM has no USD, which the assets row says).
 
 ## 4. One gated task
 

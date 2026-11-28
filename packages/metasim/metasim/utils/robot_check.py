@@ -32,6 +32,20 @@ class CheckRow:
     detail: str
 
 
+_OPEN_HANDLERS: list[Any] = []
+"""Simulator handlers the hold check left open; :func:`close_handlers` releases them after the report is printed."""
+
+
+def close_handlers() -> None:
+    """Close the handlers the hold checks left open (last: on Isaac Sim this ends the process)."""
+    while _OPEN_HANDLERS:
+        handler = _OPEN_HANDLERS.pop()
+        try:
+            handler.close()
+        except Exception:
+            pass
+
+
 @dataclass
 class RobotReport:
     """Every check for one robot on one backend."""
@@ -177,10 +191,9 @@ def check_hold(
     except Exception as err:
         return CheckRow("hold", False, f"{type(err).__name__}: {str(err)[:160]}")
     finally:
-        try:
-            handler.close()
-        except Exception:
-            pass
+        # not closed here: Isaac Sim 6 ends the process inside close(), which would take the report with it.
+        # The caller closes the handler once the report is printed (RobotReport.close()).
+        _OPEN_HANDLERS.append(handler)
 
 
 def check_robot(
