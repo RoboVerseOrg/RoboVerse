@@ -29,6 +29,16 @@ bitwise (0 mismatch vs `env._check_success`) on all 130
 
 ## Status
 
+> **Retired from the task registry on 2026-11-27.** The release gate replays every task's own demos on the
+> backend they were recorded on (`python -m metasim bench health --floor --repeat 2`, threshold 0.80). The
+> LIBERO MetaSim ports replayed at 0.00 to 0.65 over 20 episodes, and the passthrough / native wrappers have no
+> class-level scenario the harness can build, so 242 of the 244 LIBERO classes were removed from
+> `roboverse_pack` (`libero.pick_butter` and `libero_90.kitchen_scene4_close_the_bottom_drawer_of_the_cabinet`
+> pass and stay). Every file is recoverable from git; `roboverse_pack/tasks/RETIRED_TASKS.md` lists them with
+> the exact restore command. The notes below describe the integration as it was built and are kept so the port
+> can be brought back once its replay is 1:1.
+
+
 | Capability | Result | Where |
 |---|---|---|
 | LIBERO passthrough | **130 / 130** tasks, obs+step bitwise (Δ=0) | `roboverse_pack/tasks/libero/` |

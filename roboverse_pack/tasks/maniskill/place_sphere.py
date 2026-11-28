@@ -13,7 +13,6 @@ from ._dense_rl import DenseRLResetMixin
 from .maniskill_base import ManiskillBaseTask
 
 
-@register_task("maniskill.place_sphere", "place_sphere")
 class PlaceSphereTask(ManiskillBaseTask):
     """The place-sphere task from ManiSkill.
     .. Description:

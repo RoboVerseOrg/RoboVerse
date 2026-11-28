@@ -16,7 +16,6 @@ goal_region_size = 0.05  # The size of the goal region in meters
 goal_region_visible_size = 0.05  # The visible size of the goal region in meters
 
 
-@register_task("maniskill.poke_cube", "poke_cube")
 class PokeCubeCfg(ManiskillBaseTask):
     """The PokeCube task from ManiSkill.
     .. Description:

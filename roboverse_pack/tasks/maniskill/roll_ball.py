@@ -16,7 +16,6 @@ goal_region_size = 0.2  # The size of the goal region in meters
 goal_region_visible_size = 0.05  # The visible size of the goal region in meters
 
 
-@register_task("maniskill.roll_ball", "roll_ball")
 class RollBallCfg(ManiskillBaseTask):
     """The RollBall task from ManiSkill.
     .. Description:

@@ -26,7 +26,6 @@ from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.scene import SceneCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.task.base import BaseTaskEnv
-from metasim.task.registry import register_task
 
 from ._locator import lazy_scenario, mjlab_asset
 
@@ -46,7 +45,6 @@ def _cartpole_scenario() -> ScenarioCfg:
     )
 
 
-@register_task("mjlab.cartpole_balance")
 class MjlabCartpoleBalance(BaseTaskEnv):
     """Balance the pole upright (hinge_1 starts near 0)."""
 
@@ -54,7 +52,6 @@ class MjlabCartpoleBalance(BaseTaskEnv):
     max_episode_steps = 5000  # mjlab episode_length_s = 50s / dt 0.01
 
 
-@register_task("mjlab.cartpole_swingup")
 class MjlabCartpoleSwingup(BaseTaskEnv):
     """Swing the pole up from hanging-down (hinge_1 starts at pi)."""
 

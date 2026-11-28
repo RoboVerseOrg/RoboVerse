@@ -20,7 +20,6 @@ import torch
 from loguru import logger as log
 
 from metasim.scenario.scenario import ScenarioCfg
-from metasim.task.registry import register_task
 
 from .tracking_base_env import TrackingBaseEnv
 
@@ -30,7 +29,6 @@ if TYPE_CHECKING:
     from roboverse_learn.rl.configs.rsl_rl.ppo_tracking import RslRlPPOTrackingConfig
 
 
-@register_task("motion-tracking-isaaclab")
 class TrackingRLEnv(TrackingBaseEnv, gym.Env):
     """The superclass for the manager-based workflow reinforcement learning-based environments.
 
@@ -489,7 +487,6 @@ class TrackingRLEnv(TrackingBaseEnv, gym.Env):
         self.episode_length_buf[env_ids] = 0
 
 
-@register_task("motion-tracking-isaaclab-deploy")
 class TrackingRLEnvDeploy(TrackingRLEnv, gym.Env):
     """Task class for training motion tracker for deployment. The actuators are delayed, and the policy's observations `motion_anchor_pos_b` and `base_lin_vel` are removed."""
 

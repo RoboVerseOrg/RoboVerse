@@ -858,8 +858,7 @@ correction; a learned policy does).
 RoboTwin demos are *single-embodiment bimanual*: one articulation whose
 14-D action `[L_arm(6), L_grip, R_arm(6), R_grip]` drives both arms.
 RoboVerse expresses this as one name-keyed robot entry — the one-robot
-case of the same `*_v2` format the multi-agent loader uses (see the
-[multi-agent dataset docs](../dataset/multiagent.md)). Because RoboTwin
+case of the same `*_v2` format the multi-agent loader uses. Because RoboTwin
 and RoboVerse both run SAPIEN3, dof-position-target replay reproduces the
 recorded motion closely.
 
