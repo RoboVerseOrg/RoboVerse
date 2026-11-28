@@ -114,7 +114,7 @@ def test_newest_run_per_simulator_and_engine_pair_is_rendered(gen, tmp_path):
         }).verdict
         == "n/a"
     )
-    assert "- `toy` / hold: drift 0.3 rad / base moved" in page, "a pipe in a detail cannot break the table"
+    assert "- `toy` / hold: `drift 0.3 rad / base moved" in page, "a pipe in a detail cannot break the table"
     assert "### Cross-engine parity: mujoco vs isaacsim (2026-11-28)" in page
     assert "| `toy` | default | 400 | 0.63/s | `f` | 0.0200 m | FAIL |" in page
     assert "| `toy` | full range | 400 | 0.63/s | `f` | 0.0200 m | reported, not judged (floating base) |" in page

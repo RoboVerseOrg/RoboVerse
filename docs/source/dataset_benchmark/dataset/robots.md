@@ -105,23 +105,23 @@ result files per simulator; how to add a robot and pass them is in [Add a robot]
 
 Named failures (the first per robot and check):
 
-- `aloha_agilex` / config: no joint_limits for ['fl_joint1', 'fl_joint2', 'fl_joint3', 'fl_joint4', 'fl_joint5', 'fl_joint6', 'fl_joint7', 'fl_joint8', 'fr_joint1', 'fr_joint2', 'fr_joint3', 'fr_joint4', 'fr_joint5', 'fr_joint6', 'fr_joint7', 'fr_
-- `g1_tracking` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_yaw_joint', 'left_wri
-- `g1_tracking` / assets: ['/workspace/roboverse_maint/RoboVerse/roboverse_data/unitree_description/usd/g1/g1.usd'] not local and not fetched from the Hub (Exception)
-- `g1_tracking` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
-- `g1_tracking` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
-- `g1_tracking` / hold: not attempted: a cheaper check already failed
-- `openarm_bimanual_wuji` / assets: ['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)
-- `openarm_bimanual_wuji` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
-- `openarm_bimanual_wuji` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
-- `openarm_bimanual_wuji` / hold: not attempted: a cheaper check already failed
-- `openarm_wuji` / assets: ['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)
-- `openarm_wuji` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
-- `openarm_wuji` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
-- `openarm_wuji` / hold: not attempted: a cheaper check already failed
-- `sawyer` / hold: child exited 1 without a report: RuntimeError: Failed to create articulation at: /World/envs/env_[^/]+/sawyer/root_joint. Please check PhysX logs.
-- `shadow_hand` / limits: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
-- `shadow_hand` / actuators: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
+- `aloha_agilex` / config: `no joint_limits for ['fl_joint1', 'fl_joint2', 'fl_joint3', 'fl_joint4', 'fl_joint5', 'fl_joint6', 'fl_joint7', 'fl_joint8', 'fr_joint1', 'fr_joint2', 'fr_joint3', 'fr_joint4', 'fr_joint5', 'fr_joint6', 'fr_joint7', 'fr_`
+- `g1_tracking` / config: `no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_yaw_joint', 'left_wri`
+- `g1_tracking` / assets: `['/workspace/roboverse_maint/RoboVerse/roboverse_data/unitree_description/usd/g1/g1.usd'] not local and not fetched from the Hub (Exception)`
+- `g1_tracking` / limits: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'`
+- `g1_tracking` / actuators: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'`
+- `g1_tracking` / hold: `not attempted: a cheaper check already failed`
+- `openarm_bimanual_wuji` / assets: `['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)`
+- `openarm_bimanual_wuji` / limits: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'`
+- `openarm_bimanual_wuji` / actuators: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'`
+- `openarm_bimanual_wuji` / hold: `not attempted: a cheaper check already failed`
+- `openarm_wuji` / assets: `['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)`
+- `openarm_wuji` / limits: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'`
+- `openarm_wuji` / actuators: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'`
+- `openarm_wuji` / hold: `not attempted: a cheaper check already failed`
+- `sawyer` / hold: `child exited 1 without a report: RuntimeError: Failed to create articulation at: /World/envs/env_[^/]+/sawyer/root_joint. Please check PhysX logs.`
+- `shadow_hand` / limits: `MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 `
+- `shadow_hand` / actuators: `MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 `
 
 ### Self-check on mujoco (2026-11-28)
 
@@ -169,26 +169,26 @@ Named failures (the first per robot and check):
 
 Named failures (the first per robot and check):
 
-- `aloha_agilex` / config: no joint_limits for ['fl_joint1', 'fl_joint2', 'fl_joint3', 'fl_joint4', 'fl_joint5', 'fl_joint6', 'fl_joint7', 'fl_joint8', 'fr_joint1', 'fr_joint2', 'fr_joint3', 'fr_joint4', 'fr_joint5', 'fr_joint6', 'fr_joint7', 'fr_
-- `arx_l5` / hold: after 200 steps at the default pose: max joint deviation 0.0616 rad (joint7), base moved 0.0000 m
-- `cartpole` / hold: could not build the robot on mujoco: FatalError: add_pair: broadphase buffer full
-- `g1_tracking` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_yaw_joint', 'left_wri
-- `g1_tracking` / assets: ['roboverse_data/unitree_description/mjcf/g1.xml'] not local and not fetched from the Hub (Exception)
-- `g1_tracking` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
-- `g1_tracking` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
-- `g1_tracking` / hold: could not build the robot on mujoco: Exception: File roboverse_data/unitree_description/mjcf/g1.xml neither exists in the local directory nor exists in the HuggingFace data sources ('RoboVerseOrg/roboverse_da
-- `koch_1` / hold: after 200 steps at the default pose: max joint deviation 0.2189 rad (pitch), base moved 0.0000 m
-- `openarm_bimanual_wuji` / assets: ['roboverse_data/robots/openarm_wuji/openarm_wuji.xml'] not local and not fetched from the Hub (Exception)
-- `openarm_bimanual_wuji` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
-- `openarm_bimanual_wuji` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
-- `openarm_bimanual_wuji` / hold: could not build the robot on mujoco: Exception: File roboverse_data/robots/openarm_wuji/openarm_wuji.xml neither exists in the local directory nor exists in the HuggingFace data sources ('RoboVerseOrg/robover
-- `openarm_wuji` / assets: ['roboverse_data/robots/openarm_wuji/openarm_wuji.xml'] not local and not fetched from the Hub (Exception)
-- `openarm_wuji` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
-- `openarm_wuji` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
-- `openarm_wuji` / hold: could not build the robot on mujoco: Exception: File roboverse_data/robots/openarm_wuji/openarm_wuji.xml neither exists in the local directory nor exists in the HuggingFace data sources ('RoboVerseOrg/robover
-- `shadow_hand` / limits: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
-- `shadow_hand` / actuators: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
-- `shadow_hand` / hold: could not build the robot on mujoco: AttributeError: Line 4: error while parsing element <option>: 'apirate' is not a valid attribute for <option>
+- `aloha_agilex` / config: `no joint_limits for ['fl_joint1', 'fl_joint2', 'fl_joint3', 'fl_joint4', 'fl_joint5', 'fl_joint6', 'fl_joint7', 'fl_joint8', 'fr_joint1', 'fr_joint2', 'fr_joint3', 'fr_joint4', 'fr_joint5', 'fr_joint6', 'fr_joint7', 'fr_`
+- `arx_l5` / hold: `after 200 steps at the default pose: max joint deviation 0.0616 rad (joint7), base moved 0.0000 m`
+- `cartpole` / hold: `could not build the robot on mujoco: FatalError: add_pair: broadphase buffer full`
+- `g1_tracking` / config: `no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_yaw_joint', 'left_wri`
+- `g1_tracking` / assets: `['roboverse_data/unitree_description/mjcf/g1.xml'] not local and not fetched from the Hub (Exception)`
+- `g1_tracking` / limits: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'`
+- `g1_tracking` / actuators: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'`
+- `g1_tracking` / hold: `could not build the robot on mujoco: Exception: File roboverse_data/unitree_description/mjcf/g1.xml neither exists in the local directory nor exists in the HuggingFace data sources ('RoboVerseOrg/roboverse_da`
+- `koch_1` / hold: `after 200 steps at the default pose: max joint deviation 0.2189 rad (pitch), base moved 0.0000 m`
+- `openarm_bimanual_wuji` / assets: `['roboverse_data/robots/openarm_wuji/openarm_wuji.xml'] not local and not fetched from the Hub (Exception)`
+- `openarm_bimanual_wuji` / limits: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'`
+- `openarm_bimanual_wuji` / actuators: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'`
+- `openarm_bimanual_wuji` / hold: `could not build the robot on mujoco: Exception: File roboverse_data/robots/openarm_wuji/openarm_wuji.xml neither exists in the local directory nor exists in the HuggingFace data sources ('RoboVerseOrg/robover`
+- `openarm_wuji` / assets: `['roboverse_data/robots/openarm_wuji/openarm_wuji.xml'] not local and not fetched from the Hub (Exception)`
+- `openarm_wuji` / limits: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'`
+- `openarm_wuji` / actuators: `MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'`
+- `openarm_wuji` / hold: `could not build the robot on mujoco: Exception: File roboverse_data/robots/openarm_wuji/openarm_wuji.xml neither exists in the local directory nor exists in the HuggingFace data sources ('RoboVerseOrg/robover`
+- `shadow_hand` / limits: `MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 `
+- `shadow_hand` / actuators: `MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 `
+- `shadow_hand` / hold: `could not build the robot on mujoco: AttributeError: Line 4: error while parsing element <option>: 'apirate' is not a valid attribute for <option>`
 
 ## Cross-engine parity
 

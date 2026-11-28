@@ -118,8 +118,9 @@ def render_check(sim: str, date: str, data: dict) -> list[str]:
     if failures:
         lines += ["", "Named failures (the first per robot and check):", ""]
         for robot, row in failures:
-            detail = row.detail.replace("|", "/").replace("\n", " ")
-            lines.append(f"- `{robot}` / {row.check}: {detail[:220]}")
+            # inline code: a detail may carry regex fragments (``env_[^/]+``) or brackets MyST would read as markup
+            detail = row.detail.replace("|", "/").replace("\n", " ").replace("`", "'")
+            lines.append(f"- `{robot}` / {row.check}: `{detail[:220]}`")
     return lines
 
 
