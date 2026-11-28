@@ -2,51 +2,6 @@
   "simulator": "mujoco",
   "robots": [
     {
-      "robot": "aloha",
-      "simulator": "mujoco",
-      "ok": false,
-      "applicable": false,
-      "verdict": "FAIL",
-      "rows": [
-        {
-          "check": "config",
-          "ok": false,
-          "detail": "no default position for ['left/elbow', 'left/forearm_roll', 'left/left_finger', 'left/right_finger', 'left/shoulder', 'left/waist', 'left/wrist_angle', 'left/wrist_rotate', 'right/elbow', 'right/forearm_roll', 'right/left_finger', 'right/right_finger', 'right/shoulder', 'right/waist', 'right/wrist_angle', 'right/wrist_rotate']",
-          "applicable": true
-        },
-        {
-          "check": "assets",
-          "ok": false,
-          "detail": "no mjcf_path declared for mujoco",
-          "applicable": false
-        },
-        {
-          "check": "kinematics",
-          "ok": true,
-          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
-          "applicable": true
-        },
-        {
-          "check": "limits",
-          "ok": true,
-          "detail": "no mjcf_path or no joint_limits: not judged",
-          "applicable": true
-        },
-        {
-          "check": "actuators",
-          "ok": true,
-          "detail": "no mjcf_path or no actuators: not judged",
-          "applicable": true
-        },
-        {
-          "check": "hold",
-          "ok": false,
-          "detail": "n/a: no asset declared for mujoco",
-          "applicable": false
-        }
-      ]
-    },
-    {
       "robot": "aloha_agilex",
       "simulator": "mujoco",
       "ok": false,
@@ -124,14 +79,14 @@
         },
         {
           "check": "actuators",
-          "ok": false,
-          "detail": "1 actuator(s) not named after their joint (the handler would add a second servo): 'gripper' drives 'joint7'",
+          "ok": true,
+          "detail": "7 config joints driven by an MJCF actuator (1 named differently, matched by transmission: 'gripper' drives 'joint7')",
           "applicable": true
         },
         {
           "check": "hold",
           "ok": false,
-          "detail": "could not build the robot on mujoco: ValueError: Robot 'arx_l5': actuators ['gripper'] are not named after a joint of the robot (joints: ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7', '",
+          "detail": "after 200 steps at the default pose: max joint deviation 0.0616 rad (joint7), base moved 0.0000 m",
           "applicable": true
         }
       ]
@@ -163,14 +118,14 @@
         },
         {
           "check": "limits",
-          "ok": false,
-          "detail": "1 of 1 limited joints disagree with the MJCF: slider cfg [-2.000, 2.000] vs mjcf [-1.800, 1.800]",
+          "ok": true,
+          "detail": "1 limited joints match the MJCF ranges",
           "applicable": true
         },
         {
           "check": "actuators",
-          "ok": false,
-          "detail": "1 actuator(s) not named after their joint (the handler would add a second servo): 'slide' drives 'slider'",
+          "ok": true,
+          "detail": "1 config joints driven by an MJCF actuator (1 named differently, matched by transmission: 'slide' drives 'slider')",
           "applicable": true
         },
         {
@@ -184,14 +139,14 @@
     {
       "robot": "fetch",
       "simulator": "mujoco",
-      "ok": false,
+      "ok": true,
       "applicable": false,
-      "verdict": "FAIL",
+      "verdict": "n/a",
       "rows": [
         {
           "check": "config",
-          "ok": false,
-          "detail": "no default position for ['elbow_flex_joint', 'forearm_roll_joint', 'head_pan_joint', 'head_tilt_joint', 'l_gripper_finger_joint', 'l_wheel_joint', 'r_gripper_finger_joint', 'r_wheel_joint', 'shoulder_lift_joint', 'shoulder_pan_joint', 'torso_lift_joint', 'upperarm_roll_joint', 'wrist_flex_joint', 'wrist_roll_joint']",
+          "ok": true,
+          "detail": "14 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -260,7 +215,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "9 MJCF actuators named after their joints",
+          "detail": "9 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -274,14 +229,14 @@
     {
       "robot": "franka_with_gripper_extension",
       "simulator": "mujoco",
-      "ok": false,
+      "ok": true,
       "applicable": false,
-      "verdict": "FAIL",
+      "verdict": "n/a",
       "rows": [
         {
           "check": "config",
-          "ok": false,
-          "detail": "no default position for ['panda_finger_joint1', 'panda_finger_joint2', 'panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']",
+          "ok": true,
+          "detail": "9 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -350,7 +305,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "0 MJCF actuators named after their joints, 29 joint(s) driven by a servo synthesized from the config",
+          "detail": "0 config joints driven by an MJCF actuator, 29 joint(s) driven by a servo synthesized from the config",
           "applicable": true
         },
         {
@@ -395,7 +350,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "12 MJCF actuators named after their joints",
+          "detail": "12 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -530,7 +485,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "29 MJCF actuators named after their joints",
+          "detail": "29 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -665,7 +620,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "7 MJCF actuators named after their joints",
+          "detail": "7 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -710,7 +665,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "0 MJCF actuators named after their joints, 12 joint(s) driven by a servo synthesized from the config",
+          "detail": "0 config joints driven by an MJCF actuator, 12 joint(s) driven by a servo synthesized from the config",
           "applicable": true
         },
         {
@@ -724,14 +679,14 @@
     {
       "robot": "google_robot_static",
       "simulator": "mujoco",
-      "ok": false,
+      "ok": true,
       "applicable": false,
-      "verdict": "FAIL",
+      "verdict": "n/a",
       "rows": [
         {
           "check": "config",
-          "ok": false,
-          "detail": "no joint_limits for ['joint_bicep', 'joint_elbow', 'joint_finger_left', 'joint_finger_right', 'joint_forearm', 'joint_gripper', 'joint_head_pan', 'joint_head_tilt', 'joint_shoulder', 'joint_torso', 'joint_wrist']; no default position for ['joint_bicep', 'joint_elbow', 'joint_finger_left', 'joint_finger_right', 'joint_forearm', 'joint_gripper', 'joint_head_pan', 'joint_head_tilt', 'joint_shoulder', 'joint_torso', 'joint_wrist']",
+          "ok": true,
+          "detail": "11 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -800,7 +755,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "19 MJCF actuators named after their joints",
+          "detail": "19 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -812,61 +767,16 @@
       ]
     },
     {
-      "robot": "h1_2_without_hand",
-      "simulator": "mujoco",
-      "ok": false,
-      "applicable": false,
-      "verdict": "FAIL",
-      "rows": [
-        {
-          "check": "config",
-          "ok": false,
-          "detail": "no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_pitch_joint', 'left_elbow_roll_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_pitch_joint', 'left_shoulder_roll_joint', 'left_shoulder_yaw_joint', 'left_wrist_pitch_joint', 'left_wrist_yaw_joint', 'right_ankle_pitch_joint', 'right_ankle_roll_joint', 'right_elbow_pitch_joint', 'right_elbow_roll_joint', 'right_hip_pitch_joint', 'right_hip_roll_joint', 'right_hip_yaw_joint', 'right_knee_joint', 'right_shoulder_pitch_joint', 'right_shoulder_roll_joint', 'right_shoulder_yaw_joint', 'right_wrist_pitch_joint', 'right_wrist_yaw_joint', 'torso_joint']",
-          "applicable": true
-        },
-        {
-          "check": "assets",
-          "ok": false,
-          "detail": "no mjcf_path declared for mujoco",
-          "applicable": false
-        },
-        {
-          "check": "kinematics",
-          "ok": true,
-          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
-          "applicable": true
-        },
-        {
-          "check": "limits",
-          "ok": true,
-          "detail": "no mjcf_path or no joint_limits: not judged",
-          "applicable": true
-        },
-        {
-          "check": "actuators",
-          "ok": true,
-          "detail": "no mjcf_path or no actuators: not judged",
-          "applicable": true
-        },
-        {
-          "check": "hold",
-          "ok": false,
-          "detail": "n/a: no asset declared for mujoco",
-          "applicable": false
-        }
-      ]
-    },
-    {
       "robot": "h1_hand",
       "simulator": "mujoco",
-      "ok": false,
+      "ok": true,
       "applicable": true,
-      "verdict": "FAIL",
+      "verdict": "pass",
       "rows": [
         {
           "check": "config",
-          "ok": false,
-          "detail": "no joint_limits for ['lh_FFJ1', 'lh_FFJ2', 'lh_FFJ3', 'lh_FFJ4', 'lh_LFJ1', 'lh_LFJ2', 'lh_LFJ3', 'lh_LFJ4', 'lh_LFJ5', 'lh_MFJ1', 'lh_MFJ2', 'lh_MFJ3', 'lh_MFJ4', 'lh_RFJ1', 'lh_RFJ2', 'lh_RFJ3', 'lh_RFJ4', 'lh_THJ1', 'lh_THJ2', 'lh_THJ3', 'lh_THJ4', 'lh_THJ5', 'lh_WRJ1', 'lh_WRJ2', 'rh_FFJ1', 'rh_FFJ2', 'rh_FFJ3', 'rh_FFJ4', 'rh_LFJ1', 'rh_LFJ2', 'rh_LFJ3', 'rh_LFJ4', 'rh_LFJ5', 'rh_MFJ1', 'rh_MFJ2', 'rh_MFJ3', 'rh_MFJ4', 'rh_RFJ1', 'rh_RFJ2', 'rh_RFJ3', 'rh_RFJ4', 'rh_THJ1', 'rh_THJ2', 'rh_THJ3', 'rh_THJ4', 'rh_THJ5', 'rh_WRJ1', 'rh_WRJ2']; no default position for ['left_ankle', 'left_elbow', 'left_hip_pitch', 'left_hip_roll', 'left_hip_yaw', 'left_knee', 'left_shoulder_pitch', 'left_shoulder_roll', 'left_shoulder_yaw', 'left_wrist_yaw', 'lh_FFJ1', 'lh_FFJ2', 'lh_FFJ3', 'lh_FFJ4', 'lh_LFJ1', 'lh_LFJ2', 'lh_LFJ3', 'lh_LFJ4', 'lh_LFJ5', 'lh_MFJ1', 'lh_MFJ2', 'lh_MFJ3', 'lh_MFJ4', 'lh_RFJ1', 'lh_RFJ2', 'lh_RFJ3', 'lh_RFJ4', 'lh_THJ1', 'lh_THJ2', 'lh_THJ3', 'lh_THJ4', 'lh_THJ5', 'lh_WRJ1', 'lh_WRJ2', 'rh_FFJ1', 'rh_FFJ2', 'rh_FFJ3', 'rh_FFJ4', 'rh_LFJ1', 'rh_LFJ2', 'rh_LFJ3', 'rh_LFJ4', 'rh_LFJ5', 'rh_MFJ1', 'rh_MFJ2', 'rh_MFJ3', 'rh_MFJ4', 'rh_RFJ1', 'rh_RFJ2', 'rh_RFJ3', 'rh_RFJ4', 'rh_THJ1', 'rh_THJ2', 'rh_THJ3', 'rh_THJ4', 'rh_THJ5', 'rh_WRJ1', 'rh_WRJ2', 'right_ankle', 'right_elbow', 'right_hip_pitch', 'right_hip_roll', 'right_hip_yaw', 'right_knee', 'right_shoulder_pitch', 'right_shoulder_roll', 'right_shoulder_yaw', 'right_wrist_yaw', 'torso']",
+          "ok": true,
+          "detail": "69 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -884,19 +794,19 @@
         {
           "check": "limits",
           "ok": true,
-          "detail": "21 limited joints match the MJCF ranges",
+          "detail": "69 limited joints match the MJCF ranges",
           "applicable": true
         },
         {
           "check": "actuators",
-          "ok": false,
-          "detail": "48 actuator(s) not named after their joint (the handler would add a second servo): 'lh_A_WRJ2' drives 'lh_WRJ2'; 'lh_A_WRJ1' drives 'lh_WRJ1'; 'lh_A_THJ5' drives 'lh_THJ5'; 'lh_A_THJ4' drives 'lh_THJ4'",
+          "ok": true,
+          "detail": "69 config joints driven by an MJCF actuator (48 named differently, matched by transmission: 'lh_A_FFJ1' drives 'lh_FFJ1'; 'lh_A_FFJ2' drives 'lh_FFJ2'; 'lh_A_FFJ3' drives 'lh_FFJ3')",
           "applicable": true
         },
         {
           "check": "hold",
-          "ok": false,
-          "detail": "could not build the robot on mujoco: ValueError: Robot 'h1_hand': the MJCF roboverse_data/robots/h1_hand/mjcf/h1_hand.xml ships no actuator for joint 'lh_WRJ2' and its BaseActuatorCfg sets no stiffness, so the",
+          "ok": true,
+          "detail": "floating base: not judged; after 200 steps max joint deviation 0.0134 rad (lh_WRJ1), base moved 9.3599 m",
           "applicable": true
         }
       ]
@@ -904,14 +814,14 @@
     {
       "robot": "h1_simple_hand",
       "simulator": "mujoco",
-      "ok": false,
+      "ok": true,
       "applicable": true,
-      "verdict": "FAIL",
+      "verdict": "pass",
       "rows": [
         {
           "check": "config",
-          "ok": false,
-          "detail": "no default position for ['L_index_intermediate', 'L_index_proximal', 'L_middle_intermediate', 'L_middle_proximal', 'L_pinky_intermediate', 'L_pinky_proximal', 'L_ring_intermediate', 'L_ring_proximal', 'L_thumb_distal', 'L_thumb_intermediate', 'L_thumb_proximal_pitch', 'L_thumb_proximal_yaw', 'R_index_intermediate', 'R_index_proximal', 'R_middle_intermediate', 'R_middle_proximal', 'R_pinky_intermediate', 'R_pinky_proximal', 'R_ring_intermediate', 'R_ring_proximal', 'R_thumb_distal', 'R_thumb_intermediate', 'R_thumb_proximal_pitch', 'R_thumb_proximal_yaw', 'left_ankle', 'left_elbow', 'left_hand', 'left_hip_pitch', 'left_hip_roll', 'left_hip_yaw', 'left_knee', 'left_shoulder_pitch', 'left_shoulder_roll', 'left_shoulder_yaw', 'right_ankle', 'right_elbow', 'right_hand', 'right_hip_pitch', 'right_hip_roll', 'right_hip_yaw', 'right_knee', 'right_shoulder_pitch', 'right_shoulder_roll', 'right_shoulder_yaw', 'torso']",
+          "ok": true,
+          "detail": "45 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -928,20 +838,20 @@
         },
         {
           "check": "limits",
-          "ok": false,
-          "detail": "26 of 45 limited joints disagree with the MJCF: left_hand cfg [-6.000, 6.000] vs mjcf [-3.054, 3.054]; right_hand cfg [-6.000, 6.000] vs mjcf [-3.054, 3.054]; L_index_proximal cfg [-1.000, 1.000] vs mjcf [0.000, 1.700]; L_index_intermediate cfg [-1.000, 1.000] vs mjcf [0.000, 1.700]",
+          "ok": true,
+          "detail": "45 limited joints match the MJCF ranges",
           "applicable": true
         },
         {
           "check": "actuators",
           "ok": true,
-          "detail": "45 MJCF actuators named after their joints",
+          "detail": "45 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
           "check": "hold",
           "ok": true,
-          "detail": "floating base: not judged; after 200 steps max joint deviation 0.0135 rad (left_hip_roll), base moved 10.0548 m",
+          "detail": "floating base: not judged; after 200 steps max joint deviation 0.0135 rad (left_hip_roll), base moved 10.0546 m",
           "applicable": true
         }
       ]
@@ -980,7 +890,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "19 MJCF actuators named after their joints",
+          "detail": "19 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -988,51 +898,6 @@
           "ok": true,
           "detail": "floating base: not judged; after 200 steps max joint deviation 0.1711 rad (right_hip_roll), base moved 6.8485 m",
           "applicable": true
-        }
-      ]
-    },
-    {
-      "robot": "iiwa",
-      "simulator": "mujoco",
-      "ok": false,
-      "applicable": false,
-      "verdict": "FAIL",
-      "rows": [
-        {
-          "check": "config",
-          "ok": false,
-          "detail": "no joint_limits for ['iiwa7_joint_1', 'iiwa7_joint_2', 'iiwa7_joint_3', 'iiwa7_joint_4', 'iiwa7_joint_5', 'iiwa7_joint_6', 'iiwa7_joint_7', 'panda_finger_joint1', 'panda_finger_joint2']; no default position for ['iiwa7_joint_1', 'iiwa7_joint_2', 'iiwa7_joint_3', 'iiwa7_joint_4', 'iiwa7_joint_5', 'iiwa7_joint_6', 'iiwa7_joint_7', 'panda_finger_joint1', 'panda_finger_joint2']",
-          "applicable": true
-        },
-        {
-          "check": "assets",
-          "ok": false,
-          "detail": "no mjcf_path declared for mujoco",
-          "applicable": false
-        },
-        {
-          "check": "kinematics",
-          "ok": true,
-          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
-          "applicable": true
-        },
-        {
-          "check": "limits",
-          "ok": true,
-          "detail": "no mjcf_path or no joint_limits: not judged",
-          "applicable": true
-        },
-        {
-          "check": "actuators",
-          "ok": true,
-          "detail": "no mjcf_path or no actuators: not judged",
-          "applicable": true
-        },
-        {
-          "check": "hold",
-          "ok": false,
-          "detail": "n/a: no asset declared for mujoco",
-          "applicable": false
         }
       ]
     },
@@ -1070,7 +935,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "7 MJCF actuators named after their joints",
+          "detail": "7 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -1084,14 +949,14 @@
     {
       "robot": "kinova_gen3_robotiq_2f85",
       "simulator": "mujoco",
-      "ok": false,
+      "ok": true,
       "applicable": false,
-      "verdict": "FAIL",
+      "verdict": "n/a",
       "rows": [
         {
           "check": "config",
-          "ok": false,
-          "detail": "no default position for ['finger_joint', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6', 'joint_7', 'left_outer_finger_joint', 'right_outer_finger_joint']",
+          "ok": true,
+          "detail": "10 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1160,7 +1025,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "6 MJCF actuators named after their joints",
+          "detail": "6 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -1205,7 +1070,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "6 MJCF actuators named after their joints",
+          "detail": "6 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -1309,14 +1174,14 @@
     {
       "robot": "sawyer",
       "simulator": "mujoco",
-      "ok": false,
+      "ok": true,
       "applicable": false,
-      "verdict": "FAIL",
+      "verdict": "n/a",
       "rows": [
         {
           "check": "config",
-          "ok": false,
-          "detail": "no default position for ['head_pan', 'right_gripper_l_finger_joint', 'right_gripper_r_finger_joint', 'right_j0', 'right_j1', 'right_j2', 'right_j3', 'right_j4', 'right_j5', 'right_j6']",
+          "ok": true,
+          "detail": "10 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1430,7 +1295,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "22 MJCF actuators named after their joints",
+          "detail": "22 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -1475,7 +1340,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "22 MJCF actuators named after their joints",
+          "detail": "22 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -1520,7 +1385,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "6 MJCF actuators named after their joints",
+          "detail": "6 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -1534,14 +1399,14 @@
     {
       "robot": "unitree_dex3_1_left",
       "simulator": "mujoco",
-      "ok": false,
+      "ok": true,
       "applicable": false,
-      "verdict": "FAIL",
+      "verdict": "n/a",
       "rows": [
         {
           "check": "config",
-          "ok": false,
-          "detail": "no default position for ['left_hand_index_0_joint', 'left_hand_index_1_joint', 'left_hand_middle_0_joint', 'left_hand_middle_1_joint', 'left_hand_thumb_0_joint', 'left_hand_thumb_1_joint', 'left_hand_thumb_2_joint']",
+          "ok": true,
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1610,7 +1475,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "6 MJCF actuators named after their joints",
+          "detail": "6 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -1655,7 +1520,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "6 MJCF actuators named after their joints",
+          "detail": "6 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -1663,96 +1528,6 @@
           "ok": true,
           "detail": "after 200 steps at the default pose: max joint deviation 0.0000 rad (wrist_2_joint), base moved 0.0000 m",
           "applicable": true
-        }
-      ]
-    },
-    {
-      "robot": "ur5e_2f85",
-      "simulator": "mujoco",
-      "ok": false,
-      "applicable": false,
-      "verdict": "FAIL",
-      "rows": [
-        {
-          "check": "config",
-          "ok": false,
-          "detail": "no default position for ['elbow_joint', 'shoulder_lift_joint', 'shoulder_pan_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']",
-          "applicable": true
-        },
-        {
-          "check": "assets",
-          "ok": false,
-          "detail": "no mjcf_path declared for mujoco",
-          "applicable": false
-        },
-        {
-          "check": "kinematics",
-          "ok": true,
-          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
-          "applicable": true
-        },
-        {
-          "check": "limits",
-          "ok": true,
-          "detail": "no mjcf_path or no joint_limits: not judged",
-          "applicable": true
-        },
-        {
-          "check": "actuators",
-          "ok": true,
-          "detail": "no mjcf_path or no actuators: not judged",
-          "applicable": true
-        },
-        {
-          "check": "hold",
-          "ok": false,
-          "detail": "n/a: no asset declared for mujoco",
-          "applicable": false
-        }
-      ]
-    },
-    {
-      "robot": "vega",
-      "simulator": "mujoco",
-      "ok": false,
-      "applicable": false,
-      "verdict": "FAIL",
-      "rows": [
-        {
-          "check": "config",
-          "ok": false,
-          "detail": "default outside limits for ['torso_j1']",
-          "applicable": true
-        },
-        {
-          "check": "assets",
-          "ok": false,
-          "detail": "no mjcf_path declared for mujoco",
-          "applicable": false
-        },
-        {
-          "check": "kinematics",
-          "ok": true,
-          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
-          "applicable": true
-        },
-        {
-          "check": "limits",
-          "ok": true,
-          "detail": "no mjcf_path or no joint_limits: not judged",
-          "applicable": true
-        },
-        {
-          "check": "actuators",
-          "ok": true,
-          "detail": "no mjcf_path or no actuators: not judged",
-          "applicable": true
-        },
-        {
-          "check": "hold",
-          "ok": false,
-          "detail": "n/a: no asset declared for mujoco",
-          "applicable": false
         }
       ]
     },
@@ -1835,7 +1610,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "7 MJCF actuators named after their joints",
+          "detail": "7 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {
@@ -1880,7 +1655,7 @@
         {
           "check": "actuators",
           "ok": true,
-          "detail": "6 MJCF actuators named after their joints",
+          "detail": "6 config joints driven by an MJCF actuator",
           "applicable": true
         },
         {

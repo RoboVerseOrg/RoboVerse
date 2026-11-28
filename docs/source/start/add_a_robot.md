@@ -58,9 +58,9 @@ folder is fetched) and, on a USD backend, the USD's payloads and references reso
 over `configuration/*.usd`); the MJCF loads in MuJoCo's model, the end-effector body is found and
 forward kinematics of the default pose is finite (the skill library and the IL adapters depend on this; a robot
 without `ee_body_name` is not judged here); the config's joint limits agree with the ranges the MJCF declares;
-every MJCF actuator that drives a config joint is named after that joint (the MuJoCo handler finds actuators by
-joint name and would add a second servo otherwise, which is the ARX L5 defect below) and every joint the config
-drives exists in the MJCF; and holding the default pose for 200 steps leaves every joint within 0.05 rad and a
+every joint the config drives exists in the MJCF and is driven by at most one MJCF actuator (the handler matches
+an actuator to its joint by its transmission, so a Menagerie hand's `lh_A_WRJ2` drives `lh_WRJ2` as is; a tendon- or
+site-driven actuator has no action slot and is reported); and holding the default pose for 200 steps leaves every joint within 0.05 rad and a
 fixed base within 1 cm (a floating base is reported, not judged). `tests/test_roboverse_robot_cfg_validation.py`
 runs the config part on every pull request. On 2026-11-28 Franka, YAM and the Sharpa hand pass all six on
 MuJoCo, and Franka passes them on Isaac Sim 6 (YAM has no USD, which the assets row says).
@@ -74,30 +74,36 @@ python -m metasim robot check --all --sim isaacsim --out-dir gate/robots_isaac  
 The nightly gate runs the sweep on both engines after the task gate and publishes the tables; the Robots page
 renders the newest run per engine from `results/robots/`.
 
-On Isaac Sim 6 (2026-11-28, one child process per robot) 9 of the 42 pass: franka, g1_dof12, g1_dof29, gen3, h1,
-h1_wrist, ur10e, ur5e, z1; 10 are `n/a` (no USD, nothing else wrong); 23 fail, most of them the config row before any
-boot, and three USDs (g1, go1, iiwa14) do not build on Isaac Lab 3: the handler's contact sensor finds no rigid bodies under the robot
-prim (`ValueError: No contact sensors added to the prim`), so those three are an asset or handler question, not a
-config one. The generated page carries each robot's detail.
+On Isaac Sim 6 (2026-11-28, one child process per robot) 13 of the 37 pass: franka, franka_with_gripper_extension,
+g1, g1_dof12, g1_dof29, gen3, h1, h1_wrist, iiwa14, kinova_gen3_robotiq_2f85, ur10e, ur5e, z1; 18 are `n/a` (no USD,
+nothing else wrong); 6 fail: three assets missing on the Hub (g1_tracking, openarm_wuji, openarm_bimanual_wuji),
+shadow_hand's MJCF (`apirate`), aloha_agilex's limits, and sawyer's USD, which Isaac Lab 3 cannot create an
+articulation from. In the morning the same sweep read 9 pass, 23 fail, 10 n/a over 42 configs: the iiwa14 USD was a
+shell whose payloads (`usd/configuration/*.usd`) the single-file fetch never brought, and the mjlab g1 config pointed
+`usd_path` at its MJCF; both were reported as "no rigid bodies under the prim". The downloader now fetches a USD's
+folder and the asset-field rule in the config row names a path of the wrong format. The generated page carries each
+robot's detail.
 
-### The sweep of 2026-11-28 (MuJoCo, 42 configs)
+### The sweep of 2026-11-28 (MuJoCo, 37 configs)
 
 The table itself is generated: [Robots, self-check](../dataset_benchmark/dataset/robots.md#self-check) renders the
-newest `results/robots/<date>-mujoco-check/robots.json` (17 pass, 21 fail, 4 n/a). A robot with no MJCF is
-`n/a` on MuJoCo unless a backend-independent row (config) fails it, which 13 of the Isaac / URDF only configs do. By
-cause: 13 configs are Isaac / URDF only and have no MJCF (aloha, aloha_agilex, fetch, franka_with_gripper_extension, google_robot_static,
-h1_2_without_hand, iiwa, kinova_gen3_robotiq_2f85, sawyer, unitree_dex3_1_left, ur5e_2f85, vega, xhand_right; most
-also lack defaults or limits for some actuators, vega's `torso_j1` default is outside its limits); 3 have assets
-missing on the Hub (g1_tracking, openarm_wuji, openarm_bimanual_wuji); 3 are placeholders (g1_dof23, g1_dof27,
-g1_dof29_dex3); 4 have asset defects (shadow_hand: MJCF uses the removed `apirate` option; h1_hand: no actuator for
-`lh_WRJ2`; arx_l5: MJCF actuator `gripper` is not named after its joint `joint7`; cartpole: limits ±2.0 vs MJCF
-±1.8 and a standalone build overflows the broadphase buffer); 2 have config defects (h1_simple_hand: placeholder
-limits ±6 and missing defaults; koch_1: sags 0.22 rad at `pitch` under its gains).
+newest `results/robots/<date>-mujoco-check/robots.json` (19 pass, 8 fail, 10 n/a). A robot with no MJCF is `n/a` on
+MuJoCo unless a backend-independent row (config, limits, actuators) fails it. The eight failures, by cause: three
+have assets missing on the Hub (g1_tracking, openarm_wuji, openarm_bimanual_wuji); shadow_hand's MJCF uses the
+removed `apirate` option; cartpole is a scene file whose standalone build overflows MuJoCo's broadphase buffer;
+aloha_agilex has no joint limits (its URDF lives in the RoboTwin checkout); arx_l5 sags 0.06 rad at `joint7` (its
+MJCF `gripper` servo against the config's gains) and koch_1 0.22 rad at `pitch`. The generated page carries each
+robot's detail.
 
-Six of the passes were failures that morning: so_arm100, koch_1, ur5e, ur10e, lite6 and arx_l5 named a tool body
-(`tool0`) their MJCF does not have, and so_arm100, koch_1, gen3 and iiwa14 carried another arm's joint limits (the
-`limits` row found them; so_arm100's wrist default was 0.7 rad outside the reachable range). Those configs now match
-their MJCFs. The remaining rows are the robot backlog, in the order above.
+The morning of that day the sweep read 17 pass, 21 fail, 4 n/a over 42 configs. Six passes were failures until noon:
+so_arm100, koch_1, ur5e, ur10e, lite6 and arx_l5 named a tool body (`tool0`) their MJCF does not have, and so_arm100,
+koch_1, gen3 and iiwa14 carried another arm's joint limits (the `limits` row found them). In the evening eight
+configs received the `default_joint_positions` (and, for h1_hand and google_robot_static, the `joint_limits`) the
+handlers had been falling back to silently, h1_simple_hand's placeholder limits were replaced by its MJCF ranges,
+five configs whose asset paths point outside the Hub tree were retired (aloha, iiwa, ur5e_2f85, h1_2_without_hand,
+vega; `roboverse_pack/tasks/RETIRED_TASKS.md`), and the MuJoCo handler started matching actuators to joints by their
+transmission, which let h1_hand (48 servos named `lh_A_*`) and arx_l5 build at all. The remaining rows are the robot
+backlog, in the order above.
 
 ## 4. Cross-engine parity
 
