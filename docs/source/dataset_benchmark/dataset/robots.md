@@ -66,18 +66,18 @@ result files per simulator; how to add a robot and pass them is in [Add a robot]
 
 ### Self-check on isaacsim (2026-11-28)
 
-`python -m metasim robot check --all --sim isaacsim`: 42 robots, 9 pass, 23 fail, 10 n/a (no asset declared for this backend, nothing else wrong). Source: `results/robots/2026-11-28-isaacsim-check/robots.json`.
+`python -m metasim robot check --all --sim isaacsim`: 42 robots, 11 pass, 20 fail, 11 n/a (no asset declared for this backend, nothing else wrong). Source: `results/robots/2026-11-28-isaacsim-check/robots.json`.
 
 | robot | config | assets | kinematics | limits | actuators | hold | verdict |
 |---|---|---|---|---|---|---|---|
 | `aloha` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `aloha_agilex` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `arx_l5` | ok | n/a | ok | ok | FAIL | n/a | FAIL |
-| `cartpole` | ok | ok | ok | FAIL | FAIL | FAIL | FAIL |
+| `cartpole` | ok | n/a | ok | FAIL | FAIL | n/a | FAIL |
 | `fetch` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `franka` | ok | ok | ok | ok | ok | ok | pass |
 | `franka_with_gripper_extension` | FAIL | ok | ok | ok | ok | FAIL | FAIL |
-| `g1` | ok | ok | ok | ok | ok | FAIL | FAIL |
+| `g1` | ok | ok | ok | ok | ok | ok | pass |
 | `g1_dof12` | ok | ok | ok | ok | ok | ok | pass |
 | `g1_dof23` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `g1_dof27` | ok | n/a | ok | ok | ok | n/a | n/a |
@@ -85,7 +85,7 @@ result files per simulator; how to add a robot and pass them is in [Add a robot]
 | `g1_dof29_dex3` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `g1_tracking` | FAIL | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
 | `gen3` | ok | ok | ok | ok | ok | ok | pass |
-| `go1` | ok | ok | ok | ok | ok | FAIL | FAIL |
+| `go1` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `google_robot_static` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `h1` | ok | ok | ok | ok | ok | ok | pass |
 | `h1_2_without_hand` | FAIL | FAIL | ok | ok | ok | FAIL | FAIL |
@@ -93,7 +93,7 @@ result files per simulator; how to add a robot and pass them is in [Add a robot]
 | `h1_simple_hand` | FAIL | n/a | ok | FAIL | ok | n/a | FAIL |
 | `h1_wrist` | ok | ok | ok | ok | ok | ok | pass |
 | `iiwa` | FAIL | FAIL | ok | ok | ok | FAIL | FAIL |
-| `iiwa14` | ok | ok | ok | ok | ok | FAIL | FAIL |
+| `iiwa14` | ok | ok | ok | ok | ok | ok | pass |
 | `kinova_gen3_robotiq_2f85` | FAIL | ok | ok | ok | ok | FAIL | FAIL |
 | `koch_1` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `lite6` | ok | n/a | ok | ok | ok | n/a | n/a |
@@ -120,17 +120,14 @@ Named failures (the first per robot and check):
 - `arx_l5` / actuators: 1 actuator(s) not named after their joint (the handler would add a second servo): 'gripper' drives 'joint7'
 - `cartpole` / limits: 1 of 1 limited joints disagree with the MJCF: slider cfg [-2.000, 2.000] vs mjcf [-1.800, 1.800]
 - `cartpole` / actuators: 1 actuator(s) not named after their joint (the handler would add a second servo): 'slide' drives 'slider'
-- `cartpole` / hold: not attempted: a cheaper check already failed
 - `fetch` / config: no default position for ['elbow_flex_joint', 'forearm_roll_joint', 'head_pan_joint', 'head_tilt_joint', 'l_gripper_finger_joint', 'l_wheel_joint', 'r_gripper_finger_joint', 'r_wheel_joint', 'shoulder_lift_joint', 'should
 - `franka_with_gripper_extension` / config: no default position for ['panda_finger_joint1', 'panda_finger_joint2', 'panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
 - `franka_with_gripper_extension` / hold: not attempted: a cheaper check already failed
-- `g1` / hold: child exited 1 without a report: ValueError: No contact sensors added to the prim: '/World/envs/env_0/g1'. This means that no rigid bodies are present under this prim. Please check the prim path.
 - `g1_tracking` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_yaw_joint', 'left_wri
 - `g1_tracking` / assets: ['/workspace/roboverse_maint/RoboVerse/roboverse_data/unitree_description/usd/g1/g1.usd'] not local and not fetched from the Hub (Exception)
 - `g1_tracking` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
 - `g1_tracking` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
 - `g1_tracking` / hold: not attempted: a cheaper check already failed
-- `go1` / hold: child exited 1 without a report: ValueError: No contact sensors added to the prim: '/World/envs/env_0/go1'. This means that no rigid bodies are present under this prim. Please check the prim path.
 - `google_robot_static` / config: no joint_limits for ['joint_bicep', 'joint_elbow', 'joint_finger_left', 'joint_finger_right', 'joint_forearm', 'joint_gripper', 'joint_head_pan', 'joint_head_tilt', 'joint_shoulder', 'joint_torso', 'joint_wrist']; no def
 - `h1_2_without_hand` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_pitch_joint', 'left_elbow_roll_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left
 - `h1_2_without_hand` / assets: ['roboverse_data_release/robots/h1_2_without_hand/usd/h1_2_without_hand.usd'] not local and not fetched from the Hub (ValueError)
@@ -142,7 +139,6 @@ Named failures (the first per robot and check):
 - `iiwa` / config: no joint_limits for ['iiwa7_joint_1', 'iiwa7_joint_2', 'iiwa7_joint_3', 'iiwa7_joint_4', 'iiwa7_joint_5', 'iiwa7_joint_6', 'iiwa7_joint_7', 'panda_finger_joint1', 'panda_finger_joint2']; no default position for ['iiwa7_j
 - `iiwa` / assets: ['data_isaaclab/robots/iiwa/iiwa.usd'] not local and not fetched from the Hub (ValueError)
 - `iiwa` / hold: not attempted: a cheaper check already failed
-- `iiwa14` / hold: child exited 1 without a report: ValueError: No contact sensors added to the prim: '/World/envs/env_0/iiwa14'. This means that no rigid bodies are present under this prim. Please check the prim path.
 - `kinova_gen3_robotiq_2f85` / config: no default position for ['finger_joint', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6', 'joint_7', 'left_outer_finger_joint', 'right_outer_finger_joint']
 - `kinova_gen3_robotiq_2f85` / hold: not attempted: a cheaper check already failed
 - `openarm_bimanual_wuji` / assets: ['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)

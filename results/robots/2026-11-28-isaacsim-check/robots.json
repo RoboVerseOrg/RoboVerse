@@ -101,7 +101,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "7 actuators, limits and defaults consistent",
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -140,20 +140,20 @@
       "robot": "cartpole",
       "simulator": "isaacsim",
       "ok": false,
-      "applicable": true,
+      "applicable": false,
       "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
           "ok": true,
-          "detail": "1 actuators, limits and defaults consistent",
+          "detail": "1 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
-          "ok": true,
-          "detail": "usd_path=roboverse_data/robots/mjlab/tasks/cartpole/cartpole.xml",
-          "applicable": true
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
         },
         {
           "check": "kinematics",
@@ -176,8 +176,8 @@
         {
           "check": "hold",
           "ok": false,
-          "detail": "not attempted: a cheaper check already failed",
-          "applicable": true
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
         }
       ]
     },
@@ -236,13 +236,13 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "9 actuators, limits and defaults consistent",
+          "detail": "9 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/franka/usd/franka_v2.usd",
+          "detail": "usd_path=roboverse_data/robots/franka/usd/franka_v2.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -287,7 +287,7 @@
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/franka_with_gripper_extension/usd/franka_with_gripper_extension_v1.usd",
+          "detail": "usd_path=roboverse_data/robots/franka_with_gripper_extension/usd/franka_with_gripper_extension_v1.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -319,20 +319,20 @@
     {
       "robot": "g1",
       "simulator": "isaacsim",
-      "ok": false,
+      "ok": true,
       "applicable": true,
-      "verdict": "FAIL",
+      "verdict": "pass",
       "rows": [
         {
           "check": "config",
           "ok": true,
-          "detail": "29 actuators, limits and defaults consistent",
+          "detail": "29 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/mjlab/asset_zoo/robots/unitree_g1/xmls/g1.xml",
+          "detail": "usd_path=roboverse_data/robots/g1/usd/g1_29dof_rev_1_0.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -355,8 +355,8 @@
         },
         {
           "check": "hold",
-          "ok": false,
-          "detail": "child exited 1 without a report: ValueError: No contact sensors added to the prim: '/World/envs/env_0/g1'. This means that no rigid bodies are present under this prim. Please check the prim path.",
+          "ok": true,
+          "detail": "floating base: not judged; after 200 steps max joint deviation 0.2300 rad (left_shoulder_pitch_joint), base moved 0.0403 m",
           "applicable": true
         }
       ]
@@ -371,13 +371,13 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "12 actuators, limits and defaults consistent",
+          "detail": "12 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/g1/usd/g1_12dof.usd",
+          "detail": "usd_path=roboverse_data/robots/g1/usd/g1_12dof.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -416,7 +416,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "23 actuators, limits and defaults consistent",
+          "detail": "23 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -461,7 +461,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "27 actuators, limits and defaults consistent",
+          "detail": "27 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -506,13 +506,13 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "29 actuators, limits and defaults consistent",
+          "detail": "29 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/g1/usd/g1_29dof_rev_1_0.usd",
+          "detail": "usd_path=roboverse_data/robots/g1/usd/g1_29dof_rev_1_0.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -551,7 +551,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "43 actuators, limits and defaults consistent",
+          "detail": "43 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -641,13 +641,13 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "7 actuators, limits and defaults consistent",
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/Kinova_Gen3/usd/gen3.usd",
+          "detail": "usd_path=roboverse_data/robots/Kinova_Gen3/usd/gen3.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -679,21 +679,21 @@
     {
       "robot": "go1",
       "simulator": "isaacsim",
-      "ok": false,
-      "applicable": true,
-      "verdict": "FAIL",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
       "rows": [
         {
           "check": "config",
           "ok": true,
-          "detail": "12 actuators, limits and defaults consistent",
+          "detail": "12 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
-          "ok": true,
-          "detail": "usd_path=roboverse_data/robots/mjlab/asset_zoo/robots/unitree_go1/xmls/go1.xml",
-          "applicable": true
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
         },
         {
           "check": "kinematics",
@@ -716,8 +716,8 @@
         {
           "check": "hold",
           "ok": false,
-          "detail": "child exited 1 without a report: ValueError: No contact sensors added to the prim: '/World/envs/env_0/go1'. This means that no rigid bodies are present under this prim. Please check the prim path.",
-          "applicable": true
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
         }
       ]
     },
@@ -776,13 +776,13 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "19 actuators, limits and defaults consistent",
+          "detail": "19 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/h1/usd/h1.usd",
+          "detail": "usd_path=roboverse_data/robots/h1/usd/h1.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -956,13 +956,13 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "19 actuators, limits and defaults consistent",
+          "detail": "19 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/h1/usd/h1_wrist.usd",
+          "detail": "usd_path=roboverse_data/robots/h1/usd/h1_wrist.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -1039,20 +1039,20 @@
     {
       "robot": "iiwa14",
       "simulator": "isaacsim",
-      "ok": false,
+      "ok": true,
       "applicable": true,
-      "verdict": "FAIL",
+      "verdict": "pass",
       "rows": [
         {
           "check": "config",
           "ok": true,
-          "detail": "7 actuators, limits and defaults consistent",
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/KUKA_LBR_IIWA14/usd/iiwa.usd",
+          "detail": "usd_path=roboverse_data/robots/KUKA_LBR_IIWA14/usd/iiwa.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -1075,8 +1075,8 @@
         },
         {
           "check": "hold",
-          "ok": false,
-          "detail": "child exited 1 without a report: ValueError: No contact sensors added to the prim: '/World/envs/env_0/iiwa14'. This means that no rigid bodies are present under this prim. Please check the prim path.",
+          "ok": true,
+          "detail": "after 200 steps at the default pose: max joint deviation 0.0000 rad (joint1), base moved 0.0000 m",
           "applicable": true
         }
       ]
@@ -1097,7 +1097,7 @@
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/kinova_gen3_robotiq_2f85/usd/kinova_gen3_robotiq_2f85_v1.usd",
+          "detail": "usd_path=roboverse_data/robots/kinova_gen3_robotiq_2f85/usd/kinova_gen3_robotiq_2f85_v1.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -1136,7 +1136,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1181,7 +1181,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1226,7 +1226,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "54 actuators, limits and defaults consistent",
+          "detail": "54 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1271,7 +1271,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "54 actuators, limits and defaults consistent",
+          "detail": "54 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1322,7 +1322,7 @@
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/Rethink_Robotics_Sawyer/usd/sawyer_v2.usd",
+          "detail": "usd_path=roboverse_data/robots/Rethink_Robotics_Sawyer/usd/sawyer_v2.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -1361,7 +1361,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "24 actuators, limits and defaults consistent",
+          "detail": "24 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1406,7 +1406,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "22 actuators, limits and defaults consistent",
+          "detail": "22 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1451,7 +1451,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "22 actuators, limits and defaults consistent",
+          "detail": "22 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1496,7 +1496,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1586,13 +1586,13 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/Universal_Robots_UR10e/usd/ur10e.usd",
+          "detail": "usd_path=roboverse_data/robots/Universal_Robots_UR10e/usd/ur10e.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -1631,13 +1631,13 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/Universal_Robots_UR5e/usd/ur5e.usd",
+          "detail": "usd_path=roboverse_data/robots/Universal_Robots_UR5e/usd/ur5e.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
@@ -1766,7 +1766,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "12 actuators, limits and defaults consistent",
+          "detail": "12 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1811,7 +1811,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "7 actuators, limits and defaults consistent",
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1856,13 +1856,13 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
           "check": "assets",
           "ok": true,
-          "detail": "usd_path=roboverse_data/robots/Unitree_Z1_Robotic_Arm/usd/z1.usd",
+          "detail": "usd_path=roboverse_data/robots/Unitree_Z1_Robotic_Arm/usd/z1.usd, USD composition not judged (no pxr)",
           "applicable": true
         },
         {
