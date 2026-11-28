@@ -46,23 +46,17 @@ class LiberoKitchenScene4CloseTheBottomDrawerOfTheCabinetTask(Libero90BaseTask):
             ),
             RigidObjCfg(
                 name="wine_bottle",
-                usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/wine_bottle/usd/wine_bottle.usd",
-                urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/wine_bottle/urdf/wine_bottle.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/wine_bottle/mjcf/wine_bottle.xml",
                 physics=PhysicStateType.RIGIDBODY,
             ),
             RigidObjCfg(
                 name="wine_rack",
-                usd_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/wine_rack/usd/wine_rack.usd",
-                urdf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/wine_rack/urdf/wine_rack.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/turbosquid_objects/wine_rack/mjcf/wine_rack.xml",
                 physics=PhysicStateType.RIGIDBODY,
             ),
             ArticulationObjCfg(
                 name="white_cabinet",
                 fix_base_link=True,
-                usd_path="roboverse_data/assets/libero/COMMON/articulated_objects/white_cabinet/usd/white_cabinet.usd",
-                urdf_path="roboverse_data/assets/libero/COMMON/articulated_objects/white_cabinet/urdf/white_cabinet.urdf",
                 mjcf_path="roboverse_data/assets/libero/COMMON/articulated_objects/white_cabinet/mjcf/white_cabinet.xml",
             ),
         ],

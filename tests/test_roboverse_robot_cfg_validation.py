@@ -224,47 +224,6 @@ def test_g1_tracking_resolves_mjx_mjcf_path():
     assert len(cfg.action_scale) == len(cfg.actuators)
 
 
-@pytest.mark.general
-def test_anymal_default_orientation_is_wxyz_identity():
-    """Regression: ANYmal's default_orientation must be wxyz identity [1,0,0,0].
-
-    Handlers consume default_orientation as wxyz (mujoco.py reads qw,qx,qy,qz;
-    isaacgym reorders wxyz->xyzw). The value was [0,0,0,1] (the xyzw identity),
-    which under wxyz is a 180 degree yaw — ANYmal would spawn facing backwards.
-    """
-    from roboverse_pack.robots.anymal_cfg import AnymalCfg
-
-    cfg = AnymalCfg()
-    assert cfg.default_orientation == [1.0, 0.0, 0.0, 0.0], (
-        f"expected wxyz identity [1,0,0,0], got {cfg.default_orientation} "
-        f"(w must be the largest component for an identity quaternion)"
-    )
-
-
-@pytest.mark.general
-def test_g1_feet_cfg_imports_and_constructs():
-    """Regression: ``roboverse_pack.robots.g1_feet`` must import and construct.
-
-    Every ``BaseActuatorCfg`` in that file used to pass ``kp=/kd=/force_limit=`` —
-    none of which are fields of ``BaseActuatorCfg`` — so *importing the module*
-    raised ``TypeError`` at class-body evaluation. Because the crash happened at
-    import time, ``roboverse_pack.robots.__init__`` swallowed it and ``Go1FeetCfg``
-    silently never registered as a ``RobotCfg`` subclass. The correct field names
-    are ``stiffness`` (kp), ``damping`` (kd), and ``effort_limit_sim`` (force limit),
-    as consumed by the mujoco/isaacgym/newton/pybullet handlers.
-    """
-    import importlib
-
-    mod = importlib.import_module("roboverse_pack.robots.g1_feet")
-    cfg = mod.Go1FeetCfg()
-    assert cfg.name == "go1_feet"
-    assert len(cfg.actuators) == 12
-    # Gains/limits from the XML must survive under the correct field names.
-    hip = cfg.actuators["FR_hip"]
-    assert (hip.stiffness, hip.damping, hip.effort_limit_sim) == (35.0, 0.5, 23.7)
-    assert cfg.actuators["FR_calf"].effort_limit_sim == 35.55
-
-
 # Joints that are *deliberately* pinned to a single point (lo == hi). These are
 # intentional design choices (locked/unused DoF, or a fixed offset expressed as a
 # degenerate range), not the unintended dropped-sign bug the test below hunts for.

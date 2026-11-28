@@ -1,0 +1,37 @@
+# The nightly task gate: the replay baseline, the hold-policy floor and the determinism check on every
+# registered task, on the backends the release stands behind. Runs on the self-hosted GPU runner
+# (labels: self-hosted, gpu, roboverse). A task that is red here two nights in a row is unregistered
+# by the next PR (roboverse_pack/tasks/RETIRED_TASKS.md).
+name: nightly-gate
+
+on:
+  schedule:
+    - cron: "15 3 * * *"
+  workflow_dispatch:
+    inputs:
+      sim:
+        description: backend (mujoco, isaacsim)
+        default: mujoco
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: [self-hosted, gpu, roboverse]
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        sim: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.sim)) || fromJSON('["mujoco", "isaacsim"]') }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run the gate
+        run: tools/gate/nightly.sh ${{ matrix.sim }} gate_out/${{ matrix.sim }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate-${{ matrix.sim }}
+          path: gate_out/${{ matrix.sim }}/health.*
+          if-no-files-found: error
+      - name: Summary
+        run: cat gate_out/${{ matrix.sim }}/health.md >> "$GITHUB_STEP_SUMMARY"

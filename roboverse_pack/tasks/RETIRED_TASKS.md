@@ -512,3 +512,25 @@ git checkout 56a0e67b -- roboverse_pack/tasks/<family>/<file>.py   # then make i
 - `robosuite.nut_assembly_square` (`roboverse_pack/tasks/robosuite/robosuite_env.py`): no class-level scenario: cannot be built by the harness
 - `robosuite.pick_place_can` (`roboverse_pack/tasks/robosuite/robosuite_env.py`): no class-level scenario: cannot be built by the harness
 - `robosuite.stack` (`roboverse_pack/tasks/robosuite/robosuite_env.py`): no class-level scenario: cannot be built by the harness
+
+## Retired robot configs (2026-11-28)
+
+Robot configs whose asset files exist neither on the Hub nor in a checkout, so no backend could ever load them (`tools/assets/check_manifest.py`). Restore from `56a0e67b` together with the assets.
+
+- `roboverse_pack/robots/agibot_a2_cfg.py` (AgibotA2Dof12Cfg)
+- `roboverse_pack/robots/allegrohand_cfg.py` (AllegroHandCfg)
+- `roboverse_pack/robots/ant_cfg.py` (AntCfg)
+- `roboverse_pack/robots/anymal_cfg.py` (AnymalCfg)
+- `roboverse_pack/robots/brainco_hand_left_cfg.py` (BraincoHandLeftCfg)
+- `roboverse_pack/robots/brainco_hand_right_cfg.py` (BraincoHandRightCfg)
+- `roboverse_pack/robots/cartpole_cfg.py` (CartpoleCfg)
+- `roboverse_pack/robots/go2_cfg.py` (Go2Cfg)
+- `roboverse_pack/robots/inspire_hand_left_cfg.py` (InspireHandLeftCfg)
+- `roboverse_pack/robots/inspire_hand_right_cfg.py` (InspireHandRightCfg)
+- `roboverse_pack/robots/kinova_gen3_cfg.py` (KinovaGen3Cfg)
+- `roboverse_pack/robots/psihand_left_cfg.py` (PsihandLeftCfg)
+- `roboverse_pack/robots/psihand_right_cfg.py` (PsihandRightCfg)
+- `roboverse_pack/robots/walker_cfg.py` (WalkerCfg)
+- `roboverse_pack/robots/g1_feet.py` ()
+
+Also dropped: the `mjx_mjcf_path` of `aloha.py` and `h1_body_collision.py` (files absent).

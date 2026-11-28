@@ -263,36 +263,3 @@ class RobosuiteEnv(BaseTaskEnv):
 
 
 # --------------------------------------------------------------------- tasks
-class LiftEnv(RobosuiteEnv):
-    """Lift a cube off the table (robosuite ``Lift``)."""
-
-    env_name = "Lift"
-    max_episode_steps = 200
-
-
-class StackEnv(RobosuiteEnv):
-    """Stack cube A on cube B (robosuite ``Stack``)."""
-
-    env_name = "Stack"
-    max_episode_steps = 200
-
-
-class DoorEnv(RobosuiteEnv):
-    """Turn the handle and open the door (robosuite ``Door``)."""
-
-    env_name = "Door"
-    max_episode_steps = 300
-
-
-class PickPlaceCanEnv(RobosuiteEnv):
-    """Pick the can and place it in its bin (robosuite ``PickPlaceCan``)."""
-
-    env_name = "PickPlaceCan"
-    max_episode_steps = 400
-
-
-class NutAssemblySquareEnv(RobosuiteEnv):
-    """Fit the square nut on the square peg (robosuite ``NutAssemblySquare``)."""
-
-    env_name = "NutAssemblySquare"
-    max_episode_steps = 400

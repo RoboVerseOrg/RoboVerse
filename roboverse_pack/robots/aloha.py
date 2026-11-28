@@ -17,7 +17,6 @@ class AlohaCfg(RobotCfg):
     name: str = "aloha"
     num_joints: int = 16  # 8 joints per arm (6 arm + 2 gripper)
     fix_base_link: bool = True
-    mjx_mjcf_path: str = "roboverse_data/robots/aloha/mjcf/assets/mjx_aloha.xml"
     enabled_gravity: bool = False
     enabled_self_collisions: bool = False
 

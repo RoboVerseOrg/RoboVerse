@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=78.1.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,7 +24,7 @@ dependencies = [
     "pyyaml",
     "scipy",
     "tomli; python_version < '3.11'",
-    "torch",
+    "torch>=2.6",  # < 2.6: torch.load weights_only bypass (GHSA, critical)
     "torchvision",
 ]
 
@@ -74,7 +74,7 @@ superdex = [
 ]
 # robo-splatter itself is git-only (PyPI forbids URL dependencies in published metadata):
 #   pip install -r packages/metasim/requirements/robosplatter.txt
-robosplatter = ["setuptools==59.5.0"]
+robosplatter = []  # robo-splatter is git-only: requirements/robosplatter.txt (its old setuptools==59.5.0 pin was vulnerable)
 newton = [
     "warp-lang>=1.11,<2",
     "mujoco>=3.3.7,<3.14",

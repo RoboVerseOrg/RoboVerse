@@ -10,7 +10,7 @@ import torch
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.types import Info
 from metasim.utils.state import TensorState
-from roboverse_pack.robots import G1Dof12Cfg, Go2Cfg
+from roboverse_pack.robots import G1Dof12Cfg
 from roboverse_pack.tasks.humanoid.cfg_base import BaseEnvCfg
 from roboverse_pack.utils.humanoid_utils import (
     get_axis_params,
@@ -61,7 +61,7 @@ class LeggedRobotTask(AgentTask):
 
     def _init_joint_cfg(self):
         """Parse default joint positions and torque limits from cfg."""
-        robot: G1Dof12Cfg | Go2Cfg = self.robot
+        robot: G1Dof12Cfg = self.robot  # Go2Cfg was retired on 2026-11-28 (no assets on the Hub)
         sorted_joint_names: list[str] = self.sorted_joint_names
 
         torque_limits = (
