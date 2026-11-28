@@ -529,3 +529,7 @@ def test_a_robot_without_an_asset_for_the_backend_is_not_applicable(tmp_path):
     assert "verdict: n/a" in report.table() and report.to_dict()["verdict"] == "n/a"
     failing = RobotReport("x", "mujoco", [check_assets(_cfg(tmp_path), "mujoco")])
     assert failing.applicable and failing.verdict == "pass"
+    urdf_only_with_bad_config = check_robot_cfg(
+        _cfg(tmp_path, mjcf_path=None, urdf_path="x.urdf", actuators={}), sim="mujoco"
+    )
+    assert urdf_only_with_bad_config.verdict == "FAIL", "a config defect fails the robot on every backend"

@@ -94,6 +94,21 @@ def test_newest_run_per_simulator_and_engine_pair_is_rendered(gen, tmp_path):
     assert "### Self-check on mujoco (2026-11-28)" in page and "### Self-check on isaacsim (2026-11-28)" in page
     assert "2026-11-01" not in page, "only the newest sweep per simulator is shown"
     assert "| `toy` | ok | ok | ok | ok | ok | FAIL | FAIL |" in page
+    assert (
+        gen.robot_verdict({
+            "rows": [
+                {"check": "config", "ok": False, "applicable": True},
+                {"check": "assets", "ok": False, "applicable": False},
+            ]
+        })
+        == "FAIL"
+    )
+    assert (
+        gen.robot_verdict({
+            "rows": [{"check": "config", "ok": True}, {"check": "assets", "ok": False, "applicable": False}]
+        })
+        == "n/a"
+    )
     assert "- `toy` / hold: drift 0.3 rad / base moved" in page, "a pipe in a detail cannot break the table"
     assert "### Cross-engine parity: mujoco vs isaacsim (2026-11-28)" in page
     assert "| `toy` | default | 400 | 0.63/s | `f` | 0.0200 m | FAIL |" in page

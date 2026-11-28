@@ -72,17 +72,17 @@ The nightly gate runs the sweep on both engines after the task gate and publishe
 renders the newest run per engine from `results/robots/`.
 
 On Isaac Sim 6 (2026-11-28, one child process per robot) 9 of the 42 pass: franka, g1_dof12, g1_dof29, gen3, h1,
-h1_wrist, ur10e, ur5e, z1. Of the rest, 15 declare no USD, 13 fail the config row before any boot, and three USDs
-(g1, go1, iiwa14) do not build on Isaac Lab 3: the handler's contact sensor finds no rigid bodies under the robot
+h1_wrist, ur10e, ur5e, z1; 10 are `n/a` (no USD, nothing else wrong); 23 fail, most of them the config row before any
+boot, and three USDs (g1, go1, iiwa14) do not build on Isaac Lab 3: the handler's contact sensor finds no rigid bodies under the robot
 prim (`ValueError: No contact sensors added to the prim`), so those three are an asset or handler question, not a
 config one. The generated page carries each robot's detail.
 
 ### The sweep of 2026-11-28 (MuJoCo, 42 configs)
 
 The table itself is generated: [Robots, self-check](../dataset_benchmark/dataset/robots.md#self-check) renders the
-newest `results/robots/<date>-mujoco-check/robots.json` (17 pass, 9 fail, 16 n/a). The n/a rows are configs with
-no MJCF, which MuJoCo cannot judge (13 Isaac / URDF only robots and the 3 placeholders below). By cause: 13 configs
-are Isaac / URDF only and have no MJCF (aloha, aloha_agilex, fetch, franka_with_gripper_extension, google_robot_static,
+newest `results/robots/<date>-mujoco-check/robots.json` (17 pass, 21 fail, 4 n/a). A robot with no MJCF is
+`n/a` on MuJoCo unless a backend-independent row (config) fails it, which 13 of the Isaac / URDF only configs do. By
+cause: 13 configs are Isaac / URDF only and have no MJCF (aloha, aloha_agilex, fetch, franka_with_gripper_extension, google_robot_static,
 h1_2_without_hand, iiwa, kinova_gen3_robotiq_2f85, sawyer, unitree_dex3_1_left, ur5e_2f85, vega, xhand_right; most
 also lack defaults or limits for some actuators, vega's `torso_j1` default is outside its limits); 3 have assets
 missing on the Hub (g1_tracking, openarm_wuji, openarm_bimanual_wuji); 3 are placeholders (g1_dof23, g1_dof27,

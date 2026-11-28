@@ -76,10 +76,14 @@ class RobotReport:
 
     @property
     def verdict(self) -> str:
-        """``pass``, ``FAIL`` or ``n/a`` (not a candidate for this backend)."""
-        if not self.applicable:
-            return "n/a"
-        return "pass" if self.ok else "FAIL"
+        """``FAIL`` / ``n/a`` / ``pass``.
+
+        An applicable row that fails is ``FAIL`` (a config defect is one on every backend); otherwise a robot that is
+        not a candidate for this backend is ``n/a``; otherwise ``pass``.
+        """
+        if not self.ok:
+            return "FAIL"
+        return "pass" if self.applicable else "n/a"
 
     def table(self) -> str:
         """The report as a Markdown table."""

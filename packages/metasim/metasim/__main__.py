@@ -1135,9 +1135,9 @@ def _robot_sweep_table(reports) -> str:
         by = {row.check: row for row in r.rows}
         cells = ["-" if by.get(c) is None else row_verdict(by[c]) for c in checks]
         lines.append(f"| {r.robot} | " + " | ".join(cells) + f" | {r.verdict} |")
-    n_na = sum(not r.applicable for r in reports)
-    n_ok = sum(r.ok and r.applicable for r in reports)
-    n_fail = len(reports) - n_ok - n_na
+    n_na = sum(r.verdict == "n/a" for r in reports)
+    n_ok = sum(r.verdict == "pass" for r in reports)
+    n_fail = sum(r.verdict == "FAIL" for r in reports)
     lines.append(f"\n{len(reports)} robot(s), {n_ok} pass, {n_fail} fail, {n_na} n/a (no asset for this backend)")
     for r in reports:
         for row in r.rows:

@@ -23,5 +23,5 @@ on scripted demos per task and scored under the visual tier, 20 episodes per tas
 `python -m metasim robot check --all --sim <sim> --out-dir`, and `<date>-parity-<a>-<b>/<robot>.json` from
 `python -m metasim robot parity <robot> --sims <a> <b> --json`. `generate_robot_docs.py` renders the newest of each
 into the Robots page (`--check` in CI keeps it current). The first entries are the MuJoCo sweep of 2026-11-28
-(42 robots: 17 pass, 9 fail, 16 n/a without an MJCF), the Isaac Sim 6 sweep of the same day (one child process per robot) and the MuJoCo vs Isaac Sim 6 parity runs of the same day (five arms within 0.04 rad, the
+(42 robots: 17 pass, 21 fail, 4 n/a), the Isaac Sim 6 sweep of the same day (9 pass, 23 fail, 10 n/a; one child process per robot) and the MuJoCo vs Isaac Sim 6 parity runs of the same day (five arms within 0.04 rad, the
 H1 humanoids reported not judged).
