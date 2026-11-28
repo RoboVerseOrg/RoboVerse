@@ -95,6 +95,35 @@ _COMPANION_FILES = ("LICENSE", "LICENSE.txt", "LICENSE.md", "README.md")
 _COMPANIONS_PROBED: set[str] = set()
 """Directories whose licence / README companions were already looked for in this process."""
 
+_USD_SUFFIXES = (".usd", ".usda", ".usdc", ".usdz")
+_USD_COMPOSED: set[str] = set()
+"""USD files whose composition (payloads, references, sublayers) was already resolved in this process."""
+
+
+def _fetch_usd_composition(filepath: str) -> None:
+    """Fetch the payloads / references / sublayers a USD file composes from, when ``pxr`` can read them.
+
+    A robot USD is often a shell over ``configuration/*.usd`` next to it; a single-file fetch brings the shell and
+    Isaac Sim then finds no rigid bodies in it. Only a ``pxr`` the process already imported is used (importing one
+    before Isaac Sim starts breaks its launch); without one nothing is judged here, and the folder fetch above covers
+    a fresh machine.
+    """
+    if not filepath.lower().endswith(_USD_SUFFIXES):
+        return
+    key = os.path.realpath(filepath)
+    if key in _USD_COMPOSED:
+        return
+    _USD_COMPOSED.add(key)
+    try:
+        from metasim.utils.asset_check import fetch_usd_dependencies
+
+        deps = fetch_usd_dependencies(filepath, fetch=check_and_download_single)
+    except Exception as exc:  # the file itself is in place; its composition is reported, not raised, here
+        log.debug(f"USD composition of {filepath} not resolved: {exc}")
+        return
+    if deps is not None and deps.unresolved:
+        log.warning(f"{filepath} composes from files that could not be fetched: {deps.unresolved}")
+
 
 def _fetch_companions(filepath: str) -> None:
     """Fetch the licence / README that sit next to a freshly downloaded description file, from wherever it came.
@@ -285,6 +314,7 @@ def check_and_download_single(filepath: str):
     if local_exists:
         ## In this case, the runner has the file in their local machine.
         log.debug(f"File {filepath} found in local directory.")
+        _fetch_usd_composition(filepath)
         return
     else:
         ## In this case, we didn't find the file in the local directory, the circumstance is complicated.
@@ -341,6 +371,15 @@ def check_and_download_single(filepath: str):
             raise Exception(
                 "Please update the roboverse_data to the latest version, by running `cd roboverse_data && git pull`."
             )
+
+        ## A USD composes from the payloads / references next to it (``configuration/*.usd``), which nothing in the
+        ## file name announces: fetch its folder, so the stage opens with its bodies on a machine without ``pxr``.
+        if filepath.lower().endswith(_USD_SUFFIXES):
+            rel_dir = relpath_posix.rsplit("/", 1)[0] if "/" in relpath_posix else ""
+            if rel_dir and _download_tree(rel_dir) and os.path.exists(filepath):
+                _fetch_companions(filepath)
+                _fetch_usd_composition(filepath)
+                return
 
         ## Finally, download the file from the huggingface dataset.
         try:

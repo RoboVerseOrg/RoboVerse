@@ -260,8 +260,9 @@ class MjlabG1Cfg(RobotCfg):
 
     name: str = "g1"
     mjcf_path: str = "roboverse_data/robots/mjlab/asset_zoo/robots/unitree_g1/xmls/g1.xml"
-    urdf_path: str = mjcf_path
-    usd_path: str = mjcf_path
+    # The same 29 joints under the same names as the mjlab MJCF; Isaac Sim and the URDF backends load these.
+    urdf_path: str = "roboverse_data/robots/g1/urdf/g1_29dof_rev_1_0.urdf"
+    usd_path: str = "roboverse_data/robots/g1/usd/g1_29dof_rev_1_0.usd"
 
     num_joints: int = 29
     fix_base_link: bool = False

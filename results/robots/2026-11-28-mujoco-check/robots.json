@@ -101,7 +101,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "7 actuators, limits and defaults consistent",
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -146,7 +146,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "1 actuators, limits and defaults consistent",
+          "detail": "1 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -236,7 +236,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "9 actuators, limits and defaults consistent",
+          "detail": "9 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -326,7 +326,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "29 actuators, limits and defaults consistent",
+          "detail": "29 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -371,7 +371,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "12 actuators, limits and defaults consistent",
+          "detail": "12 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -416,7 +416,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "23 actuators, limits and defaults consistent",
+          "detail": "23 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -461,7 +461,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "27 actuators, limits and defaults consistent",
+          "detail": "27 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -506,7 +506,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "29 actuators, limits and defaults consistent",
+          "detail": "29 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -551,7 +551,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "43 actuators, limits and defaults consistent",
+          "detail": "43 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -641,7 +641,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "7 actuators, limits and defaults consistent",
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -686,7 +686,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "12 actuators, limits and defaults consistent",
+          "detail": "12 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -776,7 +776,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "19 actuators, limits and defaults consistent",
+          "detail": "19 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -956,7 +956,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "19 actuators, limits and defaults consistent",
+          "detail": "19 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1046,7 +1046,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "7 actuators, limits and defaults consistent",
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1136,7 +1136,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1181,7 +1181,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1226,7 +1226,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "54 actuators, limits and defaults consistent",
+          "detail": "54 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1271,7 +1271,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "54 actuators, limits and defaults consistent",
+          "detail": "54 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1361,7 +1361,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "24 actuators, limits and defaults consistent",
+          "detail": "24 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1406,7 +1406,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "22 actuators, limits and defaults consistent",
+          "detail": "22 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1451,7 +1451,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "22 actuators, limits and defaults consistent",
+          "detail": "22 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1496,7 +1496,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1586,7 +1586,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1631,7 +1631,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1766,7 +1766,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "12 actuators, limits and defaults consistent",
+          "detail": "12 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1811,7 +1811,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "7 actuators, limits and defaults consistent",
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {
@@ -1856,7 +1856,7 @@
         {
           "check": "config",
           "ok": true,
-          "detail": "6 actuators, limits and defaults consistent",
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
           "applicable": true
         },
         {

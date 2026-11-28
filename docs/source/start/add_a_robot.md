@@ -50,9 +50,12 @@ python -m metasim robot check <name>                 # MuJoCo: config, assets, k
 python -m metasim robot check <name> --sim isaacsim  # the same on Isaac Sim 6
 ```
 
-Six rows, each a pass or a named failure: the config has limits and defaults for every actuator and the
-defaults lie inside the limits; the asset files the config names for that backend exist (locally or on the
-Hub, the whole asset folder is fetched); the MJCF loads in MuJoCo's model, the end-effector body is found and
+Six rows, each a pass or a named failure: the config has limits and defaults for every actuator, the
+defaults lie inside the limits and each asset field names a file of its format (`usd_path` a USD, `mjcf_path`
+an MJCF, `urdf_path` a URDF; four mjlab configs pointed `usd_path` at their MJCF, which Isaac Sim spawned as an
+empty prim); the asset files the config names for that backend exist (locally or on the Hub, the whole asset
+folder is fetched) and, on a USD backend, the USD's payloads and references resolve (the iiwa14 USD is a shell
+over `configuration/*.usd`); the MJCF loads in MuJoCo's model, the end-effector body is found and
 forward kinematics of the default pose is finite (the skill library and the IL adapters depend on this; a robot
 without `ee_body_name` is not judged here); the config's joint limits agree with the ranges the MJCF declares;
 every MJCF actuator that drives a config joint is named after that joint (the MuJoCo handler finds actuators by

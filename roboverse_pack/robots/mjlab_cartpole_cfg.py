@@ -7,6 +7,7 @@ on MujocoHandler.
 
 from __future__ import annotations
 
+from dataclasses import MISSING
 from typing import Literal
 
 from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
@@ -22,8 +23,8 @@ class MjlabCartpoleCfg(RobotCfg):
     # works on both backends (mujoco scene-MJCF path + newton RobotCfg path).
     name: str = "cartpole"
     mjcf_path: str = "roboverse_data/robots/mjlab/tasks/cartpole/cartpole.xml"
-    urdf_path: str = mjcf_path  # mjcf only
-    usd_path: str = mjcf_path
+    urdf_path: str = MISSING  # MJCF only: the URDF and Isaac Sim backends report it as n/a
+    usd_path: str = MISSING
 
     num_joints: int = 2
     fix_base_link: bool = True

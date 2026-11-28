@@ -175,6 +175,13 @@ def resolve_isaacsim_file_path(cfg) -> str:
     """
     existing_usd = _existing_path(getattr(cfg, "usd_path", None))
     if existing_usd is not None:
+        # a USD composes from payloads / references next to it; Isaac Sim is up here, so its pxr resolves them and
+        # whatever the Hub still has to deliver is fetched before the stage opens an empty shell
+        from metasim.utils.asset_check import fetch_usd_dependencies
+
+        deps = fetch_usd_dependencies(str(existing_usd))
+        if deps is not None and not deps.ok:
+            log.warning(f"{existing_usd} composes from files that could not be fetched: {deps.unresolved}")
         return str(existing_usd)
 
     urdf = _existing_path(getattr(cfg, "urdf_path", None))

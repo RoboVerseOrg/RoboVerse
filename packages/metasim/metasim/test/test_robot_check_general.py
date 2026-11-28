@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -533,9 +534,68 @@ def test_a_robot_without_an_asset_for_the_backend_is_not_applicable(tmp_path):
         _cfg(tmp_path, mjcf_path=None, urdf_path="x.urdf", actuators={}), sim="mujoco"
     )
     assert urdf_only_with_bad_config.verdict == "FAIL", "a config defect fails the robot on every backend"
+    (tmp_path / "toy.usda").write_text("#usda 1.0\n")
     usd_only = check_robot_cfg(
-        _cfg(tmp_path, mjcf_path=None, usd_path=str(tmp_path / "toy.xml")), sim="isaacsim", hold=False
+        _cfg(tmp_path, mjcf_path=None, usd_path=str(tmp_path / "toy.usda")), sim="isaacsim", hold=False
     )
     assert usd_only.applicable and usd_only.ok, "a USD-only robot on Isaac Sim is a candidate: its hold check must run"
     hold_only = check_robot_cfg(_cfg(tmp_path), sim="mujoco", hold=False, static=False)
     assert [r.check for r in hold_only.rows] == ["assets"]
+
+
+def test_asset_fields_must_name_their_format():
+    from metasim.utils.asset_check import check_asset_fields
+
+    cfg = SimpleNamespace(mjcf_path="r/robot.xml", usd_path="r/robot.xml", urdf_path=None)
+    problems = check_asset_fields(cfg)
+    assert len(problems) == 1 and problems[0].startswith("usd_path='r/robot.xml' is not a .usd")
+    assert check_asset_fields(SimpleNamespace(mjcf_path="r/robot.xml", usd_path="r/robot.usda")) == []
+    # the config row fails on it (a defect on every backend), with the joints still consistent
+    cfg = SimpleNamespace(
+        actuators={"j": object()},
+        joint_limits={"j": (-1.0, 1.0)},
+        default_joint_positions={"j": 0.0},
+        mjcf_path="r/robot.xml",
+        usd_path="r/robot.xml",
+    )
+    row = check_config(cfg)
+    assert not row.ok and "usd_path" in row.detail
+
+
+def test_usd_dependencies_are_not_judged_without_pxr(monkeypatch):
+    import sys
+
+    from metasim.utils.asset_check import fetch_usd_dependencies, usd_dependencies
+
+    monkeypatch.setitem(sys.modules, "pxr", None)  # ``from pxr import Sdf`` raises ImportError
+    assert usd_dependencies("whatever.usd") is None
+    assert fetch_usd_dependencies("whatever.usd", fetch=lambda p: None) is None
+
+
+def test_usd_dependencies_follow_payloads_and_fetch_the_missing_ones(tmp_path):
+    pytest.importorskip("pxr")
+    from metasim.utils.asset_check import fetch_usd_dependencies, usd_dependencies
+
+    (tmp_path / "configuration").mkdir()
+    (tmp_path / "configuration" / "robot_physics.usda").write_text('#usda 1.0\ndef Xform "robot" {}\n')
+    (tmp_path / "robot.usda").write_text(
+        '#usda 1.0\ndef Xform "robot" (payload = @./configuration/robot_physics.usda@)\n{}\n'
+        'def Xform "sensors" (references = @./configuration/robot_sensor.usda@)\n{}\n'
+    )
+    deps = usd_dependencies(str(tmp_path / "robot.usda"))
+    assert [os.path.basename(p) for p in deps.resolved] == ["robot_physics.usda"]
+    assert [os.path.basename(p) for p in deps.unresolved] == ["robot_sensor.usda"]
+    assert not deps.ok
+
+    fetched = []
+
+    def fetch(path):
+        fetched.append(os.path.basename(path))
+        Path(path).write_text('#usda 1.0\ndef Xform "s" {}\n')
+
+    deps = fetch_usd_dependencies(str(tmp_path / "robot.usda"), fetch=fetch)
+    assert deps.ok and fetched == ["robot_sensor.usda"]
+    # a fetch that produces nothing leaves the file unresolved instead of looping
+    (tmp_path / "configuration" / "robot_sensor.usda").unlink()
+    deps = fetch_usd_dependencies(str(tmp_path / "robot.usda"), fetch=lambda p: None)
+    assert [os.path.basename(p) for p in deps.unresolved] == ["robot_sensor.usda"]

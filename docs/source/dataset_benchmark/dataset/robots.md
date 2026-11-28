@@ -39,10 +39,10 @@ result files per simulator; how to add a robot and pass them is in [Add a robot]
 | `kinova_gen3_robotiq_2f85` | `KinovaGen3Robotiq2f85Cfg` | `kinova_gen3_robotiq_2f85` | 9 | Isaac Sim |
 | `koch_mjcf_cfg` | `KochCfg` | `koch_1` | 6 | MuJoCo, MJX |
 | `lite6_mjcf_cfg` | `Lite6Cfg` | `lite6` | 6 | MuJoCo, MJX |
-| `mjlab_cartpole_cfg` | `MjlabCartpoleCfg` | `cartpole` | 2 | MuJoCo, Isaac Sim, URDF, MJX |
+| `mjlab_cartpole_cfg` | `MjlabCartpoleCfg` | `cartpole` | 2 | MuJoCo, MJX |
 | `mjlab_g1_cfg` | `MjlabG1Cfg` | `g1` | 29 | MuJoCo, Isaac Sim, URDF, MJX |
-| `mjlab_go1_cfg` | `MjlabGo1Cfg` | `go1` | 12 | MuJoCo, Isaac Sim, URDF, MJX |
-| `mjlab_yam_cfg` | `MjlabYamCfg` | `yam` | 8 | MuJoCo, Isaac Sim, URDF, MJX |
+| `mjlab_go1_cfg` | `MjlabGo1Cfg` | `go1` | 12 | MuJoCo, MJX |
+| `mjlab_yam_cfg` | `MjlabYamCfg` | `yam` | 8 | MuJoCo, MJX |
 | `openarm_wuji_cfg` | `OpenarmBimanualWujiCfg` | `openarm_bimanual_wuji` | 54 | MuJoCo, Isaac Sim, URDF, MJX |
 | `openarm_wuji_cfg` | `OpenarmWujiCfg` | `openarm_wuji` | 54 | MuJoCo, Isaac Sim, URDF, MJX |
 | `sawyer_cfg` | `SawyerCfg` | `sawyer` | 10 | Isaac Sim, URDF |

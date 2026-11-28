@@ -290,3 +290,20 @@ def test_robot_cfg_no_unintended_degenerate_joint_limits(cls: type[RobotCfg]):
         f"{degenerate}. If this is intentional, add the joint to "
         f"_DELIBERATELY_LOCKED_JOINTS; otherwise a sign was likely dropped."
     )
+
+
+@pytest.mark.skipif(not _CFG_PARAMS, reason="roboverse_pack not importable")
+@pytest.mark.parametrize("cls", _CFG_PARAMS)
+def test_robot_cfg_asset_fields_name_their_format(cls: type[RobotCfg]):
+    """``usd_path`` names a USD, ``mjcf_path`` an MJCF, ``urdf_path`` a URDF.
+
+    A field pointing at a file of another format reaches the backend that reads it and fails there with an
+    unrelated message (Isaac Sim spawns an empty prim from an MJCF and reports "no rigid bodies"); the rule is
+    ``metasim.utils.asset_check.check_asset_fields``, which ``robot check`` applies in its config row.
+    """
+    from metasim.utils.asset_check import check_asset_fields
+
+    instance = _try_instantiate(cls)
+    if instance is None:
+        pytest.skip(f"{cls.__name__} abstract template")
+    assert check_asset_fields(instance) == [], f"{cls.__name__}: {check_asset_fields(instance)}"

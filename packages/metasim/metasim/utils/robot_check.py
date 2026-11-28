@@ -26,6 +26,7 @@ from typing import Any
 import numpy as np
 
 from metasim.constants import SimType
+from metasim.utils.asset_check import check_asset_fields, fetch_usd_dependencies
 
 
 @dataclass
@@ -148,8 +149,12 @@ def check_config(cfg) -> CheckRow:
         problems.append(f"no default position for {missing_defaults}")
     if outside:
         problems.append(f"default outside limits for {outside}")
+    # an asset field naming a file of another format (usd_path -> an MJCF) fails on every backend that reads it
+    problems += check_asset_fields(cfg)
     return CheckRow(
-        "config", not problems, "; ".join(problems) or f"{len(joints)} actuators, limits and defaults consistent"
+        "config",
+        not problems,
+        "; ".join(problems) or f"{len(joints)} actuators, limits, defaults and asset fields consistent",
     )
 
 
@@ -181,7 +186,19 @@ def check_assets(cfg, sim: str) -> CheckRow:
             return CheckRow("assets", False, f"{missing} not local and not fetched from the Hub ({type(err).__name__})")
     if missing:
         return CheckRow("assets", False, f"missing files: {missing}")
-    return CheckRow("assets", True, ", ".join(f"{f}={p}" for f, p in declared))
+    notes = []
+    for f, p in declared:
+        if f != "usd_path":
+            continue
+        # a USD composes from payloads and references next to it; fetch what is missing, fail on what the Hub lacks
+        deps = fetch_usd_dependencies(p)
+        if deps is None:
+            notes.append("USD composition not judged (no pxr)")
+        elif not deps.ok:
+            return CheckRow("assets", False, f"{p} composes from files that do not exist: {deps.unresolved}")
+        else:
+            notes.append(f"USD composes from {len(deps.resolved)} file(s), all present")
+    return CheckRow("assets", True, ", ".join([f"{f}={p}" for f, p in declared] + notes))
 
 
 def check_kinematics(cfg) -> CheckRow:
