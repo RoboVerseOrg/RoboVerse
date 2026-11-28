@@ -80,8 +80,9 @@ config one. The generated page carries each robot's detail.
 ### The sweep of 2026-11-28 (MuJoCo, 42 configs)
 
 The table itself is generated: [Robots, self-check](../dataset_benchmark/dataset/robots.md#self-check) renders the
-newest `results/robots/<date>-mujoco-check/robots.json` (17 pass, 25 fail). By cause: 13 configs are Isaac / URDF
-only and have no MJCF (aloha, aloha_agilex, fetch, franka_with_gripper_extension, google_robot_static,
+newest `results/robots/<date>-mujoco-check/robots.json` (17 pass, 9 fail, 16 n/a). The n/a rows are configs with
+no MJCF, which MuJoCo cannot judge (13 Isaac / URDF only robots and the 3 placeholders below). By cause: 13 configs
+are Isaac / URDF only and have no MJCF (aloha, aloha_agilex, fetch, franka_with_gripper_extension, google_robot_static,
 h1_2_without_hand, iiwa, kinova_gen3_robotiq_2f85, sawyer, unitree_dex3_1_left, ur5e_2f85, vega, xhand_right; most
 also lack defaults or limits for some actuators, vega's `torso_j1` default is outside its limits); 3 have assets
 missing on the Hub (g1_tracking, openarm_wuji, openarm_bimanual_wuji); 3 are placeholders (g1_dof23, g1_dof27,

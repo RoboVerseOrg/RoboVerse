@@ -221,111 +221,78 @@ Named failures (the first per robot and check):
 
 ### Self-check on mujoco (2026-11-28)
 
-`python -m metasim robot check --all --sim mujoco`: 42 robots, 17 pass, 25 fail, 0 n/a (no asset declared for this backend). Source: `results/robots/2026-11-28-mujoco-check/robots.json`.
+`python -m metasim robot check --all --sim mujoco`: 42 robots, 17 pass, 9 fail, 16 n/a (no asset declared for this backend). Source: `results/robots/2026-11-28-mujoco-check/robots.json`.
 
 | robot | config | assets | kinematics | limits | actuators | hold | verdict |
 |---|---|---|---|---|---|---|---|
-| `aloha` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
-| `aloha_agilex` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `aloha` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
+| `aloha_agilex` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
 | `arx_l5` | ok | ok | ok | ok | FAIL | FAIL | FAIL |
 | `cartpole` | ok | ok | ok | FAIL | FAIL | FAIL | FAIL |
-| `fetch` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `fetch` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
 | `franka` | ok | ok | ok | ok | ok | ok | pass |
-| `franka_with_gripper_extension` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `franka_with_gripper_extension` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
 | `g1` | ok | ok | ok | ok | ok | ok | pass |
 | `g1_dof12` | ok | ok | ok | ok | ok | ok | pass |
-| `g1_dof23` | ok | FAIL | FAIL | ok | ok | FAIL | FAIL |
-| `g1_dof27` | ok | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `g1_dof23` | ok | n/a | n/a | ok | ok | n/a | n/a |
+| `g1_dof27` | ok | n/a | n/a | ok | ok | n/a | n/a |
 | `g1_dof29` | ok | ok | ok | ok | ok | ok | pass |
-| `g1_dof29_dex3` | ok | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `g1_dof29_dex3` | ok | n/a | n/a | ok | ok | n/a | n/a |
 | `g1_tracking` | FAIL | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
 | `gen3` | ok | ok | ok | ok | ok | ok | pass |
 | `go1` | ok | ok | ok | ok | ok | ok | pass |
-| `google_robot_static` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `google_robot_static` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
 | `h1` | ok | ok | ok | ok | ok | ok | pass |
-| `h1_2_without_hand` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `h1_2_without_hand` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
 | `h1_hand` | FAIL | ok | ok | ok | FAIL | FAIL | FAIL |
 | `h1_simple_hand` | FAIL | ok | ok | FAIL | ok | ok | FAIL |
 | `h1_wrist` | ok | ok | ok | ok | ok | ok | pass |
-| `iiwa` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `iiwa` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
 | `iiwa14` | ok | ok | ok | ok | ok | ok | pass |
-| `kinova_gen3_robotiq_2f85` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `kinova_gen3_robotiq_2f85` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
 | `koch_1` | ok | ok | ok | ok | ok | FAIL | FAIL |
 | `lite6` | ok | ok | ok | ok | ok | ok | pass |
 | `openarm_bimanual_wuji` | ok | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
 | `openarm_wuji` | ok | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
-| `sawyer` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `sawyer` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
 | `shadow_hand` | ok | ok | ok | FAIL | FAIL | FAIL | FAIL |
 | `sharpa_wave_left` | ok | ok | ok | ok | ok | ok | pass |
 | `sharpa_wave_right` | ok | ok | ok | ok | ok | ok | pass |
 | `so_arm100` | ok | ok | ok | ok | ok | ok | pass |
-| `unitree_dex3_1_left` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `unitree_dex3_1_left` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
 | `ur10e` | ok | ok | ok | ok | ok | ok | pass |
 | `ur5e` | ok | ok | ok | ok | ok | ok | pass |
-| `ur5e_2f85` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
-| `vega` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
-| `xhand_right` | ok | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `ur5e_2f85` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
+| `vega` | FAIL | n/a | n/a | ok | ok | n/a | n/a |
+| `xhand_right` | ok | n/a | n/a | ok | ok | n/a | n/a |
 | `yam` | ok | ok | ok | ok | ok | ok | pass |
 | `z1` | ok | ok | ok | ok | ok | ok | pass |
 
 Named failures (the first per robot and check):
 
 - `aloha` / config: no default position for ['left/elbow', 'left/forearm_roll', 'left/left_finger', 'left/right_finger', 'left/shoulder', 'left/waist', 'left/wrist_angle', 'left/wrist_rotate', 'right/elbow', 'right/forearm_roll', 'right/lef
-- `aloha` / assets: no mjcf_path declared for mujoco
-- `aloha` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `aloha` / hold: could not build the robot on mujoco: ValueError: Object 'aloha' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=None, urdf_path=
 - `aloha_agilex` / config: no joint_limits for ['fl_joint1', 'fl_joint2', 'fl_joint3', 'fl_joint4', 'fl_joint5', 'fl_joint6', 'fl_joint7', 'fl_joint8', 'fr_joint1', 'fr_joint2', 'fr_joint3', 'fr_joint4', 'fr_joint5', 'fr_joint6', 'fr_joint7', 'fr_
-- `aloha_agilex` / assets: no mjcf_path declared for mujoco
-- `aloha_agilex` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `aloha_agilex` / hold: could not build the robot on mujoco: ValueError: Object 'aloha_agilex' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=None, urd
 - `arx_l5` / actuators: 1 actuator(s) not named after their joint (the handler would add a second servo): 'gripper' drives 'joint7'
 - `arx_l5` / hold: could not build the robot on mujoco: ValueError: Robot 'arx_l5': actuators ['gripper'] are not named after a joint of the robot (joints: ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7', '
 - `cartpole` / limits: 1 of 1 limited joints disagree with the MJCF: slider cfg [-2.000, 2.000] vs mjcf [-1.800, 1.800]
 - `cartpole` / actuators: 1 actuator(s) not named after their joint (the handler would add a second servo): 'slide' drives 'slider'
 - `cartpole` / hold: could not build the robot on mujoco: FatalError: add_pair: broadphase buffer full
 - `fetch` / config: no default position for ['elbow_flex_joint', 'forearm_roll_joint', 'head_pan_joint', 'head_tilt_joint', 'l_gripper_finger_joint', 'l_wheel_joint', 'r_gripper_finger_joint', 'r_wheel_joint', 'shoulder_lift_joint', 'should
-- `fetch` / assets: no mjcf_path declared for mujoco
-- `fetch` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `fetch` / hold: could not build the robot on mujoco: ValueError: Object 'fetch' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=None, urdf_path=
 - `franka_with_gripper_extension` / config: no default position for ['panda_finger_joint1', 'panda_finger_joint2', 'panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
-- `franka_with_gripper_extension` / assets: no mjcf_path declared for mujoco
-- `franka_with_gripper_extension` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `franka_with_gripper_extension` / hold: could not build the robot on mujoco: ValueError: Object 'franka_with_gripper_extension' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: u
-- `g1_dof23` / assets: no mjcf_path declared for mujoco
-- `g1_dof23` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `g1_dof23` / hold: could not build the robot on mujoco: TypeError: stat: path should be string, bytes, os.PathLike or integer, not _MISSING_TYPE
-- `g1_dof27` / assets: no mjcf_path declared for mujoco
-- `g1_dof27` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `g1_dof27` / hold: could not build the robot on mujoco: TypeError: stat: path should be string, bytes, os.PathLike or integer, not _MISSING_TYPE
-- `g1_dof29_dex3` / assets: no mjcf_path declared for mujoco
-- `g1_dof29_dex3` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `g1_dof29_dex3` / hold: could not build the robot on mujoco: TypeError: stat: path should be string, bytes, os.PathLike or integer, not _MISSING_TYPE
 - `g1_tracking` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_yaw_joint', 'left_wri
 - `g1_tracking` / assets: ['roboverse_data/unitree_description/mjcf/g1.xml'] not local and not fetched from the Hub (Exception)
 - `g1_tracking` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
 - `g1_tracking` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
 - `g1_tracking` / hold: could not build the robot on mujoco: Exception: File roboverse_data/unitree_description/mjcf/g1.xml neither exists in the local directory nor exists in the HuggingFace data sources ('RoboVerseOrg/roboverse_da
 - `google_robot_static` / config: no joint_limits for ['joint_bicep', 'joint_elbow', 'joint_finger_left', 'joint_finger_right', 'joint_forearm', 'joint_gripper', 'joint_head_pan', 'joint_head_tilt', 'joint_shoulder', 'joint_torso', 'joint_wrist']; no def
-- `google_robot_static` / assets: no mjcf_path declared for mujoco
-- `google_robot_static` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `google_robot_static` / hold: could not build the robot on mujoco: ValueError: Object 'google_robot_static' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=No
 - `h1_2_without_hand` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_pitch_joint', 'left_elbow_roll_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left
-- `h1_2_without_hand` / assets: no mjcf_path declared for mujoco
-- `h1_2_without_hand` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `h1_2_without_hand` / hold: could not build the robot on mujoco: ValueError: Object 'h1_2_without_hand' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=robo
 - `h1_hand` / config: no joint_limits for ['lh_FFJ1', 'lh_FFJ2', 'lh_FFJ3', 'lh_FFJ4', 'lh_LFJ1', 'lh_LFJ2', 'lh_LFJ3', 'lh_LFJ4', 'lh_LFJ5', 'lh_MFJ1', 'lh_MFJ2', 'lh_MFJ3', 'lh_MFJ4', 'lh_RFJ1', 'lh_RFJ2', 'lh_RFJ3', 'lh_RFJ4', 'lh_THJ1', '
 - `h1_hand` / actuators: 48 actuator(s) not named after their joint (the handler would add a second servo): 'lh_A_WRJ2' drives 'lh_WRJ2'; 'lh_A_WRJ1' drives 'lh_WRJ1'; 'lh_A_THJ5' drives 'lh_THJ5'; 'lh_A_THJ4' drives 'lh_THJ4'
 - `h1_hand` / hold: could not build the robot on mujoco: ValueError: Robot 'h1_hand': the MJCF roboverse_data/robots/h1_hand/mjcf/h1_hand.xml ships no actuator for joint 'lh_WRJ2' and its BaseActuatorCfg sets no stiffness, so the
 - `h1_simple_hand` / config: no default position for ['L_index_intermediate', 'L_index_proximal', 'L_middle_intermediate', 'L_middle_proximal', 'L_pinky_intermediate', 'L_pinky_proximal', 'L_ring_intermediate', 'L_ring_proximal', 'L_thumb_distal', '
 - `h1_simple_hand` / limits: 26 of 45 limited joints disagree with the MJCF: left_hand cfg [-6.000, 6.000] vs mjcf [-3.054, 3.054]; right_hand cfg [-6.000, 6.000] vs mjcf [-3.054, 3.054]; L_index_proximal cfg [-1.000, 1.000] vs mjcf [0.000, 1.700]; 
 - `iiwa` / config: no joint_limits for ['iiwa7_joint_1', 'iiwa7_joint_2', 'iiwa7_joint_3', 'iiwa7_joint_4', 'iiwa7_joint_5', 'iiwa7_joint_6', 'iiwa7_joint_7', 'panda_finger_joint1', 'panda_finger_joint2']; no default position for ['iiwa7_j
-- `iiwa` / assets: no mjcf_path declared for mujoco
-- `iiwa` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `iiwa` / hold: could not build the robot on mujoco: ValueError: Object 'iiwa' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=data_isaaclab/rob
 - `kinova_gen3_robotiq_2f85` / config: no default position for ['finger_joint', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6', 'joint_7', 'left_outer_finger_joint', 'right_outer_finger_joint']
-- `kinova_gen3_robotiq_2f85` / assets: no mjcf_path declared for mujoco
-- `kinova_gen3_robotiq_2f85` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `kinova_gen3_robotiq_2f85` / hold: could not build the robot on mujoco: ValueError: Object 'kinova_gen3_robotiq_2f85' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_pa
 - `koch_1` / hold: after 200 steps at the default pose: max joint deviation 0.2189 rad (pitch), base moved 0.0000 m
 - `openarm_bimanual_wuji` / assets: ['roboverse_data/robots/openarm_wuji/openarm_wuji.xml'] not local and not fetched from the Hub (Exception)
 - `openarm_bimanual_wuji` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
@@ -336,27 +303,12 @@ Named failures (the first per robot and check):
 - `openarm_wuji` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
 - `openarm_wuji` / hold: could not build the robot on mujoco: Exception: File roboverse_data/robots/openarm_wuji/openarm_wuji.xml neither exists in the local directory nor exists in the HuggingFace data sources ('RoboVerseOrg/robover
 - `sawyer` / config: no default position for ['head_pan', 'right_gripper_l_finger_joint', 'right_gripper_r_finger_joint', 'right_j0', 'right_j1', 'right_j2', 'right_j3', 'right_j4', 'right_j5', 'right_j6']
-- `sawyer` / assets: no mjcf_path declared for mujoco
-- `sawyer` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `sawyer` / hold: could not build the robot on mujoco: ValueError: Object 'sawyer' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=roboverse_data/
 - `shadow_hand` / limits: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
 - `shadow_hand` / actuators: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
 - `shadow_hand` / hold: could not build the robot on mujoco: AttributeError: Line 4: error while parsing element <option>: 'apirate' is not a valid attribute for <option>
 - `unitree_dex3_1_left` / config: no default position for ['left_hand_index_0_joint', 'left_hand_index_1_joint', 'left_hand_middle_0_joint', 'left_hand_middle_1_joint', 'left_hand_thumb_0_joint', 'left_hand_thumb_1_joint', 'left_hand_thumb_2_joint']
-- `unitree_dex3_1_left` / assets: no mjcf_path declared for mujoco
-- `unitree_dex3_1_left` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `unitree_dex3_1_left` / hold: could not build the robot on mujoco: ValueError: Object 'unitree_dex3_1_left' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=No
 - `ur5e_2f85` / config: no default position for ['elbow_joint', 'shoulder_lift_joint', 'shoulder_pan_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
-- `ur5e_2f85` / assets: no mjcf_path declared for mujoco
-- `ur5e_2f85` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `ur5e_2f85` / hold: could not build the robot on mujoco: ValueError: Object 'ur5e_2f85' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=data_isaacla
 - `vega` / config: default outside limits for ['torso_j1']
-- `vega` / assets: no mjcf_path declared for mujoco
-- `vega` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `vega` / hold: could not build the robot on mujoco: ValueError: Object 'vega' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=roboverse_pack/ro
-- `xhand_right` / assets: no mjcf_path declared for mujoco
-- `xhand_right` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
-- `xhand_right` / hold: could not build the robot on mujoco: ValueError: Object 'xhand_right' has no mjcf asset path set for the 'mujoco' simulator. Please set 'mjcf_path' on this object's config. Available paths: usd_path=None, urdf
 
 ## Cross-engine parity
 
