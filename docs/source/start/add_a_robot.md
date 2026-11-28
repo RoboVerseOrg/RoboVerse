@@ -98,21 +98,23 @@ only with this green.
 
 ### The sweep of 2026-11-28 (MuJoCo vs Isaac Sim 6, every config with an MJCF and a USD)
 
-| verdict | robots |
+| verdict | robots (largest cross-engine difference, 400 steps at 0.63 rad/s peak) |
 |---|---|
-| pass | franka (worst 0.038 rad, joints 2 and 4), ur5e (0.024), ur10e (0.026) |
-| FAIL | z1 (joints 3, 4, 6: MuJoCo follows 44 to 58 steps late, 0.33 rad apart, Isaac 6 steps: the MJCF's wrist gains); gen3 (joint_7 0.89 rad: MuJoCo tracking error 1.13 vs 0.28; joints 2 to 4 0.06 to 0.13) |
-| reported, not judged | h1, h1_wrist (floating base: the knees end 1.0 to 1.1 rad apart as the two engines let the robot fall) |
+| pass | gen3 0.0004 rad, z1 0.0011, franka 0.0043, ur5e 0.028, ur10e 0.036 |
+| reported, not judged | h1, h1_wrist (floating base: the knees end 1.1 to 1.7 rad apart as the two engines let the robot fall) |
 | no comparison | iiwa14 (Isaac Lab 3 cannot build the USD: no rigid bodies under the prim), so_arm100, lite6, koch_1 (no USD) |
 
-The regime is the verdict's fine print. The first run used a quarter of each joint's half range in 3 s (1.5 rad/s on
-Franka's joint 1, near its velocity limit) and every arm failed, Franka by 0.17 rad on joint 1: at that speed the
-position gains saturate the torque limits, and the limits differ between engines (the Menagerie MJCF authors
-+-40 N m, the USD 87 N m on joints 1 to 4 and 12 N m on 5 to 7, because `FrankaCfg` sets no `effort_limit_sim`).
-Pinning the datasheet limits halves the remaining gap on joints 2 and 4 but changes the MuJoCo dynamics the shipped
-demos were recorded under: `bench health` then replays stack_cube at 0.6 and pick_cube at 0.8. The limits therefore
-stay unpinned, the gap is written in the config's docstring, and the default amplitude is capped at 0.3 rad (0.63
-rad/s), the speed of a tabletop demo. `--amplitude-max 0` restores the full-range probe.
+How the trajectory is shaped is the verdict's fine print, and the sweep had to learn it. Its first version began
+each phase-shifted joint with a step from the default to the first sample; that step saturated the position servos
+(Franka's joint 1 drifted 0.17 rad apart between engines, Z1's 30 N m wrist servos lagged half a second on MuJoCo,
+Gen3's unlimited wrist joint swung a radian) and every arm failed. With the amplitude ramped in over the first period
+the table above is what remains, and Franka also agrees within 0.004 rad at the full-range probe (`--amplitude-max 0`,
+1.5 rad/s peak, near its velocity limit). Two facts from the detour are kept: `FrankaCfg` sets no `effort_limit_sim`,
+so MuJoCo clamps at the Menagerie MJCF's +-40 N m while the USD carries 87 N m (joints 1 to 4) and 12 N m (5 to 7),
+a difference these trajectories do not expose; and pinning the datasheet limits changes the MuJoCo dynamics the
+shipped demos were recorded under (`bench health` then replays stack_cube at 0.6 and pick_cube at 0.8), so the limits
+stay unpinned until the demos are re-recorded for a protocol bump. The default amplitude cap of 0.3 rad (0.63 rad/s,
+the speed of a tabletop demo) keeps the verdict in the regime the benchmark runs in.
 
 ## 5. One gated task
 
@@ -121,7 +123,7 @@ with the skills, pass the gate. Where the asset exists for both engines, run the
 
 ## What is coming
 
-`robot add` from a URDF or a USD (today the MJCF is the source; the other paths are declared, not read), the Z1
-and Gen3 gain fixes the parity sweep asks for, and re-recording the tabletop demos under pinned Franka effort limits
-as a protocol bump. The order of planned robots is Franka (reference), YAM, Sharpa, the Wuji hand, UR5e, xArm7,
+`robot add` from a URDF or a USD (today the MJCF is the source; the other paths are declared, not read), a USD for
+iiwa14 that Isaac Lab 3 can build, and re-recording the tabletop demos under pinned Franka effort limits as a protocol
+bump. The order of planned robots is Franka (reference), YAM, Sharpa, the Wuji hand, UR5e, xArm7,
 SO-101, G1, bimanual.

@@ -400,6 +400,8 @@ def canned_trajectory(
     Amplitude is ``amplitude_frac`` of each joint's half range (0.5 rad for an unlimited joint), at most
     ``amplitude_max`` (so a 0.3 rad swing in 3 s peaks at 0.63 rad/s, the speed of a tabletop demo rather than of
     a joint at its velocity limit), clipped to the limits. A slide joint keeps the fraction (its range is small).
+    The amplitude ramps in over the first period, so every joint's command starts at its default and the robot is
+    never yanked at step 0 (a step on a phase-shifted joint used to swing an unlimited wrist by a radian).
     """
     limits = getattr(cfg, "joint_limits", None) or {}
     defaults = getattr(cfg, "default_joint_positions", None) or {}
@@ -412,7 +414,8 @@ def canned_trajectory(
         amp = amplitude_frac * (hi - lo) / 2 if np.isfinite(lo) and np.isfinite(hi) else 0.5
         if np.isfinite(amplitude_max) and amplitude_max > 0:
             amp = min(amp, amplitude_max)
-        q = q0 + amp * np.sin(2 * np.pi * t / float(period_steps) + k * np.pi / 4)
+        ramp = np.clip(t / float(period_steps), 0.0, 1.0)
+        q = q0 + ramp * amp * np.sin(2 * np.pi * t / float(period_steps) + k * np.pi / 4)
         out[:, k] = np.clip(q, lo, hi)
     return out
 

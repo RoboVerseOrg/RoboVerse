@@ -1198,6 +1198,7 @@ def _robot_parity(args) -> int:
                 steps=args.steps,
                 period_steps=args.period,
                 amplitude_frac=args.amplitude,
+                amplitude_max=args.amplitude_max,
                 settle_steps=args.settle,
             )
         )

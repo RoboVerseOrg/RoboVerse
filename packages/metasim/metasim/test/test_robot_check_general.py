@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from types import SimpleNamespace
 
 import pytest
@@ -255,8 +256,9 @@ def test_canned_trajectory_starts_near_the_defaults_and_stays_inside_the_limits(
     for k, j in enumerate(joints):
         lo, hi = cfg.joint_limits[j]
         assert np.all(q[:, k] >= lo - 1e-9) and np.all(q[:, k] <= hi + 1e-9)
-    assert q[0, 0] == pytest.approx(cfg.default_joint_positions[joints[0]]), "phase 0: joint 0 starts at its default"
-    assert np.ptp(q[:, joints.index("j2")]) > 0.5, "the trajectory actually moves"
+    for k, j in enumerate(joints):
+        assert q[0, k] == pytest.approx(cfg.default_joint_positions[j]), "every joint starts at its default (ramp)"
+    assert np.ptp(q[20:, joints.index("j2")]) > 0.5, "after the ramp the trajectory actually moves"
 
 
 def test_compare_traces_judges_each_joint_against_its_unit_tolerance(tmp_path):
@@ -299,5 +301,42 @@ def test_cli_has_robot_parity():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="command", required=True)
     cli._add_robot(sub)
-    ns = p.parse_args(["robot", "parity", "franka", "--sims", "mujoco", "isaacsim", "--tol", "0.02"])
+    ns = p.parse_args([
+        "robot",
+        "parity",
+        "franka",
+        "--sims",
+        "mujoco",
+        "isaacsim",
+        "--tol",
+        "0.02",
+        "--amplitude-max",
+        "0",
+    ])
     assert ns.func is cli._robot_parity and ns.sims == ["mujoco", "isaacsim"] and ns.tol == 0.02 and ns.steps == 400
+    assert ns.amplitude_max == 0.0 and "amplitude_max=args.amplitude_max" in inspect.getsource(cli._robot_parity)
+
+
+def test_mujoco_package_defaults_to_egl_on_a_headless_machine():
+    """Without a display and without MUJOCO_GL, importing the MuJoCo backend asks for EGL before `mujoco` loads."""
+    import os
+    import subprocess
+    import sys
+
+    env = {k: v for k, v in os.environ.items() if k not in ("DISPLAY", "WAYLAND_DISPLAY", "MUJOCO_GL")}
+    code = "import sys, os; import metasim.sim.mujoco; print(os.environ.get('MUJOCO_GL'))"
+    out = subprocess.run(
+        [sys.executable, "-c", code], check=False, env=env, capture_output=True, text=True, timeout=120
+    )
+    assert out.stdout.strip() == "egl", out.stderr[-500:]
+    env["MUJOCO_GL"] = "disable"
+    out = subprocess.run(
+        [sys.executable, "-c", code], check=False, env=env, capture_output=True, text=True, timeout=120
+    )
+    assert out.stdout.strip() == "disable", "an explicit choice is kept"
+    env.pop("MUJOCO_GL")
+    env["DISPLAY"] = ":0"
+    out = subprocess.run(
+        [sys.executable, "-c", code], check=False, env=env, capture_output=True, text=True, timeout=120
+    )
+    assert out.stdout.strip() == "None", "with a display MuJoCo's own default stands"
