@@ -39,7 +39,7 @@ def hub_files(cache: str | None) -> set[str]:
     return files
 
 
-def references(paths: list[Path]) -> dict[str, list[tuple[str, int]]]:
+def references(paths: list[Path]) -> tuple[dict[str, list[tuple[str, int]]], dict[str, list[tuple[str, int]]]]:
     """``roboverse_data/...`` literals -> [(file, line)]; a literal that is part of an f-string or a concatenation is dynamic."""
     static: dict[str, list[tuple[str, int]]] = {}
     dynamic: dict[str, list[tuple[str, int]]] = {}
@@ -52,17 +52,32 @@ def references(paths: list[Path]) -> dict[str, list[tuple[str, int]]]:
             except (SyntaxError, UnicodeDecodeError):
                 continue
             rel = py.relative_to(REPO).as_posix()
+            fstring_parts: set[int] = set()  # ast.walk visits an f-string's constant parts again as plain Constants
+            for scope in ast.walk(tree):  # docstrings are prose about the data, not references to it
+                if isinstance(scope, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and scope.body:
+                    first = scope.body[0]
+                    if (
+                        isinstance(first, ast.Expr)
+                        and isinstance(first.value, ast.Constant)
+                        and isinstance(first.value.value, str)
+                    ):
+                        fstring_parts.add(id(first.value))
             for node in ast.walk(tree):
                 if isinstance(node, ast.JoinedStr):  # f-string: dynamic
                     for part in node.values:
                         if isinstance(part, ast.Constant) and isinstance(part.value, str):
+                            fstring_parts.add(id(part))
                             for m in REF.findall(part.value):
                                 dynamic.setdefault(m, []).append((rel, node.lineno))
-                elif isinstance(node, ast.Constant) and isinstance(node.value, str) and "roboverse_data/" in node.value:
+                elif (
+                    isinstance(node, ast.Constant)
+                    and isinstance(node.value, str)
+                    and "roboverse_data/" in node.value
+                    and id(node) not in fstring_parts
+                ):
                     for m in REF.findall(node.value):
                         static.setdefault(m, []).append((rel, node.lineno))
-    for m in dynamic:
-        static.pop(m, None)
+    # a literal that is also the constant part of some f-string stays a static reference where it is written in full
     return static, dynamic
 
 

@@ -173,18 +173,30 @@ def check_kinematics(cfg) -> CheckRow:
         return CheckRow("kinematics", False, f"{type(err).__name__}: {str(err)[:160]}")
 
 
-def check_limits(cfg, tol: float = 1e-3) -> CheckRow:
+def load_mjcf(cfg):
+    """The config's MJCF as a ``mujoco.MjModel``, the exception that stopped it loading, or None without an MJCF."""
+    path = getattr(cfg, "mjcf_path", None)
+    if not isinstance(path, str) or not path:
+        return None
+    try:
+        import mujoco
+
+        return mujoco.MjModel.from_xml_path(path)
+    except Exception as err:
+        return err
+
+
+def check_limits(cfg, tol: float = 1e-3, model=None) -> CheckRow:
     """The config's joint limits agree with the MJCF's joint ranges (limited joints only)."""
     path = getattr(cfg, "mjcf_path", None)
     limits = getattr(cfg, "joint_limits", None) or {}
     if not isinstance(path, str) or not path or not limits:
         return CheckRow("limits", True, "no mjcf_path or no joint_limits: not judged")
-    try:
-        import mujoco
+    import mujoco
 
-        model = mujoco.MjModel.from_xml_path(path)
-    except Exception as err:
-        return CheckRow("limits", False, f"MJCF did not load: {type(err).__name__}: {str(err)[:140]}")
+    model = load_mjcf(cfg) if model is None else model
+    if isinstance(model, Exception):
+        return CheckRow("limits", False, f"MJCF did not load: {type(model).__name__}: {str(model)[:140]}")
     mismatches, compared = [], 0
     for joint, (lo, hi) in limits.items():
         jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint)
@@ -203,18 +215,17 @@ def check_limits(cfg, tol: float = 1e-3) -> CheckRow:
     return CheckRow("limits", True, f"{compared} limited joints match the MJCF ranges")
 
 
-def check_actuators(cfg) -> CheckRow:
+def check_actuators(cfg, model=None) -> CheckRow:
     """MJCF actuators are named after the joints they drive; every config joint exists in the MJCF."""
     path = getattr(cfg, "mjcf_path", None)
     joints = sorted(getattr(cfg, "actuators", {}) or {})
     if not isinstance(path, str) or not path or not joints:
         return CheckRow("actuators", True, "no mjcf_path or no actuators: not judged")
-    try:
-        import mujoco
+    import mujoco
 
-        model = mujoco.MjModel.from_xml_path(path)
-    except Exception as err:
-        return CheckRow("actuators", False, f"MJCF did not load: {type(err).__name__}: {str(err)[:140]}")
+    model = load_mjcf(cfg) if model is None else model
+    if isinstance(model, Exception):
+        return CheckRow("actuators", False, f"MJCF did not load: {type(model).__name__}: {str(model)[:140]}")
     problems = []
     unknown = [j for j in joints if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, j) < 0]
     if unknown:
@@ -253,6 +264,7 @@ def check_hold(cfg, sim: str, *, steps: int = 200, joint_tol: float = 0.05, base
     try:
         scenario = ScenarioCfg(robots=[cfg], simulator=sim, num_envs=1, headless=True)
         handler = get_sim_handler_class(SimType(sim))(scenario)
+        _OPEN_HANDLERS.append(handler)  # registered before launch: a launch that raises must still be closed
         handler.launch()
     except Exception as err:
         return CheckRow("hold", False, f"could not build the robot on {sim}: {type(err).__name__}: {str(err)[:160]}")
@@ -293,10 +305,8 @@ def check_hold(cfg, sim: str, *, steps: int = 200, joint_tol: float = 0.05, base
         )
     except Exception as err:
         return CheckRow("hold", False, f"{type(err).__name__}: {str(err)[:160]}")
-    finally:
-        # not closed here: Isaac Sim 6 ends the process inside close(), which would take the report with it.
-        # The caller closes it once the report is printed (close_handlers()).
-        _OPEN_HANDLERS.append(handler)
+    # not closed here: Isaac Sim 6 ends the process inside close(), which would take the report with it.
+    # The caller closes it once the report is printed (close_handlers()); the handler is registered above.
 
 
 def check_robot_cfg(cfg, *, sim: str = "mujoco", steps: int = 200, hold: bool = True) -> RobotReport:
@@ -305,8 +315,9 @@ def check_robot_cfg(cfg, *, sim: str = "mujoco", steps: int = 200, hold: bool = 
     report.rows.append(check_config(cfg))
     report.rows.append(check_assets(cfg, sim))
     report.rows.append(check_kinematics(cfg))
-    report.rows.append(check_limits(cfg))
-    report.rows.append(check_actuators(cfg))
+    model = load_mjcf(cfg)  # one parse for the two MJCF checks
+    report.rows.append(check_limits(cfg, model=model))
+    report.rows.append(check_actuators(cfg, model=model))
     if hold:
         report.rows.append(check_hold(cfg, sim, steps=steps))
     return report

@@ -101,7 +101,16 @@ def _build_instance_pool(env) -> list[TaskInstance]:
         robot = robots[0] if len(robots) == 1 else robots
         try:
             init_states, all_actions, _ = get_traj(traj, robot, getattr(env, "handler", None))
-        except (FileNotFoundError, KeyError, ValueError) as err:
+        except FileNotFoundError as err:
+            # a task that names a demo file nobody has recorded yet (``bench record`` is about to): the pool is the
+            # task's own initial states, exactly as for a task without demos
+            from loguru import logger as log
+
+            log.warning(
+                f"{type(env).__name__}: no demo file at {traj} ({err}); evaluating from the task's own initial states"
+            )
+            return []
+        except (KeyError, ValueError) as err:
             names = [r.name for r in robots]
             raise ValueError(
                 f"{type(env).__name__}: cannot build the instance pool for robot(s) {names} from {traj}: {err}. "

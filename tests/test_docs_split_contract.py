@@ -60,6 +60,8 @@ def test_build_script_puts_roboverse_at_site_root_and_metasim_under_metasim(tmp_
     fake_pythonpath = tmp_path / "pythonpath"
     fake_sphinx = fake_pythonpath / "sphinx"
     fake_sphinx.mkdir(parents=True)
+    # a regular package (with __init__.py): a namespace package would lose to a real sphinx installed in site-packages
+    (fake_sphinx / "__init__.py").write_text("", encoding="utf-8")
     (fake_sphinx / "__main__.py").write_text(
         """from __future__ import annotations
 

@@ -1165,32 +1165,41 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
         return report
     import tempfile
 
-    child_dir = (
-        os.path.join(args.out_dir, "children", name) if args.out_dir else tempfile.mkdtemp(prefix="robot_check_")
-    )
+    scratch = None if args.out_dir else tempfile.TemporaryDirectory(prefix="robot_check_")
+    child_dir = os.path.join(args.out_dir, "children", name) if args.out_dir else scratch.name
     os.makedirs(child_dir, exist_ok=True)
+    report_path = os.path.join(child_dir, "robots.json")
+    if os.path.exists(report_path):
+        os.remove(report_path)  # a child that dies must not be read as the last run's report
     cmd = [sys.executable, "-m", "metasim", "robot", "check", name, "--sim", args.sim, "--steps", str(args.steps)]
     cmd += ["--isolate", "never", "--out-dir", child_dir]  # the report is read from the child's robots.json, not stdout
     log_path = None
     if args.out_dir:
         os.makedirs(os.path.join(args.out_dir, "logs"), exist_ok=True)
         log_path = os.path.join(args.out_dir, "logs", f"{name}.log")
-    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
-    if log_path:
-        with open(log_path, "w", encoding="utf-8") as fh:
-            fh.write(proc.stdout)
-            fh.write(proc.stderr)
     try:
-        with open(os.path.join(child_dir, "robots.json"), encoding="utf-8") as fh:
-            child = json.load(fh)["robots"][0]
-        rows = [CheckRow(r["check"], bool(r["ok"]), str(r["detail"])) for r in child["rows"]]
-        return RobotReport(robot=child["robot"], simulator=child["simulator"], rows=rows)
-    except (OSError, ValueError, KeyError, IndexError, TypeError):
-        last = next((ln for ln in reversed((proc.stderr + proc.stdout).splitlines()) if ln.strip()), "")
-        report.rows.append(
-            CheckRow("hold", False, f"child exited {proc.returncode} without a report: {last.strip()[:200]}")
-        )
-        return report
+        proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        if log_path:
+            with open(log_path, "w", encoding="utf-8") as fh:
+                fh.write(proc.stdout)
+                fh.write(proc.stderr)
+        try:
+            with open(report_path, encoding="utf-8") as fh:
+                child = json.load(fh)["robots"][0]
+            rows = [CheckRow(r["check"], bool(r["ok"]), str(r["detail"])) for r in child["rows"]]
+            return RobotReport(robot=child["robot"], simulator=child["simulator"], rows=rows)
+        except (OSError, ValueError, KeyError, IndexError, TypeError):
+            lines = [ln.strip() for ln in (proc.stdout + proc.stderr).splitlines() if ln.strip()]
+            markers = ("Error", "error", "Exception", "Traceback", "fault", "abort")
+            errors = [ln for ln in lines if any(m in ln for m in markers) and not ln.startswith("[")]
+            last = (errors or lines or [""])[-1]  # the last error line beats Isaac's "SimulationContext cleared"
+            report.rows.append(
+                CheckRow("hold", False, f"child exited {proc.returncode} without a report: {last.strip()[:200]}")
+            )
+            return report
+    finally:
+        if scratch is not None:
+            scratch.cleanup()
 
 
 def _robot_check(args: argparse.Namespace) -> int:

@@ -1122,3 +1122,15 @@ def test_health_task_isolated_forwards_the_gate_flags(monkeypatch, tmp_path):
     cli._health_task_isolated("t", SimpleNamespace(**{**vars(args), "demos": None, "floor": False, "repeat": 1}))
     assert "--demos" not in calls[-1] and "--floor" not in calls[-1] and "--repeat" not in calls[-1]
     assert "invalid" in cli.HEALTH_STATUSES and "invalid" in cli.HEALTH_FAILING
+
+
+def test_instance_pool_treats_a_missing_demo_file_as_no_recorded_instances(tmp_path):
+    """A task whose demo file nobody recorded yet (bench record is about to) evaluates from its own initial states."""
+    from metasim.bench.instances import _build_instance_pool
+
+    env = SimpleNamespace(
+        traj_filepath=str(tmp_path / "trajs" / "new_task" / "v2"),
+        scenario=SimpleNamespace(robots=[SimpleNamespace(name="bot")]),
+        handler=None,
+    )
+    assert _build_instance_pool(env) == []

@@ -11,7 +11,8 @@ if [ "$sim" = isaacsim ]; then
   py=${ISAACSIM_PYTHON:-$py}
   export ACCEPT_EULA=Y OMNI_KIT_ACCEPT_EULA=YES PRIVACY_CONSENT=Y OPENBLAS_NUM_THREADS=1
 fi
-export PYTHONPATH="$PWD/packages/metasim:$PWD${PYTHONPATH:+:$PYTHONPATH}" MUJOCO_GL=egl
+export PYTHONPATH="$PWD/packages/metasim:$PWD${PYTHONPATH:+:$PYTHONPATH}"
+# MUJOCO_GL is chosen by metasim.sim.gl at the `python -m metasim` entry (EGL only where libEGL is loadable)
 mkdir -p "$out"
 "$py" -m metasim bench health --sim "$sim" --episodes 5 --threshold 0.8 --floor --repeat 2 --isolate auto \
   --device "${ROBOVERSE_GATE_DEVICE:-cpu}" --out-dir "$out" || status=$?

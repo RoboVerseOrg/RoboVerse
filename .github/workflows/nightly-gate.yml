@@ -32,7 +32,7 @@ jobs:
         if: always()  # the gate exits 1 when a task fails; that is exactly when the report matters
         with:
           name: gate-${{ matrix.sim }}
-          path: gate_out/${{ matrix.sim }}/health.*
+          path: gate_out/${{ matrix.sim }}/
           if-no-files-found: error
       - name: Summary
         if: always()

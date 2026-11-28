@@ -95,8 +95,6 @@ _KNOWN_DEFAULT_POS_OUT_OF_RANGE_GAPS: dict[str, str] = {
     # ArxL5, SoArm100 and Koch left this list on 2026-11-28: their limits now match their MJCFs and the
     # defaults lie inside them (`python -m metasim robot check`).
     "VegaCfg": "torso_j1 default 0.0 but joint_limits is the single-point [0.2, 0.2] — limit looks like a fixed offset, not a range.",
-    "Go2Cfg": "RL/RR_thigh_joint default 1.0 outside [-4.54, 0.52] — sign or value error in stand-pose default.",
-    "AllegroHandCfg": "thumb_joint_0 default 0.0 below lower limit 0.263; either default→0.263 or limit→0.",
 }
 
 

@@ -491,9 +491,13 @@ def test_robot_check_isolated_spawns_a_child_only_when_the_cheap_rows_pass(monke
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     args = argparse.Namespace(sim="isaacsim", steps=200, no_hold=False, out_dir=str(tmp_path), json=False, all=True)
+    stale_dir = tmp_path / "children" / "dies"
+    stale_dir.mkdir(parents=True)
+    (stale_dir / "robots.json").write_text(json.dumps({"simulator": "isaacsim", "robots": [cheap["ready"].to_dict()]}))
     ready = cli._robot_check_isolated("ready", args)
     nousd = cli._robot_check_isolated("nousd", args)
     dies = cli._robot_check_isolated("dies", args)
+    assert not (stale_dir / "robots.json").exists(), "a stale report from the last run is removed before the child runs"
     assert spawned == ["ready", "dies"], "no simulator boot for a robot whose assets are missing"
     assert ready.ok and [r.check for r in ready.rows] == ["config", "hold"], "the child's report replaces the parent's"
     assert not nousd.ok and nousd.rows[-1].check == "hold" and "not attempted" in nousd.rows[-1].detail

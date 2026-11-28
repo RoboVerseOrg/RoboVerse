@@ -30,7 +30,9 @@ def load_all():
     by_suite: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
     for f in sorted(RESULTS.rglob("*.json")):
         rel = f.relative_to(RESULTS)
-        if len(rel.parts) < 3:
+        if (
+            len(rel.parts) < 3 or rel.parts[0] == "robots"
+        ):  # results/robots/ holds robot check / parity runs, not results
             continue
         suite, submission = rel.parts[0], rel.parts[1]
         data = json.loads(f.read_text())
