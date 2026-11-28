@@ -64,6 +64,161 @@ result files per simulator; how to add a robot and pass them is in [Add a robot]
 
 ## Self-check
 
+### Self-check on isaacsim (2026-11-28)
+
+`python -m metasim robot check --all --sim isaacsim`: 42 robots, 9 pass. Source: `results/robots/2026-11-28-isaacsim-check/robots.json`.
+
+| robot | config | assets | kinematics | limits | actuators | hold | verdict |
+|---|---|---|---|---|---|---|---|
+| `aloha` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `aloha_agilex` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `arx_l5` | ok | FAIL | ok | ok | FAIL | FAIL | FAIL |
+| `cartpole` | ok | ok | ok | FAIL | FAIL | FAIL | FAIL |
+| `fetch` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `franka` | ok | ok | ok | ok | ok | ok | pass |
+| `franka_with_gripper_extension` | FAIL | ok | FAIL | ok | ok | FAIL | FAIL |
+| `g1` | ok | ok | ok | ok | ok | FAIL | FAIL |
+| `g1_dof12` | ok | ok | ok | ok | ok | ok | pass |
+| `g1_dof23` | ok | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `g1_dof27` | ok | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `g1_dof29` | ok | ok | ok | ok | ok | ok | pass |
+| `g1_dof29_dex3` | ok | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `g1_tracking` | FAIL | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
+| `gen3` | ok | ok | ok | ok | ok | ok | pass |
+| `go1` | ok | ok | ok | ok | ok | FAIL | FAIL |
+| `google_robot_static` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `h1` | ok | ok | ok | ok | ok | ok | pass |
+| `h1_2_without_hand` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `h1_hand` | FAIL | FAIL | ok | ok | FAIL | FAIL | FAIL |
+| `h1_simple_hand` | FAIL | FAIL | ok | FAIL | ok | FAIL | FAIL |
+| `h1_wrist` | ok | ok | ok | ok | ok | ok | pass |
+| `iiwa` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `iiwa14` | ok | ok | ok | ok | ok | FAIL | FAIL |
+| `kinova_gen3_robotiq_2f85` | FAIL | ok | FAIL | ok | ok | FAIL | FAIL |
+| `koch_1` | ok | FAIL | ok | ok | ok | FAIL | FAIL |
+| `lite6` | ok | FAIL | ok | ok | ok | FAIL | FAIL |
+| `openarm_bimanual_wuji` | ok | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
+| `openarm_wuji` | ok | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
+| `sawyer` | FAIL | ok | FAIL | ok | ok | FAIL | FAIL |
+| `shadow_hand` | ok | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
+| `sharpa_wave_left` | ok | FAIL | ok | ok | ok | FAIL | FAIL |
+| `sharpa_wave_right` | ok | FAIL | ok | ok | ok | FAIL | FAIL |
+| `so_arm100` | ok | FAIL | ok | ok | ok | FAIL | FAIL |
+| `unitree_dex3_1_left` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `ur10e` | ok | ok | ok | ok | ok | ok | pass |
+| `ur5e` | ok | ok | ok | ok | ok | ok | pass |
+| `ur5e_2f85` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `vega` | FAIL | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `xhand_right` | ok | FAIL | FAIL | ok | ok | FAIL | FAIL |
+| `yam` | ok | FAIL | ok | ok | ok | FAIL | FAIL |
+| `z1` | ok | ok | ok | ok | ok | ok | pass |
+
+Named failures (the first per robot and check):
+
+- `aloha` / config: no default position for ['left/elbow', 'left/forearm_roll', 'left/left_finger', 'left/right_finger', 'left/shoulder', 'left/waist', 'left/wrist_angle', 'left/wrist_rotate', 'right/elbow', 'right/forearm_roll', 'right/lef
+- `aloha` / assets: no usd_path declared for isaacsim
+- `aloha` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `aloha` / hold: not attempted: a cheaper check already failed
+- `aloha_agilex` / config: no joint_limits for ['fl_joint1', 'fl_joint2', 'fl_joint3', 'fl_joint4', 'fl_joint5', 'fl_joint6', 'fl_joint7', 'fl_joint8', 'fr_joint1', 'fr_joint2', 'fr_joint3', 'fr_joint4', 'fr_joint5', 'fr_joint6', 'fr_joint7', 'fr_
+- `aloha_agilex` / assets: no usd_path declared for isaacsim
+- `aloha_agilex` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `aloha_agilex` / hold: not attempted: a cheaper check already failed
+- `arx_l5` / assets: no usd_path declared for isaacsim
+- `arx_l5` / actuators: 1 actuator(s) not named after their joint (the handler would add a second servo): 'gripper' drives 'joint7'
+- `arx_l5` / hold: not attempted: a cheaper check already failed
+- `cartpole` / limits: 1 of 1 limited joints disagree with the MJCF: slider cfg [-2.000, 2.000] vs mjcf [-1.800, 1.800]
+- `cartpole` / actuators: 1 actuator(s) not named after their joint (the handler would add a second servo): 'slide' drives 'slider'
+- `cartpole` / hold: not attempted: a cheaper check already failed
+- `fetch` / config: no default position for ['elbow_flex_joint', 'forearm_roll_joint', 'head_pan_joint', 'head_tilt_joint', 'l_gripper_finger_joint', 'l_wheel_joint', 'r_gripper_finger_joint', 'r_wheel_joint', 'shoulder_lift_joint', 'should
+- `fetch` / assets: no usd_path declared for isaacsim
+- `fetch` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `fetch` / hold: not attempted: a cheaper check already failed
+- `franka_with_gripper_extension` / config: no default position for ['panda_finger_joint1', 'panda_finger_joint2', 'panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
+- `franka_with_gripper_extension` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `franka_with_gripper_extension` / hold: not attempted: a cheaper check already failed
+- `g1` / hold: child exited 1 without a report: 2026-11-28 09:14:10.974 +00:00 / ERROR    / metasim.sim.isaacsim.isaacsim:close:705 - closing Isaac Sim while ValueError propagates; the process exits 1
+- `g1_dof23` / assets: no usd_path declared for isaacsim
+- `g1_dof23` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `g1_dof23` / hold: not attempted: a cheaper check already failed
+- `g1_dof27` / assets: no usd_path declared for isaacsim
+- `g1_dof27` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `g1_dof27` / hold: not attempted: a cheaper check already failed
+- `g1_dof29_dex3` / assets: no usd_path declared for isaacsim
+- `g1_dof29_dex3` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `g1_dof29_dex3` / hold: not attempted: a cheaper check already failed
+- `g1_tracking` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_yaw_joint', 'left_wri
+- `g1_tracking` / assets: ['/workspace/roboverse_maint/RoboVerse/roboverse_data/unitree_description/usd/g1/g1.usd'] not local and not fetched from the Hub (Exception)
+- `g1_tracking` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
+- `g1_tracking` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'
+- `g1_tracking` / hold: not attempted: a cheaper check already failed
+- `go1` / hold: child exited 1 without a report: 2026-11-28 09:15:14.432 +00:00 / ERROR    / metasim.sim.isaacsim.isaacsim:close:705 - closing Isaac Sim while ValueError propagates; the process exits 1
+- `google_robot_static` / config: no joint_limits for ['joint_bicep', 'joint_elbow', 'joint_finger_left', 'joint_finger_right', 'joint_forearm', 'joint_gripper', 'joint_head_pan', 'joint_head_tilt', 'joint_shoulder', 'joint_torso', 'joint_wrist']; no def
+- `google_robot_static` / assets: no usd_path declared for isaacsim
+- `google_robot_static` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `google_robot_static` / hold: not attempted: a cheaper check already failed
+- `h1_2_without_hand` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_pitch_joint', 'left_elbow_roll_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left
+- `h1_2_without_hand` / assets: ['roboverse_data_release/robots/h1_2_without_hand/usd/h1_2_without_hand.usd'] not local and not fetched from the Hub (ValueError)
+- `h1_2_without_hand` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `h1_2_without_hand` / hold: not attempted: a cheaper check already failed
+- `h1_hand` / config: no joint_limits for ['lh_FFJ1', 'lh_FFJ2', 'lh_FFJ3', 'lh_FFJ4', 'lh_LFJ1', 'lh_LFJ2', 'lh_LFJ3', 'lh_LFJ4', 'lh_LFJ5', 'lh_MFJ1', 'lh_MFJ2', 'lh_MFJ3', 'lh_MFJ4', 'lh_RFJ1', 'lh_RFJ2', 'lh_RFJ3', 'lh_RFJ4', 'lh_THJ1', '
+- `h1_hand` / assets: no usd_path declared for isaacsim
+- `h1_hand` / actuators: 48 actuator(s) not named after their joint (the handler would add a second servo): 'lh_A_WRJ2' drives 'lh_WRJ2'; 'lh_A_WRJ1' drives 'lh_WRJ1'; 'lh_A_THJ5' drives 'lh_THJ5'; 'lh_A_THJ4' drives 'lh_THJ4'
+- `h1_hand` / hold: not attempted: a cheaper check already failed
+- `h1_simple_hand` / config: no default position for ['L_index_intermediate', 'L_index_proximal', 'L_middle_intermediate', 'L_middle_proximal', 'L_pinky_intermediate', 'L_pinky_proximal', 'L_ring_intermediate', 'L_ring_proximal', 'L_thumb_distal', '
+- `h1_simple_hand` / assets: no usd_path declared for isaacsim
+- `h1_simple_hand` / limits: 26 of 45 limited joints disagree with the MJCF: left_hand cfg [-6.000, 6.000] vs mjcf [-3.054, 3.054]; right_hand cfg [-6.000, 6.000] vs mjcf [-3.054, 3.054]; L_index_proximal cfg [-1.000, 1.000] vs mjcf [0.000, 1.700]; 
+- `h1_simple_hand` / hold: not attempted: a cheaper check already failed
+- `iiwa` / config: no joint_limits for ['iiwa7_joint_1', 'iiwa7_joint_2', 'iiwa7_joint_3', 'iiwa7_joint_4', 'iiwa7_joint_5', 'iiwa7_joint_6', 'iiwa7_joint_7', 'panda_finger_joint1', 'panda_finger_joint2']; no default position for ['iiwa7_j
+- `iiwa` / assets: ['data_isaaclab/robots/iiwa/iiwa.usd'] not local and not fetched from the Hub (ValueError)
+- `iiwa` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `iiwa` / hold: not attempted: a cheaper check already failed
+- `iiwa14` / hold: child exited 1 without a report: 2026-11-28 09:15:59.293 +00:00 / ERROR    / metasim.sim.isaacsim.isaacsim:close:705 - closing Isaac Sim while ValueError propagates; the process exits 1
+- `kinova_gen3_robotiq_2f85` / config: no default position for ['finger_joint', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6', 'joint_7', 'left_outer_finger_joint', 'right_outer_finger_joint']
+- `kinova_gen3_robotiq_2f85` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `kinova_gen3_robotiq_2f85` / hold: not attempted: a cheaper check already failed
+- `koch_1` / assets: no usd_path declared for isaacsim
+- `koch_1` / hold: not attempted: a cheaper check already failed
+- `lite6` / assets: no usd_path declared for isaacsim
+- `lite6` / hold: not attempted: a cheaper check already failed
+- `openarm_bimanual_wuji` / assets: ['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)
+- `openarm_bimanual_wuji` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
+- `openarm_bimanual_wuji` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
+- `openarm_bimanual_wuji` / hold: not attempted: a cheaper check already failed
+- `openarm_wuji` / assets: ['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)
+- `openarm_wuji` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
+- `openarm_wuji` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
+- `openarm_wuji` / hold: not attempted: a cheaper check already failed
+- `sawyer` / config: no default position for ['head_pan', 'right_gripper_l_finger_joint', 'right_gripper_r_finger_joint', 'right_j0', 'right_j1', 'right_j2', 'right_j3', 'right_j4', 'right_j5', 'right_j6']
+- `sawyer` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `sawyer` / hold: not attempted: a cheaper check already failed
+- `shadow_hand` / assets: no usd_path declared for isaacsim
+- `shadow_hand` / limits: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
+- `shadow_hand` / actuators: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
+- `shadow_hand` / hold: not attempted: a cheaper check already failed
+- `sharpa_wave_left` / assets: no usd_path declared for isaacsim
+- `sharpa_wave_left` / hold: not attempted: a cheaper check already failed
+- `sharpa_wave_right` / assets: no usd_path declared for isaacsim
+- `sharpa_wave_right` / hold: not attempted: a cheaper check already failed
+- `so_arm100` / assets: no usd_path declared for isaacsim
+- `so_arm100` / hold: not attempted: a cheaper check already failed
+- `unitree_dex3_1_left` / config: no default position for ['left_hand_index_0_joint', 'left_hand_index_1_joint', 'left_hand_middle_0_joint', 'left_hand_middle_1_joint', 'left_hand_thumb_0_joint', 'left_hand_thumb_1_joint', 'left_hand_thumb_2_joint']
+- `unitree_dex3_1_left` / assets: no usd_path declared for isaacsim
+- `unitree_dex3_1_left` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `unitree_dex3_1_left` / hold: not attempted: a cheaper check already failed
+- `ur5e_2f85` / config: no default position for ['elbow_joint', 'shoulder_lift_joint', 'shoulder_pan_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+- `ur5e_2f85` / assets: ['data_isaaclab/robots/UniversalRobots/ur5e/ur5e_2f85_fix.usd'] not local and not fetched from the Hub (ValueError)
+- `ur5e_2f85` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `ur5e_2f85` / hold: not attempted: a cheaper check already failed
+- `vega` / config: default outside limits for ['torso_j1']
+- `vega` / assets: ['roboverse_pack/robots/robots_vega/humanoid/vega_1/vega/vega.usd'] not local and not fetched from the Hub (ValueError)
+- `vega` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `vega` / hold: not attempted: a cheaper check already failed
+- `xhand_right` / assets: no usd_path declared for isaacsim
+- `xhand_right` / kinematics: no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model
+- `xhand_right` / hold: not attempted: a cheaper check already failed
+- `yam` / assets: no usd_path declared for isaacsim
+- `yam` / hold: not attempted: a cheaper check already failed
+
 ### Self-check on mujoco (2026-11-28)
 
 `python -m metasim robot check --all --sim mujoco`: 42 robots, 17 pass. Source: `results/robots/2026-11-28-mujoco-check/robots.json`.

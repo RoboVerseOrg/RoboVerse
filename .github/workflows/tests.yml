@@ -111,6 +111,8 @@ jobs:
         run: python tools/bench/leaderboard.py --check
       - name: Robots page matches the configs and the robot result files
         run: python docs/source/dataset_benchmark/dataset/generate_robot_docs.py --check
+      - name: Task inventory page matches the registry
+        run: python docs/source/dataset_benchmark/tasks/generate_task_docs.py --check
       - name: Coverage summary
         if: always()
         run: |

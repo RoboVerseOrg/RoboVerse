@@ -153,8 +153,7 @@ Add a robot <start/add_a_robot>
 :hidden:
 
 Tasks Overview <dataset_benchmark/tasks/overview>
-Task Descriptions <dataset_benchmark/tasks/descriptions>
-Task Groups <dataset_benchmark/tasks/task_groups>
+Task Inventory <dataset_benchmark/tasks/inventory>
 Robots <dataset_benchmark/dataset/robots>
 Objects <dataset_benchmark/dataset/objects>
 Scenes <dataset_benchmark/dataset/scenes>

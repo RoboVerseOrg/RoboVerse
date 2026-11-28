@@ -1,265 +1,124 @@
-import ast
-import glob
-import os
-import re
-import shutil
+"""Regenerate inventory.md from the task registry (no hand-written rows).
 
-CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-TASK_CFG_ROOT = os.path.abspath(os.path.join(CUR_DIR, "../../../../roboverse_pack/tasks"))
-OUTPUT_DIR = os.path.join(CUR_DIR, "tasks_md")
-VIDEO_BASE = "https://videos.example.com"
-DEFAULT_DESC = "No description provided."
+    python docs/source/dataset_benchmark/tasks/generate_task_docs.py           # rewrite the page
+    python docs/source/dataset_benchmark/tasks/generate_task_docs.py --check   # exit 1 if the page is stale (CI)
 
-GROUPS = [
-    "Maniskill",
-    "RLBench",
-    "Libero",
-    "Calvin",
-    "Graspnet",
-    "Gapartnet",
-    "Arnold",
-    "Unidoormanip",
-    "Simpler",
-    "Robosuite",
-    "Metaworld",
-    "Rlafford",
-]
-PLATFORMS = ["isaacsim", "mujoco", "isaacgym", "sapien3", "genesis", "newton"]
-
-
-def parse_docstring_metadata(docstring: str):
-    if not docstring:
-        return {}
-
-    meta = {}
-    sections = re.split(r"^###\s*", docstring, flags=re.MULTILINE)
-    for section in sections[1:]:
-        lines = section.strip().splitlines()
-        if not lines:
-            continue
-        key_line = lines[0].strip().rstrip(":")
-        key = key_line.lower()
-        content_lines = lines[1:]
-
-        if not content_lines:
-            continue
-
-        is_list = all(line.strip().startswith("- ") for line in content_lines if line.strip())
-        if is_list:
-            values = [line.strip()[2:].strip() for line in content_lines if line.strip()]
-        else:
-            values = "\n".join(content_lines).strip()
-
-        meta[key] = values
-
-    # === Occur  ✅, otherwise ❓ ===
-    if "platforms" in meta:
-        listed_platforms = set(p.lower() for p in meta["platforms"])  # lowercase normalize
-        platform_status = {}
-        for p in PLATFORMS:
-            platform_status[p] = "✅" if p in listed_platforms else "❓"
-        meta["platforms"] = platform_status
-
-    # badges to  map
-    if "badges" in meta and isinstance(meta["badges"], list):
-        meta["badges"] = {b.strip(): True for b in meta["badges"] if isinstance(b, str)}
-
-    # video_url
-    if "video_url" not in meta and "title" in meta and "group" in meta:
-        meta["video_url"] = f"/roboverse/_static/standard_output/tasks/{meta['group']}/{meta['title']}.mp4"
-
-    elif "video_url" in meta and not meta["video_url"].startswith("http"):
-        meta["video_url"] = (
-            f"/roboverse/_static/standard_output/tasks/{meta.get('group', 'Unknown')}/{meta['video_url']}"
-        )
-
-    return meta
-
-
-def render_badges(meta):
-    badge_definitions = {
-        "dense": ("dense-reward", "https://img.shields.io/badge/dense-yes-brightgreen.svg"),
-        "sparse": ("sparse-reward", "https://img.shields.io/badge/sparse-yes-brightgreen.svg"),
-        "demos": ("demos", "https://img.shields.io/badge/demos-yes-brightgreen.svg"),
-    }
-    badges = meta.get("badges", {})
-    display_lines = []
-    definition_lines = []
-
-    for key, (label, badge_url) in badge_definitions.items():
-        if badges.get(key, False):
-            badge_id = f"{label}-badge"
-            display_lines.append(f"![{label}][{badge_id}]")
-            definition_lines.append(f"[{badge_id}]: {badge_url}")
-
-    return "\n".join(display_lines + [""] + definition_lines) if display_lines else ""
-
-
-def generate_md(tid: str, meta: dict) -> str:
-    title = meta.get("title", tid)
-    desc = meta.get("description", DEFAULT_DESC)
-
-    def format_list_field(value):
-        if isinstance(value, list):
-            return "\n" + "\n".join([f"- {item}" for item in value])
-        elif isinstance(value, str) and value.startswith("[") and value.endswith("]"):
-            try:
-                import ast
-
-                items = ast.literal_eval(value)
-                if isinstance(items, list):
-                    return "\n" + "\n".join([f"- {item}" for item in items])
-            except Exception:
-                pass
-        return value
-
-    randoms = format_list_field(meta.get("randomizations", "None."))
-    success = format_list_field(meta.get("success", "None."))
-    video_url = meta.get("video_url")
-    poster_url = meta.get("poster_url", "")
-    official_url = meta.get("official_url", "")
-    badge_section = render_badges(meta)
-    official_link = f"\n**[🔗 Official Task Page]({official_url})**\n" if official_url else ""
-
-    return f"""# {title}
-
-{badge_section}
-{official_link}
-
-**Task Description:** {desc}
-
-**Randomizations:**{randoms}
-
-**Success Conditions:**{success}
-
-
-<div style="display: flex; justify-content: center; margin-bottom: 20px;">
-    <div style="width: 100%; max-width: 512px; text-align: center;">
-        <video width="100%" autoplay loop muted playsinline style="border-radius: 0px;">
-            <source src="{video_url}" type="video/mp4">
-        </video>
-        <p style="margin-top: 5px;"></p>
-    </div>
-</div>
+The page lists every registered task name with the module that registers it, grouped by pack, from MetaSim's static
+registry index (nothing is imported), plus the suites that score them and the retired list. A task appears here
+because it is registered, nowhere else; the gate decides whether it stays.
 """
 
+from __future__ import annotations
 
-def discover_all_tasks():
-    task_meta = {}
-    for py_path in glob.glob(os.path.join(TASK_CFG_ROOT, "*", "*.py")):
-        if os.path.basename(py_path).startswith("_"):
-            continue  # skip __init__.py and private helper modules (_osc, _native_util, ...)
+import argparse
+import csv
+import sys
+from collections import defaultdict
+from pathlib import Path
 
-        try:
-            with open(py_path) as f:
-                doc = f.read()
-            tree = ast.parse(doc)
+ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "packages" / "metasim"))
 
-            # docstring: prefer the task ``...Cfg`` class, else fall back to the
-            # module docstring (modules that register tasks programmatically — e.g.
-            # the native robosuite/LIBERO ports — carry their ``### Title`` /
-            # ``### Platforms`` metadata at module level).
-            docstring = ""
-            for node in tree.body:
-                if isinstance(node, ast.ClassDef) and node.name.endswith("Cfg"):
-                    docstring = ast.get_docstring(node)
-                    break
-            if not docstring:
-                docstring = ast.get_docstring(tree)
-
-            meta = parse_docstring_metadata(docstring or "")
-
-            # title
-            title = meta.get("title") or os.path.splitext(os.path.basename(py_path))[0].replace("_cfg", "")
-            meta["title"] = title
-            safe_title = re.sub(r"\W+", "_", title.strip().lower())
-            meta["md_path"] = f"tasks_md/{safe_title}.md"
-
-            # group
-            group_raw = os.path.basename(os.path.dirname(py_path))
-            if group_raw.lower() == "rlbench":
-                meta["group"] = "RLBench"
-            else:
-                meta["group"] = group_raw.capitalize()
-
-            task_meta[safe_title] = meta
-        except Exception as e:
-            # print(f"❌ Failed to process {py_path}: {e}")
-            pass
-    return task_meta
+RETIRED_CSV = ROOT / "roboverse_pack" / "tasks" / "retired_tasks.csv"
 
 
-def build_task_docs(TASK_REGISTRY):
-    if os.path.exists(OUTPUT_DIR):
-        shutil.rmtree(OUTPUT_DIR)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    for tid, meta in TASK_REGISTRY.items():
-        path = os.path.join(OUTPUT_DIR, os.path.basename(meta["md_path"]))
-        with open(path, "w") as f:
-            f.write(generate_md(tid, meta))
-        # print(f"✅ {path} written.")
+def pack_of(module: str) -> str:
+    """``roboverse_pack.tasks.maniskill.pick_cube`` -> ``maniskill``; a module outside the pack keeps its root."""
+    parts = module.split(".")
+    if parts[:2] == ["roboverse_pack", "tasks"] and len(parts) > 2:
+        return parts[2]  # a module directly under tasks/ (task_template) is its own "pack"
+    if parts[:1] == ["metasim"]:
+        return "metasim example pack"
+    return parts[0]
 
 
-def generate_task_groups_md(TASK_REGISTRY, output_path=None):
-    if output_path is None:
-        output_path = os.path.join(CUR_DIR, "task_groups.md")
+def registered() -> dict[str, str]:
+    """``{task name: registering module}`` for every registered task, from the static index."""
+    from metasim.task.registry import _static_index, list_tasks
 
-    lines = ["# Task Group\n"]
+    index = _static_index()
+    out = {}
+    for name in list_tasks():
+        out[name] = index.names.get(name.lower(), "(registered at import time)")
+    return out
 
-    for i, group in enumerate(GROUPS):
-        lines.append(f"## {group}\n")
 
-        # HTML table
+def suites() -> dict[str, dict[str, list[str]]]:
+    """``{suite: {split: [tasks]}}`` for the registered suites."""
+    from metasim.bench import get_suite, list_suites
+
+    return {name: {s: [t.task for t in ts] for s, ts in get_suite(name).splits.items()} for name in list_suites()}
+
+
+def retired_rows() -> list[dict[str, str]]:
+    if not RETIRED_CSV.exists():
+        return []
+    with RETIRED_CSV.open(encoding="utf-8", newline="") as fh:
+        return list(csv.DictReader(fh))
+
+
+def render() -> str:
+    """The whole page."""
+    tasks = registered()
+    by_pack: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for name, module in tasks.items():
+        by_pack[pack_of(module)].append((name, module))
+    lines = [
+        "# Task inventory",
+        "",
+        "Generated from the task registry by `generate_task_docs.py`; do not edit by hand. Every name below is",
+        "registered in this checkout (`python -m metasim bench list` prints the same list); the release gate",
+        "(`bench health --floor --repeat 2`, nightly on MuJoCo and Isaac Sim 6) decides whether a task stays, and",
+        "`roboverse_pack/tasks/RETIRED_TASKS.md` records the ones it removed and the commit to restore them from.",
+        "How to add one: [Add a task](../../start/add_a_task.md).",
+        "",
+        f"{len(tasks)} registered task names in {len(by_pack)} packs.",
+        "",
+        "## Suites",
+        "",
+    ]
+    for suite, splits in sorted(suites().items()):
+        for split, names in splits.items():
+            lines.append(f"- `{suite}` / `{split}`: " + ", ".join(f"`{n}`" for n in names))
+    lines += ["", "## Registered tasks by pack", ""]
+    for pack in sorted(by_pack):
+        rows = sorted(by_pack[pack])
+        lines += [f"### {pack} ({len(rows)})", "", "| task | registered in |", "|---|---|"]
+        lines += [f"| `{name}` | `{module}` |" for name, module in rows]
+        lines.append("")
+    retired = retired_rows()
+    lines += ["## Retired", ""]
+    if retired:
+        by_family = defaultdict(int)
+        for row in retired:
+            by_family[row.get("family", "?")] += 1
         lines.append(
-            '<table style="table-layout: fixed; width: 100%; border-collapse: collapse; margin-bottom: 24px;">'
+            f"{len(retired)} task rows retired on 2026-11-27 (`roboverse_pack/tasks/retired_tasks.csv`, with the commit to "
+            "restore each from), by family: " + ", ".join(f"{f} ({n})" for f, n in sorted(by_family.items())) + "."
         )
+    else:
+        lines.append("No retired-task list in this checkout.")
+    return "\n".join(lines).rstrip("\n") + "\n"
 
-        # Header
-        lines.append(
-            "<thead><tr>"
-            "<th style='width: 30%; word-wrap: break-word; text-align: left; padding: 8px; border-bottom: 2px solid #ccc; font-size: 16px;'>Task / Robot</th>"
-            + "".join([
-                f"<th style='width: {int(70 / len(PLATFORMS))}%; text-align: center; padding: 8px; border-bottom: 2px solid #ccc; font-size: 16px;'>{plat}</th>"
-                for plat in PLATFORMS
-            ])
-            + "</tr></thead>"
-        )
 
-        lines.append("<tbody>")
-
-        group_tasks = [(tid, meta) for tid, meta in TASK_REGISTRY.items() if meta.get("group") == group]
-        group_tasks.sort(key=lambda x: x[1].get("title", x[0]))
-
-        for tid, meta in group_tasks:
-            task_name = meta.get("title", tid)
-
-            if len(task_name) > 25 and "_" in task_name:
-                task_name = task_name.replace("_", "_<br>", 1)
-
-            # md_path = meta.get("md_path", f"tasks_md/{tid}.md")
-
-            # row = f"<td style='padding: 8px; font-size: 15px; border-bottom: 1px solid #eee;'><a href='{md_path}'>{task_name}</a></td>"
-            html_path = meta.get("md_path", f"tasks_md/{tid}.md").replace(".md", ".html")
-            row = f"<td style='padding: 8px; font-size: 15px; border-bottom: 1px solid #eee;'><a href='{html_path}'>{task_name}</a></td>"
-
-            for plat in PLATFORMS:
-                status = meta.get("platforms", {}).get(plat, "❓")
-                row += f"<td style='text-align: center; padding: 8px; font-size: 15px; border-bottom: 1px solid #eee;'>{status}</td>"
-
-            lines.append(f"<tr>{row}</tr>")
-
-        lines.append("</tbody></table>")
-
-        if i != len(GROUPS) - 1:
-            lines.append("\n---\n")
-
-    with open(output_path, "w") as f:
-        f.write("\n".join(lines))
-    # print(f"✅ {output_path} generated.")
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--check", action="store_true", help="fail when the committed page differs from the generated one")
+    args = ap.parse_args(argv)
+    out = Path(__file__).with_name("inventory.md")
+    text = render()
+    if args.check:
+        current = out.read_text() if out.exists() else ""
+        if current != text:
+            sys.stderr.write(f"{out} is stale: run python {Path(__file__).relative_to(ROOT)}\n")
+            return 1
+        sys.stderr.write(f"{out}: up to date\n")
+        return 0
+    out.write_text(text)
+    sys.stderr.write(f"{out}: {text.count(chr(10))} lines\n")
+    return 0
 
 
 if __name__ == "__main__":
-    TASK_REGISTRY = discover_all_tasks()
-    build_task_docs(TASK_REGISTRY)
-    generate_task_groups_md(TASK_REGISTRY)
+    sys.exit(main())

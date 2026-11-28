@@ -2,6 +2,9 @@
 
 RoboVerse provides a diverse set of tasks for robots to learn and evaluate their capabilities. We mainly migrate the tasks from existing benchmarks and simulation environments. We further migrate trajectories, collect demonstrations, roll out existing policies or heuristics, and train policies on them. Please follow the license of the original tasks and datasets when using them.
 
+The registered tasks are listed in the generated [Task inventory](inventory.md); tasks that failed the release
+gate are in `roboverse_pack/tasks/RETIRED_TASKS.md` with the commit to restore them from.
+
 ## Task Organization
 
 We organize the tasks with our standard metasim configuration, as shown in `roboverse_pack/tasks`. You can easily use them to instantiate simulations, or inherit them to create modified tasks.

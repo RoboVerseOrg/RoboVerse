@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 
 from metasim.constants import SimType
@@ -1190,9 +1191,12 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
             return RobotReport(robot=child["robot"], simulator=child["simulator"], rows=rows)
         except (OSError, ValueError, KeyError, IndexError, TypeError):
             lines = [ln.strip() for ln in (proc.stdout + proc.stderr).splitlines() if ln.strip()]
+            # the exception line of a traceback ("ValueError: ...") beats any later log line about closing the
+            # simulator, which beats the last line of all ("SimulationContext cleared")
+            raised = [ln for ln in lines if re.match(r"^[A-Za-z_.]+(Error|Exception)\b", ln)]
             markers = ("Error", "error", "Exception", "Traceback", "fault", "abort")
-            errors = [ln for ln in lines if any(m in ln for m in markers) and not ln.startswith("[")]
-            last = (errors or lines or [""])[-1]  # the last error line beats Isaac's "SimulationContext cleared"
+            flagged = [ln for ln in lines if any(m in ln for m in markers) and not ln.startswith("[")]
+            last = (raised or flagged or lines or [""])[-1]
             report.rows.append(
                 CheckRow("hold", False, f"child exited {proc.returncode} without a report: {last.strip()[:200]}")
             )

@@ -71,6 +71,12 @@ python -m metasim robot check --all --sim isaacsim --out-dir gate/robots_isaac  
 The nightly gate runs the sweep on both engines after the task gate and publishes the tables; the Robots page
 renders the newest run per engine from `results/robots/`.
 
+On Isaac Sim 6 (2026-11-28, one child process per robot) 9 of the 42 pass: franka, g1_dof12, g1_dof29, gen3, h1,
+h1_wrist, ur10e, ur5e, z1. Of the rest, 15 declare no USD, 13 fail the config row before any boot, and three USDs
+(g1, go1, iiwa14) do not build on Isaac Lab 3: the handler's contact sensor finds no rigid bodies under the robot
+prim (`ValueError: No contact sensors added to the prim`), so those three are an asset or handler question, not a
+config one. The generated page carries each robot's detail.
+
 ### The sweep of 2026-11-28 (MuJoCo, 42 configs)
 
 The table itself is generated: [Robots, self-check](../dataset_benchmark/dataset/robots.md#self-check) renders the
