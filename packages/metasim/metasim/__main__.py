@@ -1149,7 +1149,7 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
 
     The cheap rows (config, assets, kinematics, limits, actuators) run here first; the child, which costs a simulator
     boot, is spawned only when they pass, so a robot without an asset for this backend is a named failure in
-    milliseconds. The child prints its report as JSON before it exits; a child that dies without one is reported as
+    milliseconds. The child writes its report (``--out-dir``) before it exits; a child that dies without one is reported as
     a failed ``hold`` row with its exit code and last log line.
     """
     import subprocess
@@ -1163,19 +1163,14 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
         if not args.no_hold:
             report.rows.append(CheckRow("hold", False, "not attempted: a cheaper check already failed"))
         return report
-    cmd = [
-        sys.executable,
-        "-m",
-        "metasim",
-        "robot",
-        "check",
-        name,
-        "--sim",
-        args.sim,
-        "--steps",
-        str(args.steps),
-        "--json",
-    ]
+    import tempfile
+
+    child_dir = (
+        os.path.join(args.out_dir, "children", name) if args.out_dir else tempfile.mkdtemp(prefix="robot_check_")
+    )
+    os.makedirs(child_dir, exist_ok=True)
+    cmd = [sys.executable, "-m", "metasim", "robot", "check", name, "--sim", args.sim, "--steps", str(args.steps)]
+    cmd += ["--isolate", "never", "--out-dir", child_dir]  # the report is read from the child's robots.json, not stdout
     log_path = None
     if args.out_dir:
         os.makedirs(os.path.join(args.out_dir, "logs"), exist_ok=True)
@@ -1186,12 +1181,11 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
             fh.write(proc.stdout)
             fh.write(proc.stderr)
     try:
-        start = proc.stdout.index("[")
-        payload = json.loads(proc.stdout[start : proc.stdout.rindex("]") + 1])
-        child = payload[0]
+        with open(os.path.join(child_dir, "robots.json"), encoding="utf-8") as fh:
+            child = json.load(fh)["robots"][0]
         rows = [CheckRow(r["check"], bool(r["ok"]), str(r["detail"])) for r in child["rows"]]
         return RobotReport(robot=child["robot"], simulator=child["simulator"], rows=rows)
-    except (ValueError, KeyError, IndexError, TypeError):
+    except (OSError, ValueError, KeyError, IndexError, TypeError):
         last = next((ln for ln in reversed((proc.stderr + proc.stdout).splitlines()) if ln.strip()), "")
         report.rows.append(
             CheckRow("hold", False, f"child exited {proc.returncode} without a report: {last.strip()[:200]}")

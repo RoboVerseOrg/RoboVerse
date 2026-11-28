@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -475,12 +476,18 @@ def test_robot_check_isolated_spawns_a_child_only_when_the_cheap_rows_pass(monke
     def fake_run(cmd, **kwargs):
         name = cmd[cmd.index("check") + 1]
         spawned.append(name)
+        assert cmd[cmd.index("--isolate") + 1] == "never", "the child must not isolate again"
         if name == "dies":
-            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="Kit aborted\nSegmentation fault")
+            return subprocess.CompletedProcess(
+                cmd, 1, stdout="[INFO] booting\n", stderr="Kit aborted\nSegmentation fault"
+            )
         report = rc.RobotReport(
             name, "isaacsim", [rc.CheckRow("config", True, "c"), rc.CheckRow("hold", True, "still")]
         )
-        return subprocess.CompletedProcess(cmd, 0, stdout="noise\n" + json.dumps([report.to_dict()]), stderr="")
+        child_dir = cmd[cmd.index("--out-dir") + 1]
+        with open(os.path.join(child_dir, "robots.json"), "w") as fh:
+            json.dump({"simulator": "isaacsim", "robots": [report.to_dict()]}, fh)
+        return subprocess.CompletedProcess(cmd, 0, stdout="[INFO] lots of [bracketed] log lines\n", stderr="")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     args = argparse.Namespace(sim="isaacsim", steps=200, no_hold=False, out_dir=str(tmp_path), json=False, all=True)
