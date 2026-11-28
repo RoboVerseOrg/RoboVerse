@@ -34,6 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `state_tensor_to_nested` raised `StopIteration` for a scene-only scenario (the articulation in the scene MJCF, no objects, no robots), so every such task crashed at its first `reset`; the batch size now comes from the handler and the env states are empty.
 - `bench run` crashed with `AttributeError` when its first episode finished: the per-episode stream (`<out>.episodes.jsonl`) serialised `EpisodeResult` through a `to_dict()` it does not have. It uses `dataclasses.asdict`; a CLI test now drives `_bench_run` through a finished episode.
 
+### Removed
+- The `isaacsim211` extra (Isaac Sim 4.5 with torch 2.5.1+cu118): the Isaac Sim backend targets Isaac Sim 6 / Isaac Lab 3 (`metasim/sim/_versions.py`, `python -m metasim doctor`), so the extra installed a version the handler cannot run. Migration: `pip install "roboverse-metasim[isaacsim]"` or `tools/install/isaacsim6.sh`.
+
+### Changed
+- The `sapien2` extra installs `sapien>=2.2,<3` (the range `doctor` checks) instead of the third-party `mani-skill2==0.5.3` package that used to pull SAPIEN 2 in as a side effect.
+
+
 ## [1.0.0] - 2026-11-27
 
 ### Added

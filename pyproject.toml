@@ -83,7 +83,6 @@ vla = [
 genesis = ["roboverse-metasim[genesis]>=1.0.0,<1.1"]
 isaacgym = ["roboverse-metasim[isaacgym]>=1.0.0,<1.1"]
 isaacsim = ["roboverse-metasim[isaacsim]>=1.0.0,<1.1"]
-isaacsim211 = ["roboverse-metasim[isaacsim211]>=1.0.0,<1.1"]
 mjx = ["roboverse-metasim[mjx]>=1.0.0,<1.1"]
 mujoco = ["roboverse-metasim[mujoco]>=1.0.0,<1.1"]
 newton = ["roboverse-metasim[newton]>=1.0.0,<1.1"]

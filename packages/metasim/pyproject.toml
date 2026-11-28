@@ -43,18 +43,13 @@ visualization = ["rerun-sdk", "trimesh", "viser", "yourdfpy"]
 isaacsim = [
     "isaacsim[all,extscache]==6.0.1.0",
 ]
-isaacsim211 = [
-    "torch==2.5.1+cu118",
-    "torchvision==0.20.1+cu118",
-    "isaacsim[all,extscache]==4.5.0",
-]
 isaacgym = [
     "numpy<2",
     "fsspec<=2025.3.0",  # fsspec==2025.3.1 has bug with python 3.8
 ]
 mujoco = ["mujoco>=3.2,<3.18", "dm-control>=1.0.20,<2"]
 mjx = ["torch==2.7.0", "mujoco-mjx>=3.2.7,<3.14", "dm-control>=1.0.20,<2", "jax[cuda]==0.6.2"]
-sapien2 = ["mani-skill2==0.5.3"]
+sapien2 = ["sapien>=2.2,<3"]
 sapien3 = ["sapien>=3.0.0b1,<4"]
 pybullet = ["numpy<2", "pybullet>=3.2,<4"]
 genesis = [
@@ -89,10 +84,7 @@ index-strategy = "unsafe-best-match"
 # Simulator extras pin different torch / CUDA stacks; declare them mutually exclusive so a resolver
 # fails with a clear message instead of picking one silently (see docs: one environment per simulator).
 conflicts = [
-    [{ extra = "isaacsim" }, { extra = "isaacsim211" }],
     [{ extra = "isaacsim" }, { extra = "mjx" }],
-    [{ extra = "isaacsim211" }, { extra = "mjx" }],
-    [{ extra = "isaacsim211" }, { extra = "isaacgym" }],
 ]
 
 [tool.uv.pip]
