@@ -195,6 +195,7 @@ SAC <roboverse_learn/reinforcement_learning/sac>
 TD3 <roboverse_learn/reinforcement_learning/td3>
 SkillBlender <roboverse_learn/reinforcement_learning/skillblender_rl>
 Humanoid <roboverse_learn/reinforcement_learning/humanoid>
+BeyondMimic (retired) <roboverse_learn/reinforcement_learning/beyondmimic>
 ```
 
 ```{toctree}

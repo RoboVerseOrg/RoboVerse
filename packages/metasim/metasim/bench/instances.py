@@ -197,6 +197,12 @@ def plan_instances(
     return planned
 
 
+JOINT_LIMIT_TOL = 1e-4
+"""How far outside a joint limit a recorded initial state may sit and still be physical: recorded states went through
+float32, so a gripper closed at its 0.04 m limit comes back as 0.0400013 (the RLBench close_box demos). 0.1 mm or
+0.1 mrad is round-off; the states this check exists for are off by whole radians (1.0 in a 0 to 0.04 range)."""
+
+
 def validate_instances(env, instances: list[TaskInstance]) -> list[str]:
     """The initial states a task ships must be physical: every robot joint inside its limits.
 
@@ -229,6 +235,6 @@ def validate_instances(env, instances: list[TaskInstance]) -> list[str]:
                 except (TypeError, ValueError):
                     continue
                 lo, hi = float(lo_hi[0]), float(lo_hi[1])
-                if not (lo - 1e-6 <= q <= hi + 1e-6):
+                if not (lo - JOINT_LIMIT_TOL <= q <= hi + JOINT_LIMIT_TOL):
                     problems.append(f"instance {inst.index}: {name}.{joint}={q:.3f} outside [{lo:.3f}, {hi:.3f}]")
     return problems

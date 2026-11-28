@@ -1134,3 +1134,20 @@ def test_instance_pool_treats_a_missing_demo_file_as_no_recorded_instances(tmp_p
         handler=None,
     )
     assert _build_instance_pool(env) == []
+
+
+def test_validate_instances_tolerates_float32_round_off_at_a_limit():
+    """0.0400013 at a 0.04 limit is a recorded state that went through float32, not an unphysical start."""
+    from metasim.bench.instances import JOINT_LIMIT_TOL, TaskInstance, validate_instances
+
+    robot = SimpleNamespace(name="franka", joint_limits={"f1": (0.0, 0.04), "j1": (-2.0, 2.0)})
+    env = SimpleNamespace(scenario=SimpleNamespace(robots=[robot]))
+
+    def inst(f1, j1=0.0):
+        return TaskInstance(index=0, seed=0, state={"robots": {"franka": {"dof_pos": {"f1": f1, "j1": j1}}}})
+
+    assert validate_instances(env, [inst(0.04000125825405121)]) == []
+    assert validate_instances(env, [inst(-0.00005)]) == [], "inside the tolerance on the low side too"
+    assert JOINT_LIMIT_TOL == 1e-4
+    assert validate_instances(env, [inst(0.0402)]) and validate_instances(env, [inst(-0.034)])
+    assert "j1=3.000 outside [-2.000, 2.000]" in validate_instances(env, [inst(0.0, 3.0)])[0]
