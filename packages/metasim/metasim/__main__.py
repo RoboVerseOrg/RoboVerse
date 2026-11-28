@@ -1237,6 +1237,7 @@ def _robot_check(args: argparse.Namespace) -> int:
         os.makedirs(args.out_dir, exist_ok=True)
         with open(os.path.join(args.out_dir, "robots.json"), "w", encoding="utf-8") as fh:
             json.dump({"simulator": args.sim, "robots": [r.to_dict() for r in reports]}, fh, indent=2)
+            fh.write("\n")
         with open(os.path.join(args.out_dir, "robots.md"), "w", encoding="utf-8") as fh:
             fh.write(_robot_sweep_table(reports) + "\n")
     sys.stdout.flush()
@@ -1332,6 +1333,7 @@ def _robot_parity(args) -> int:
             return 2
         with open(args.save, "w", encoding="utf-8") as fh:
             json.dump(traces[-1].to_dict(), fh)
+            fh.write("\n")
         print(f"saved {traces[-1].simulator} trace to {args.save}")
     if len(traces) < 2:
         if args.save:
