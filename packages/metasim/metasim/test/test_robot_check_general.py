@@ -601,3 +601,20 @@ def test_usd_dependencies_follow_payloads_and_fetch_the_missing_ones(tmp_path):
     (tmp_path / "configuration" / "robot_sensor.usda").unlink()
     deps = fetch_usd_dependencies(str(tmp_path / "robot.usda"), fetch=lambda p: None)
     assert [os.path.basename(p) for p in deps.unresolved] == ["robot_sensor.usda"]
+
+
+def test_actuators_check_names_two_drivers_and_tendon_actuators(tmp_path):
+    from metasim.utils.robot_check import check_actuators
+
+    twice = _ACTUATED_ARM.replace("</actuator>", '<motor name="j2_boost" joint="j2"/></actuator>')
+    path = tmp_path / "twice.xml"
+    path.write_text(twice)
+    row = check_actuators(_cfg(tmp_path, mjcf_path=str(path), actuators={"j1": None, "j2": None, "f_l": None}))
+    assert not row.ok and "two actuators" in row.detail and "'j2': ['elbow', 'j2_boost']" in row.detail
+    stray = _ACTUATED_ARM.replace(
+        "<actuator>",
+        '<tendon><fixed name="split"><joint joint="f_l" coef="1"/></fixed></tendon><actuator><general tendon="split"/>',
+    )
+    path.write_text(stray)
+    row = check_actuators(_cfg(tmp_path, mjcf_path=str(path), actuators={"j1": None, "j2": None, "f_l": None}))
+    assert not row.ok and "drive no joint" in row.detail and "'#0'" in row.detail

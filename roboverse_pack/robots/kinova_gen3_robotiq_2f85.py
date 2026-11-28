@@ -57,6 +57,12 @@ class KinovaGen3Robotiq2f85Cfg(RobotCfg):
         "finger_joint": 0.0,
         "left_outer_finger_joint": 0.0,
         "right_outer_finger_joint": 0.0,
+        # the passive linkage joints (no actuator): explicit so the backends agree on the reset pose
+        "right_outer_knuckle_joint": 0.0,
+        "left_inner_finger_joint": 0.0,
+        "right_inner_finger_joint": 0.0,
+        "left_inner_finger_knuckle_joint": 0.0,
+        "right_inner_finger_knuckle_joint": 0.0,
     }
     ee_body_name: str = "end_effector_link"
 

@@ -290,7 +290,10 @@ def check_actuators(cfg, model=None) -> CheckRow:
     stray = []
     for a in range(model.nu):
         aname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_ACTUATOR, a) or f"#{a}"
-        if int(model.actuator_trntype[a]) != int(mujoco.mjtTrn.mjTRN_JOINT):
+        if int(model.actuator_trntype[a]) not in (
+            int(mujoco.mjtTrn.mjTRN_JOINT),
+            int(mujoco.mjtTrn.mjTRN_JOINTINPARENT),
+        ):
             stray.append(aname)  # the handler writes one target per joint: a tendon / site actuator has no slot
             continue
         joint = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, int(model.actuator_trnid[a, 0]))

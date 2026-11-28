@@ -400,7 +400,8 @@ What a robot config promises, and what the MuJoCo and Newton handlers enforce:
 - **Joints.** `joint_limits` and `default_joint_positions` list every joint of the asset, in any
   order; the handler's joint vector is the asset's joints sorted by name, and that is the layout of
   `joint_pos`, `joint_pos_target` and the action tensor.
-- **Actuators are named after their joint.** `RobotCfg.actuators` is keyed by joint name. A joint the
+- **Actuators are matched to joints by their transmission.** `RobotCfg.actuators` is keyed by joint name;
+  the asset's actuator names are free (a Menagerie hand's `lh_A_WRJ2` drives `lh_WRJ2`). A joint the
   MJCF actuates keeps the asset's servo unless the config sets `stiffness` / `damping`; a joint the
   MJCF does not actuate gets a servo synthesized from the config (so Menagerie and mjlab files that
   ship no `<actuator>` block work as-is). A joint in neither place is **passive**: it is observed, it

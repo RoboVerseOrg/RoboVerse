@@ -465,3 +465,59 @@ def test_set_states_refuses_a_none_or_non_finite_joint_value(tmp_path):
         state["robots"]["arm"]["dof_pos"]["elbow"] = 0.25
         handler.set_states([state])
         assert float(handler.get_states(mode="tensor").robots["arm"].joint_pos[0, 0]) == pytest.approx(0.25)
+
+
+def test_two_actuators_on_one_joint_are_rejected_with_the_joint_named(tmp_path):
+    """RoboVerse writes one target per joint; a second actuator on a joint of the robot is an error at launch."""
+    from metasim.sim.mujoco import MujocoHandler
+
+    scenario = _arm_scenario(
+        tmp_path,
+        actuators_xml=(
+            '<actuator><position name="shoulder" joint="shoulder" kp="50"/>'
+            '<position name="elbow" joint="elbow" kp="50"/><motor name="elbow_boost" joint="elbow"/></actuator>'
+        ),
+    )
+    with pytest.raises(ValueError, match=r"joints driven by two actuators \{'elbow': \['elbow', 'elbow_boost'\]\}"):
+        MujocoHandler(scenario).launch()
+
+
+def test_a_tendon_actuator_of_the_robot_is_rejected_even_without_a_name(tmp_path):
+    """An actuator that drives no joint has no action slot; it is attributed to the robot by what it drives."""
+    from metasim.sim.mujoco import MujocoHandler
+
+    scenario = _arm_scenario(
+        tmp_path,
+        actuators_xml=(
+            '<tendon><fixed name="split"><joint joint="elbow" coef="1"/></fixed></tendon>'
+            '<actuator><position name="shoulder" joint="shoulder" kp="50"/>'
+            '<position name="elbow" joint="elbow" kp="50"/><general tendon="split"/></actuator>'
+        ),
+    )
+    with pytest.raises(ValueError, match=r"actuators \['unnamed_actuator_2'\] drive no joint of the robot"):
+        MujocoHandler(scenario).launch()
+
+
+def test_set_states_writes_a_position_target_only_into_a_position_servo(tmp_path):
+    """A motor's ctrl is a force: writing a joint position into it would push the joint for a decimation window."""
+    from metasim.scenario.robot import BaseActuatorCfg
+    from metasim.sim.sim_context import HandlerContext
+
+    scenario = _arm_scenario(
+        tmp_path,
+        actuators_xml=(
+            '<actuator><position name="shoulder" joint="shoulder" kp="50"/>'
+            '<motor name="elbow_motor" joint="elbow" ctrlrange="-1 1"/></actuator>'
+        ),
+        actuators={
+            "shoulder": BaseActuatorCfg(stiffness=50.0, damping=5.0, effort_limit_sim=20.0),
+            "elbow": BaseActuatorCfg(effort_limit_sim=1.0),
+        },
+        control_type={"shoulder": "position", "elbow": "effort"},
+    )
+    with HandlerContext(scenario) as handler:
+        ids = handler._joint_actuator_ids("arm")  # elbow, shoulder
+        handler.physics.data.ctrl[:] = 0.0
+        handler._set_states([{"robots": {"arm": {"dof_pos": {"shoulder": 0.3, "elbow": 0.5}}}, "objects": {}}])
+        assert float(handler.physics.data.ctrl[ids[1]]) == pytest.approx(0.3), "the servo got its target"
+        assert float(handler.physics.data.ctrl[ids[0]]) == 0.0, "the motor got no force"

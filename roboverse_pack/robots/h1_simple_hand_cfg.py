@@ -110,7 +110,8 @@ class H1SimpleHandCfg(RobotCfg):
         "R_thumb_intermediate": (0.0, 0.8),
         "R_thumb_distal": (0.0, 1.2),
     }
-    # Filled 2026-11-28: the MJCF defaults (robot check config row).
+    # Filled 2026-11-28: the zero pose (the MJCF has no keyframe; every zero lies inside the ranges), which is what
+    # the handlers fell back to without a default (robot check config row).
     default_joint_positions: dict[str, float] = {
         "left_hip_yaw": 0.0,
         "left_hip_roll": 0.0,
@@ -142,8 +143,8 @@ class H1SimpleHandCfg(RobotCfg):
         "L_pinky_proximal": 0.0,
         "L_pinky_intermediate": 0.0,
         "L_thumb_proximal_yaw": 0.0,
-        "L_thumb_proximal_pitch": 0.6,
-        "L_thumb_intermediate": 0.8,
+        "L_thumb_proximal_pitch": 0.0,
+        "L_thumb_intermediate": 0.0,
         "L_thumb_distal": 0.0,
         "R_index_proximal": 0.0,
         "R_index_intermediate": 0.0,
@@ -154,7 +155,7 @@ class H1SimpleHandCfg(RobotCfg):
         "R_pinky_proximal": 0.0,
         "R_pinky_intermediate": 0.0,
         "R_thumb_proximal_yaw": 0.0,
-        "R_thumb_proximal_pitch": 0.6,
-        "R_thumb_intermediate": 0.8,
+        "R_thumb_proximal_pitch": 0.0,
+        "R_thumb_intermediate": 0.0,
         "R_thumb_distal": 0.0,
     }
