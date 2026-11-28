@@ -53,7 +53,6 @@ from metasim.scenario.scene import SceneCfg
 from metasim.scenario.simulator_params import SimParamCfg
 from metasim.sim.mujoco.mujoco import MujocoHandler
 from metasim.task.base import BaseTaskEnv
-from metasim.task.registry import register_task
 
 _MODEL_TIMESTEP = 0.002  # robosuite macros.SIMULATION_TIMESTEP
 
@@ -264,7 +263,6 @@ class RobosuiteEnv(BaseTaskEnv):
 
 
 # --------------------------------------------------------------------- tasks
-@register_task("robosuite.lift", "robosuite_lift")
 class LiftEnv(RobosuiteEnv):
     """Lift a cube off the table (robosuite ``Lift``)."""
 
@@ -272,7 +270,6 @@ class LiftEnv(RobosuiteEnv):
     max_episode_steps = 200
 
 
-@register_task("robosuite.stack", "robosuite_stack")
 class StackEnv(RobosuiteEnv):
     """Stack cube A on cube B (robosuite ``Stack``)."""
 
@@ -280,7 +277,6 @@ class StackEnv(RobosuiteEnv):
     max_episode_steps = 200
 
 
-@register_task("robosuite.door", "robosuite_door")
 class DoorEnv(RobosuiteEnv):
     """Turn the handle and open the door (robosuite ``Door``)."""
 
@@ -288,7 +284,6 @@ class DoorEnv(RobosuiteEnv):
     max_episode_steps = 300
 
 
-@register_task("robosuite.pick_place_can", "robosuite_pick_place_can")
 class PickPlaceCanEnv(RobosuiteEnv):
     """Pick the can and place it in its bin (robosuite ``PickPlaceCan``)."""
 
@@ -296,7 +291,6 @@ class PickPlaceCanEnv(RobosuiteEnv):
     max_episode_steps = 400
 
 
-@register_task("robosuite.nut_assembly_square", "robosuite_nut_assembly_square")
 class NutAssemblySquareEnv(RobosuiteEnv):
     """Fit the square nut on the square peg (robosuite ``NutAssemblySquare``)."""
 

@@ -12,6 +12,10 @@ release.
 
 ## [Unreleased]
 
+### Removed
+- **Task registry curated to what passes the release gate.** Every registered task class was run through `python -m metasim bench health --floor --repeat 2` (its demos replay at or above 0.80 on their own backend, the hold policy scores 0, two replays agree; demo-less RL tasks must build, step and reset) on MuJoCo, and on Isaac Sim 6 where MuJoCo cannot build the assets. 3021 of 3083 classes failed and are removed from `roboverse_pack`; 62 remain (9 demo tasks: pick_cube, stack_cube, push_cube, pull_cube, lift_peg_upright, plug_charger, rlbench.close_box, libero.pick_butter, libero_90 kitchen_scene4 close-bottom-drawer; 52 RL / dense-reward tasks). The two generated ManiSkill variant families (`pick_single_egad_*`, 1588 classes with no demos or assets on the Hub; `peg_insertion_side_*`, 999 classes whose USD assets are not on the Hub) are 86 % of the removals; the LIBERO ports (242 classes) replay their own demos at 0.00 to 0.65; the RLBench USD ports fail to build their articulations on Isaac Sim 6. Nothing is lost: `roboverse_pack/tasks/RETIRED_TASKS.md` and `retired_tasks.csv` list every retired class with its registry names, file, reason and the commit to restore it from (`git checkout 56a0e67b -- <file>`).
+- With the tasks: the SIMPLER (SAPIEN-only) task package and its parity tools, the bimanual multi-agent dataset example and page, the robosuite wrappers, and the tests that existed only for retired tasks. `docs/source/dataset_benchmark/benchmark/results.md` no longer carries the 2025 imitation-learning table (unreproducible under the protocol; kept in git history) and points at the methods x perspectives matrix instead.
+
 ### Added
 - `roboverse_learn/vla/bench_policy.py`: `EEDeltaPolicy` turns an end-effector-delta VLA (image + instruction -> translation, rotation, gripper) into joint targets through the robot's kinematics, and `OpenVLAPolicy` wraps `openvla/openvla-7b` for `python -m metasim bench serve`, so an off-the-shelf generalist is scored on the tabletop suite under the `visual` tier with the same protocol as every other method.
 

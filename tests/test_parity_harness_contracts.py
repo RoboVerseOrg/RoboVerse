@@ -19,15 +19,11 @@ GPU -- so it runs in the default test environment.
 
 from __future__ import annotations
 
-import os
-
 import numpy as np
 import pytest
 
 import tools.parity.eval_liberoplus_policy_consistency as evalc
 import tools.parity.parity_liberoplus_passthrough as parity_pt
-import tools.parity.parity_simpler_env as parity_se
-import tools.parity.spike_metasim_full_parity as spike
 
 
 class _Boom(RuntimeError):
@@ -187,57 +183,3 @@ def test_passthrough_run_does_not_vacuously_pass(monkeypatch, capsys):
 # --------------------------------------------------------------------------------------
 # 3. exit status must reflect the verdict
 # --------------------------------------------------------------------------------------
-
-
-def test_spike_full_parity_exits_nonzero_on_failure(monkeypatch):
-    """A failing parity run must be visible to a shell/CI caller."""
-    monkeypatch.setattr(spike, "run_compare", lambda: False)
-    monkeypatch.setattr("sys.argv", ["spike_metasim_full_parity.py", "--mode", "compare"])
-    with pytest.raises(SystemExit) as exc:
-        spike.main()
-    assert exc.value.code != 0
-
-
-def test_spike_full_parity_exits_zero_on_success(monkeypatch):
-    monkeypatch.setattr(spike, "run_compare", lambda: True)
-    monkeypatch.setattr("sys.argv", ["spike_metasim_full_parity.py", "--mode", "compare"])
-    with pytest.raises(SystemExit) as exc:
-        spike.main()
-    assert exc.value.code == 0
-
-
-def test_spike_full_parity_data_root_is_env_or_repo_local():
-    """The asset root follows ``ROBOVERSE_DATA_DIR`` or the repo checkout — never a developer's home."""
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # tests/ -> repo root
-    expected = os.environ.get("ROBOVERSE_DATA_DIR", os.path.join(repo_root, "roboverse_data"))
-    assert spike.RV == expected
-    assert "/home/ghr" not in spike.RV
-
-
-def test_spike_compare_rejects_truncated_rollout(monkeypatch, tmp_path):
-    """Comparing only ``min(len(a), len(b))`` frames hides a side that died early."""
-    monkeypatch.setattr(spike, "ART", str(tmp_path))
-    monkeypatch.setattr(spike, "ALL", ["t"])
-    np.savez(tmp_path / "mfp_native_t.npz", rgbs=np.zeros((4, 2, 2, 3)), succ=np.zeros(3, bool))
-    np.savez(tmp_path / "mfp_metasim_t.npz", rgbs=np.zeros((1, 2, 2, 3)), succ=np.zeros(0, bool))
-    assert spike.run_compare() is False
-
-
-def test_simpler_env_parity_main_exits_nonzero_on_diff(monkeypatch, capsys):
-    monkeypatch.setattr(parity_se, "check_task", lambda t, **kw: {"task": t, "parity_1to1": False, "diffs": [{}]})
-    monkeypatch.setattr("sys.argv", ["parity_simpler_env.py", "--tasks", "some_task"])
-    assert parity_se.main() != 0
-    assert "RESULT: PASS" not in capsys.readouterr().out
-
-
-def test_simpler_env_parity_main_exits_zero_when_all_match(monkeypatch):
-    monkeypatch.setattr(parity_se, "check_task", lambda t, **kw: {"task": t, "parity_1to1": True, "diffs": []})
-    monkeypatch.setattr("sys.argv", ["parity_simpler_env.py", "--tasks", "some_task"])
-    assert parity_se.main() == 0
-
-
-def test_simpler_env_parity_main_does_not_vacuously_pass(monkeypatch):
-    """No tasks checked -> nothing proven -> not a PASS."""
-    monkeypatch.setattr(parity_se, "check_task", lambda t, **kw: {"task": t, "parity_1to1": True})
-    monkeypatch.setattr("sys.argv", ["parity_simpler_env.py", "--tasks"])
-    assert parity_se.main() != 0

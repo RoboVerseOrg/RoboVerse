@@ -67,7 +67,6 @@ _DETECTOR = Relative3DSphereDetector(
 )
 
 
-@register_task("maniskill.pick_cube_v1", "pick_cube_v1")
 class PickCubeV1Task(ManiskillBaseTask):
     """ManiSkill3 PickCube-v1 geometry + sparse success checker."""
 

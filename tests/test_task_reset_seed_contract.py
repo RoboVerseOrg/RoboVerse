@@ -71,18 +71,12 @@ _FIXED_BASES = {
     "maniskill/maniskill_base.py",
     "rlbench/rl_bench.py",
     "embodiedgen/base.py",
-    "calvin/base_table.py",
     "pick_place/base.py",
     "humanoid/base/base_legged_robot.py",
     "beyondmimic/metasim/envs/base_legged_robot.py",
     # SimplerEnv: took `options` in place of `states`, so VLA eval on SimplerEnv — the canonical
     # pairing for that benchmark — was a hard TypeError. They keep `options` after the contract's
     # three parameters.
-    "simpler_env/_metasim/coke_task.py",
-    "simpler_env/_metasim/drawer_task.py",
-    "simpler_env/_metasim/grasp_objects_task.py",
-    "simpler_env/_metasim/place_task.py",
-    "simpler_env/_metasim/put_on_task.py",
 }
 
 # P1 cleanup targets: Tier-1 task files whose ``reset`` override is not substitutable for the base
@@ -97,31 +91,14 @@ KNOWN_NONCONFORMANT_RESET = frozenset()
 # blocks any NEW Tier-1 step()/close() override so the architecture cannot degrade
 # while the existing ones are migrated. Remove an entry when you drop its override.
 KNOWN_STEP_OVERRIDES = frozenset({
-    "libero/native_libero.py",  # native LIBERO replay port (Tier-1 by base, kept explicit)
-    "mujoco_playground/open_cabinet.py",
-    "mujoco_playground/pick.py",
     "beyondmimic/metasim/envs/base_legged_robot.py",
-    "calvin/base_table.py",
     "humanoid/base/base_legged_robot.py",
     "mjlab/cartpole_train.py",
-    "mujoco_playground/handover.py",
     "pick_place/approach_grasp.py",
-    "pick_place/approach_grasp_ceramic_teapot.py",
-    "pick_place/approach_grasp_knife.py",
     "pick_place/base.py",
-    "pick_place/hand_trajectory.py",
-    "pick_place/track_banana.py",
-    "pick_place/track_ceramic_teapot.py",
-    "pick_place/track_knife.py",
-    "pick_place/track_screwdriver.py",
-    "pick_place/track_spoon.py",
     "robosuite/robosuite_env.py",
-    "simpler_env/_metasim/base.py",
-    "simpler_env/_metasim/coke_task.py",
-    "simpler_env/_metasim/place_task.py",
 })
 KNOWN_CLOSE_OVERRIDES = frozenset({
-    "libero/native_libero.py",
     "robosuite/robosuite_env.py",
 })
 

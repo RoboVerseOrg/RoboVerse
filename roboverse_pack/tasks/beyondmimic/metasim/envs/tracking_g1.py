@@ -15,7 +15,6 @@ import torch
 from metasim.scenario.lights import DomeLightCfg
 from metasim.scenario.scenario import ScenarioCfg
 from metasim.scenario.simulator_params import SimParamCfg
-from metasim.task.registry import register_task
 from metasim.types import TensorState
 from roboverse_learn.rl.configs.rsl_rl.ppo_tracking import RslRlPPOTrackingConfig
 from roboverse_pack.tasks.beyondmimic.metasim.configs.tracking_g1 import TrackingG1EnvCfg
@@ -23,7 +22,6 @@ from roboverse_pack.tasks.beyondmimic.metasim.configs.tracking_g1 import Trackin
 from .base_legged_robot import LeggedRobotTask
 
 
-@register_task("motion-tracking")
 class TrackingG1Task(LeggedRobotTask):
     """Registered BeyondMimic motion tracking task."""
 

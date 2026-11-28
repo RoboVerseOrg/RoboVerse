@@ -75,16 +75,6 @@ def test_max_steps_matches_maniskill(task_key):
 
 
 @pytest.mark.parametrize("task_key", sorted(TASK_SPECS))
-def test_registered_task_carries_the_native_horizon(task_key):
-    """The registered ``maniskill.<name>_native`` task class exposes that horizon."""
-    import roboverse_pack.tasks.maniskill  # noqa: F401 — registers the native tasks
-    from metasim.task.registry import get_task_class
-
-    cls = get_task_class(f"maniskill.{task_key}_native")
-    assert cls.max_episode_steps == _registered_env(TASK_SPECS[task_key]["gym_id"]).max_episode_steps
-
-
-@pytest.mark.parametrize("task_key", sorted(TASK_SPECS))
 def test_sim_and_control_freq_match_maniskill(task_key):
     """The shipped PhysX recipe steps at ManiSkill's ``sim_freq`` with its ``control_freq`` decimation."""
     env_cls = _registered_env(TASK_SPECS[task_key]["gym_id"]).cls
