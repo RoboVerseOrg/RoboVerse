@@ -194,6 +194,17 @@ adapter is expected to honour, and a served policy reads them from `PolicyContex
 scores a result only under its own tier (`bench suite run --access` and `bench suite report --access`
 set it for the whole suite); `bench summarize` shows the tier of every row.
 
+## Suites on Isaac Sim
+
+Isaac Sim boots once per process and ends the process in `close()`, so the tasks of a suite cannot share one
+interpreter there. `bench suite run --isolate auto` (the default) scores each task in a child `bench run`
+on such backends and collects the result files; `--isolate always` does the same on any backend, `never`
+keeps one process:
+
+```bash
+python -m metasim bench suite run --suite tabletop-mujoco --sim isaacsim --policy replay --episodes 10
+```
+
 ## Recording demos with a policy
 
 A task needs demos before the replay gate can judge it. `bench record` drives a task with any policy

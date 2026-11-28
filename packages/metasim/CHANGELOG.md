@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `python -m metasim bench suite run --isolate auto|always|never`: on a backend that boots once per process (Isaac Sim) each suite task is scored in a child `bench run` with the entry's protocol as flags, and its result file is collected; a child that exits without a result is that task's failure.
 - `python -m metasim bench record`: record demos with any policy (the scripted skills by default) into the `{robot: [demos]}` file the task bases load and the gate replays; `bench run` / `bench health --demos PATH` evaluate against another demo file than the task's own, so a recorded set is gated before it is published (`metasim.bench.record_demos`, `RecordingPolicy`, `flatten_initial_state`).
 - `python -m metasim bench health --floor --repeat N`: a passing replay must also survive the hold policy scoring zero (`unreliable` otherwise: the checker accepts the initial state) and N identical replays of the same instances (`flaky` otherwise); both fail the gate.
 - `python -m metasim bench run|suite run --camera <preset>` adds a named camera (`front`, `side`, `top`; `metasim.bench.cameras.CAMERA_PRESETS`) to a task whose scenario has none, so the visual access tiers have something to observe; the preset names are recorded in the result's `notes["cameras"]`.

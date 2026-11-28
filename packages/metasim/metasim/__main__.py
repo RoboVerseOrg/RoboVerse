@@ -383,6 +383,70 @@ def _write_suite_report(suite, results, out_dir: str, *, policy: str | None = No
     return report
 
 
+def _suite_task_isolated(entry, protocol, args: argparse.Namespace, sim: str, out_path: str):
+    """Score one suite task in a child interpreter (``bench run``) and load its result file.
+
+    Isaac Sim boots Kit once per process and ends the process in ``close()``, so the tasks of a suite cannot
+    share one interpreter there. The child gets the entry's protocol as flags; a child that exits without a
+    result raises with the last line of its log, which the suite loop records as that task's failure.
+    """
+    import json as _json
+    import subprocess
+    import sys
+
+    from metasim.bench import ACCESS_PROFILES, BenchmarkResult
+
+    cmd = [sys.executable, "-m", "metasim", "bench", "run", "--task", entry.task, "--sim", sim, "--out", out_path]
+    cmd += ["--num-envs", str(args.num_envs), "--episodes", str(protocol.episodes)]
+    cmd += ["--success-rule", protocol.success_rule, "--hold-steps", str(protocol.hold_steps)]
+    cmd += ["--seed", str(protocol.seed), "--protocol-name", protocol.name, "--prompt-split", protocol.prompt_split]
+    cmd += ["--demo-budget-quantile", str(protocol.demo_budget_quantile)]
+    if protocol.max_episode_steps is not None:
+        cmd += ["--max-steps", str(protocol.max_episode_steps)]
+    if protocol.demo_budget_factor is not None:
+        cmd += ["--demo-budget", str(protocol.demo_budget_factor)]
+    for i in protocol.instances or ():
+        cmd += ["--instance", str(i)]
+    preset = ACCESS_PROFILES.get(protocol.access.name)
+    if preset is not None and preset == protocol.access:
+        cmd += ["--access", protocol.access.name]
+    else:  # a custom tier travels as a file the child reads
+        access_path = os.path.join(os.path.dirname(out_path), f"access__{protocol.access.name}.json")
+        with open(access_path, "w") as f:
+            _json.dump(protocol.access.to_dict(), f)
+        cmd += ["--access", access_path]
+    for robot in entry.robots:
+        cmd += ["--robot", robot]
+    for cam in getattr(args, "camera", None) or ():
+        cmd += ["--camera", cam]
+    if getattr(args, "policy_url", None):
+        cmd += ["--policy-url", args.policy_url]
+        for kv in args.require_metadata or ():
+            cmd += ["--require-metadata", kv]
+        for key in args.obs_key or ():
+            cmd += ["--obs-key", key]
+    else:
+        cmd += ["--policy", args.policy]
+        for kv in args.policy_arg or ():
+            cmd += ["--policy-arg", kv]
+        if args.checkpoint:
+            cmd += ["--checkpoint", args.checkpoint]
+    if args.device:
+        cmd += ["--device", args.device]
+    log_dir = os.path.join(os.path.dirname(out_path), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, f"{entry.task}.log")
+    if os.path.exists(out_path):
+        os.remove(out_path)
+    with open(log_path, "w") as log_file:
+        proc = subprocess.run(cmd, check=False, stdout=log_file, stderr=subprocess.STDOUT)
+    if not os.path.exists(out_path):
+        raise RuntimeError(
+            f"child exited with {proc.returncode} before saving a result ({_last_error_line(log_path)}; {log_path})"
+        )
+    return BenchmarkResult.load(out_path)
+
+
 def _bench_suite_run(args: argparse.Namespace) -> int:
     """Every task of a suite (or one split) under the suite protocol; one result file per task."""
     import dataclasses
@@ -394,6 +458,7 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
     if not sim:
         raise SystemExit(f"suite {suite.name!r} names no simulator; pass --sim")
     out_dir = args.out_dir or os.path.join("bench_results", "suites", suite.name, sim)
+    isolate = args.isolate == "always" or (args.isolate == "auto" and sim in ISOLATED_HEALTH_BACKENDS)
     overrides = {k: v for k, v in {"episodes": args.episodes, "seed": args.seed}.items() if v is not None}
     suite = _suite_under_access(suite, args.access)
     if args.episodes is not None and any(
@@ -409,29 +474,37 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
             protocol = suite.protocol_for(entry)
             if overrides:
                 protocol = dataclasses.replace(protocol, **overrides)
-            policy, policy_info = _make_policy(args)
-            env = _make_env(
-                entry.task,
-                sim=sim,
-                robots=list(entry.robots) or None,
-                num_envs=args.num_envs,
-                gui=False,
-                device=args.device,
-                cameras=getattr(args, "camera", None),
-            )
-            try:
-                result = evaluate(
-                    env, policy, protocol, policy_info=policy_info, on_episode=_report_episode, task_name=entry.task
-                )
+            if isolate:
+                policy_name = "remote" if getattr(args, "policy_url", None) else args.policy.rsplit(":", 1)[-1]
+                robots = "+".join(entry.robots) or "task"
+                out_path = os.path.join(out_dir, f"{split}__{entry.task}__{robots}__{policy_name}.json")
+                result = _suite_task_isolated(entry, protocol, args, sim, out_path)
                 result.notes["suite"] = {"name": suite.name, "split": split}
-                if getattr(args, "camera", None):
-                    result.notes["cameras"] = list(args.camera)
-                robots = "+".join(result.robots) or "norobot"
-                result.save(
-                    os.path.join(out_dir, f"{split}__{entry.task}__{robots}__{policy.name}.json")
-                )  # before close()
-            finally:
-                env.close()
+                result.save(out_path)
+            else:
+                policy, policy_info = _make_policy(args)
+                env = _make_env(
+                    entry.task,
+                    sim=sim,
+                    robots=list(entry.robots) or None,
+                    num_envs=args.num_envs,
+                    gui=False,
+                    device=args.device,
+                    cameras=getattr(args, "camera", None),
+                )
+                try:
+                    result = evaluate(
+                        env, policy, protocol, policy_info=policy_info, on_episode=_report_episode, task_name=entry.task
+                    )
+                    result.notes["suite"] = {"name": suite.name, "split": split}
+                    if getattr(args, "camera", None):
+                        result.notes["cameras"] = list(args.camera)
+                    robots = "+".join(result.robots) or "norobot"
+                    result.save(
+                        os.path.join(out_dir, f"{split}__{entry.task}__{robots}__{policy.name}.json")
+                    )  # before close()
+                finally:
+                    env.close()
         except Exception as err:  # one broken task is reported as missing, the others still run
             detail = f"{type(err).__name__}: {err}".splitlines()[0][:300]
             print(f"{entry.task}: ERROR {detail}", file=sys.stderr)
@@ -934,6 +1007,12 @@ def _add_bench(sub) -> None:
     )
     sr.add_argument("--device", help="torch device (default: cuda if available)")
     sr.add_argument("--out-dir", help="default: bench_results/suites/<suite>/<sim>")
+    sr.add_argument(
+        "--isolate",
+        choices=("auto", "always", "never"),
+        default="auto",
+        help="run each task in its own interpreter (auto: for backends that boot once per process, e.g. isaacsim)",
+    )
     _add_remote_args(sr)
     sr.set_defaults(func=_bench_suite_run)
     sp = sus.add_parser("report", help="score existing result files against a suite")

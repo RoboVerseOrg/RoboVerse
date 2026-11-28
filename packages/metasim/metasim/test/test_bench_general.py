@@ -970,3 +970,63 @@ def test_flatten_initial_state_accepts_both_layouts():
         "bot": {"pos": [0.0, 0.0, 0.0], "rot": [1.0, 0.0, 0.0, 0.0], "dof_pos": {"j0": 0.5}},
     }
     assert flatten_initial_state(flat) == flat, "the flat layout passes through unchanged"
+
+
+def test_suite_task_isolated_runs_bench_run_with_the_entry_protocol(monkeypatch, tmp_path):
+    """The child gets every protocol field as a flag and its result file is loaded; a child without a file is an error."""
+    import subprocess
+    from types import SimpleNamespace
+
+    import metasim.__main__ as cli
+    from metasim.bench import AccessProfile, SuiteTask
+
+    calls = []
+
+    def fake_run(cmd, check, stdout, stderr):
+        calls.append(cmd)
+        out = cmd[cmd.index("--out") + 1]
+        if "broken" not in cmd:
+            BenchmarkResult(
+                task="t", simulator="isaacsim", robots=["franka"], num_envs=1, protocol=EvalProtocol().to_dict(),
+                policy={"name": "hold"}, episodes=[_episode(0, True)],
+            ).save(out)  # fmt: skip
+        return SimpleNamespace(returncode=0 if "broken" not in cmd else 1)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    args = SimpleNamespace(
+        num_envs=2, camera=["front"], policy_url=None, policy="hold", policy_arg=["k=v"], checkpoint=None, device="cuda:0",
+        require_metadata=None, obs_key=None,
+    )  # fmt: skip
+    protocol = EvalProtocol(
+        seed=3,
+        demo_budget_factor=2.0,
+        instances=(1, 4),
+        access=AccessProfile(name="visual", observation="rgb"),
+    )
+    entry = SuiteTask(task="t", robots=("franka",))
+    result = cli._suite_task_isolated(entry, protocol, args, "isaacsim", str(tmp_path / "r.json"))
+    cmd = calls[-1]
+    assert cmd[1:6] == ["-m", "metasim", "bench", "run", "--task"] and "isaacsim" in cmd
+    for flag, value in (
+        ("--episodes", "2"),
+        ("--seed", "3"),
+        ("--demo-budget", "2.0"),
+        ("--num-envs", "2"),
+        ("--robot", "franka"),
+        ("--camera", "front"),
+        ("--policy", "hold"),
+        ("--policy-arg", "k=v"),
+        ("--device", "cuda:0"),
+    ):
+        assert cmd[cmd.index(flag) + 1] == value, flag
+    assert [cmd[i + 1] for i, v in enumerate(cmd) if v == "--instance"] == ["1", "4"]
+    access_arg = cmd[cmd.index("--access") + 1]
+    assert access_arg.endswith("access__visual.json"), "a tier that is not a preset travels as a file"
+    assert result.task == "t" and (tmp_path / "r.json").exists()
+
+    # a custom profile equal to a preset is passed by name
+    cli._suite_task_isolated(entry, EvalProtocol(access=AccessProfile()), args, "isaacsim", str(tmp_path / "r2.json"))
+    assert calls[-1][calls[-1].index("--access") + 1] == "privileged"
+
+    with pytest.raises(RuntimeError, match="before saving a result"):
+        cli._suite_task_isolated(SuiteTask(task="broken"), EvalProtocol(), args, "isaacsim", str(tmp_path / "r3.json"))
