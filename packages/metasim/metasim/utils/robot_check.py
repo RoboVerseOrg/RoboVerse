@@ -66,8 +66,9 @@ class RobotReport:
 
     @property
     def applicable(self) -> bool:
-        """The robot declares an asset for this backend (every row applies)."""
-        return all(r.applicable for r in self.rows)
+        """The robot declares an asset for this backend: the assets row is the one check that knows the backend."""
+        assets = [r for r in self.rows if r.check == "assets"]
+        return assets[0].applicable if assets else all(r.applicable for r in self.rows)
 
     @property
     def ok(self) -> bool:
@@ -186,12 +187,10 @@ def check_assets(cfg, sim: str) -> CheckRow:
 def check_kinematics(cfg) -> CheckRow:
     """The MJCF loads, the end-effector body exists and forward kinematics of the default pose is finite."""
     if not isinstance(getattr(cfg, "mjcf_path", None), str) or not cfg.mjcf_path:
-        # a URDF / USD-only robot: the skill library and the IL adapters need an MJCF, so this is reported, not judged
+        # a URDF / USD-only robot: the skill library and the IL adapters need an MJCF; like limits and actuators,
+        # this row is not judged without one (it says so), and the backend's own checks decide the robot
         return CheckRow(
-            "kinematics",
-            False,
-            "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-            applicable=False,
+            "kinematics", True, "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)"
         )
     if not getattr(cfg, "ee_body_name", None):
         return CheckRow("kinematics", True, "no ee_body_name (not an arm): tool kinematics not judged")
@@ -349,15 +348,22 @@ def check_hold(cfg, sim: str, *, steps: int = 200, joint_tol: float = 0.05, base
     # The caller closes it once the report is printed (close_handlers()); the handler is registered above.
 
 
-def check_robot_cfg(cfg, *, sim: str = "mujoco", steps: int = 200, hold: bool = True) -> RobotReport:
-    """Run every check for the config object ``cfg`` on ``sim`` (``robot add`` checks the file it just wrote)."""
+def check_robot_cfg(
+    cfg, *, sim: str = "mujoco", steps: int = 200, hold: bool = True, static: bool = True
+) -> RobotReport:
+    """Run every check for the config object ``cfg`` on ``sim`` (``robot add`` checks the file it just wrote).
+
+    ``static=False`` runs only the assets row and the hold check (a child process whose parent already ran the rest).
+    """
     report = RobotReport(robot=cfg.name, simulator=sim)
-    report.rows.append(check_config(cfg))
+    if static:
+        report.rows.append(check_config(cfg))
     report.rows.append(check_assets(cfg, sim))
-    report.rows.append(check_kinematics(cfg))
-    model = load_mjcf(cfg)  # one parse for the two MJCF checks
-    report.rows.append(check_limits(cfg, model=model))
-    report.rows.append(check_actuators(cfg, model=model))
+    if static:
+        report.rows.append(check_kinematics(cfg))
+        model = load_mjcf(cfg)  # one parse for the two MJCF checks
+        report.rows.append(check_limits(cfg, model=model))
+        report.rows.append(check_actuators(cfg, model=model))
     if hold:
         if report.applicable:
             report.rows.append(check_hold(cfg, sim, steps=steps))
@@ -366,11 +372,13 @@ def check_robot_cfg(cfg, *, sim: str = "mujoco", steps: int = 200, hold: bool = 
     return report
 
 
-def check_robot(name: str, *, sim: str = "mujoco", steps: int = 200, hold: bool = True) -> RobotReport:
+def check_robot(
+    name: str, *, sim: str = "mujoco", steps: int = 200, hold: bool = True, static: bool = True
+) -> RobotReport:
     """Run every check for the robot config ``name`` (a registered robot) on ``sim``."""
     from metasim.utils.setup_util import get_robot
 
-    return check_robot_cfg(get_robot(name), sim=sim, steps=steps, hold=hold)
+    return check_robot_cfg(get_robot(name), sim=sim, steps=steps, hold=hold, static=static)
 
 
 # --------------------------------------------------------------------------- cross-engine parity

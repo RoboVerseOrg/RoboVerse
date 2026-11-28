@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / "packages" / "metasim"))
 
 import roboverse_pack.robots as robots_pkg
 from metasim.scenario.robot import RobotCfg
+from metasim.utils.robot_check import CheckRow, RobotReport, row_verdict
 
 FIELDS = (("mjcf_path", "MuJoCo"), ("usd_path", "Isaac Sim"), ("urdf_path", "URDF"), ("mjx_mjcf_path", "MJX"))
 CHECKS = ("config", "assets", "kinematics", "limits", "actuators", "hold")
@@ -82,19 +83,20 @@ def latest_dirs(pattern: re.Pattern, results: Path = RESULTS) -> dict[str, tuple
     return out
 
 
-def robot_verdict(record: dict) -> str:
-    """``FAIL`` when an applicable row fails, else ``n/a`` when a row is not applicable, else ``pass`` (from the rows,
-    so a result file written before the rule existed renders the same way as a new one)."""
-    rows = record.get("rows", [])
-    if any(row.get("applicable", True) and not row["ok"] for row in rows):
-        return "FAIL"
-    return "n/a" if any(not row.get("applicable", True) for row in rows) else "pass"
+def as_report(record: dict) -> RobotReport:
+    """A result-file record as the library's report, so the page uses the one verdict rule (``RobotReport.verdict``)."""
+    rows = [
+        CheckRow(r["check"], bool(r["ok"]), str(r["detail"]), bool(r.get("applicable", True)))
+        for r in record.get("rows", [])
+    ]
+    return RobotReport(robot=record["robot"], simulator=record.get("simulator", ""), rows=rows)
 
 
 def render_check(sim: str, date: str, data: dict) -> list[str]:
     """The ``robot check --all`` sweep as a table plus the named failures."""
     robots = data.get("robots", [])
-    verdicts = {r["robot"]: robot_verdict(r) for r in robots}
+    reports = {r["robot"]: as_report(r) for r in robots}
+    verdicts = {name: rep.verdict for name, rep in reports.items()}
     n_ok = sum(v == "pass" for v in verdicts.values())
     n_na = sum(v == "n/a" for v in verdicts.values())
     lines = [
@@ -108,23 +110,16 @@ def render_check(sim: str, date: str, data: dict) -> list[str]:
         "|---|" + "---|" * (len(CHECKS) + 1),
     ]
 
-    def cell(row):
-        if not row.get("applicable", True):
-            return "n/a"
-        return "ok" if row["ok"] else "FAIL"
-
-    for r in robots:
-        by = {row["check"]: row for row in r.get("rows", [])}
-        cells = ["-" if c not in by else cell(by[c]) for c in CHECKS]
-        lines.append(f"| `{r['robot']}` | " + " | ".join(cells) + f" | {verdicts[r['robot']]} |")
-    failures = [
-        (r["robot"], row) for r in robots for row in r.get("rows", []) if row.get("applicable", True) and not row["ok"]
-    ]
+    for name, rep in reports.items():
+        by = {row.check: row for row in rep.rows}
+        cells = ["-" if c not in by else row_verdict(by[c]) for c in CHECKS]
+        lines.append(f"| `{name}` | " + " | ".join(cells) + f" | {verdicts[name]} |")
+    failures = [(name, row) for name, rep in reports.items() for row in rep.rows if row.applicable and not row.ok]
     if failures:
         lines += ["", "Named failures (the first per robot and check):", ""]
         for robot, row in failures:
-            detail = row["detail"].replace("|", "/").replace("\n", " ")
-            lines.append(f"- `{robot}` / {row['check']}: {detail[:220]}")
+            detail = row.detail.replace("|", "/").replace("\n", " ")
+            lines.append(f"- `{robot}` / {row.check}: {detail[:220]}")
     return lines
 
 
@@ -202,13 +197,13 @@ def main(argv=None) -> int:
     out = Path(__file__).with_name("robots.md")
     text = render()
     if args.check:
-        current = out.read_text() if out.exists() else ""
+        current = out.read_text(encoding="utf-8") if out.exists() else ""
         if current != text:
             sys.stderr.write(f"{out} is stale: run python {Path(__file__).relative_to(ROOT)}\n")
             return 1
         sys.stderr.write(f"{out}: up to date\n")
         return 0
-    out.write_text(text)
+    out.write_text(text, encoding="utf-8")
     sys.stderr.write(f"{out}: {text.count(chr(10))} lines\n")
     return 0
 

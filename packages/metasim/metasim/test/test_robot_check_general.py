@@ -108,7 +108,7 @@ def test_kinematics_and_hold_rows_do_not_judge_what_is_not_an_arm(tmp_path):
     row = check_kinematics(_cfg(tmp_path, ee_body_name=None))
     assert row.ok and "not an arm" in row.detail
     none = check_kinematics(_cfg(tmp_path, mjcf_path=None))
-    assert not none.ok and not none.applicable and "no mjcf_path" in none.detail
+    assert none.ok and none.applicable and "not judged" in none.detail, "no MJCF: the backend's own checks decide"
 
 
 _ACTUATED_ARM = """
@@ -419,7 +419,7 @@ def test_robot_check_all_sweeps_the_list_and_writes_the_table(monkeypatch, tmp_p
 
     monkeypatch.setattr(setup_util, "list_robots", lambda: {"good": "m:Good", "bad": "m:Bad", "broken": "m:Broken"})
 
-    def fake_check(name, *, sim, steps, hold):
+    def fake_check(name, *, sim, steps, hold, static=True):
         if name == "broken":
             raise ValueError("no such robot")
         ok = name == "good"
@@ -476,7 +476,7 @@ def test_robot_check_isolated_spawns_a_child_only_when_the_cheap_rows_pass(monke
     def fake_run(cmd, **kwargs):
         name = cmd[cmd.index("check") + 1]
         spawned.append(name)
-        assert cmd[cmd.index("--isolate") + 1] == "never", "the child must not isolate again"
+        assert cmd[cmd.index("--isolate") + 1] == "never" and "--hold-only" in cmd, "the child runs only the hold"
         if name == "dies":
             return subprocess.CompletedProcess(
                 cmd, 1, stdout="[INFO] booting\n", stderr="Kit aborted\nSegmentation fault"
@@ -499,7 +499,7 @@ def test_robot_check_isolated_spawns_a_child_only_when_the_cheap_rows_pass(monke
     dies = cli._robot_check_isolated("dies", args)
     assert not (stale_dir / "robots.json").exists(), "a stale report from the last run is removed before the child runs"
     assert spawned == ["ready", "dies"], "no simulator boot for a robot whose assets are missing"
-    assert ready.ok and [r.check for r in ready.rows] == ["config", "hold"], "the child's report replaces the parent's"
+    assert ready.ok and [r.check for r in ready.rows] == ["config", "assets", "hold"], "parent rows + the child's hold"
     assert not nousd.ok and nousd.rows[-1].check == "hold" and "not attempted" in nousd.rows[-1].detail
     assert not dies.ok and "child exited 1 without a report: Segmentation fault" in dies.rows[-1].detail
     assert (tmp_path / "logs" / "dies.log").read_text().endswith("Segmentation fault")
@@ -533,3 +533,9 @@ def test_a_robot_without_an_asset_for_the_backend_is_not_applicable(tmp_path):
         _cfg(tmp_path, mjcf_path=None, urdf_path="x.urdf", actuators={}), sim="mujoco"
     )
     assert urdf_only_with_bad_config.verdict == "FAIL", "a config defect fails the robot on every backend"
+    usd_only = check_robot_cfg(
+        _cfg(tmp_path, mjcf_path=None, usd_path=str(tmp_path / "toy.xml")), sim="isaacsim", hold=False
+    )
+    assert usd_only.applicable and usd_only.ok, "a USD-only robot on Isaac Sim is a candidate: its hold check must run"
+    hold_only = check_robot_cfg(_cfg(tmp_path), sim="mujoco", hold=False, static=False)
+    assert [r.check for r in hold_only.rows] == ["assets"]

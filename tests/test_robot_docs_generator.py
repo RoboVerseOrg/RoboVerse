@@ -95,18 +95,23 @@ def test_newest_run_per_simulator_and_engine_pair_is_rendered(gen, tmp_path):
     assert "2026-11-01" not in page, "only the newest sweep per simulator is shown"
     assert "| `toy` | ok | ok | ok | ok | ok | FAIL | FAIL |" in page
     assert (
-        gen.robot_verdict({
+        gen.as_report({
+            "robot": "r",
             "rows": [
-                {"check": "config", "ok": False, "applicable": True},
-                {"check": "assets", "ok": False, "applicable": False},
-            ]
-        })
+                {"check": "config", "ok": False, "detail": "", "applicable": True},
+                {"check": "assets", "ok": False, "detail": "", "applicable": False},
+            ],
+        }).verdict
         == "FAIL"
     )
     assert (
-        gen.robot_verdict({
-            "rows": [{"check": "config", "ok": True}, {"check": "assets", "ok": False, "applicable": False}]
-        })
+        gen.as_report({
+            "robot": "r",
+            "rows": [
+                {"check": "config", "ok": True, "detail": ""},
+                {"check": "assets", "ok": False, "detail": "", "applicable": False},
+            ],
+        }).verdict
         == "n/a"
     )
     assert "- `toy` / hold: drift 0.3 rad / base moved" in page, "a pipe in a detail cannot break the table"

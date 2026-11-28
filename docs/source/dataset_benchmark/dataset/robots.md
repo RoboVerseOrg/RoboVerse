@@ -70,46 +70,46 @@ result files per simulator; how to add a robot and pass them is in [Add a robot]
 
 | robot | config | assets | kinematics | limits | actuators | hold | verdict |
 |---|---|---|---|---|---|---|---|
-| `aloha` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
-| `aloha_agilex` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `aloha` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
+| `aloha_agilex` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `arx_l5` | ok | n/a | ok | ok | FAIL | n/a | FAIL |
 | `cartpole` | ok | ok | ok | FAIL | FAIL | FAIL | FAIL |
-| `fetch` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `fetch` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `franka` | ok | ok | ok | ok | ok | ok | pass |
-| `franka_with_gripper_extension` | FAIL | ok | n/a | ok | ok | n/a | FAIL |
+| `franka_with_gripper_extension` | FAIL | ok | ok | ok | ok | FAIL | FAIL |
 | `g1` | ok | ok | ok | ok | ok | FAIL | FAIL |
 | `g1_dof12` | ok | ok | ok | ok | ok | ok | pass |
-| `g1_dof23` | ok | n/a | n/a | ok | ok | n/a | n/a |
-| `g1_dof27` | ok | n/a | n/a | ok | ok | n/a | n/a |
+| `g1_dof23` | ok | n/a | ok | ok | ok | n/a | n/a |
+| `g1_dof27` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `g1_dof29` | ok | ok | ok | ok | ok | ok | pass |
-| `g1_dof29_dex3` | ok | n/a | n/a | ok | ok | n/a | n/a |
+| `g1_dof29_dex3` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `g1_tracking` | FAIL | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
 | `gen3` | ok | ok | ok | ok | ok | ok | pass |
 | `go1` | ok | ok | ok | ok | ok | FAIL | FAIL |
-| `google_robot_static` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `google_robot_static` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `h1` | ok | ok | ok | ok | ok | ok | pass |
-| `h1_2_without_hand` | FAIL | FAIL | n/a | ok | ok | n/a | FAIL |
+| `h1_2_without_hand` | FAIL | FAIL | ok | ok | ok | FAIL | FAIL |
 | `h1_hand` | FAIL | n/a | ok | ok | FAIL | n/a | FAIL |
 | `h1_simple_hand` | FAIL | n/a | ok | FAIL | ok | n/a | FAIL |
 | `h1_wrist` | ok | ok | ok | ok | ok | ok | pass |
-| `iiwa` | FAIL | FAIL | n/a | ok | ok | n/a | FAIL |
+| `iiwa` | FAIL | FAIL | ok | ok | ok | FAIL | FAIL |
 | `iiwa14` | ok | ok | ok | ok | ok | FAIL | FAIL |
-| `kinova_gen3_robotiq_2f85` | FAIL | ok | n/a | ok | ok | n/a | FAIL |
+| `kinova_gen3_robotiq_2f85` | FAIL | ok | ok | ok | ok | FAIL | FAIL |
 | `koch_1` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `lite6` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `openarm_bimanual_wuji` | ok | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
 | `openarm_wuji` | ok | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
-| `sawyer` | FAIL | ok | n/a | ok | ok | n/a | FAIL |
+| `sawyer` | FAIL | ok | ok | ok | ok | FAIL | FAIL |
 | `shadow_hand` | ok | n/a | ok | FAIL | FAIL | n/a | FAIL |
 | `sharpa_wave_left` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `sharpa_wave_right` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `so_arm100` | ok | n/a | ok | ok | ok | n/a | n/a |
-| `unitree_dex3_1_left` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `unitree_dex3_1_left` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `ur10e` | ok | ok | ok | ok | ok | ok | pass |
 | `ur5e` | ok | ok | ok | ok | ok | ok | pass |
-| `ur5e_2f85` | FAIL | FAIL | n/a | ok | ok | n/a | FAIL |
-| `vega` | FAIL | FAIL | n/a | ok | ok | n/a | FAIL |
-| `xhand_right` | ok | n/a | n/a | ok | ok | n/a | n/a |
+| `ur5e_2f85` | FAIL | FAIL | ok | ok | ok | FAIL | FAIL |
+| `vega` | FAIL | FAIL | ok | ok | ok | FAIL | FAIL |
+| `xhand_right` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `yam` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `z1` | ok | ok | ok | ok | ok | ok | pass |
 
@@ -123,6 +123,7 @@ Named failures (the first per robot and check):
 - `cartpole` / hold: not attempted: a cheaper check already failed
 - `fetch` / config: no default position for ['elbow_flex_joint', 'forearm_roll_joint', 'head_pan_joint', 'head_tilt_joint', 'l_gripper_finger_joint', 'l_wheel_joint', 'r_gripper_finger_joint', 'r_wheel_joint', 'shoulder_lift_joint', 'should
 - `franka_with_gripper_extension` / config: no default position for ['panda_finger_joint1', 'panda_finger_joint2', 'panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
+- `franka_with_gripper_extension` / hold: not attempted: a cheaper check already failed
 - `g1` / hold: child exited 1 without a report: ValueError: No contact sensors added to the prim: '/World/envs/env_0/g1'. This means that no rigid bodies are present under this prim. Please check the prim path.
 - `g1_tracking` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_yaw_joint', 'left_wri
 - `g1_tracking` / assets: ['/workspace/roboverse_maint/RoboVerse/roboverse_data/unitree_description/usd/g1/g1.usd'] not local and not fetched from the Hub (Exception)
@@ -133,14 +134,17 @@ Named failures (the first per robot and check):
 - `google_robot_static` / config: no joint_limits for ['joint_bicep', 'joint_elbow', 'joint_finger_left', 'joint_finger_right', 'joint_forearm', 'joint_gripper', 'joint_head_pan', 'joint_head_tilt', 'joint_shoulder', 'joint_torso', 'joint_wrist']; no def
 - `h1_2_without_hand` / config: no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_pitch_joint', 'left_elbow_roll_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left
 - `h1_2_without_hand` / assets: ['roboverse_data_release/robots/h1_2_without_hand/usd/h1_2_without_hand.usd'] not local and not fetched from the Hub (ValueError)
+- `h1_2_without_hand` / hold: not attempted: a cheaper check already failed
 - `h1_hand` / config: no joint_limits for ['lh_FFJ1', 'lh_FFJ2', 'lh_FFJ3', 'lh_FFJ4', 'lh_LFJ1', 'lh_LFJ2', 'lh_LFJ3', 'lh_LFJ4', 'lh_LFJ5', 'lh_MFJ1', 'lh_MFJ2', 'lh_MFJ3', 'lh_MFJ4', 'lh_RFJ1', 'lh_RFJ2', 'lh_RFJ3', 'lh_RFJ4', 'lh_THJ1', '
 - `h1_hand` / actuators: 48 actuator(s) not named after their joint (the handler would add a second servo): 'lh_A_WRJ2' drives 'lh_WRJ2'; 'lh_A_WRJ1' drives 'lh_WRJ1'; 'lh_A_THJ5' drives 'lh_THJ5'; 'lh_A_THJ4' drives 'lh_THJ4'
 - `h1_simple_hand` / config: no default position for ['L_index_intermediate', 'L_index_proximal', 'L_middle_intermediate', 'L_middle_proximal', 'L_pinky_intermediate', 'L_pinky_proximal', 'L_ring_intermediate', 'L_ring_proximal', 'L_thumb_distal', '
 - `h1_simple_hand` / limits: 26 of 45 limited joints disagree with the MJCF: left_hand cfg [-6.000, 6.000] vs mjcf [-3.054, 3.054]; right_hand cfg [-6.000, 6.000] vs mjcf [-3.054, 3.054]; L_index_proximal cfg [-1.000, 1.000] vs mjcf [0.000, 1.700]; 
 - `iiwa` / config: no joint_limits for ['iiwa7_joint_1', 'iiwa7_joint_2', 'iiwa7_joint_3', 'iiwa7_joint_4', 'iiwa7_joint_5', 'iiwa7_joint_6', 'iiwa7_joint_7', 'panda_finger_joint1', 'panda_finger_joint2']; no default position for ['iiwa7_j
 - `iiwa` / assets: ['data_isaaclab/robots/iiwa/iiwa.usd'] not local and not fetched from the Hub (ValueError)
+- `iiwa` / hold: not attempted: a cheaper check already failed
 - `iiwa14` / hold: child exited 1 without a report: ValueError: No contact sensors added to the prim: '/World/envs/env_0/iiwa14'. This means that no rigid bodies are present under this prim. Please check the prim path.
 - `kinova_gen3_robotiq_2f85` / config: no default position for ['finger_joint', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6', 'joint_7', 'left_outer_finger_joint', 'right_outer_finger_joint']
+- `kinova_gen3_robotiq_2f85` / hold: not attempted: a cheaper check already failed
 - `openarm_bimanual_wuji` / assets: ['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)
 - `openarm_bimanual_wuji` / limits: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
 - `openarm_bimanual_wuji` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
@@ -150,13 +154,16 @@ Named failures (the first per robot and check):
 - `openarm_wuji` / actuators: MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'
 - `openarm_wuji` / hold: not attempted: a cheaper check already failed
 - `sawyer` / config: no default position for ['head_pan', 'right_gripper_l_finger_joint', 'right_gripper_r_finger_joint', 'right_j0', 'right_j1', 'right_j2', 'right_j3', 'right_j4', 'right_j5', 'right_j6']
+- `sawyer` / hold: not attempted: a cheaper check already failed
 - `shadow_hand` / limits: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
 - `shadow_hand` / actuators: MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate' Element 'option', line 4 
 - `unitree_dex3_1_left` / config: no default position for ['left_hand_index_0_joint', 'left_hand_index_1_joint', 'left_hand_middle_0_joint', 'left_hand_middle_1_joint', 'left_hand_thumb_0_joint', 'left_hand_thumb_1_joint', 'left_hand_thumb_2_joint']
 - `ur5e_2f85` / config: no default position for ['elbow_joint', 'shoulder_lift_joint', 'shoulder_pan_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
 - `ur5e_2f85` / assets: ['data_isaaclab/robots/UniversalRobots/ur5e/ur5e_2f85_fix.usd'] not local and not fetched from the Hub (ValueError)
+- `ur5e_2f85` / hold: not attempted: a cheaper check already failed
 - `vega` / config: default outside limits for ['torso_j1']
 - `vega` / assets: ['roboverse_pack/robots/robots_vega/humanoid/vega_1/vega/vega.usd'] not local and not fetched from the Hub (ValueError)
+- `vega` / hold: not attempted: a cheaper check already failed
 
 ### Self-check on mujoco (2026-11-28)
 
@@ -164,46 +171,46 @@ Named failures (the first per robot and check):
 
 | robot | config | assets | kinematics | limits | actuators | hold | verdict |
 |---|---|---|---|---|---|---|---|
-| `aloha` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
-| `aloha_agilex` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `aloha` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
+| `aloha_agilex` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `arx_l5` | ok | ok | ok | ok | FAIL | FAIL | FAIL |
 | `cartpole` | ok | ok | ok | FAIL | FAIL | FAIL | FAIL |
-| `fetch` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `fetch` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `franka` | ok | ok | ok | ok | ok | ok | pass |
-| `franka_with_gripper_extension` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `franka_with_gripper_extension` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `g1` | ok | ok | ok | ok | ok | ok | pass |
 | `g1_dof12` | ok | ok | ok | ok | ok | ok | pass |
-| `g1_dof23` | ok | n/a | n/a | ok | ok | n/a | n/a |
-| `g1_dof27` | ok | n/a | n/a | ok | ok | n/a | n/a |
+| `g1_dof23` | ok | n/a | ok | ok | ok | n/a | n/a |
+| `g1_dof27` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `g1_dof29` | ok | ok | ok | ok | ok | ok | pass |
-| `g1_dof29_dex3` | ok | n/a | n/a | ok | ok | n/a | n/a |
+| `g1_dof29_dex3` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `g1_tracking` | FAIL | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
 | `gen3` | ok | ok | ok | ok | ok | ok | pass |
 | `go1` | ok | ok | ok | ok | ok | ok | pass |
-| `google_robot_static` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `google_robot_static` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `h1` | ok | ok | ok | ok | ok | ok | pass |
-| `h1_2_without_hand` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `h1_2_without_hand` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `h1_hand` | FAIL | ok | ok | ok | FAIL | FAIL | FAIL |
 | `h1_simple_hand` | FAIL | ok | ok | FAIL | ok | ok | FAIL |
 | `h1_wrist` | ok | ok | ok | ok | ok | ok | pass |
-| `iiwa` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `iiwa` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `iiwa14` | ok | ok | ok | ok | ok | ok | pass |
-| `kinova_gen3_robotiq_2f85` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `kinova_gen3_robotiq_2f85` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `koch_1` | ok | ok | ok | ok | ok | FAIL | FAIL |
 | `lite6` | ok | ok | ok | ok | ok | ok | pass |
 | `openarm_bimanual_wuji` | ok | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
 | `openarm_wuji` | ok | FAIL | ok | FAIL | FAIL | FAIL | FAIL |
-| `sawyer` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `sawyer` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `shadow_hand` | ok | ok | ok | FAIL | FAIL | FAIL | FAIL |
 | `sharpa_wave_left` | ok | ok | ok | ok | ok | ok | pass |
 | `sharpa_wave_right` | ok | ok | ok | ok | ok | ok | pass |
 | `so_arm100` | ok | ok | ok | ok | ok | ok | pass |
-| `unitree_dex3_1_left` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
+| `unitree_dex3_1_left` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
 | `ur10e` | ok | ok | ok | ok | ok | ok | pass |
 | `ur5e` | ok | ok | ok | ok | ok | ok | pass |
-| `ur5e_2f85` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
-| `vega` | FAIL | n/a | n/a | ok | ok | n/a | FAIL |
-| `xhand_right` | ok | n/a | n/a | ok | ok | n/a | n/a |
+| `ur5e_2f85` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
+| `vega` | FAIL | n/a | ok | ok | ok | n/a | FAIL |
+| `xhand_right` | ok | n/a | ok | ok | ok | n/a | n/a |
 | `yam` | ok | ok | ok | ok | ok | ok | pass |
 | `z1` | ok | ok | ok | ok | ok | ok | pass |
 

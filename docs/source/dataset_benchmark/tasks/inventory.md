@@ -181,4 +181,4 @@ How to add one: [Add a task](../../start/add_a_task.md).
 
 ## Retired
 
-443 task rows retired on 2026-11-27 (`roboverse_pack/tasks/retired_tasks.csv`, with the commit to restore each from), by family: beyondmimic (5), bimanual (1), box_task (1), calvin (5), embodiedgen (1), humanoid (1), libero (178), libero_90 (64), maniskill (81), mjlab (2), mujoco_playground (3), pick_place (14), rlbench (78), robosuite (5), simpler_env (4).
+441 retired tasks (`roboverse_pack/tasks/retired_tasks.csv`, with the commit to restore each from; `RETIRED_TASKS.md` tells the story), by family: beyondmimic (3), bimanual (1), box_task (1), calvin (5), embodiedgen (1), humanoid (1), libero (178), libero_90 (64), maniskill (81), mjlab (2), mujoco_playground (3), pick_place (14), rlbench (78), robosuite (5), simpler_env (4).

@@ -35,4 +35,4 @@ def test_committed_inventory_matches_the_registry(gen):
     )
     assert "## Suites" in page and "`tabletop-mujoco` / `core`: `pick_cube`" in page
     assert "| `pick_cube` | `roboverse_pack.tasks.maniskill" in page
-    assert "## Retired" in page and "task rows retired on 2026-11-27" in page
+    assert "## Retired" in page and "retired tasks (`roboverse_pack/tasks/retired_tasks.csv`" in page

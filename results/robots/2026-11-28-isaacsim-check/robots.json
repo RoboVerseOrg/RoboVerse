@@ -6,7 +6,7 @@
       "simulator": "isaacsim",
       "ok": false,
       "applicable": false,
-      "verdict": "n/a",
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -22,9 +22,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -51,7 +51,7 @@
       "simulator": "isaacsim",
       "ok": false,
       "applicable": false,
-      "verdict": "n/a",
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -67,9 +67,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -96,7 +96,7 @@
       "simulator": "isaacsim",
       "ok": false,
       "applicable": false,
-      "verdict": "n/a",
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -186,7 +186,7 @@
       "simulator": "isaacsim",
       "ok": false,
       "applicable": false,
-      "verdict": "n/a",
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -202,9 +202,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -275,8 +275,8 @@
       "robot": "franka_with_gripper_extension",
       "simulator": "isaacsim",
       "ok": false,
-      "applicable": false,
-      "verdict": "n/a",
+      "applicable": true,
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -292,9 +292,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -311,8 +311,8 @@
         {
           "check": "hold",
           "ok": false,
-          "detail": "n/a: no asset declared for isaacsim",
-          "applicable": false
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
         }
       ]
     },
@@ -427,9 +427,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -472,9 +472,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -562,9 +562,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -726,7 +726,7 @@
       "simulator": "isaacsim",
       "ok": false,
       "applicable": false,
-      "verdict": "n/a",
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -742,9 +742,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -815,8 +815,8 @@
       "robot": "h1_2_without_hand",
       "simulator": "isaacsim",
       "ok": false,
-      "applicable": false,
-      "verdict": "n/a",
+      "applicable": true,
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -832,9 +832,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -851,8 +851,8 @@
         {
           "check": "hold",
           "ok": false,
-          "detail": "n/a: no asset declared for isaacsim",
-          "applicable": false
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
         }
       ]
     },
@@ -861,7 +861,7 @@
       "simulator": "isaacsim",
       "ok": false,
       "applicable": false,
-      "verdict": "n/a",
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -906,7 +906,7 @@
       "simulator": "isaacsim",
       "ok": false,
       "applicable": false,
-      "verdict": "n/a",
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -995,8 +995,8 @@
       "robot": "iiwa",
       "simulator": "isaacsim",
       "ok": false,
-      "applicable": false,
-      "verdict": "n/a",
+      "applicable": true,
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -1012,9 +1012,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -1031,8 +1031,8 @@
         {
           "check": "hold",
           "ok": false,
-          "detail": "n/a: no asset declared for isaacsim",
-          "applicable": false
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
         }
       ]
     },
@@ -1085,8 +1085,8 @@
       "robot": "kinova_gen3_robotiq_2f85",
       "simulator": "isaacsim",
       "ok": false,
-      "applicable": false,
-      "verdict": "n/a",
+      "applicable": true,
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -1102,9 +1102,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -1121,8 +1121,8 @@
         {
           "check": "hold",
           "ok": false,
-          "detail": "n/a: no asset declared for isaacsim",
-          "applicable": false
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
         }
       ]
     },
@@ -1310,8 +1310,8 @@
       "robot": "sawyer",
       "simulator": "isaacsim",
       "ok": false,
-      "applicable": false,
-      "verdict": "n/a",
+      "applicable": true,
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -1327,9 +1327,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -1346,8 +1346,8 @@
         {
           "check": "hold",
           "ok": false,
-          "detail": "n/a: no asset declared for isaacsim",
-          "applicable": false
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
         }
       ]
     },
@@ -1356,7 +1356,7 @@
       "simulator": "isaacsim",
       "ok": false,
       "applicable": false,
-      "verdict": "n/a",
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -1536,7 +1536,7 @@
       "simulator": "isaacsim",
       "ok": false,
       "applicable": false,
-      "verdict": "n/a",
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -1552,9 +1552,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -1670,8 +1670,8 @@
       "robot": "ur5e_2f85",
       "simulator": "isaacsim",
       "ok": false,
-      "applicable": false,
-      "verdict": "n/a",
+      "applicable": true,
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -1687,9 +1687,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -1706,8 +1706,8 @@
         {
           "check": "hold",
           "ok": false,
-          "detail": "n/a: no asset declared for isaacsim",
-          "applicable": false
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
         }
       ]
     },
@@ -1715,8 +1715,8 @@
       "robot": "vega",
       "simulator": "isaacsim",
       "ok": false,
-      "applicable": false,
-      "verdict": "n/a",
+      "applicable": true,
+      "verdict": "FAIL",
       "rows": [
         {
           "check": "config",
@@ -1732,9 +1732,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",
@@ -1751,8 +1751,8 @@
         {
           "check": "hold",
           "ok": false,
-          "detail": "n/a: no asset declared for isaacsim",
-          "applicable": false
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
         }
       ]
     },
@@ -1777,9 +1777,9 @@
         },
         {
           "check": "kinematics",
-          "ok": false,
-          "detail": "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
-          "applicable": false
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
         },
         {
           "check": "limits",

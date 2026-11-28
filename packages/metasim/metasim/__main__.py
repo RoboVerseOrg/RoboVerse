@@ -1150,13 +1150,14 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
     """One robot's self-check in a child interpreter (Isaac Sim boots Kit once per process and may end it in close()).
 
     The cheap rows (config, assets, kinematics, limits, actuators) run here first; the child, which costs a simulator
-    boot, is spawned only when they pass, so a robot without an asset for this backend is a named failure in
-    milliseconds. The child writes its report (``--out-dir``) before it exits; a child that dies without one is reported as
-    a failed ``hold`` row with its exit code and last log line.
+    boot, runs only the hold check (``--hold-only``) and only when the cheap rows pass and the robot declares an asset
+    for this backend (otherwise the robot is ``n/a`` in milliseconds). The child writes its report (``--out-dir``)
+    before it exits; a child that dies without one is reported as a failed ``hold`` row with its exit code and last
+    error line.
     """
     import subprocess
 
-    from metasim.utils.robot_check import CheckRow, RobotReport, check_robot
+    from metasim.utils.robot_check import CheckRow, check_robot
     from metasim.utils.setup_util import get_robot
 
     cfg = get_robot(name)
@@ -1177,7 +1178,7 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
     if os.path.exists(report_path):
         os.remove(report_path)  # a child that dies must not be read as the last run's report
     cmd = [sys.executable, "-m", "metasim", "robot", "check", name, "--sim", args.sim, "--steps", str(args.steps)]
-    cmd += ["--isolate", "never", "--out-dir", child_dir]  # the report is read from the child's robots.json, not stdout
+    cmd += ["--isolate", "never", "--hold-only", "--out-dir", child_dir]  # the report comes from its robots.json
     log_path = None
     if args.out_dir:
         os.makedirs(os.path.join(args.out_dir, "logs"), exist_ok=True)
@@ -1191,11 +1192,13 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
         try:
             with open(report_path, encoding="utf-8") as fh:
                 child = json.load(fh)["robots"][0]
-            rows = [
+            hold_rows = [
                 CheckRow(r["check"], bool(r["ok"]), str(r["detail"]), bool(r.get("applicable", True)))
                 for r in child["rows"]
+                if r["check"] == "hold"
             ]
-            return RobotReport(robot=child["robot"], simulator=child["simulator"], rows=rows)
+            report.rows.extend(hold_rows or [CheckRow("hold", False, "child report has no hold row")])
+            return report
         except (OSError, ValueError, KeyError, IndexError, TypeError):
             lines = [ln.strip() for ln in (proc.stdout + proc.stderr).splitlines() if ln.strip()]
             # the exception line of a traceback ("ValueError: ...") beats any later log line about closing the
@@ -1234,7 +1237,9 @@ def _robot_check(args: argparse.Namespace) -> int:
             if isolate:
                 reports.append(_robot_check_isolated(name, args))
             else:
-                reports.append(check_robot(name, sim=args.sim, steps=args.steps, hold=not args.no_hold))
+                reports.append(
+                    check_robot(name, sim=args.sim, steps=args.steps, hold=not args.no_hold, static=not args.hold_only)
+                )
         except Exception as err:  # one robot that cannot even be resolved must not end the sweep
             row = CheckRow("config", False, f"{type(err).__name__}: {str(err)[:200]}")
             reports.append(RobotReport(robot=name, simulator=args.sim, rows=[row]))
@@ -1436,6 +1441,9 @@ def _add_robot(sub) -> None:
         "--no-hold", action="store_true", help="skip the simulator hold test (config, assets, kinematics only)"
     )
     c.add_argument("--json", action="store_true")
+    c.add_argument(
+        "--hold-only", action="store_true", help="only the assets row and the hold check (what an isolated child runs)"
+    )
     c.set_defaults(func=_robot_check)
 
 

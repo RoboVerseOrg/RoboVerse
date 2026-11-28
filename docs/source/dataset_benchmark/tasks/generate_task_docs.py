@@ -90,12 +90,17 @@ def render() -> str:
     retired = retired_rows()
     lines += ["## Retired", ""]
     if retired:
-        by_family = defaultdict(int)
+        seen: dict[str, str] = {}
         for row in retired:
-            by_family[row.get("family", "?")] += 1
+            seen.setdefault(row.get("task", ""), row.get("family", "?"))
+        by_family = defaultdict(int)
+        for family in seen.values():
+            by_family[family] += 1
         lines.append(
-            f"{len(retired)} task rows retired on 2026-11-27 (`roboverse_pack/tasks/retired_tasks.csv`, with the commit to "
-            "restore each from), by family: " + ", ".join(f"{f} ({n})" for f, n in sorted(by_family.items())) + "."
+            f"{len(seen)} retired tasks (`roboverse_pack/tasks/retired_tasks.csv`, with the commit to restore each from; "
+            "`RETIRED_TASKS.md` tells the story), by family: "
+            + ", ".join(f"{f} ({n})" for f, n in sorted(by_family.items()))
+            + "."
         )
     else:
         lines.append("No retired-task list in this checkout.")
@@ -109,13 +114,13 @@ def main(argv=None) -> int:
     out = Path(__file__).with_name("inventory.md")
     text = render()
     if args.check:
-        current = out.read_text() if out.exists() else ""
+        current = out.read_text(encoding="utf-8") if out.exists() else ""
         if current != text:
             sys.stderr.write(f"{out} is stale: run python {Path(__file__).relative_to(ROOT)}\n")
             return 1
         sys.stderr.write(f"{out}: up to date\n")
         return 0
-    out.write_text(text)
+    out.write_text(text, encoding="utf-8")
     sys.stderr.write(f"{out}: {text.count(chr(10))} lines\n")
     return 0
 
