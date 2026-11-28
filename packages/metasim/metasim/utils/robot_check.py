@@ -30,11 +30,16 @@ from metasim.constants import SimType
 
 @dataclass
 class CheckRow:
-    """One check: its name, whether it passed, and the measurement or error behind the verdict."""
+    """One check: its name, whether it passed, and the measurement or error behind the verdict.
+
+    ``applicable=False`` marks a check the robot is not a candidate for on this backend (no asset declared for it):
+    reported as ``n/a``, and it neither passes nor fails the robot.
+    """
 
     check: str
     ok: bool
     detail: str
+    applicable: bool = True
 
 
 _OPEN_HANDLERS: list[Any] = []
@@ -60,21 +65,47 @@ class RobotReport:
     rows: list[CheckRow] = field(default_factory=list)
 
     @property
+    def applicable(self) -> bool:
+        """The robot declares an asset for this backend (every row applies)."""
+        return all(r.applicable for r in self.rows)
+
+    @property
     def ok(self) -> bool:
-        """Every check passed."""
-        return all(r.ok for r in self.rows)
+        """Every applicable check passed; a robot that is not a candidate for this backend does not fail it."""
+        return all(r.ok for r in self.rows if r.applicable)
+
+    @property
+    def verdict(self) -> str:
+        """``pass``, ``FAIL`` or ``n/a`` (not a candidate for this backend)."""
+        if not self.applicable:
+            return "n/a"
+        return "pass" if self.ok else "FAIL"
 
     def table(self) -> str:
         """The report as a Markdown table."""
         lines = [f"robot {self.robot} on {self.simulator}", "| check | result | detail |", "|---|---|---|"]
         for r in self.rows:
-            lines.append(f"| {r.check} | {'ok' if r.ok else 'FAIL'} | {r.detail} |")
-        lines.append(f"verdict: {'pass' if self.ok else 'FAIL'}")
+            lines.append(f"| {r.check} | {row_verdict(r)} | {r.detail} |")
+        lines.append(f"verdict: {self.verdict}")
         return "\n".join(lines)
 
     def to_dict(self) -> dict[str, Any]:
         """JSON-ready form."""
-        return {"robot": self.robot, "simulator": self.simulator, "ok": self.ok, "rows": [asdict(r) for r in self.rows]}
+        return {
+            "robot": self.robot,
+            "simulator": self.simulator,
+            "ok": self.ok,
+            "applicable": self.applicable,
+            "verdict": self.verdict,
+            "rows": [asdict(r) for r in self.rows],
+        }
+
+
+def row_verdict(row: CheckRow) -> str:
+    """``ok`` / ``FAIL`` / ``n/a`` for one row."""
+    if not row.applicable:
+        return "n/a"
+    return "ok" if row.ok else "FAIL"
 
 
 _ASSET_FIELDS = {
@@ -126,7 +157,8 @@ def check_assets(cfg, sim: str) -> CheckRow:
         (f, getattr(cfg, f, None)) for f in fields if isinstance(getattr(cfg, f, None), str) and getattr(cfg, f)
     ]
     if not declared:
-        return CheckRow("assets", False, f"no {' / '.join(fields)} declared for {sim}")
+        # not a candidate for this backend: reported, neither a pass nor a failure (a URDF-only robot on MuJoCo)
+        return CheckRow("assets", False, f"no {' / '.join(fields)} declared for {sim}", applicable=False)
     missing = [p for _, p in declared if not os.path.exists(p)]
     if missing:
         try:
@@ -150,8 +182,12 @@ def check_assets(cfg, sim: str) -> CheckRow:
 def check_kinematics(cfg) -> CheckRow:
     """The MJCF loads, the end-effector body exists and forward kinematics of the default pose is finite."""
     if not isinstance(getattr(cfg, "mjcf_path", None), str) or not cfg.mjcf_path:
+        # a URDF / USD-only robot: the skill library and the IL adapters need an MJCF, so this is reported, not judged
         return CheckRow(
-            "kinematics", False, "no mjcf_path: the kinematics check loads the robot's MJCF in MuJoCo's model"
+            "kinematics",
+            False,
+            "n/a: no mjcf_path (the skill library and the IL adapters read the MJCF; this robot has none)",
+            applicable=False,
         )
     if not getattr(cfg, "ee_body_name", None):
         return CheckRow("kinematics", True, "no ee_body_name (not an arm): tool kinematics not judged")
@@ -319,7 +355,10 @@ def check_robot_cfg(cfg, *, sim: str = "mujoco", steps: int = 200, hold: bool = 
     report.rows.append(check_limits(cfg, model=model))
     report.rows.append(check_actuators(cfg, model=model))
     if hold:
-        report.rows.append(check_hold(cfg, sim, steps=steps))
+        if report.applicable:
+            report.rows.append(check_hold(cfg, sim, steps=steps))
+        else:
+            report.rows.append(CheckRow("hold", False, f"n/a: no asset declared for {sim}", applicable=False))
     return report
 
 

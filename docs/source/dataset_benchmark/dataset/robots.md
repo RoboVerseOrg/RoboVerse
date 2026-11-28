@@ -66,7 +66,7 @@ result files per simulator; how to add a robot and pass them is in [Add a robot]
 
 ### Self-check on isaacsim (2026-11-28)
 
-`python -m metasim robot check --all --sim isaacsim`: 42 robots, 9 pass. Source: `results/robots/2026-11-28-isaacsim-check/robots.json`.
+`python -m metasim robot check --all --sim isaacsim`: 42 robots, 9 pass, 33 fail, 0 n/a (no asset declared for this backend). Source: `results/robots/2026-11-28-isaacsim-check/robots.json`.
 
 | robot | config | assets | kinematics | limits | actuators | hold | verdict |
 |---|---|---|---|---|---|---|---|
@@ -221,7 +221,7 @@ Named failures (the first per robot and check):
 
 ### Self-check on mujoco (2026-11-28)
 
-`python -m metasim robot check --all --sim mujoco`: 42 robots, 17 pass. Source: `results/robots/2026-11-28-mujoco-check/robots.json`.
+`python -m metasim robot check --all --sim mujoco`: 42 robots, 17 pass, 25 fail, 0 n/a (no asset declared for this backend). Source: `results/robots/2026-11-28-mujoco-check/robots.json`.
 
 | robot | config | assets | kinematics | limits | actuators | hold | verdict |
 |---|---|---|---|---|---|---|---|

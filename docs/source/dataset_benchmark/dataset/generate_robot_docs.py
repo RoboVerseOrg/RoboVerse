@@ -85,20 +85,32 @@ def latest_dirs(pattern: re.Pattern, results: Path = RESULTS) -> dict[str, tuple
 def render_check(sim: str, date: str, data: dict) -> list[str]:
     """The ``robot check --all`` sweep as a table plus the named failures."""
     robots = data.get("robots", [])
+    n_na = sum(1 for r in robots if not r.get("applicable", True))
+    n_ok = sum(1 for r in robots if r.get("ok") and r.get("applicable", True))
     lines = [
         f"### Self-check on {sim} ({date})",
         "",
-        f"`python -m metasim robot check --all --sim {sim}`: {len(robots)} robots, "
-        f"{sum(1 for r in robots if r.get('ok'))} pass. Source: `results/robots/{date}-{sim}-check/robots.json`.",
+        f"`python -m metasim robot check --all --sim {sim}`: {len(robots)} robots, {n_ok} pass, "
+        f"{len(robots) - n_ok - n_na} fail, {n_na} n/a (no asset declared for this backend). "
+        f"Source: `results/robots/{date}-{sim}-check/robots.json`.",
         "",
         "| robot | " + " | ".join(CHECKS) + " | verdict |",
         "|---|" + "---|" * (len(CHECKS) + 1),
     ]
+
+    def cell(row):
+        if not row.get("applicable", True):
+            return "n/a"
+        return "ok" if row["ok"] else "FAIL"
+
     for r in robots:
         by = {row["check"]: row for row in r.get("rows", [])}
-        cells = ["-" if c not in by else ("ok" if by[c]["ok"] else "FAIL") for c in CHECKS]
-        lines.append(f"| `{r['robot']}` | " + " | ".join(cells) + f" | {'pass' if r.get('ok') else 'FAIL'} |")
-    failures = [(r["robot"], row) for r in robots for row in r.get("rows", []) if not row["ok"]]
+        cells = ["-" if c not in by else cell(by[c]) for c in CHECKS]
+        verdict = r.get("verdict") or ("pass" if r.get("ok") else "FAIL")
+        lines.append(f"| `{r['robot']}` | " + " | ".join(cells) + f" | {verdict} |")
+    failures = [
+        (r["robot"], row) for r in robots for row in r.get("rows", []) if row.get("applicable", True) and not row["ok"]
+    ]
     if failures:
         lines += ["", "Named failures (the first per robot and check):", ""]
         for robot, row in failures:

@@ -108,7 +108,7 @@ def test_kinematics_and_hold_rows_do_not_judge_what_is_not_an_arm(tmp_path):
     row = check_kinematics(_cfg(tmp_path, ee_body_name=None))
     assert row.ok and "not an arm" in row.detail
     none = check_kinematics(_cfg(tmp_path, mjcf_path=None))
-    assert not none.ok and "no mjcf_path" in none.detail
+    assert not none.ok and not none.applicable and "no mjcf_path" in none.detail
 
 
 _ACTUATED_ARM = """
@@ -513,3 +513,19 @@ def test_robot_check_isolated_spawns_a_child_only_when_the_cheap_rows_pass(monke
     )
     err = capsys.readouterr().err
     assert "ready" in err and "FAIL" in err, "the sweep reports each robot as it finishes"
+
+
+def test_a_robot_without_an_asset_for_the_backend_is_not_applicable(tmp_path):
+    """A URDF-only robot on MuJoCo is reported n/a: it neither passes nor fails the sweep on that backend."""
+    from metasim.utils.robot_check import RobotReport, check_assets, check_robot_cfg
+
+    cfg = _cfg(tmp_path, mjcf_path=None, urdf_path="x.urdf")
+    row = check_assets(cfg, "mujoco")
+    assert not row.ok and not row.applicable and "no mjcf_path declared" in row.detail
+    report = check_robot_cfg(cfg, sim="mujoco", hold=True)
+    assert not report.applicable and report.ok and report.verdict == "n/a"
+    hold = report.rows[-1]
+    assert hold.check == "hold" and not hold.applicable and hold.detail.startswith("n/a")
+    assert "verdict: n/a" in report.table() and report.to_dict()["verdict"] == "n/a"
+    failing = RobotReport("x", "mujoco", [check_assets(_cfg(tmp_path), "mujoco")])
+    assert failing.applicable and failing.verdict == "pass"

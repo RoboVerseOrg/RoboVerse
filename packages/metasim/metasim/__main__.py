@@ -1129,18 +1129,19 @@ def _robot_sweep_table(reports) -> str:
     """One row per robot: each check's verdict and the overall one (the nightly gate publishes this)."""
     checks = ("config", "assets", "kinematics", "limits", "actuators", "hold")
     lines = ["| robot | " + " | ".join(checks) + " | verdict |", "|---|" + "---|" * (len(checks) + 1)]
+    from metasim.utils.robot_check import row_verdict
+
     for r in reports:
         by = {row.check: row for row in r.rows}
-        cells = []
-        for c in checks:
-            row = by.get(c)
-            cells.append("-" if row is None else ("ok" if row.ok else "FAIL"))
-        lines.append(f"| {r.robot} | " + " | ".join(cells) + f" | {'pass' if r.ok else 'FAIL'} |")
-    n_ok = sum(r.ok for r in reports)
-    lines.append(f"\n{len(reports)} robot(s), {n_ok} pass, {len(reports) - n_ok} fail")
+        cells = ["-" if by.get(c) is None else row_verdict(by[c]) for c in checks]
+        lines.append(f"| {r.robot} | " + " | ".join(cells) + f" | {r.verdict} |")
+    n_na = sum(not r.applicable for r in reports)
+    n_ok = sum(r.ok and r.applicable for r in reports)
+    n_fail = len(reports) - n_ok - n_na
+    lines.append(f"\n{len(reports)} robot(s), {n_ok} pass, {n_fail} fail, {n_na} n/a (no asset for this backend)")
     for r in reports:
         for row in r.rows:
-            if not row.ok:
+            if row.applicable and not row.ok:
                 lines.append(f"- {r.robot} / {row.check}: {row.detail}")
     return "\n".join(lines)
 
@@ -1160,6 +1161,9 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
 
     cfg = get_robot(name)
     report = check_robot(cfg.name, sim=args.sim, steps=args.steps, hold=False)
+    if not report.applicable:
+        report.rows.append(CheckRow("hold", False, f"n/a: no asset declared for {args.sim}", applicable=False))
+        return report
     if not report.ok or args.no_hold:
         if not args.no_hold:
             report.rows.append(CheckRow("hold", False, "not attempted: a cheaper check already failed"))
@@ -1187,7 +1191,10 @@ def _robot_check_isolated(name: str, args: argparse.Namespace):
         try:
             with open(report_path, encoding="utf-8") as fh:
                 child = json.load(fh)["robots"][0]
-            rows = [CheckRow(r["check"], bool(r["ok"]), str(r["detail"])) for r in child["rows"]]
+            rows = [
+                CheckRow(r["check"], bool(r["ok"]), str(r["detail"]), bool(r.get("applicable", True)))
+                for r in child["rows"]
+            ]
             return RobotReport(robot=child["robot"], simulator=child["simulator"], rows=rows)
         except (OSError, ValueError, KeyError, IndexError, TypeError):
             lines = [ln.strip() for ln in (proc.stdout + proc.stderr).splitlines() if ln.strip()]
@@ -1233,7 +1240,7 @@ def _robot_check(args: argparse.Namespace) -> int:
             reports.append(RobotReport(robot=name, simulator=args.sim, rows=[row]))
         if args.all and not args.json:
             r = reports[-1]
-            print(f"{r.robot:32s} {'pass' if r.ok else 'FAIL'}", file=sys.stderr, flush=True)
+            print(f"{r.robot:32s} {r.verdict}", file=sys.stderr, flush=True)
     if args.json:
         print(json.dumps([r.to_dict() for r in reports], indent=2))
     elif args.all:
