@@ -30,6 +30,8 @@ class ILPolicy:
     robots[<robot>].joint_pos}``, exactly what ``DefaultRunner.eval`` feeds it.
     """
 
+    family = "il"
+
     name = "il"
 
     def __init__(

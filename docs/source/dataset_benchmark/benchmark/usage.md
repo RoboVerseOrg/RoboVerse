@@ -312,6 +312,12 @@ Measured on 2026-11-27 (`bench matrix` output, 10 episodes per task; the suite p
 
 </details>
 
+Two rows were added on 2026-11-28 and live in `results/` (see the [leaderboard](leaderboard.md)): the **Isaac Sim 6
+twin** of the suite (replay 0.9 to 1.0 per task, the scripted skills 1.0 on pick, push and stack and 0.7 on pull with
+no change to the skills, so the matrix can carry an engine column), and the first **learned row**, a diffusion policy
+(`ddpm_dit`) trained on 100 scripted demos of pick_cube recorded with `bench record` and scored under the `visual`
+tier with the collection camera: 0.75 over 20 episodes.
+
 What the matrix is meant to show, and what the first one does show: the replay ceiling and the scripted
 oracle bound what a perfect perception stack could reach; the same agent drops from near the oracle to
 near zero when its object poses are taken away, which is the perception gap the `agent-skills` tier

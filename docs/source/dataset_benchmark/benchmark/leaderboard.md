@@ -8,53 +8,67 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 
 ## tabletop-mujoco
 
-1 submission(s), 45 result files.
+3 submission(s), 56 result files.
 
 ### Methods x tiers
 
 | method | privileged | agent-privileged | agent-skills | visual |
 |---|---|---|---|---|
-| llm-agent (agent) |  | 0.880 (5 tasks, 50 ep) | 0.120 (5 tasks, 50 ep) |  |
-| scripted (scripted) | 0.900 (5 tasks, 50 ep) |  |  |  |
-| hold | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
-| openvla-7b[bridge_orig] |  |  |  | 0.000 (5 tasks, 50 ep) |
-| random | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
-| replay | 0.960 (5 tasks, 50 ep) |  |  |  |
+| llm-agent @mujoco (agent) |  | 0.880 (5 tasks, 50 ep) | 0.120 (5 tasks, 50 ep) |  |
+| scripted @isaacsim (scripted) | 0.740 (5 tasks, 50 ep) |  |  |  |
+| scripted @mujoco (scripted) | 0.900 (5 tasks, 50 ep) |  |  |  |
+| hold @mujoco | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
+| il @mujoco |  |  |  | 0.750* (1 tasks, 20 ep) |
+| openvla-7b[bridge_orig] @mujoco |  |  |  | 0.000 (5 tasks, 50 ep) |
+| random @mujoco | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
+| replay @isaacsim | 0.980 (5 tasks, 50 ep) |  |  |  |
+| replay @mujoco | 0.960 (5 tasks, 50 ep) |  |  |  |
 
 `*`: fewer tasks than the full set; macros are not comparable across such cells.
 
 | task | method | privileged | agent-privileged | agent-skills | visual |
 |---|---|---|---|---|---|
-| lift_peg_upright | llm-agent (agent) |  | 0.700 [0.40, 0.89] n=10 | 0.000 [0.00, 0.28] n=10 |  |
-| lift_peg_upright | scripted (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
-| lift_peg_upright | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| lift_peg_upright | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
-| lift_peg_upright | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| lift_peg_upright | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
-| pick_cube | llm-agent (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.000 [0.00, 0.28] n=10 |  |
-| pick_cube | scripted (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
-| pick_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| pick_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
-| pick_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| pick_cube | replay | 0.900 [0.60, 0.98] n=10 |  |  |  |
-| pull_cube | llm-agent (agent) |  | 0.800 [0.49, 0.94] n=10 | 0.000 [0.00, 0.28] n=10 |  |
-| pull_cube | scripted (scripted) | 0.700 [0.40, 0.89] n=10 |  |  |  |
-| pull_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| pull_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
-| pull_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| pull_cube | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
-| push_cube | llm-agent (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.600 [0.31, 0.83] n=10 |  |
-| push_cube | scripted (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
-| push_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| push_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
-| push_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| push_cube | replay | 1.000 [0.72, 1.00] n=10 |  |  |  |
-| stack_cube | llm-agent (agent) |  | 0.900 [0.60, 0.98] n=10 | 0.000 [0.00, 0.28] n=10 |  |
-| stack_cube | scripted (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
-| stack_cube | hold | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| stack_cube | openvla-7b[bridge_orig] |  |  |  | 0.000 [0.00, 0.28] n=10 |
-| stack_cube | random | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| stack_cube | replay | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| lift_peg_upright | llm-agent @mujoco (agent) |  | 0.700 [0.40, 0.89] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| lift_peg_upright | scripted @isaacsim (scripted) | 0.000 [0.00, 0.28] n=10 |  |  |  |
+| lift_peg_upright | scripted @mujoco (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| lift_peg_upright | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| lift_peg_upright | openvla-7b[bridge_orig] @mujoco |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| lift_peg_upright | random @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| lift_peg_upright | replay @isaacsim | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| lift_peg_upright | replay @mujoco | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| pick_cube | llm-agent @mujoco (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| pick_cube | scripted @isaacsim (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| pick_cube | scripted @mujoco (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| pick_cube | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pick_cube | il @mujoco |  |  |  | 0.750 [0.53, 0.89] n=20 |
+| pick_cube | openvla-7b[bridge_orig] @mujoco |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| pick_cube | random @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pick_cube | replay @isaacsim | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| pick_cube | replay @mujoco | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| pull_cube | llm-agent @mujoco (agent) |  | 0.800 [0.49, 0.94] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| pull_cube | scripted @isaacsim (scripted) | 0.700 [0.40, 0.89] n=10 |  |  |  |
+| pull_cube | scripted @mujoco (scripted) | 0.700 [0.40, 0.89] n=10 |  |  |  |
+| pull_cube | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pull_cube | openvla-7b[bridge_orig] @mujoco |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| pull_cube | random @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| pull_cube | replay @isaacsim | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| pull_cube | replay @mujoco | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| push_cube | llm-agent @mujoco (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.600 [0.31, 0.83] n=10 |  |
+| push_cube | scripted @isaacsim (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| push_cube | scripted @mujoco (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| push_cube | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| push_cube | openvla-7b[bridge_orig] @mujoco |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| push_cube | random @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| push_cube | replay @isaacsim | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| push_cube | replay @mujoco | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| stack_cube | llm-agent @mujoco (agent) |  | 0.900 [0.60, 0.98] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| stack_cube | scripted @isaacsim (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| stack_cube | scripted @mujoco (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
+| stack_cube | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| stack_cube | openvla-7b[bridge_orig] @mujoco |  |  |  | 0.000 [0.00, 0.28] n=10 |
+| stack_cube | random @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
+| stack_cube | replay @isaacsim | 1.000 [0.72, 1.00] n=10 |  |  |  |
+| stack_cube | replay @mujoco | 0.900 [0.60, 0.98] n=10 |  |  |  |
 
 ### 2026-11-27-poc
 
@@ -108,3 +122,30 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 | stack_cube | franka | mujoco | first, budget 3x p75 | privileged | random | 1 | 10 | 0.000 | [0.000, 0.278] | 250.0 |
 | stack_cube | franka | mujoco | first, budget 3x p75 | privileged | replay | 1 | 10 | 0.900 | [0.596, 0.982] | 140.1 |
 | stack_cube | franka | mujoco | first, budget 3x p75 | privileged | scripted | 1 | 10 | 0.900 | [0.596, 0.982] | 183.5 |
+
+### 2026-11-28-il-ddpm-dit
+
+- simulators: mujoco; policies: il; 20 episodes in 1 files
+- MetaSim 1.0.0, commit `1eca9a92a6`
+
+| task | robots | simulator | rule | access | policy | runs | episodes | success rate | 95% CI | mean steps |
+|---|---|---|---|---|---|---|---|---|---|---|
+| pick_cube | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 0.750 | [0.531, 0.888] | 158.9 |
+
+### 2026-11-28-isaacsim-twin
+
+- simulators: isaacsim; policies: replay, scripted; 100 episodes in 10 files
+- MetaSim 1.0.0, commit `2eb3afb341`
+
+| task | robots | simulator | rule | access | policy | runs | episodes | success rate | 95% CI | mean steps |
+|---|---|---|---|---|---|---|---|---|---|---|
+| lift_peg_upright | franka | isaacsim | first, budget 3x p75 | privileged | replay | 1 | 10 | 1.000 | [0.722, 1.000] | 92.7 |
+| lift_peg_upright | franka | isaacsim | first, budget 3x p75 | privileged | scripted | 1 | 10 | 0.000 | [0.000, 0.278] | 534.0 |
+| pick_cube | franka | isaacsim | first, budget 3x p75 | privileged | replay | 1 | 10 | 0.900 | [0.596, 0.982] | 91.1 |
+| pick_cube | franka | isaacsim | first, budget 3x p75 | privileged | scripted | 1 | 10 | 1.000 | [0.722, 1.000] | 94.2 |
+| pull_cube | franka | isaacsim | first, budget 3x p75 | privileged | replay | 1 | 10 | 1.000 | [0.722, 1.000] | 63.1 |
+| pull_cube | franka | isaacsim | first, budget 3x p75 | privileged | scripted | 1 | 10 | 0.700 | [0.397, 0.892] | 195.1 |
+| push_cube | franka | isaacsim | first, budget 3x p75 | privileged | replay | 1 | 10 | 1.000 | [0.722, 1.000] | 57.6 |
+| push_cube | franka | isaacsim | first, budget 3x p75 | privileged | scripted | 1 | 10 | 1.000 | [0.722, 1.000] | 114.1 |
+| stack_cube | franka | isaacsim | first, budget 3x p75 | privileged | replay | 1 | 10 | 1.000 | [0.722, 1.000] | 124.8 |
+| stack_cube | franka | isaacsim | first, budget 3x p75 | privileged | scripted | 1 | 10 | 1.000 | [0.722, 1.000] | 177.9 |
