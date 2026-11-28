@@ -36,4 +36,8 @@ jobs:
           if-no-files-found: error
       - name: Summary
         if: always()
-        run: cat gate_out/${{ matrix.sim }}/health.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          cat gate_out/${{ matrix.sim }}/health.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -f gate_out/${{ matrix.sim }}/robots/robots.md ]; then
+            { echo; echo "## Robot sweep (${{ matrix.sim }})"; cat gate_out/${{ matrix.sim }}/robots/robots.md; } >> "$GITHUB_STEP_SUMMARY"
+          fi

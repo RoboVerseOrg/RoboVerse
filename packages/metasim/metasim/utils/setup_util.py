@@ -421,6 +421,53 @@ def _lookup_robot_by_name(robot_name: str, candidate_packages: list[str]):
     return None
 
 
+def list_robots(packages: list[str] | None = None) -> dict[str, str]:
+    """Every robot config the robot packages define: ``{name: "module:Class"}``, sorted by name.
+
+    Walks each candidate package (installed packs, ``metasim.toml`` / ``pyproject.toml`` / ``METASIM_ROBOT_PACKAGES``,
+    then MetaSim's example pack) and every submodule in it, so a class that the package forgot to export is listed
+    too (the 2026-11-28 sweep found three). The template (``robot_template``) and classes without a ``name`` default
+    are skipped. A package or module that fails to import is skipped with a warning, not an error: one broken file
+    must not hide every other robot.
+    """
+    import pkgutil
+
+    from loguru import logger as log
+
+    from metasim.scenario.robot import RobotCfg
+
+    if packages is None:
+        cwd = os.getcwd()
+        packages = get_package_candidates("robots", defaults=["metasim.example.example_pack.robots"], cwd=cwd)
+    found: dict[str, str] = {}
+    for pkg_name in packages:
+        try:
+            pkg = importlib.import_module(pkg_name)
+        except Exception as err:
+            log.warning(f"list_robots: cannot import {pkg_name}: {type(err).__name__}: {err}")
+            continue
+        modules = [pkg]
+        for info in pkgutil.iter_modules(getattr(pkg, "__path__", []), prefix=pkg_name + "."):
+            if info.name.rsplit(".", 1)[-1].startswith("_"):
+                continue
+            try:
+                modules.append(importlib.import_module(info.name))
+            except Exception as err:
+                log.warning(f"list_robots: cannot import {info.name}: {type(err).__name__}: {err}")
+        for module in modules:
+            for attr in dir(module):
+                cls = getattr(module, attr, None)
+                if not (isinstance(cls, type) and issubclass(cls, RobotCfg) and cls is not RobotCfg):
+                    continue
+                if cls.__module__ != module.__name__:
+                    continue  # re-exported; counted where it is defined
+                name = _robot_cfg_default_name(cls)
+                if not name or name == "robot_template":
+                    continue
+                found.setdefault(name, f"{cls.__module__}:{cls.__name__}")
+    return dict(sorted(found.items()))
+
+
 def get_scene(scene_name: str) -> SceneCfg:
     """Get a scene configuration by name.
 

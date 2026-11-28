@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import inspect
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -314,33 +314,135 @@ def test_cli_has_robot_parity():
         "0",
     ])
     assert ns.func is cli._robot_parity and ns.sims == ["mujoco", "isaacsim"] and ns.tol == 0.02 and ns.steps == 400
-    assert ns.amplitude_max == 0.0 and "amplitude_max=args.amplitude_max" in inspect.getsource(cli._robot_parity)
+    assert ns.amplitude_max == 0.0
 
 
-def test_mujoco_package_picks_an_offscreen_gl_backend_on_a_headless_machine():
-    """Without a display and without MUJOCO_GL, importing the MuJoCo backend asks for EGL (or OSMesa) before `mujoco`
-    loads, when the machine has the library; a machine without one keeps MuJoCo's default."""
+def test_robot_parity_forwards_the_trajectory_flags(monkeypatch, tmp_path):
+    """The CLI hands every trajectory flag to track_trajectory (``--amplitude-max`` was once parsed and ignored)."""
+    import argparse
+
+    import metasim.__main__ as cli
+    from metasim.utils import robot_check as rc
+    from metasim.utils import setup_util
+
+    cfg = _cfg(tmp_path)
+    seen = []
+
+    def fake_track(cfg_, sim, **kwargs):
+        seen.append((sim, kwargs))
+        joints = sorted(cfg_.actuators)
+        cmd = rc.canned_trajectory(cfg_, joints, steps=kwargs["steps"], period_steps=kwargs["period_steps"])
+        return rc.TrackingTrace(sim, joints, cmd, cmd.copy(), control_dt=0.015)
+
+    monkeypatch.setattr(setup_util, "get_robot", lambda name: cfg)
+    monkeypatch.setattr(rc, "track_trajectory", fake_track)
+    ns = argparse.Namespace(
+        robot="toy",
+        sims=["a", "b"],
+        load=None,
+        save=None,
+        steps=30,
+        period=15,
+        amplitude=0.1,
+        amplitude_max=0.0,
+        settle=5,
+        tol=0.05,
+        tol_slide=0.005,
+        json=False,
+    )
+    assert cli._robot_parity(ns) == 0
+    assert [s for s, _ in seen] == ["a", "b"]
+    assert seen[0][1] == {
+        "steps": 30,
+        "period_steps": 15,
+        "amplitude_frac": 0.1,
+        "amplitude_max": 0.0,
+        "settle_steps": 5,
+    }
+
+
+def test_headless_gl_decision_is_one_pure_rule():
+    """Linux, no display, nothing set, a loadable offscreen library -> egl (or osmesa); every other case leaves MuJoCo alone."""
+    from metasim.sim.gl import apply_headless_gl, choose_headless_gl
+
+    def pick(env, platform="linux", mujoco_loaded=False, is_loadable=lambda lib: True):
+        return choose_headless_gl(environ=env, platform=platform, mujoco_loaded=mujoco_loaded, is_loadable=is_loadable)
+
+    assert pick({})[0] == "egl"
+    assert pick({}, is_loadable=lambda lib: lib == "libOSMesa.so.8")[0] == "osmesa"
+    none = pick({}, is_loadable=lambda lib: False)
+    assert none[0] is None and "no offscreen GL library" in none[1]
+    assert pick({"MUJOCO_GL": "disable"})[0] is None and "explicitly" in pick({"MUJOCO_GL": "disable"})[1]
+    assert pick({"DISPLAY": ":0"})[0] is None and pick({"WAYLAND_DISPLAY": "wayland-0"})[0] is None
+    assert pick({}, platform="darwin")[0] is None and "Linux only" in pick({}, platform="darwin")[1]
+    late = pick({}, mujoco_loaded=True)
+    assert late[0] is None and "imported before" in late[1]
+    env: dict[str, str] = {}
+    chosen = apply_headless_gl(env)
+    assert (chosen is None) == ("MUJOCO_GL" not in env), (
+        "apply sets exactly what choose picked (this process's real state)"
+    )
+
+
+def test_mujoco_backend_import_applies_the_headless_rule_once():
+    """One subprocess: after importing the backend package, MUJOCO_GL is what the rule says for that process."""
     import os
     import subprocess
     import sys
 
-    from metasim.sim.mujoco import headless_gl_backend
-
-    expected = headless_gl_backend() or "None"
     env = {k: v for k, v in os.environ.items() if k not in ("DISPLAY", "WAYLAND_DISPLAY", "MUJOCO_GL")}
-    code = "import sys, os; import metasim.sim.mujoco; print(os.environ.get('MUJOCO_GL'))"
-    out = subprocess.run(
-        [sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=120, check=False
+    code = (
+        "import os; from metasim.sim.gl import choose_headless_gl; expected = choose_headless_gl()[0];"
+        " import metasim.sim.mujoco; print(os.environ.get('MUJOCO_GL') == expected)"
     )
-    assert out.stdout.strip() == expected, out.stderr[-500:]
-    env["MUJOCO_GL"] = "disable"
     out = subprocess.run(
-        [sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=120, check=False
+        [sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=180, check=False
     )
-    assert out.stdout.strip() == "disable", "an explicit choice is kept"
-    env.pop("MUJOCO_GL")
-    env["DISPLAY"] = ":0"
-    out = subprocess.run(
-        [sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=120, check=False
+    assert out.stdout.strip() == "True", out.stderr[-800:]
+
+
+def test_list_robots_walks_every_module_of_the_robot_packages():
+    from metasim.utils.setup_util import list_robots
+
+    robots = list_robots(["metasim.example.example_pack.robots"])
+    assert "franka" in robots and robots["franka"].endswith(":FrankaCfg")
+    assert "g1_dof12" in robots and "g1_dof23" in robots, "two classes in one module are both listed"
+    assert "robot_template" not in robots and list(robots) == sorted(robots)
+    assert list_robots(["not.a.package"]) == {}, "a package that does not import is skipped, not fatal"
+
+
+def test_robot_check_all_sweeps_the_list_and_writes_the_table(monkeypatch, tmp_path, capsys):
+    import metasim.__main__ as cli
+    from metasim.utils import robot_check as rc
+    from metasim.utils import setup_util
+
+    monkeypatch.setattr(setup_util, "list_robots", lambda: {"good": "m:Good", "bad": "m:Bad", "broken": "m:Broken"})
+
+    def fake_check(name, *, sim, steps, hold):
+        if name == "broken":
+            raise ValueError("no such robot")
+        ok = name == "good"
+        return rc.RobotReport(
+            robot=name,
+            simulator=sim,
+            rows=[rc.CheckRow("config", True, "fine"), rc.CheckRow("hold", ok, "drift" if not ok else "still")],
+        )
+
+    monkeypatch.setattr(rc, "check_robot", fake_check)
+    monkeypatch.setattr(cli.os, "_exit", lambda code: (_ for _ in ()).throw(SystemExit(code)))
+    out = tmp_path / "sweep"
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["robot", "check", "--all", "--sim", "mujoco", "--out-dir", str(out)])
+    assert exc.value.code == 1
+    table = capsys.readouterr().out
+    assert (
+        "| good | ok | - | - | - | - | ok | pass |" in table and "| bad | ok | - | - | - | - | FAIL | FAIL |" in table
     )
-    assert out.stdout.strip() == "None", "with a display MuJoCo's own default stands"
+    assert "| broken | FAIL |" in table and "ValueError: no such robot" in table
+    assert "3 robot(s), 1 pass, 2 fail" in table
+    data = json.loads((out / "robots.json").read_text())
+    assert data["simulator"] == "mujoco" and [r["robot"] for r in data["robots"]] == ["good", "bad", "broken"]
+    assert (out / "robots.md").read_text().startswith("| robot | config |")
+    assert cli.main(["robot", "check"]) == 2, "no names and no --all is a usage error"
+    cli.main(["robot", "list", "--json"])
+    assert json.loads(capsys.readouterr().out) == {"good": "m:Good", "bad": "m:Bad", "broken": "m:Broken"}

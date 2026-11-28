@@ -406,6 +406,7 @@ def canned_trajectory(
     limits = getattr(cfg, "joint_limits", None) or {}
     defaults = getattr(cfg, "default_joint_positions", None) or {}
     t = np.arange(int(steps), dtype=float)
+    ramp = np.clip(t / float(period_steps), 0.0, 1.0)  # the same for every joint
     out = np.zeros((int(steps), len(joints)))
     for k, j in enumerate(joints):
         q0 = float(defaults.get(j, 0.0))
@@ -414,7 +415,6 @@ def canned_trajectory(
         amp = amplitude_frac * (hi - lo) / 2 if np.isfinite(lo) and np.isfinite(hi) else 0.5
         if np.isfinite(amplitude_max) and amplitude_max > 0:
             amp = min(amp, amplitude_max)
-        ramp = np.clip(t / float(period_steps), 0.0, 1.0)
         q = q0 + ramp * amp * np.sin(2 * np.pi * t / float(period_steps) + k * np.pi / 4)
         out[:, k] = np.clip(q, lo, hi)
     return out

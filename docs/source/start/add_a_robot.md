@@ -62,6 +62,13 @@ fixed base within 1 cm (a floating base is reported, not judged). `tests/test_ro
 runs the config part on every pull request. On 2026-11-28 Franka, YAM and the Sharpa hand pass all six on
 MuJoCo, and Franka passes them on Isaac Sim 6 (YAM has no USD, which the assets row says).
 
+```bash
+python -m metasim robot list                                # every config the robot packages define
+python -m metasim robot check --all --out-dir gate/robots   # the sweep: one row per robot, robots.json / robots.md
+```
+
+The nightly gate runs the sweep on MuJoCo after the task gate and publishes the table.
+
 ### The sweep of 2026-11-28 (MuJoCo, 43 configs)
 
 | verdict | robots |

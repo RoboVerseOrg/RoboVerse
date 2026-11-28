@@ -21,6 +21,7 @@ import sys
 
 from metasim.constants import SimType
 from metasim.sim._versions import BACKEND_REQUIREMENTS, doctor, format_reports
+from metasim.sim.gl import apply_headless_gl
 
 
 def _doctor(args: argparse.Namespace) -> int:
@@ -1109,15 +1110,71 @@ def _add_bench(sub) -> None:
     v.set_defaults(func=_bench_validate)
 
 
+def _robot_list(args: argparse.Namespace) -> int:
+    """Every robot config the robot packages define (``robot check --all`` runs on this list)."""
+    from metasim.utils.setup_util import list_robots
+
+    robots = list_robots()
+    if args.json:
+        print(json.dumps(robots, indent=2))
+    else:
+        for name, where in robots.items():
+            print(f"{name:32s} {where}")
+        print(f"{len(robots)} robot(s)", file=sys.stderr)
+    return 0
+
+
+def _robot_sweep_table(reports) -> str:
+    """One row per robot: each check's verdict and the overall one (the nightly gate publishes this)."""
+    checks = ("config", "assets", "kinematics", "limits", "actuators", "hold")
+    lines = ["| robot | " + " | ".join(checks) + " | verdict |", "|---|" + "---|" * (len(checks) + 1)]
+    for r in reports:
+        by = {row.check: row for row in r.rows}
+        cells = []
+        for c in checks:
+            row = by.get(c)
+            cells.append("-" if row is None else ("ok" if row.ok else "FAIL"))
+        lines.append(f"| {r.robot} | " + " | ".join(cells) + f" | {'pass' if r.ok else 'FAIL'} |")
+    n_ok = sum(r.ok for r in reports)
+    lines.append(f"\n{len(reports)} robot(s), {n_ok} pass, {len(reports) - n_ok} fail")
+    for r in reports:
+        for row in r.rows:
+            if not row.ok:
+                lines.append(f"- {r.robot} / {row.check}: {row.detail}")
+    return "\n".join(lines)
+
+
 def _robot_check(args: argparse.Namespace) -> int:
     """The robot self-check (config, assets, kinematics, limits, actuators, hold); exit 1 when a check fails."""
-    from metasim.utils.robot_check import check_robot
+    from metasim.utils.robot_check import CheckRow, RobotReport, check_robot
 
-    reports = [check_robot(name, sim=args.sim, steps=args.steps, hold=not args.no_hold) for name in args.robot]
+    names = list(args.robot or [])
+    if args.all:
+        from metasim.utils.setup_util import list_robots
+
+        names = list(list_robots())
+    if not names:
+        print("robot check needs robot name(s) or --all", file=sys.stderr)
+        return 2
+    reports = []
+    for name in names:
+        try:
+            reports.append(check_robot(name, sim=args.sim, steps=args.steps, hold=not args.no_hold))
+        except Exception as err:  # one robot that cannot even be resolved must not end the sweep
+            row = CheckRow("config", False, f"{type(err).__name__}: {str(err)[:200]}")
+            reports.append(RobotReport(robot=name, simulator=args.sim, rows=[row]))
     if args.json:
         print(json.dumps([r.to_dict() for r in reports], indent=2))
+    elif args.all:
+        print(_robot_sweep_table(reports))
     else:
         print("\n\n".join(r.table() for r in reports))
+    if args.out_dir:
+        os.makedirs(args.out_dir, exist_ok=True)
+        with open(os.path.join(args.out_dir, "robots.json"), "w", encoding="utf-8") as fh:
+            json.dump({"simulator": args.sim, "robots": [r.to_dict() for r in reports]}, fh, indent=2)
+        with open(os.path.join(args.out_dir, "robots.md"), "w", encoding="utf-8") as fh:
+            fh.write(_robot_sweep_table(reports) + "\n")
     sys.stdout.flush()
     if not all(r.ok for r in reports):
         # Isaac Sim ends the process with status 0 inside close(); a failed check must not be laundered into
@@ -1279,8 +1336,13 @@ def _add_robot(sub) -> None:
     pa.add_argument("--tol-slide", type=float, default=0.005, help="the same for a slide joint, metres")
     pa.add_argument("--json", action="store_true")
     pa.set_defaults(func=_robot_parity)
+    ls = rs.add_parser("list", help="every robot config the robot packages define")
+    ls.add_argument("--json", action="store_true")
+    ls.set_defaults(func=_robot_list)
     c = rs.add_parser("check", help="config, assets, kinematics, limits, actuators and a hold test on a backend")
-    c.add_argument("robot", nargs="+", help="robot config name(s), e.g. franka")
+    c.add_argument("robot", nargs="*", help="robot config name(s), e.g. franka")
+    c.add_argument("--all", action="store_true", help="every robot `robot list` names (the sweep; one table)")
+    c.add_argument("--out-dir", help="write robots.json and robots.md here (the nightly gate publishes them)")
     c.add_argument("--sim", default="mujoco", help="backend for the assets and hold checks (default mujoco)")
     c.add_argument("--steps", type=int, default=200, help="simulator steps to hold the default pose")
     c.add_argument(
@@ -1292,6 +1354,7 @@ def _add_robot(sub) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     """Parse ``argv`` and run the selected sub-command; returns the process exit status."""
+    apply_headless_gl()  # one decision about MuJoCo's GL backend, before any command imports mujoco
     parser = argparse.ArgumentParser(prog="python -m metasim")
     sub = parser.add_subparsers(dest="command", required=True)
     d = sub.add_parser("doctor", help="check installed simulator versions against the supported ranges")
