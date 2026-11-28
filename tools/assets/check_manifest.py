@@ -66,12 +66,12 @@ def references(paths: list[Path]) -> dict[str, list[tuple[str, int]]]:
     return static, dynamic
 
 
-def resolve(ref: str, files: set[str], prefixes: set[str]) -> bool:
-    """``ref`` names a Hub file, a Hub directory (prefix), or exists locally."""
+def resolve(ref: str, files: set[str], prefixes: set[str], *, hub_only: bool = False) -> bool:
+    """``ref`` names a Hub file, a Hub directory (prefix), or (unless ``hub_only``) exists locally."""
     key = ref[len("roboverse_data/") :].rstrip("/")
     if key in files or key in prefixes:
         return True
-    if (REPO / ref).exists():
+    if not hub_only and (REPO / ref).exists():
         return True
     # a stem reference (``trajs/<task>/v2``) is a directory; a ``.xml`` next to ``assets/`` dirs may be hashed
     return any(f.startswith(key + "/") for f in files) if "/" in key else False
@@ -82,15 +82,32 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--paths", nargs="*", default=["roboverse_pack"], help="files or directories to scan")
     ap.add_argument("--hub-list", help="cache file of the Hub listing (written when missing)")
     ap.add_argument("--allow", nargs="*", default=[], help="reference prefixes that are allowed to be absent")
+    ap.add_argument(
+        "--hub-only",
+        action="store_true",
+        help="ignore local files: what CI sees (a file only on this machine is not published)",
+    )
     args = ap.parse_args(argv)
     files = hub_files(args.hub_list)
     prefixes = {p for f in files for p in [f.rsplit("/", 1)[0]] if "/" in f}
     static, dynamic = references([REPO / p for p in args.paths])
+    allowed = lambda r: any(r.startswith(a) for a in args.allow)  # noqa: E731
     missing = {
         r: locs
         for r, locs in static.items()
-        if not resolve(r, files, prefixes) and not any(r.startswith(a) for a in args.allow)
+        if not resolve(r, files, prefixes, hub_only=args.hub_only) and not allowed(r)
     }
+    local_only = sorted(
+        r
+        for r in static
+        if not allowed(r) and resolve(r, files, prefixes) and not resolve(r, files, prefixes, hub_only=True)
+    )
+    if local_only:
+        print(
+            f"{len(local_only)} reference(s) exist only on this machine, not on the Hub (upload them): "
+            + ", ".join(local_only[:8])
+            + (" ..." if len(local_only) > 8 else "")
+        )
     print(
         f"{len(static)} static references, {len(dynamic)} dynamic, {len(missing)} missing ({len(files)} files on the Hub)"
     )

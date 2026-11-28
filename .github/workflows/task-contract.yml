@@ -28,9 +28,10 @@ jobs:
         run: python -m pytest tests/test_task_reset_seed_contract.py tests/test_task_contract_static.py -v
       - name: Every roboverse_data path the packs name exists on the Hub
         # allow: the robot template's placeholder paths; the Blender asset root (a directory prefix the loader lists
-        # at run time); openarm_wuji, whose assets are not on the Hub yet (TODO(upload): remove once uploaded);
+        # at run time); openarm_wuji and sharpa_wave, whose assets are not on the Hub yet (TODO(upload): remove once uploaded;
+        # scratch/hf_upload_1.0.0.py carries sharpa_wave);
         # EmbodiedGen / Kujiale (manycore) collections, fetched by their own downloaders, not from the Hub dataset
         run: >-
-          python tools/assets/check_manifest.py
+          python tools/assets/check_manifest.py --hub-only
           --allow roboverse_data/robots/your_robot roboverse_data/blender roboverse_data/robots/openarm_wuji
-          roboverse_data/assets/EmbodiedGenData roboverse_data/scenes/manycore
+          roboverse_data/robots/sharpa_wave roboverse_data/assets/EmbodiedGenData roboverse_data/scenes/manycore
