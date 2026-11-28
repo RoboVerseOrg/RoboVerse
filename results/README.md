@@ -15,3 +15,6 @@ What a submission must contain:
 The first submission, `tabletop-mujoco/2026-11-27-poc`, is the methods x perspectives proof of concept:
 replay, hold, random, scripted skills, an LLM agent under two tiers, and OpenVLA-7B zero-shot, 10 episodes
 per task.
+`tabletop-mujoco/2026-11-28-isaacsim-twin` is the same suite on Isaac Sim 6 (replay and scripted skills, 10
+episodes per task); `tabletop-mujoco/2026-11-28-il-ddpm-dit` is the first learned row, a diffusion policy trained
+on scripted demos per task and scored under the visual tier, 20 episodes per task.

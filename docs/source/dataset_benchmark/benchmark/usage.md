@@ -314,9 +314,12 @@ Measured on 2026-11-27 (`bench matrix` output, 10 episodes per task; the suite p
 
 Two rows were added on 2026-11-28 and live in `results/` (see the [leaderboard](leaderboard.md)): the **Isaac Sim 6
 twin** of the suite (replay 0.9 to 1.0 per task, the scripted skills 1.0 on pick, push and stack and 0.7 on pull with
-no change to the skills, so the matrix can carry an engine column), and the first **learned row**, a diffusion policy
-(`ddpm_dit`) trained on 100 scripted demos of pick_cube recorded with `bench record` and scored under the `visual`
-tier with the collection camera: 0.75 over 20 episodes.
+no change to the skills, so the matrix can carry an engine column), and the first **learned row**: a diffusion policy
+(`ddpm_dit`, `roboverse_learn/il`) trained for 100 epochs per task on scripted demos recorded with `bench record`
+(100 demos for pick, push and stack, 64 for pull, 48 for the peg) and scored under the `visual` tier with the
+collection camera, 20 episodes per task: push 1.00, pull 0.90, pick 0.75, peg 0.55, stack 0.20, macro 0.68. The
+ordering is informative in itself: the two tasks the agent and the VLA found hardest from images (stack, peg) are
+the two where the learned policy is weakest, and the demo budget is lowest where the plan is longest.
 
 What the matrix is meant to show, and what the first one does show: the replay ceiling and the scripted
 oracle bound what a perfect perception stack could reach; the same agent drops from near the oracle to

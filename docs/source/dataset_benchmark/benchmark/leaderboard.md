@@ -8,17 +8,17 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 
 ## tabletop-mujoco
 
-3 submission(s), 56 result files.
+3 submission(s), 60 result files.
 
 ### Methods x tiers
 
 | method | privileged | agent-privileged | agent-skills | visual |
 |---|---|---|---|---|
 | llm-agent @mujoco (agent) |  | 0.880 (5 tasks, 50 ep) | 0.120 (5 tasks, 50 ep) |  |
+| il @mujoco (il) |  |  |  | 0.680 (5 tasks, 100 ep) |
 | scripted @isaacsim (scripted) | 0.740 (5 tasks, 50 ep) |  |  |  |
 | scripted @mujoco (scripted) | 0.900 (5 tasks, 50 ep) |  |  |  |
 | hold @mujoco | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
-| il @mujoco |  |  |  | 0.750* (1 tasks, 20 ep) |
 | openvla-7b[bridge_orig] @mujoco |  |  |  | 0.000 (5 tasks, 50 ep) |
 | random @mujoco | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
 | replay @isaacsim | 0.980 (5 tasks, 50 ep) |  |  |  |
@@ -29,6 +29,7 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 | task | method | privileged | agent-privileged | agent-skills | visual |
 |---|---|---|---|---|---|
 | lift_peg_upright | llm-agent @mujoco (agent) |  | 0.700 [0.40, 0.89] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| lift_peg_upright | il @mujoco (il) |  |  |  | 0.550 [0.34, 0.74] n=20 |
 | lift_peg_upright | scripted @isaacsim (scripted) | 0.000 [0.00, 0.28] n=10 |  |  |  |
 | lift_peg_upright | scripted @mujoco (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
 | lift_peg_upright | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
@@ -37,15 +38,16 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 | lift_peg_upright | replay @isaacsim | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | lift_peg_upright | replay @mujoco | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | pick_cube | llm-agent @mujoco (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| pick_cube | il @mujoco (il) |  |  |  | 0.750 [0.53, 0.89] n=20 |
 | pick_cube | scripted @isaacsim (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | pick_cube | scripted @mujoco (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | pick_cube | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
-| pick_cube | il @mujoco |  |  |  | 0.750 [0.53, 0.89] n=20 |
 | pick_cube | openvla-7b[bridge_orig] @mujoco |  |  |  | 0.000 [0.00, 0.28] n=10 |
 | pick_cube | random @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
 | pick_cube | replay @isaacsim | 0.900 [0.60, 0.98] n=10 |  |  |  |
 | pick_cube | replay @mujoco | 0.900 [0.60, 0.98] n=10 |  |  |  |
 | pull_cube | llm-agent @mujoco (agent) |  | 0.800 [0.49, 0.94] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| pull_cube | il @mujoco (il) |  |  |  | 0.900 [0.70, 0.97] n=20 |
 | pull_cube | scripted @isaacsim (scripted) | 0.700 [0.40, 0.89] n=10 |  |  |  |
 | pull_cube | scripted @mujoco (scripted) | 0.700 [0.40, 0.89] n=10 |  |  |  |
 | pull_cube | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
@@ -54,6 +56,7 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 | pull_cube | replay @isaacsim | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | pull_cube | replay @mujoco | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | push_cube | llm-agent @mujoco (agent) |  | 1.000 [0.72, 1.00] n=10 | 0.600 [0.31, 0.83] n=10 |  |
+| push_cube | il @mujoco (il) |  |  |  | 1.000 [0.84, 1.00] n=20 |
 | push_cube | scripted @isaacsim (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | push_cube | scripted @mujoco (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | push_cube | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
@@ -62,6 +65,7 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 | push_cube | replay @isaacsim | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | push_cube | replay @mujoco | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | stack_cube | llm-agent @mujoco (agent) |  | 0.900 [0.60, 0.98] n=10 | 0.000 [0.00, 0.28] n=10 |  |
+| stack_cube | il @mujoco (il) |  |  |  | 0.200 [0.08, 0.42] n=20 |
 | stack_cube | scripted @isaacsim (scripted) | 1.000 [0.72, 1.00] n=10 |  |  |  |
 | stack_cube | scripted @mujoco (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
 | stack_cube | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
@@ -125,12 +129,16 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 
 ### 2026-11-28-il-ddpm-dit
 
-- simulators: mujoco; policies: il; 20 episodes in 1 files
-- MetaSim 1.0.0, commit `1eca9a92a6`
+- simulators: mujoco; policies: il; 100 episodes in 5 files
+- MetaSim 1.0.0, commit `b48b24c1a7`
 
 | task | robots | simulator | rule | access | policy | runs | episodes | success rate | 95% CI | mean steps |
 |---|---|---|---|---|---|---|---|---|---|---|
+| lift_peg_upright | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 0.550 | [0.342, 0.742] | 379.8 |
 | pick_cube | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 0.750 | [0.531, 0.888] | 158.9 |
+| pull_cube | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 0.900 | [0.699, 0.972] | 211.4 |
+| push_cube | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 1.000 | [0.839, 1.000] | 162.8 |
+| stack_cube | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 0.200 | [0.081, 0.416] | 243.6 |
 
 ### 2026-11-28-isaacsim-twin
 
