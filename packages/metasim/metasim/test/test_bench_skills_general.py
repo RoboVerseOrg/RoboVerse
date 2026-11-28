@@ -349,3 +349,15 @@ def test_agent_refuses_a_tier_without_tools(tmp_path):
     )  # fmt: skip
     with pytest.raises(ValueError, match="allows no tools"):
         LLMAgentPolicy().reset([0], [None], ctx)
+
+
+def test_matrix_keeps_engines_apart():
+    rows = [_result("pick", "replay", 10, 10), _result("pick", "replay", 5, 10)]
+    rows[1].simulator = "isaacsim"
+    table = matrix(rows)
+    assert (
+        "| replay @mujoco | 1.000 (1 tasks, 10 ep) |" in table
+        and "| replay @isaacsim | 0.500 (1 tasks, 10 ep) |" in table
+    )
+    assert "| replay |" not in matrix([_result("pick", "replay", 10, 10)]).splitlines()[0], "one engine: no suffix"
+    assert "| replay | 1.000 (1 tasks, 10 ep) |" in matrix([_result("pick", "replay", 10, 10)])
