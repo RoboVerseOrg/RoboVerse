@@ -16,10 +16,9 @@ mkdir -p "$out"
 "$py" -m metasim bench health --sim "$sim" --episodes 5 --threshold 0.8 --floor --repeat 2 --isolate auto \
   --device "${ROBOVERSE_GATE_DEVICE:-cpu}" --out-dir "$out" || status=$?
 echo "gate exit: ${status:-0} (1 = at least one task is low / unreliable / flaky / invalid / error)"
-if [ "$sim" = mujoco ]; then
-  # the robot sweep: every config the robot packages define, six checks each (robots.md is published with health.md)
-  "$py" -m metasim robot check --all --sim mujoco --out-dir "$out/robots" || robots_status=$?
-  echo "robot sweep exit: ${robots_status:-0} (1 = at least one robot fails a check)"
-fi
+# the robot sweep: every config the robot packages define, six checks each (robots.md is published with health.md);
+# on Isaac Sim each robot's simulator check runs in its own process (--isolate auto)
+"$py" -m metasim robot check --all --sim "$sim" --isolate auto --out-dir "$out/robots" || robots_status=$?
+echo "robot sweep exit: ${robots_status:-0} (1 = at least one robot fails a check)"
 if [ "${status:-0}" -ne 0 ] || [ "${robots_status:-0}" -ne 0 ]; then exit 1; fi
 exit 0

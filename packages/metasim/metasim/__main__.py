@@ -1144,6 +1144,61 @@ def _robot_sweep_table(reports) -> str:
     return "\n".join(lines)
 
 
+def _robot_check_isolated(name: str, args: argparse.Namespace):
+    """One robot's self-check in a child interpreter (Isaac Sim boots Kit once per process and may end it in close()).
+
+    The cheap rows (config, assets, kinematics, limits, actuators) run here first; the child, which costs a simulator
+    boot, is spawned only when they pass, so a robot without an asset for this backend is a named failure in
+    milliseconds. The child prints its report as JSON before it exits; a child that dies without one is reported as
+    a failed ``hold`` row with its exit code and last log line.
+    """
+    import subprocess
+
+    from metasim.utils.robot_check import CheckRow, RobotReport, check_robot
+    from metasim.utils.setup_util import get_robot
+
+    cfg = get_robot(name)
+    report = check_robot(cfg.name, sim=args.sim, steps=args.steps, hold=False)
+    if not report.ok or args.no_hold:
+        if not args.no_hold:
+            report.rows.append(CheckRow("hold", False, "not attempted: a cheaper check already failed"))
+        return report
+    cmd = [
+        sys.executable,
+        "-m",
+        "metasim",
+        "robot",
+        "check",
+        name,
+        "--sim",
+        args.sim,
+        "--steps",
+        str(args.steps),
+        "--json",
+    ]
+    log_path = None
+    if args.out_dir:
+        os.makedirs(os.path.join(args.out_dir, "logs"), exist_ok=True)
+        log_path = os.path.join(args.out_dir, "logs", f"{name}.log")
+    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    if log_path:
+        with open(log_path, "w", encoding="utf-8") as fh:
+            fh.write(proc.stdout)
+            fh.write(proc.stderr)
+    try:
+        start = proc.stdout.index("[")
+        payload = json.loads(proc.stdout[start : proc.stdout.rindex("]") + 1])
+        child = payload[0]
+        rows = [CheckRow(r["check"], bool(r["ok"]), str(r["detail"])) for r in child["rows"]]
+        return RobotReport(robot=child["robot"], simulator=child["simulator"], rows=rows)
+    except (ValueError, KeyError, IndexError, TypeError):
+        last = next((ln for ln in reversed((proc.stderr + proc.stdout).splitlines()) if ln.strip()), "")
+        report.rows.append(
+            CheckRow("hold", False, f"child exited {proc.returncode} without a report: {last.strip()[:200]}")
+        )
+        return report
+
+
 def _robot_check(args: argparse.Namespace) -> int:
     """The robot self-check (config, assets, kinematics, limits, actuators, hold); exit 1 when a check fails."""
     from metasim.utils.robot_check import CheckRow, RobotReport, check_robot
@@ -1156,13 +1211,22 @@ def _robot_check(args: argparse.Namespace) -> int:
     if not names:
         print("robot check needs robot name(s) or --all", file=sys.stderr)
         return 2
+    isolate = args.isolate == "always" or (
+        args.isolate == "auto" and args.sim in ISOLATED_HEALTH_BACKENDS and len(names) > 1
+    )
     reports = []
     for name in names:
         try:
-            reports.append(check_robot(name, sim=args.sim, steps=args.steps, hold=not args.no_hold))
+            if isolate:
+                reports.append(_robot_check_isolated(name, args))
+            else:
+                reports.append(check_robot(name, sim=args.sim, steps=args.steps, hold=not args.no_hold))
         except Exception as err:  # one robot that cannot even be resolved must not end the sweep
             row = CheckRow("config", False, f"{type(err).__name__}: {str(err)[:200]}")
             reports.append(RobotReport(robot=name, simulator=args.sim, rows=[row]))
+        if args.all and not args.json:
+            r = reports[-1]
+            print(f"{r.robot:32s} {'pass' if r.ok else 'FAIL'}", file=sys.stderr, flush=True)
     if args.json:
         print(json.dumps([r.to_dict() for r in reports], indent=2))
     elif args.all:
@@ -1343,6 +1407,13 @@ def _add_robot(sub) -> None:
     c.add_argument("robot", nargs="*", help="robot config name(s), e.g. franka")
     c.add_argument("--all", action="store_true", help="every robot `robot list` names (the sweep; one table)")
     c.add_argument("--out-dir", help="write robots.json and robots.md here (the nightly gate publishes them)")
+    c.add_argument(
+        "--isolate",
+        choices=("auto", "always", "never"),
+        default="auto",
+        help="run each robot's simulator check in its own process (auto: on backends that boot once per process, "
+        "e.g. isaacsim, when checking several robots)",
+    )
     c.add_argument("--sim", default="mujoco", help="backend for the assets and hold checks (default mujoco)")
     c.add_argument("--steps", type=int, default=200, help="simulator steps to hold the default pose")
     c.add_argument(

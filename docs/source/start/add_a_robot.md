@@ -65,9 +65,11 @@ MuJoCo, and Franka passes them on Isaac Sim 6 (YAM has no USD, which the assets 
 ```bash
 python -m metasim robot list                                # every config the robot packages define
 python -m metasim robot check --all --out-dir gate/robots   # the sweep: one row per robot, robots.json / robots.md
+python -m metasim robot check --all --sim isaacsim --out-dir gate/robots_isaac   # one child process per robot
 ```
 
-The nightly gate runs the sweep on MuJoCo after the task gate and publishes the table.
+The nightly gate runs the sweep on both engines after the task gate and publishes the tables; the Robots page
+renders the newest run per engine from `results/robots/`.
 
 ### The sweep of 2026-11-28 (MuJoCo, 42 configs)
 

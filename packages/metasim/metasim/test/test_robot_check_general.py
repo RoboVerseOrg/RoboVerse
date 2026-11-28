@@ -446,3 +446,59 @@ def test_robot_check_all_sweeps_the_list_and_writes_the_table(monkeypatch, tmp_p
     assert cli.main(["robot", "check"]) == 2, "no names and no --all is a usage error"
     cli.main(["robot", "list", "--json"])
     assert json.loads(capsys.readouterr().out) == {"good": "m:Good", "bad": "m:Bad", "broken": "m:Broken"}
+
+
+def test_robot_check_isolated_spawns_a_child_only_when_the_cheap_rows_pass(monkeypatch, tmp_path, capsys):
+    """Isaac Sim boots once per process: the sweep runs one child per robot, and skips the boot for a robot whose
+    assets are already missing; a child that dies without a report is a named hold failure."""
+    import argparse
+    import subprocess
+    from types import SimpleNamespace
+
+    import metasim.__main__ as cli
+    from metasim.utils import robot_check as rc
+    from metasim.utils import setup_util
+
+    cheap = {
+        "ready": rc.RobotReport(
+            "ready", "isaacsim", [rc.CheckRow("config", True, ""), rc.CheckRow("assets", True, "")]
+        ),
+        "nousd": rc.RobotReport(
+            "nousd", "isaacsim", [rc.CheckRow("config", True, ""), rc.CheckRow("assets", False, "no usd_path")]
+        ),
+        "dies": rc.RobotReport("dies", "isaacsim", [rc.CheckRow("config", True, ""), rc.CheckRow("assets", True, "")]),
+    }
+    monkeypatch.setattr(setup_util, "get_robot", lambda name: SimpleNamespace(name=name))
+    monkeypatch.setattr(rc, "check_robot", lambda name, *, sim, steps, hold: cheap[name])
+    spawned = []
+
+    def fake_run(cmd, **kwargs):
+        name = cmd[cmd.index("check") + 1]
+        spawned.append(name)
+        if name == "dies":
+            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="Kit aborted\nSegmentation fault")
+        report = rc.RobotReport(
+            name, "isaacsim", [rc.CheckRow("config", True, "c"), rc.CheckRow("hold", True, "still")]
+        )
+        return subprocess.CompletedProcess(cmd, 0, stdout="noise\n" + json.dumps([report.to_dict()]), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    args = argparse.Namespace(sim="isaacsim", steps=200, no_hold=False, out_dir=str(tmp_path), json=False, all=True)
+    ready = cli._robot_check_isolated("ready", args)
+    nousd = cli._robot_check_isolated("nousd", args)
+    dies = cli._robot_check_isolated("dies", args)
+    assert spawned == ["ready", "dies"], "no simulator boot for a robot whose assets are missing"
+    assert ready.ok and [r.check for r in ready.rows] == ["config", "hold"], "the child's report replaces the parent's"
+    assert not nousd.ok and nousd.rows[-1].check == "hold" and "not attempted" in nousd.rows[-1].detail
+    assert not dies.ok and "child exited 1 without a report: Segmentation fault" in dies.rows[-1].detail
+    assert (tmp_path / "logs" / "dies.log").read_text().endswith("Segmentation fault")
+
+    monkeypatch.setattr(setup_util, "list_robots", lambda: {"ready": "m:R", "nousd": "m:N"})
+    monkeypatch.setattr(cli.os, "_exit", lambda code: (_ for _ in ()).throw(SystemExit(code)))
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["robot", "check", "--all", "--sim", "isaacsim", "--out-dir", str(tmp_path)])
+    assert exc.value.code == 1 and spawned == ["ready", "dies", "ready"], (
+        "auto isolation on isaacsim with several robots"
+    )
+    err = capsys.readouterr().err
+    assert "ready" in err and "FAIL" in err, "the sweep reports each robot as it finishes"
