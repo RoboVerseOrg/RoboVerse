@@ -1,0 +1,96 @@
+{
+ "robot": "gen3",
+ "sim_a": "mujoco",
+ "sim_b": "isaacsim",
+ "steps": 400,
+ "control_dt": 0.015,
+ "peak_velocity": 0.6282151815626118,
+ "judged": true,
+ "ok": true,
+ "rows": [
+  {
+   "joint": "joint_1",
+   "kind": "hinge",
+   "max_diff": 0.00033494457602500916,
+   "rms_diff": 0.00017979118939766617,
+   "tracking_a": 0.02635219620899784,
+   "tracking_b": 0.026649158423631664,
+   "tol": 0.05,
+   "lag_a": 3,
+   "lag_b": 3,
+   "ok": true
+  },
+  {
+   "joint": "joint_2",
+   "kind": "hinge",
+   "max_diff": 0.00034046173095703125,
+   "rms_diff": 0.00019580363472118697,
+   "tracking_a": 0.02634600150478611,
+   "tracking_b": 0.02667379724872837,
+   "tol": 0.05,
+   "lag_a": 3,
+   "lag_b": 3,
+   "ok": true
+  },
+  {
+   "joint": "joint_3",
+   "kind": "hinge",
+   "max_diff": 0.0003380775451660156,
+   "rms_diff": 0.00019279691495306404,
+   "tracking_a": 0.026578624366647485,
+   "tracking_b": 0.026905257820016626,
+   "tol": 0.05,
+   "lag_a": 3,
+   "lag_b": 3,
+   "ok": true
+  },
+  {
+   "joint": "joint_4",
+   "kind": "hinge",
+   "max_diff": 0.0003578662872314453,
+   "rms_diff": 0.00020048385609807177,
+   "tracking_a": 0.026314231513863806,
+   "tracking_b": 0.026670667289620642,
+   "tol": 0.05,
+   "lag_a": 3,
+   "lag_b": 3,
+   "ok": true
+  },
+  {
+   "joint": "joint_5",
+   "kind": "hinge",
+   "max_diff": 0.0003489255905151367,
+   "rms_diff": 0.00019262291868160723,
+   "tracking_a": 0.056622142532875945,
+   "tracking_b": 0.05696517748117333,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "joint_6",
+   "kind": "hinge",
+   "max_diff": 0.0003268718719482422,
+   "rms_diff": 0.00018398987990351348,
+   "tracking_a": 0.056741695210372645,
+   "tracking_b": 0.05705122213069125,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "joint_7",
+   "kind": "hinge",
+   "max_diff": 0.00033462047576904297,
+   "rms_diff": 0.00019537554754732697,
+   "tracking_a": 0.05669585156172352,
+   "tracking_b": 0.0570286838981493,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  }
+ ]
+}

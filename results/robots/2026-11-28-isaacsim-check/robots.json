@@ -1,0 +1,1670 @@
+{
+  "simulator": "isaacsim",
+  "robots": [
+    {
+      "robot": "aloha_agilex",
+      "simulator": "isaacsim",
+      "ok": false,
+      "applicable": false,
+      "verdict": "FAIL",
+      "rows": [
+        {
+          "check": "config",
+          "ok": false,
+          "detail": "no joint_limits for ['fl_joint1', 'fl_joint2', 'fl_joint3', 'fl_joint4', 'fl_joint5', 'fl_joint6', 'fl_joint7', 'fl_joint8', 'fr_joint1', 'fr_joint2', 'fr_joint3', 'fr_joint4', 'fr_joint5', 'fr_joint6', 'fr_joint7', 'fr_joint8']",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "arx_l5",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'link6' found; 7 arm joints, 0 gripper joints; default tool pose (-0.021, -0.103, 0.089) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "8 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "7 config joints driven by an MJCF actuator (1 named differently, matched by transmission: 'gripper' drives 'joint7')",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "cartpole",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "1 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "1 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "1 config joints driven by an MJCF actuator (1 named differently, matched by transmission: 'slide' drives 'slider')",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "fetch",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "14 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "franka",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "9 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/franka/usd/franka_v2.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'panda_hand' found; 7 arm joints, 2 gripper joints; default tool pose (0.307, 0.000, 0.487) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "9 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "9 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "after 200 steps at the default pose: max joint deviation 0.0000 rad (panda_finger_joint1), base moved 0.0000 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "franka_with_gripper_extension",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "9 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/franka_with_gripper_extension/usd/franka_with_gripper_extension_v1.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "floating base: not judged; after 200 steps max joint deviation 0.0000 rad (panda_joint5), base moved 0.1872 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "g1",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "29 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/g1/usd/g1_29dof_rev_1_0.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "29 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "0 config joints driven by an MJCF actuator, 29 joint(s) driven by a servo synthesized from the config",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "floating base: not judged; after 200 steps max joint deviation 0.2300 rad (left_shoulder_pitch_joint), base moved 0.0403 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "g1_dof12",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "12 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/g1/usd/g1_12dof.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "12 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "12 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "floating base: not judged; after 200 steps max joint deviation 2.7576 rad (left_hip_yaw_joint), base moved 0.0367 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "g1_dof23",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "23 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "g1_dof27",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "27 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "g1_dof29",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "29 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/g1/usd/g1_29dof_rev_1_0.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "29 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "29 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "floating base: not judged; after 200 steps max joint deviation 2.7576 rad (left_hip_yaw_joint), base moved 0.0381 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "g1_dof29_dex3",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "43 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "g1_tracking",
+      "simulator": "isaacsim",
+      "ok": false,
+      "applicable": true,
+      "verdict": "FAIL",
+      "rows": [
+        {
+          "check": "config",
+          "ok": false,
+          "detail": "no default position for ['left_ankle_pitch_joint', 'left_ankle_roll_joint', 'left_elbow_joint', 'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_shoulder_yaw_joint', 'left_wrist_pitch_joint', 'left_wrist_roll_joint', 'left_wrist_yaw_joint', 'right_ankle_pitch_joint', 'right_ankle_roll_joint', 'right_elbow_joint', 'right_hip_pitch_joint', 'right_hip_roll_joint', 'right_hip_yaw_joint', 'right_knee_joint', 'right_shoulder_yaw_joint', 'right_wrist_pitch_joint', 'right_wrist_roll_joint', 'right_wrist_yaw_joint', 'waist_pitch_joint', 'waist_roll_joint', 'waist_yaw_joint']",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "['/workspace/roboverse_maint/RoboVerse/roboverse_data/unitree_description/usd/g1/g1.usd'] not local and not fetched from the Hub (Exception)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": false,
+          "detail": "MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": false,
+          "detail": "MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/unitree_description/mjcf/g1.xml'",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "gen3",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/Kinova_Gen3/usd/gen3.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'bracelet_link' found; 7 arm joints, 0 gripper joints; default tool pose (0.292, 0.001, 0.434) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "3 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "7 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "after 200 steps at the default pose: max joint deviation 0.0000 rad (joint_1), base moved 0.0000 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "go1",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "12 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "12 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "0 config joints driven by an MJCF actuator, 12 joint(s) driven by a servo synthesized from the config",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "google_robot_static",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "11 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "h1",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "19 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/h1/usd/h1.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "19 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "19 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "floating base: not judged; after 200 steps max joint deviation 0.0310 rad (left_hip_pitch), base moved 0.0536 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "h1_hand",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "69 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "69 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "69 config joints driven by an MJCF actuator (48 named differently, matched by transmission: 'lh_A_FFJ1' drives 'lh_FFJ1'; 'lh_A_FFJ2' drives 'lh_FFJ2'; 'lh_A_FFJ3' drives 'lh_FFJ3')",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "h1_simple_hand",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "45 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "45 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "45 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "h1_wrist",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "19 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/h1/usd/h1_wrist.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "19 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "19 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "floating base: not judged; after 200 steps max joint deviation 0.6772 rad (left_knee), base moved 0.0200 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "iiwa14",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/KUKA_LBR_IIWA14/usd/iiwa.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'link7' found; 7 arm joints, 0 gripper joints; default tool pose (0.710, 0.000, 0.244) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "7 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "7 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "after 200 steps at the default pose: max joint deviation 0.0000 rad (joint1), base moved 0.0000 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "kinova_gen3_robotiq_2f85",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "10 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/kinova_gen3_robotiq_2f85/usd/kinova_gen3_robotiq_2f85_v1.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "after 200 steps at the default pose: max joint deviation 0.0000 rad (left_inner_finger_joint), base moved 0.0000 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "koch_1",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'gripper_static_finger' found; 6 arm joints, 0 gripper joints; default tool pose (-0.189, -0.001, -0.051) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "6 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "6 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "lite6",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'link6' found; 6 arm joints, 0 gripper joints; default tool pose (0.198, -0.000, 0.169) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "6 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "6 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "openarm_bimanual_wuji",
+      "simulator": "isaacsim",
+      "ok": false,
+      "applicable": true,
+      "verdict": "FAIL",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "54 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": false,
+          "detail": "MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": false,
+          "detail": "MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "openarm_wuji",
+      "simulator": "isaacsim",
+      "ok": false,
+      "applicable": true,
+      "verdict": "FAIL",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "54 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "['roboverse_data/robots/openarm_wuji/openarm_wuji.usd'] not local and not fetched from the Hub (Exception)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": false,
+          "detail": "MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": false,
+          "detail": "MJCF did not load: ValueError: ParseXML: Error opening file 'roboverse_data/robots/openarm_wuji/openarm_wuji.xml'",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "not attempted: a cheaper check already failed",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "sawyer",
+      "simulator": "isaacsim",
+      "ok": false,
+      "applicable": true,
+      "verdict": "FAIL",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "10 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/Rethink_Robotics_Sawyer/usd/sawyer_v2.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "child exited 1 without a report: RuntimeError: Failed to create articulation at: /World/envs/env_[^/]+/sawyer/root_joint. Please check PhysX logs.",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "shadow_hand",
+      "simulator": "isaacsim",
+      "ok": false,
+      "applicable": false,
+      "verdict": "FAIL",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "24 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no ee_body_name (not an arm): tool kinematics not judged",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": false,
+          "detail": "MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate'\nElement 'option', line 4\n",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": false,
+          "detail": "MJCF did not load: ValueError: XML Error: Schema violation: unrecognized attribute: 'apirate'\nElement 'option', line 4\n",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "sharpa_wave_left",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "22 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'left_hand_C_MC' found; 22 arm joints, 0 gripper joints; default tool pose (0.000, 0.000, 0.103) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "22 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "22 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "sharpa_wave_right",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "22 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'right_hand_C_MC' found; 22 arm joints, 0 gripper joints; default tool pose (0.000, 0.000, 0.103) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "22 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "22 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "so_arm100",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'Fixed_Jaw' found; 6 arm joints, 0 gripper joints; default tool pose (0.103, -0.224, 0.320) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "6 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "6 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "unitree_dex3_1_left",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "ur10e",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/Universal_Robots_UR10e/usd/ur10e.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'wrist_3_link' found; 6 arm joints, 0 gripper joints; default tool pose (0.000, -0.174, 1.588) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "6 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "6 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "after 200 steps at the default pose: max joint deviation 0.0000 rad (elbow_joint), base moved 0.0000 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "ur5e",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/Universal_Robots_UR5e/usd/ur5e.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'wrist_3_link' found; 6 arm joints, 0 gripper joints; default tool pose (0.000, -0.134, 1.183) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "6 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "6 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "after 200 steps at the default pose: max joint deviation 0.0000 rad (elbow_joint), base moved 0.0000 m",
+          "applicable": true
+        }
+      ]
+    },
+    {
+      "robot": "xhand_right",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "12 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "no mjcf_path: not judged (the skill library and the IL adapters need an MJCF)",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "no mjcf_path or no joint_limits: not judged",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "no mjcf_path or no actuators: not judged",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "yam",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": false,
+      "verdict": "n/a",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "7 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": false,
+          "detail": "no usd_path declared for isaacsim",
+          "applicable": false
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'link_6' found; 6 arm joints, 1 gripper joints; default tool pose (0.345, -0.000, 0.393) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "8 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "7 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": false,
+          "detail": "n/a: no asset declared for isaacsim",
+          "applicable": false
+        }
+      ]
+    },
+    {
+      "robot": "z1",
+      "simulator": "isaacsim",
+      "ok": true,
+      "applicable": true,
+      "verdict": "pass",
+      "rows": [
+        {
+          "check": "config",
+          "ok": true,
+          "detail": "6 actuators, limits, defaults and asset fields consistent",
+          "applicable": true
+        },
+        {
+          "check": "assets",
+          "ok": true,
+          "detail": "usd_path=roboverse_data/robots/Unitree_Z1_Robotic_Arm/usd/z1.usd, USD composition not judged (no pxr)",
+          "applicable": true
+        },
+        {
+          "check": "kinematics",
+          "ok": true,
+          "detail": "ee body 'link06' found; 6 arm joints, 0 gripper joints; default tool pose (0.089, 0.000, 0.394) m in the base frame",
+          "applicable": true
+        },
+        {
+          "check": "limits",
+          "ok": true,
+          "detail": "6 limited joints match the MJCF ranges",
+          "applicable": true
+        },
+        {
+          "check": "actuators",
+          "ok": true,
+          "detail": "6 config joints driven by an MJCF actuator",
+          "applicable": true
+        },
+        {
+          "check": "hold",
+          "ok": true,
+          "detail": "after 200 steps at the default pose: max joint deviation 0.0000 rad (joint1), base moved 0.0000 m",
+          "applicable": true
+        }
+      ]
+    }
+  ]
+}

@@ -259,8 +259,14 @@ class MujocoHandler(BaseSimHandler):
                 if actuator_cfg is None:
                     continue
 
-                actuator = self.physics.model.actuator(full_name)
-                actuator_id = actuator.id
+                actuator_id = self._actuator_by_joint().get(full_name)
+                if actuator_id is None:
+                    raise ValueError(
+                        f"Robot {robot.name!r}: no actuator drives joint {joint_name!r} although the config lists it "
+                        "in actuators; the MJCF names it in a transmission the handler does not resolve, or the "
+                        "synthesized servo was lost."
+                    )
+                actuator = self.physics.model.actuator(actuator_id)
 
                 # MuJoCo actuators loaded from the MJCF asset already encode a
                 # servo law. Override those runtime parameters from the MetaSim
@@ -728,15 +734,24 @@ class MujocoHandler(BaseSimHandler):
             self._mujoco_robot_names.append(robot_xml.full_identifier)
 
     @staticmethod
-    def _mjcf_actuator_names(robot_xml: mjcf.RootElement) -> set[str]:
-        """Names of the actuators a robot MJCF ships (the ``<actuator>`` children with a name)."""
-        return {act.name for act in robot_xml.actuator.all_children() if act.name}
+    def _mjcf_driven_joints(robot_xml: mjcf.RootElement) -> set[str]:
+        """Names of the joints a robot MJCF already actuates (the ``joint`` target of each ``<actuator>`` child).
+
+        The actuator's own name is free: a Menagerie hand names its servos ``lh_A_WRJ2`` for joint ``lh_WRJ2``.
+        """
+        driven = set()
+        for act in robot_xml.actuator.all_children():
+            for attr in ("joint", "jointinparent"):
+                joint = getattr(act, attr, None)
+                if joint is not None and getattr(joint, "name", None):
+                    driven.add(joint.name)
+        return driven
 
     def _synthesize_cfg_actuators(self, robot_xml: mjcf.RootElement, robot: RobotCfg) -> None:
         """Add an actuator for every ``RobotCfg.actuators`` joint the MJCF does not actuate.
 
-        RoboVerse names each actuator after the joint it drives, and ``RobotCfg.actuators`` (keyed by
-        joint name) carries the servo gains. An asset that ships no actuator for such a joint, as mjlab's
+        ``RobotCfg.actuators`` (keyed by joint name) carries the servo gains; an asset's actuator is matched
+        to its joint by its transmission, whatever it is named. An asset that ships no actuator for such a joint, as mjlab's
         bare robots and Menagerie files that leave actuation to the user do, gets one here, so the config
         is the single source of control truth on this backend as it already is on Newton. A position-
         controlled joint becomes a ``<position>`` servo with the config's stiffness / damping (the asset
@@ -749,7 +764,7 @@ class MujocoHandler(BaseSimHandler):
         if not robot.actuators:
             return
         joints = {j.name: j for j in robot_xml.find_all("joint") if j.name and getattr(j, "type", None) != "free"}
-        existing = self._mjcf_actuator_names(robot_xml)
+        existing = self._mjcf_driven_joints(robot_xml)
         control_type = robot.control_type or {}
         joint_limits = robot.joint_limits or {}
         for joint_name, actuator_cfg in robot.actuators.items():
@@ -766,8 +781,7 @@ class MujocoHandler(BaseSimHandler):
                     raise ValueError(
                         f"Robot {robot.name!r}: the MJCF {robot.mjcf_path} ships no actuator for joint "
                         f"{joint_name!r} and its BaseActuatorCfg sets no stiffness, so there is nothing to drive it "
-                        "with. Set stiffness (and damping) on the config or add an actuator named after the joint "
-                        "to the MJCF."
+                        "with. Set stiffness (and damping) on the config or add an actuator for the joint to the MJCF."
                     )
                 attrs = {"kp": float(actuator_cfg.stiffness), "kv": float(actuator_cfg.damping or 0.0)}
                 if joint_name in joint_limits:
@@ -781,7 +795,7 @@ class MujocoHandler(BaseSimHandler):
                     raise ValueError(
                         f"Robot {robot.name!r}: the MJCF {robot.mjcf_path} ships no actuator for the effort-controlled "
                         f"joint {joint_name!r} and its BaseActuatorCfg sets no effort_limit_sim; set one (the motor's "
-                        "ctrlrange) or add a motor named after the joint to the MJCF."
+                        "ctrlrange) or add a motor for the joint to the MJCF."
                     )
                 limit = abs(float(actuator_cfg.effort_limit_sim))
                 robot_xml.actuator.add("motor", name=joint_name, joint=joint_name, ctrlrange=[-limit, limit])
@@ -1177,11 +1191,9 @@ class MujocoHandler(BaseSimHandler):
             joint = self.physics.data.joint(full_joint_name)
             joint.qpos = joint_pos
             joint.qvel = 0 if zero_vel else float(np.asarray(dof_vel.get(joint_name, 0.0)).reshape(-1)[0])
-            try:
-                actuator = self.physics.model.actuator(full_joint_name)
-                self.physics.data.ctrl[actuator.id] = joint_pos
-            except KeyError:
-                pass
+            actuator_id = self._actuator_by_joint().get(full_joint_name)
+            if actuator_id is not None and self._is_position_servo(actuator_id):
+                self.physics.data.ctrl[actuator_id] = joint_pos  # a motor's ctrl is a force: it stays as it is
 
     def _set_states(self, states, env_ids=None, zero_vel=False):
         """Write a full state. Velocities present in the state (``vel``/``ang_vel``/``dof_vel``, always
@@ -1339,36 +1351,94 @@ class MujocoHandler(BaseSimHandler):
         else:
             return []
 
+    _JOINT_TRANSMISSIONS = ("mjTRN_JOINT", "mjTRN_JOINTINPARENT")
+
+    def _actuator_by_joint(self) -> dict[str, int]:
+        """``{full joint name: actuator id}`` for every joint-driven actuator of the model, by its transmission.
+
+        The model is fixed after ``launch``, so the map is built once. An actuator's name plays no part: the joint it
+        drives is ``actuator_trnid`` (``joint`` or ``jointinparent``). A joint driven by two actuators keeps the first
+        here and is listed in ``_actuator_conflicts``; the robot that owns it raises when it resolves its actuators.
+        """
+        cached = self.__dict__.get("_actuator_by_joint_cache")
+        if cached is not None:
+            return cached
+        model = self.physics.model
+        joint_trn = {int(getattr(mujoco.mjtTrn, name)) for name in self._JOINT_TRANSMISSIONS}
+        out: dict[str, int] = {}
+        conflicts: dict[str, list[int]] = {}
+        for a in range(model.nu):
+            if int(model.actuator_trntype[a]) not in joint_trn:
+                continue
+            joint = model.joint(int(model.actuator_trnid[a, 0])).name
+            if joint in out:
+                conflicts.setdefault(joint, [out[joint]]).append(a)
+            else:
+                out[joint] = a
+        self.__dict__["_actuator_conflicts"] = conflicts
+        self.__dict__["_actuator_by_joint_cache"] = out
+        return out
+
+    def _is_position_servo(self, actuator_id: int) -> bool:
+        """Whether ``ctrl`` of this actuator is a position target (an affine bias on qpos), not a force."""
+        model = self.physics.model
+        return int(model.actuator_biastype[actuator_id]) == int(mujoco.mjtBias.mjBIAS_AFFINE) and bool(
+            model.actuator_biasprm[actuator_id, 1] != 0.0
+        )
+
+    def _actuator_target_name(self, actuator_id: int) -> str:
+        """The name of what a non-joint actuator drives (its tendon, site or body), or its own name."""
+        model = self.physics.model
+        trn = int(model.actuator_trntype[actuator_id])
+        target = int(model.actuator_trnid[actuator_id, 0])
+        if trn == int(mujoco.mjtTrn.mjTRN_TENDON):
+            return model.tendon(target).name
+        if trn == int(mujoco.mjtTrn.mjTRN_SITE):
+            return model.site(target).name
+        if trn == int(mujoco.mjtTrn.mjTRN_BODY):
+            return model.body(target).name
+        return model.actuator(actuator_id).name
+
     def _get_actuator_names(self, robot_name: str) -> list[str]:
+        """The joints of ``robot_name`` an actuator drives, in actuator order (the name says *joint*: the action slot).
+
+        Actuators are matched to joints by their transmission, so an asset may name them as it likes
+        (``lh_A_WRJ2`` for ``lh_WRJ2``). Two actuators on one of the robot's joints, or an actuator of the robot that
+        drives no joint (a tendon-, site- or body-driven one, attributed by what it drives), are errors: RoboVerse
+        writes one target per joint and nothing in the action tensor could address them.
+        """
         assert isinstance(self.object_dict[robot_name], RobotCfg)
-        actuator_names = [self.physics.model.actuator(i).name for i in range(self.physics.model.nu)]
-
-        # Find the robot index
-        robot_idx = None
-        for i, robot in enumerate(self.robots):
-            if robot.name == robot_name:
-                robot_idx = i
-                break
-
+        robot_idx = next((i for i, robot in enumerate(self.robots) if robot.name == robot_name), None)
         if robot_idx is None:
             return []
-
-        robot_actuator_names = []
-        for name in actuator_names:
-            if name.startswith(self._mujoco_robot_names[robot_idx]):
-                joint_name = name[len(self._mujoco_robot_names[robot_idx]) :]
-                if joint_name:
-                    robot_actuator_names.append(joint_name)
-
-        joint_names = self._get_joint_names(robot_name)
-        stray = sorted(set(robot_actuator_names) - set(joint_names))
+        prefix = self._mujoco_robot_names[robot_idx]
+        model = self.physics.model
+        by_joint = self._actuator_by_joint()
+        twice = {
+            joint[len(prefix) :]: [model.actuator(a).name[len(prefix) :] or f"#{a}" for a in ids]
+            for joint, ids in self.__dict__["_actuator_conflicts"].items()
+            if joint.startswith(prefix)
+        }
+        if twice:
+            raise ValueError(
+                f"Robot {robot_name!r}: joints driven by two actuators {twice}; RoboVerse writes one target per "
+                "joint, remove one of them from the MJCF."
+            )
+        driven = {a: joint[len(prefix) :] for joint, a in by_joint.items() if joint.startswith(prefix)}
+        joint_ids = set(by_joint.values())
+        stray = sorted(
+            model.actuator(a).name[len(prefix) :].lstrip("/")
+            or f"#{a}"  # dm_control names an unnamed one //unnamed_...
+            for a in range(model.nu)
+            if a not in joint_ids
+            and (model.actuator(a).name.startswith(prefix) or self._actuator_target_name(a).startswith(prefix))
+        )
         if stray:
             raise ValueError(
-                f"Robot {robot_name!r}: actuators {stray} are not named after a joint of the robot (joints: "
-                f"{joint_names}). RoboVerse drives each joint through the actuator of the same name; rename the "
-                "actuators in the MJCF (a tendon- or site-driven actuator is not supported)."
+                f"Robot {robot_name!r}: actuators {stray} drive no joint of the robot (a tendon-, site- or "
+                "body-driven actuator is not supported: RoboVerse writes one target per joint)."
             )
-        return robot_actuator_names
+        return [driven[a] for a in sorted(driven)]
 
     def _passive_joint_names(self, robot_name: str) -> list[str]:
         """Joints of ``robot_name`` that no actuator drives, sorted.
@@ -1392,11 +1462,9 @@ class MujocoHandler(BaseSimHandler):
         assert isinstance(self.object_dict[robot_name], RobotCfg)
         robot_idx = next(i for i, robot in enumerate(self.robots) if robot.name == robot_name)
         prefix = self._mujoco_robot_names[robot_idx]
-        by_name = {
-            self.physics.model.actuator(i).name: i for i in range(self.physics.model.nu)
-        }  # actuators are global; a robot's are the ones under its prefix
-        self._get_actuator_names(robot_name)  # validates that every actuator under the prefix names a joint
-        ids = [by_name.get(f"{prefix}{jn}") for jn in self._get_joint_names(robot_name, sort=True)]
+        self._get_actuator_names(robot_name)  # validates that every actuator under the prefix drives a joint
+        by_joint = self._actuator_by_joint()
+        ids = [by_joint.get(f"{prefix}{jn}") for jn in self._get_joint_names(robot_name, sort=True)]
         cache[robot_name] = ids
         return ids
 

@@ -107,6 +107,12 @@ jobs:
         # Reset 2026-11-28 to the measured value after the task curation (3083 -> 62 task classes) removed
         # content together with its tests: 40.4% of 12,910 statements. From here it only moves up.
         run: python -m pytest tests/ -rs --cov=roboverse_pack --cov=roboverse_learn --cov-report=xml --cov-report=term --cov-fail-under=40
+      - name: Leaderboard page matches the result files
+        run: python tools/bench/leaderboard.py --check
+      - name: Robots page matches the configs and the robot result files
+        run: python docs/source/dataset_benchmark/dataset/generate_robot_docs.py --check
+      - name: Task inventory page matches the registry
+        run: python docs/source/dataset_benchmark/tasks/generate_task_docs.py --check
       - name: Coverage summary
         if: always()
         run: |

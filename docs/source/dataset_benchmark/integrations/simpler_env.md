@@ -26,6 +26,14 @@ RoboVerse integrates SimplerEnv on **two tracks**:
 
 ## Status
 
+> **Retired from the tree on 2026-11-27.** The SimplerEnv port needs SAPIEN, which is not one of the
+> engines the release stands behind (MuJoCo, Isaac Sim 6), and it never registered a task in a standard
+> install, so the gate could not judge it. The package `roboverse_pack/tasks/simpler_env/` and its parity
+> tools are recoverable from git at `56a0e67b` (`roboverse_pack/tasks/RETIRED_TASKS.md`); a MuJoCo or Isaac
+> port of these 25 tasks with our own assets would re-enter through the gate like any other task. The
+> notes below describe the integration as it was built.
+
+
 | Capability | Result | Where |
 |---|---|---|
 | MetaSim-native tasks | **25 / 25** built via `ScenarioCfg` + handler + `@register_task` | `roboverse_pack/tasks/simpler_env/_metasim/` |

@@ -17,4 +17,3 @@ class H1BodyCollisionCfg(H1Cfg):
     #    Without enabling full-body collisions, such behaviors may become physically invalid
     #    or lead to unstable simulation artifacts.
     name: str = "h1"
-    mjx_mjcf_path: str = "roboverse_data/robots/h1/mjcf/mjx_h1_body.xml"

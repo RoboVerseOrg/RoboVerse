@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import threading
 from collections import Counter
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -603,3 +604,342 @@ def test_remote_names_the_server_when_a_200_answer_is_not_an_action_array(served
     monkeypatch.setattr(policy._opener, "open", lambda *a, **k: _Raw())
     with pytest.raises(ValueError, match="non-JSON"):
         policy._request("GET", "/metadata")
+
+
+def test_conformance_passes_a_protocol_server_and_names_what_a_bad_one_gets_wrong():
+    """`bench conformance` exercises metadata, reset, act (chunks too), partial reset and malformed input; no simulator."""
+    import http.server
+    import json as _json
+
+    from metasim.bench import conformance
+
+    class Chunky:
+        name = "chunky"
+        family = "il"
+
+        def reset(self, env_ids, instances, ctx):
+            pass
+
+        def act(self, obs, ctx):
+            return torch.zeros(ctx.num_envs, 4, ctx.action_dim) + 3.0  # a chunk of 4, outside the [-1, 1] box
+
+    for policy, horizon in ((HoldPolicy(), None), (Chunky(), 4)):
+        server = PolicyServer(policy, port=0, metadata={"checkpoint": "none"})
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            report = conformance(server.url, num_envs=3, action_dim=5)
+        finally:
+            server.shutdown()
+        rows = {r.check: r for r in report.rows}
+        assert report.ok, report.table()
+        assert set(rows) == {
+            "metadata",
+            "reset",
+            "act",
+            "action box",
+            "determinism",
+            "latency",
+            "partial reset",
+            "malformed act",
+            "unknown path",
+        }
+        assert "3 envs, 5 joints" in rows["reset"].detail
+        if horizon:
+            assert f"horizon {horizon}" in rows["act"].detail and "leave the box" in rows["action box"].detail
+        else:
+            assert rows["act"].detail == "shape (3, 5)" and "inside" in rows["action box"].detail
+        assert "400" in rows["malformed act"].detail, "an undecodable body is the client's fault, not a server error"
+        assert report.to_dict()["metadata"]["checkpoint"] == "none" and "verdict: pass" in report.table()
+
+    class WrongProtocol(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            body = _json.dumps({"protocol": "something/else", "name": "x"}).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), WrongProtocol)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    try:
+        report = conformance(f"http://127.0.0.1:{httpd.server_address[1]}")
+    finally:
+        httpd.shutdown()
+    assert not report.ok and [r.check for r in report.rows] == ["metadata"]
+    assert "something/else" in report.rows[0].detail and "verdict: FAIL" in report.table()
+    unreachable = conformance("http://127.0.0.1:9", timeout=2)
+    assert not unreachable.ok and "unreachable" in unreachable.rows[0].detail
+
+
+def test_conformance_uses_a_robot_config_action_box():
+    from types import SimpleNamespace
+
+    from metasim.bench.remote import synthetic_context, synthetic_observation
+
+    cfg = SimpleNamespace(
+        name="toy",
+        actuators={"j1": None, "j0": None, "f": None},
+        joint_limits={"j0": (-1.0, 2.0), "j1": (-3.0, 3.0), "f": (0.0, 0.04)},
+        default_joint_positions={"j0": 0.5, "j1": 0.0, "f": 0.04},
+    )
+    ctx = synthetic_context(num_envs=2, robot_cfg=cfg)
+    assert ctx.action_joint_names == {"toy": ["f", "j0", "j1"]} and ctx.action_dim == 3
+    assert ctx.action_low.tolist() == [0.0, -1.0, -3.0]
+    assert ctx.default_action.tolist() == pytest.approx([0.04, 0.5, 0.0])
+    obs = synthetic_observation(ctx)
+    assert obs["obs/robots/toy/joint_pos"].shape == (2, 3) and obs["obs/cameras/front/rgb"].shape == (2, 64, 64, 3)
+
+
+# ----------------------------------------------------------------------------------------------
+# every bench CLI entry, end to end through main(), on fabricated result files (no simulator)
+# ----------------------------------------------------------------------------------------------
+
+
+def _write_results(tmp_path):
+    import json as _json
+
+    files = []
+    for name, task, succ, policy in (("a_p", "a", 9, "p"), ("b_p", "b", 1, "p"), ("c_q", "c", 3, "q")):
+        path = tmp_path / f"{name}.json"
+        path.write_text(_json.dumps(_result(task, succ, 10 if task != "c" else 5, policy=policy).to_dict()))
+        files.append(str(path))
+    return files
+
+
+def test_cli_access_list_and_suite_list(monkeypatch, capsys):
+    import json as _json
+
+    import metasim.__main__ as cli
+    from metasim.bench import suite as suite_mod
+    from metasim.task import registry
+
+    assert cli.main(["bench", "access"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("| name | observation |") and "| privileged |" in out and "| visual |" in out
+
+    monkeypatch.setattr(registry, "list_tasks", lambda: ["pick_cube", "push_cube", "walk"])
+    assert cli.main(["bench", "list", "--json", "--filter", "cube"]) == 0
+    data = _json.loads(capsys.readouterr().out)
+    assert data == {"count": 2, "tasks": ["pick_cube", "push_cube"]}
+    assert cli.main(["bench", "list"]) == 0
+    assert capsys.readouterr().out.splitlines() == ["pick_cube", "push_cube", "walk"]
+
+    monkeypatch.setattr(suite_mod, "list_suites", lambda: ["toy"])
+    monkeypatch.setattr(suite_mod, "get_suite", lambda name: SUITE)
+    import metasim.bench as bench
+
+    monkeypatch.setattr(bench, "list_suites", lambda: ["toy"])
+    monkeypatch.setattr(bench, "get_suite", lambda name: SUITE)
+    assert cli.main(["bench", "suite", "list", "--json"]) == 0
+    listed = _json.loads(capsys.readouterr().out)
+    assert listed[0]["name"] == "toy" and listed[0]["splits"] == {"core": ["a", "b"], "heldout": ["c"]}
+    assert listed[0]["protocol"]["episodes"] == 10
+    assert cli.main(["bench", "suite", "list"]) == 0
+    assert "toy  [fake]  core (2), heldout (1)" in capsys.readouterr().out
+
+
+def test_cli_summarize_matrix_validate_on_result_files(tmp_path, capsys):
+    import metasim.__main__ as cli
+
+    files = _write_results(tmp_path)
+    assert cli.main(["bench", "summarize", *files]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("|") and "| a |" in out and "| c |" in out, out
+
+    assert cli.main(["bench", "matrix", str(tmp_path)]) == 0, "a directory is walked for result files"
+    out = capsys.readouterr().out
+    assert "| p |" in out and "| q |" in out, out
+
+    broken = tmp_path / "broken.json"
+    broken.write_text('{"task": "x"}')
+    assert cli.main(["bench", "validate", files[0], str(broken)]) == 1
+    out = capsys.readouterr().out
+    assert out.splitlines()[0].startswith("ok    ") and out.splitlines()[1].startswith("FAIL  ")
+    assert cli.main(["bench", "validate", files[0]]) == 0
+
+    assert cli.main(["bench", "summarize", str(tmp_path / "nothing_here")]) == 1
+    assert "no result files found" in capsys.readouterr().err
+
+
+def test_cli_suite_report_scores_files_against_a_suite(monkeypatch, tmp_path, capsys):
+    import json as _json
+
+    import metasim.__main__ as cli
+    import metasim.bench as bench
+
+    monkeypatch.setattr(bench, "get_suite", lambda name: SUITE)
+    files = _write_results(tmp_path)
+    # the heldout task c is scored by policy q only: with --policy p the heldout split is incomplete -> exit 1
+    assert cli.main(["bench", "suite", "report", "--suite", "toy", "--policy", "p", *files]) == 1
+    table = capsys.readouterr().out
+    assert "### core" in table and "core: task-macro 0.500" in table, table  # a 0.9, b 0.1 -> macro 0.5
+    assert "heldout: INCOMPLETE" in table
+    out = tmp_path / "report"
+    code = cli.main(["bench", "suite", "report", "--suite", "toy", "--policy", "q", "--out-dir", str(out), *files])
+    report = _json.loads((out / "suite.json").read_text())
+    assert (out / "suite.md").exists() and set(report["splits"]) == {"core", "heldout"}
+    assert code == 1 and report["splits"]["heldout"]["complete"] and not report["splits"]["core"]["complete"]
+    with pytest.raises(SystemExit, match="several policies"):
+        cli.main(["bench", "suite", "report", "--suite", "toy", *files])
+
+
+def test_cli_conformance_exits_on_the_verdict(capsys):
+    import metasim.__main__ as cli
+
+    server = PolicyServer(HoldPolicy(), port=0)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        assert cli.main(["bench", "conformance", "--policy-url", server.url, "--num-envs", "1"]) == 0
+        out = capsys.readouterr().out
+        assert "verdict: pass" in out and "1 envs, 7 joints" in out
+    finally:
+        server.shutdown()
+    assert cli.main(["bench", "conformance", "--policy-url", "http://127.0.0.1:9", "--timeout", "1"]) == 1
+    assert "unreachable" in capsys.readouterr().out
+
+
+def test_cli_suite_run_writes_one_result_per_task_and_reports_a_broken_one(monkeypatch, tmp_path, capsys):
+    """`bench suite run` (in-process path): a result file per task, the suite report, errors.json, exit 1 when a task breaks."""
+    import json as _json
+
+    import metasim.__main__ as cli
+    import metasim.bench as bench
+
+    class _Env:
+        def __init__(self, task):
+            self.task = task
+            self.scenario = SimpleNamespace(robots=[SimpleNamespace(name="bot")], simulator="fake")
+
+        def close(self):
+            pass
+
+    def fake_make_env(task, **kwargs):
+        if task == "c":
+            raise RuntimeError("asset missing for c")
+        return _Env(task)
+
+    def fake_evaluate(env, policy, protocol, policy_info=None, on_episode=None, task_name=None):
+        return _result(task_name, 2, protocol.episodes, policy=policy.name, protocol=protocol)
+
+    monkeypatch.setattr(bench, "get_suite", lambda name: SUITE)
+    monkeypatch.setattr(bench, "evaluate", fake_evaluate)
+    monkeypatch.setattr(cli, "_make_env", fake_make_env)
+    monkeypatch.setattr(cli, "_make_policy", lambda args: (HoldPolicy(), {}))
+    out = tmp_path / "suite"
+    code = cli.main([
+        "bench",
+        "suite",
+        "run",
+        "--suite",
+        "toy",
+        "--policy",
+        "hold",
+        "--out-dir",
+        str(out),
+        "--episodes",
+        "3",
+        "--isolate",
+        "never",
+    ])
+    assert code == 1, "a task that cannot be built fails the run"
+    files = sorted(p.name for p in out.glob("*.json"))
+    assert files == ["core__a__bot__hold.json", "core__b__bot__hold.json", "errors.json", "suite.json"], files
+    assert _json.loads((out / "errors.json").read_text()) == [
+        {"split": "heldout", "task": "c", "error": "RuntimeError: asset missing for c"}
+    ]
+    saved = _json.loads((out / "core__a__bot__hold.json").read_text())
+    assert saved["notes"]["suite"] == {"name": "toy", "split": "core"} and saved["protocol"]["episodes"] == 3
+    report = _json.loads((out / "suite.json").read_text())
+    assert report["splits"]["core"]["complete"] and not report["splits"]["heldout"]["complete"]
+    err = capsys.readouterr().err
+    assert "=== toy/core: a" in err and "c: ERROR RuntimeError: asset missing for c" in err
+
+    monkeypatch.setattr(cli, "_make_env", lambda task, **kw: _Env(task))
+    assert (
+        cli.main([
+            "bench",
+            "suite",
+            "run",
+            "--suite",
+            "toy",
+            "--policy",
+            "hold",
+            "--out-dir",
+            str(out),
+            "--isolate",
+            "never",
+        ])
+        == 0
+    )
+    assert not (out / "errors.json").exists() or _json.loads((out / "errors.json").read_text()) == [], (
+        "a clean run leaves no stale errors"
+    )
+
+
+def test_cli_record_drives_the_recorder_and_prints_what_was_kept(monkeypatch, tmp_path, capsys):
+    """`bench record` builds the env, hands the policy and provenance to record_demos and reports the summary."""
+    import metasim.__main__ as cli
+    import metasim.bench.record as record_mod
+
+    class _Env:
+        scenario = SimpleNamespace(robots=[SimpleNamespace(name="bot")], simulator="fake")
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    env = _Env()
+    calls = {}
+
+    def fake_record(env_, policy, protocol, *, out, success_only, task_name, on_episode, policy_info):
+        calls.update(policy=policy.name, out=out, success_only=success_only, task=task_name, info=policy_info)
+        result = _result(task_name, 3, protocol.episodes, policy=policy.name, protocol=protocol)
+        return result, {"robot": "bot", "kept": 3, "dropped": protocol.episodes - 3, "path": out}
+
+    monkeypatch.setattr(record_mod, "record_demos", fake_record)
+    monkeypatch.setattr(cli, "_make_env", lambda *a, **k: env)
+    monkeypatch.setattr(cli, "_make_policy", lambda args: (HoldPolicy(), {"spec": "hold"}))
+    monkeypatch.setattr(cli, "_apply_demos_override", lambda env, demos: None)
+    out = str(tmp_path / "demos.pkl.gz")
+    code = cli.main([
+        "bench",
+        "record",
+        "--task",
+        "t",
+        "--sim",
+        "fake",
+        "--policy",
+        "hold",
+        "--episodes",
+        "4",
+        "--out",
+        out,
+    ])
+    assert code == 0 and env.closed
+    assert calls == {"policy": "hold", "out": out, "success_only": True, "task": "t", "info": {"spec": "hold"}}
+    line = capsys.readouterr().out
+    assert line.startswith("t [bot @ fake] hold:") and "kept 3 demo(s), dropped 1" in line, line
+    assert (
+        cli.main([
+            "bench",
+            "record",
+            "--task",
+            "t",
+            "--sim",
+            "fake",
+            "--policy",
+            "hold",
+            "--episodes",
+            "4",
+            "--out",
+            out,
+            "--keep-failures",
+        ])
+        == 0
+    )
+    assert calls["success_only"] is False

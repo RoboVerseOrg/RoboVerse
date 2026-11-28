@@ -360,7 +360,8 @@ backward compat for trained policies):
    pose but ``joint_limits`` are Yam's narrower ranges
 4. ``ArxL5Cfg`` — same Franka copy-paste, different limit ranges
 5. ``VegaCfg`` — ``torso_j1`` ``joint_limits`` is the single-point
-   ``[0.2, 0.2]`` — looks like a fixed offset, not a range
+   ``[0.2, 0.2]`` — looks like a fixed offset, not a range (the config
+   was retired on 2026-11-28: its assets are not on the Hub)
 6. ``SoArm100Cfg`` — ``Wrist_Pitch`` default ``-2.356`` outside
    ``[-0.192, 3.927]``
 7. ``KochCfg`` — same shape as SoArm100

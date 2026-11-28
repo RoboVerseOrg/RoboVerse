@@ -211,7 +211,7 @@ def test_scripted_policy_refuses_without_object_poses(tmp_path):
 
 
 def test_camera_presets_are_added_to_a_scenario_once():
-    assert set(CAMERA_PRESETS) >= {"front", "side", "top"}
+    assert set(CAMERA_PRESETS) >= {"front", "side", "top", "il"} and camera_preset("il").name == "camera0"
     assert camera_preset("front").name == "front" and camera_preset("front").data_types == ["rgb", "depth"]
     with pytest.raises(ValueError, match="unknown camera preset"):
         camera_preset("wrist")
@@ -349,3 +349,15 @@ def test_agent_refuses_a_tier_without_tools(tmp_path):
     )  # fmt: skip
     with pytest.raises(ValueError, match="allows no tools"):
         LLMAgentPolicy().reset([0], [None], ctx)
+
+
+def test_matrix_keeps_engines_apart():
+    rows = [_result("pick", "replay", 10, 10), _result("pick", "replay", 5, 10)]
+    rows[1].simulator = "isaacsim"
+    table = matrix(rows)
+    assert (
+        "| replay @mujoco | 1.000 (1 tasks, 10 ep) |" in table
+        and "| replay @isaacsim | 0.500 (1 tasks, 10 ep) |" in table
+    )
+    assert "| replay |" not in matrix([_result("pick", "replay", 10, 10)]).splitlines()[0], "one engine: no suffix"
+    assert "| replay | 1.000 (1 tasks, 10 ep) |" in matrix([_result("pick", "replay", 10, 10)])

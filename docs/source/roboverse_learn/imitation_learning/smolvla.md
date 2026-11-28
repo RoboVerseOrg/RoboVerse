@@ -218,7 +218,7 @@ roboverse_learn/vla/SmolVLA/
 - [LeRobot GitHub](https://github.com/huggingface/lerobot)
 - [SmolVLA on Hugging Face](https://huggingface.co/lerobot/smolvla)
 - [OpenVLA Documentation](./openvla.md)
-- [pi0 Documentation](../../vla/pi0/README.md)
+- [pi0 Documentation](https://github.com/RoboVerseOrg/RoboVerse/blob/main/roboverse_learn/vla/pi0/README.md)
 
 ## Related Documentation
 

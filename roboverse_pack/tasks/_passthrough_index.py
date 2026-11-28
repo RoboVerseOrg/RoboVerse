@@ -6,10 +6,6 @@ passthrough, this function returns a dict {benchmark_name: [env_id, ...]}.
 Usage:
     import roboverse_pack.tasks.mjlab
     import roboverse_pack.tasks.maniskill
-    import roboverse_pack.tasks.metaworld
-    import roboverse_pack.tasks.myosuite
-    import roboverse_pack.tasks.gym_robotics
-    import roboverse_pack.tasks.dm_control
     from roboverse_pack.tasks._passthrough_index import list_passthrough_envs
     envs = list_passthrough_envs()
     print(envs.keys())  # dict_keys(['MjlabPassthrough', 'ManiSkill3', ...])
@@ -21,10 +17,6 @@ from __future__ import annotations
 PASSTHROUGH_PREFIXES = [
     "MjlabPassthrough/",
     "ManiSkill3/",
-    "MetaWorld/",
-    "MyoSuite/",
-    "GymRobotics/",
-    "DMControl/",
     "Libero/",
     "LiberoPlus/",
     "SimplerEnv/",  # MetaSim-native SimplerEnv tasks (zero upstream dependency)

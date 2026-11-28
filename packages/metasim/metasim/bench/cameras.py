@@ -37,8 +37,19 @@ CAMERA_PRESETS: dict[str, PinholeCameraCfg] = {
         look_at=(0.0, 0.0, 0.0),
         data_types=["rgb", "depth"],
     ),
+    # the view roboverse_learn's imitation-learning data is collected from (scripts/advanced/collect_demo.py):
+    # a policy trained on that data is evaluated with the same camera, under the name its runner expects
+    "il": PinholeCameraCfg(
+        name="camera0",
+        width=256,
+        height=256,
+        pos=(1.0, 0.0, 0.75),
+        look_at=(0.0, 0.0, 0.0),
+        data_types=["rgb", "depth"],
+    ),
 }
-"""Named views. Keys are what ``--camera`` accepts; each is a ``PinholeCameraCfg`` whose ``name`` is the key."""
+"""Named views. Keys are what ``--camera`` accepts; the camera's ``name`` is the key except where a consumer expects
+another name (``il`` -> ``camera0``)."""
 
 
 def camera_preset(name: str) -> PinholeCameraCfg:

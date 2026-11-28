@@ -12,7 +12,8 @@ This section documents the RoboVerse task suite, asset library, and evaluation p
 
 ### For Researchers
 
-- [Task Overview](tasks/overview.md) - Browse available tasks by category
+- [Task Overview](tasks/overview.md) - How tasks are organised
+- [Task Inventory](tasks/inventory.md) - Every registered task, generated from the registry
 - [Benchmark Usage](benchmark/usage.md) - Run standardized evaluations
 - [Benchmark Results](benchmark/results.md) - Compare with state-of-the-art
 

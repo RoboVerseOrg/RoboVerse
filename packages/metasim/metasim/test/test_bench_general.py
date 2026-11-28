@@ -8,6 +8,7 @@ the counting rules are pinned independently of any backend.
 from __future__ import annotations
 
 import json
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -843,7 +844,7 @@ def test_health_reliability_flags_a_checker_the_hold_policy_satisfies_and_a_flak
     row = {"task": "t", "status": "ok", "detail": ""}
     cli._health_reliability(None, "t", EvalProtocol(episodes=2), first, row, SimpleNamespace(repeat=1, floor=False))
     assert row["status"] == "ok", "without the flags the gate is the replay score alone"
-    assert cli.HEALTH_FAILING == ("low", "unreliable", "flaky", "error")
+    assert cli.HEALTH_FAILING == ("low", "unreliable", "flaky", "invalid", "error")
 
 
 def test_health_error_status_tells_unsupported_and_missing_demos_from_errors():
@@ -875,7 +876,8 @@ def test_bench_run_streams_each_episode_then_saves_the_result(monkeypatch, tmp_p
         scenario = SimpleNamespace(robots=[SimpleNamespace(name="bot")], simulator="mujoco")
 
         def close(self):
-            return None
+            # Isaac Sim's fast shutdown ends the process here: the result must already be on disk
+            assert (tmp_path / "r.json").exists(), "bench run must save the result before closing the simulator"
 
     seen = []
 
@@ -896,11 +898,13 @@ def test_bench_run_streams_each_episode_then_saves_the_result(monkeypatch, tmp_p
     monkeypatch.setattr(bench, "evaluate", fake_evaluate)
     monkeypatch.setattr(cli, "_make_env", lambda *a, **k: _Env())
     monkeypatch.setattr(cli, "_make_policy", lambda args: (HoldPolicy(), {}))
+    monkeypatch.setattr(cli, "_apply_demos_override", lambda env, demos: None)  # the fake env has no demo file
     args = argparse.Namespace(
         task="t",
         sim="mujoco",
         robot=None,
         num_envs=1,
+        demos="demos/t/v2",
         episodes=2,
         success_rule="first",
         hold_steps=1,
@@ -925,4 +929,225 @@ def test_bench_run_streams_each_episode_then_saves_the_result(monkeypatch, tmp_p
     assert cli._bench_run(args) == 0
     assert seen == [1, 2], "one JSON line per finished episode, written as each ends"
     assert (tmp_path / "r.json").exists() and not (tmp_path / "r.json.episodes.jsonl").exists()
+    assert json.loads((tmp_path / "r.json").read_text())["notes"]["demos"] == "demos/t/v2", (
+        "scored from an overridden set"
+    )
     assert capsys.readouterr().out.startswith("t [bot @ mujoco] hold:"), "the score line names task, robot, sim, policy"
+
+
+def test_record_demos_writes_the_v2_layout_the_gate_replays(tmp_path):
+    """Successful episodes become ``{robot: [{"init_state", "actions", "states"}]}``; failures are dropped by default."""
+    import gzip
+    import pickle
+
+    from metasim.bench import record_demos
+
+    env = _ScriptedEnv(num_envs=1, schedule=[(3, 5, True), (None, 4, False)], pool_size=2)
+    out = tmp_path / "demos" / "v2" / "bot_v2.pkl.gz"
+    result, summary = record_demos(env, HoldPolicy(), EvalProtocol(episodes=4, seed=3), out=out, task_name="t")
+    assert summary["kept"] == 2 and summary["dropped"] == 2 and result.summary["episodes"] == 4
+    data = pickle.load(gzip.open(out))
+    assert list(data) == ["bot"] and len(data["bot"]) == 2
+    demo = data["bot"][0]
+    assert set(demo) == {"init_state", "actions", "states"} and demo["states"] is None
+    assert demo["init_state"]["cube"]["pos"] == [0.0, 0.0, 0.0] or isinstance(demo["init_state"]["cube"]["pos"], list)
+    assert len(demo["actions"]) == 5, "one action per step of the successful 5-step episode"
+    assert demo["actions"][0] == {"dof_pos_target": {"j0": 0.5, "j1": 1.0}}, "v2 layout: the robot's own dict"
+    sidecar = out.with_name(out.name + ".json")
+    assert sidecar.exists() and '"kept": 2' in sidecar.read_text()
+    # --keep-failures keeps every episode
+    _, summary_all = record_demos(
+        _ScriptedEnv(num_envs=1, schedule=[(3, 5, True), (None, 4, False)], pool_size=2), HoldPolicy(),
+        EvalProtocol(episodes=4, seed=3), out=tmp_path / "all.pkl", success_only=False, task_name="t",
+    )  # fmt: skip
+    assert summary_all["kept"] == 4 and len(pickle.load(open(tmp_path / "all.pkl", "rb"))["bot"]) == 4
+
+
+def test_flatten_initial_state_accepts_both_layouts():
+    from metasim.bench import flatten_initial_state
+
+    nested = {
+        "objects": {"cube": {"pos": torch.tensor([1.0, 2.0, 3.0]), "rot": torch.tensor([1.0, 0, 0, 0]), "vel": torch.zeros(3)}},
+        "robots": {"bot": {"pos": torch.zeros(3), "rot": torch.tensor([1.0, 0, 0, 0]), "dof_pos": {"j0": torch.tensor(0.5)}}},
+    }  # fmt: skip
+    flat = flatten_initial_state(nested)
+    assert flat == {
+        "cube": {"pos": [1.0, 2.0, 3.0], "rot": [1.0, 0.0, 0.0, 0.0]},
+        "bot": {"pos": [0.0, 0.0, 0.0], "rot": [1.0, 0.0, 0.0, 0.0], "dof_pos": {"j0": 0.5}},
+    }
+    assert flatten_initial_state(flat) == flat, "the flat layout passes through unchanged"
+
+
+def test_suite_task_isolated_runs_bench_run_with_the_entry_protocol(monkeypatch, tmp_path):
+    """The child gets every protocol field as a flag and its result file is loaded; a child without a file is an error."""
+    import subprocess
+    from types import SimpleNamespace
+
+    import metasim.__main__ as cli
+    from metasim.bench import AccessProfile, SuiteTask
+
+    calls = []
+
+    def fake_run(cmd, check, stdout, stderr):
+        calls.append(cmd)
+        out = cmd[cmd.index("--out") + 1]
+        if "broken" not in cmd:
+            BenchmarkResult(
+                task="t", simulator="isaacsim", robots=["franka"], num_envs=1, protocol=EvalProtocol().to_dict(),
+                policy={"name": "hold"}, episodes=[_episode(0, True)],
+            ).save(out)  # fmt: skip
+        return SimpleNamespace(returncode=0 if "broken" not in cmd else 1)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    args = SimpleNamespace(
+        num_envs=2, camera=["front"], policy_url=None, policy="hold", policy_arg=["k=v"], checkpoint=None, device="cuda:0",
+        require_metadata=None, obs_key=None,
+    )  # fmt: skip
+    protocol = EvalProtocol(
+        seed=3,
+        demo_budget_factor=2.0,
+        instances=(1, 4),
+        access=AccessProfile(name="visual", observation="rgb"),
+    )
+    entry = SuiteTask(task="t", robots=("franka",))
+    result = cli._suite_task_isolated(entry, protocol, args, "isaacsim", str(tmp_path / "r.json"))
+    cmd = calls[-1]
+    assert cmd[1:6] == ["-m", "metasim", "bench", "run", "--task"] and "isaacsim" in cmd
+    for flag, value in (
+        ("--episodes", "2"),
+        ("--seed", "3"),
+        ("--demo-budget", "2.0"),
+        ("--num-envs", "2"),
+        ("--robot", "franka"),
+        ("--camera", "front"),
+        ("--policy", "hold"),
+        ("--policy-arg", "k=v"),
+        ("--device", "cuda:0"),
+    ):
+        assert cmd[cmd.index(flag) + 1] == value, flag
+    assert [cmd[i + 1] for i, v in enumerate(cmd) if v == "--instance"] == ["1", "4"]
+    access_arg = cmd[cmd.index("--access") + 1]
+    assert access_arg.endswith("access__visual.json"), "a tier that is not a preset travels as a file"
+    assert os.path.basename(os.path.dirname(access_arg)) == "logs", "not next to the results: readers glob *.json there"
+    assert result.task == "t" and (tmp_path / "r.json").exists()
+
+    # a custom profile equal to a preset is passed by name
+    cli._suite_task_isolated(entry, EvalProtocol(access=AccessProfile()), args, "isaacsim", str(tmp_path / "r2.json"))
+    assert calls[-1][calls[-1].index("--access") + 1] == "privileged"
+
+    with pytest.raises(RuntimeError, match="before saving a result"):
+        cli._suite_task_isolated(SuiteTask(task="broken"), EvalProtocol(), args, "isaacsim", str(tmp_path / "r3.json"))
+
+
+# ----------------------------------------------------------------------------------------------
+# instance validity, the recorder's guards, the isolated health child
+# ----------------------------------------------------------------------------------------------
+def _limited_env(pool_states):
+    env = _ScriptedEnv(num_envs=1, schedule=[(3, 5, True)], pool_size=0)
+    env.scenario.robots[0].joint_limits = {"j0": (0.0, 1.0), "j1": (-1.0, 1.0)}
+    env._bench_instance_pool = tuple(
+        TaskInstance(index=i, seed=0, state=s, state_hash=hash_state(s)) for i, s in enumerate(pool_states)
+    )
+    return env
+
+
+def test_validate_instances_names_each_out_of_limit_joint():
+    from metasim.bench import validate_instances
+
+    good = {"objects": {}, "robots": {"bot": {"dof_pos": {"j0": 0.5, "j1": torch.tensor(-1.0)}}}}
+    bad = {"objects": {}, "robots": {"bot": {"dof_pos": {"j0": 1.0 + 0.5, "j1": 0.0}}}}
+    flat_bad = {"bot": {"dof_pos": {"j0": -0.2, "j1": 0.0}}}
+    env = _limited_env([good, bad, flat_bad])
+    problems = validate_instances(env, list(env._bench_instance_pool))
+    assert problems == [
+        "instance 1: bot.j0=1.500 outside [0.000, 1.000]",
+        "instance 2: bot.j0=-0.200 outside [0.000, 1.000]",
+    ], "both layouts are judged; the good state and the in-range joint are silent"
+    assert validate_instances(env, [TaskInstance(index=0, seed=0, state=None)]) == [], "a default reset is not judged"
+    env.scenario.robots[0].joint_limits = {}
+    assert validate_instances(env, list(env._bench_instance_pool)) == [], "no declared limits, no judgement"
+
+
+def test_record_demos_refuses_unphysical_starts_and_non_joint_actions(tmp_path):
+    from metasim.bench import record_demos
+
+    bad = {"objects": {}, "robots": {"bot": {"dof_pos": {"j0": 7.0, "j1": 0.0}}}}
+    with pytest.raises(ValueError, match=r"outside its limits \(instance 0: bot.j0=7.000"):
+        record_demos(_limited_env([bad]), HoldPolicy(), EvalProtocol(episodes=1), out=tmp_path / "x.pkl", task_name="t")
+    env = _ScriptedEnv(num_envs=1, schedule=[(3, 5, True)], pool_size=1)
+    env.actions_are_joint_targets = False
+    with pytest.raises(ValueError, match="normalized or delta actions"):
+        record_demos(env, HoldPolicy(), EvalProtocol(episodes=1), out=tmp_path / "y.pkl", task_name="t")
+
+
+def test_record_demos_keeps_the_policy_provenance(tmp_path):
+    from metasim.bench import record_demos
+
+    env = _ScriptedEnv(num_envs=1, schedule=[(3, 5, True)], pool_size=1)
+    result, _ = record_demos(
+        env, HoldPolicy(), EvalProtocol(episodes=1), out=tmp_path / "d.pkl", task_name="t",
+        policy_info={"spec": "pkg.mod:Policy", "checkpoint": "ckpt.pt", "checkpoint_sha256": "ab" * 32},
+    )  # fmt: skip
+    assert result.policy["spec"] == "pkg.mod:Policy" and result.policy["checkpoint_sha256"] == "ab" * 32
+    sidecar = json.loads((tmp_path / "d.pkl.json").read_text())
+    assert sidecar["policy"]["checkpoint"] == "ckpt.pt", "the sidecar says which checkpoint produced the demos"
+
+
+def test_health_task_isolated_forwards_the_gate_flags(monkeypatch, tmp_path):
+    """The child must receive --demos, --floor and --repeat, or the isolated gate can never say unreliable/flaky."""
+    import subprocess
+    from types import SimpleNamespace
+
+    import metasim.__main__ as cli
+
+    calls = []
+
+    def fake_run(cmd, check, stdout, stderr, env):
+        calls.append(cmd)
+        out_dir = cmd[cmd.index("--out-dir") + 1]
+        cli._write_health_row(out_dir, {"task": "t", "status": "ok", "success_rate": 1.0, "episodes": 2, "detail": ""})
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    args = SimpleNamespace(
+        sim="isaacsim", num_envs=1, episodes=2, seed=5, threshold=0.8, out_dir=str(tmp_path), robot=["franka"],
+        max_steps=None, device=None, demos="demos/t/v2", floor=True, repeat=3,
+    )  # fmt: skip
+    row = cli._health_task_isolated("t", args)
+    cmd = calls[-1]
+    assert cmd[cmd.index("--demos") + 1] == "demos/t/v2" and "--floor" in cmd and cmd[cmd.index("--repeat") + 1] == "3"
+    assert row["status"] == "ok"
+    # without the flags nothing is forwarded
+    calls.clear()
+    cli._health_task_isolated("t", SimpleNamespace(**{**vars(args), "demos": None, "floor": False, "repeat": 1}))
+    assert "--demos" not in calls[-1] and "--floor" not in calls[-1] and "--repeat" not in calls[-1]
+    assert "invalid" in cli.HEALTH_STATUSES and "invalid" in cli.HEALTH_FAILING
+
+
+def test_instance_pool_treats_a_missing_demo_file_as_no_recorded_instances(tmp_path):
+    """A task whose demo file nobody recorded yet (bench record is about to) evaluates from its own initial states."""
+    from metasim.bench.instances import _build_instance_pool
+
+    env = SimpleNamespace(
+        traj_filepath=str(tmp_path / "trajs" / "new_task" / "v2"),
+        scenario=SimpleNamespace(robots=[SimpleNamespace(name="bot")]),
+        handler=None,
+    )
+    assert _build_instance_pool(env) == []
+
+
+def test_validate_instances_tolerates_float32_round_off_at_a_limit():
+    """0.0400013 at a 0.04 limit is a recorded state that went through float32, not an unphysical start."""
+    from metasim.bench.instances import JOINT_LIMIT_TOL, TaskInstance, validate_instances
+
+    robot = SimpleNamespace(name="franka", joint_limits={"f1": (0.0, 0.04), "j1": (-2.0, 2.0)})
+    env = SimpleNamespace(scenario=SimpleNamespace(robots=[robot]))
+
+    def inst(f1, j1=0.0):
+        return TaskInstance(index=0, seed=0, state={"robots": {"franka": {"dof_pos": {"f1": f1, "j1": j1}}}})
+
+    assert validate_instances(env, [inst(0.04000125825405121)]) == []
+    assert validate_instances(env, [inst(-0.00005)]) == [], "inside the tolerance on the low side too"
+    assert JOINT_LIMIT_TOL == 1e-4
+    assert validate_instances(env, [inst(0.0402)]) and validate_instances(env, [inst(-0.034)])
+    assert "j1=3.000 outside [-2.000, 2.000]" in validate_instances(env, [inst(0.0, 3.0)])[0]

@@ -8,7 +8,11 @@ from metasim.utils import configclass
 
 @configclass
 class RobotTemplateCfg(RobotCfg):
-    """This is a minimal template for creating new robot configurations."""
+    """This is a minimal template for creating new robot configurations.
+
+    Generate one from an MJCF instead with ``python -m metasim robot add --mjcf <path> --name <robot>``: it reads the
+    joints, limits, servo gains, default pose and tool body from the file and runs ``robot check`` on the result.
+    """
 
     # ==================== Basic Information ====================
     name: str = "robot_template"

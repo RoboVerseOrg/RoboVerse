@@ -32,6 +32,9 @@ class RslRlPPOTrackingConfig(RslRlPPOConfig):
     wandb_project: str = "rsl_rl_ppo_tracking"
 
     # Environment / device
+    # The BeyondMimic tracking tasks ("motion-tracking", "motion-tracking-isaaclab", "-deploy") were retired on
+    # 2026-11-27 (roboverse_pack/tasks/RETIRED_TASKS.md): they could not be gated without the WandB motion registry.
+    # Restore their registration before training; until then this default resolves to an unknown task.
     task = "motion-tracking-isaaclab"
     robot = "g1_tracking"  # unused
     sim: SimBackend = "isaacsim"

@@ -1,0 +1,121 @@
+{
+ "robot": "franka",
+ "sim_a": "mujoco",
+ "sim_b": "isaacsim",
+ "steps": 400,
+ "control_dt": 0.015,
+ "peak_velocity": 1.5167732046177624,
+ "judged": true,
+ "ok": true,
+ "rows": [
+  {
+   "joint": "panda_finger_joint1",
+   "kind": "slide",
+   "max_diff": 4.3042004108428955e-05,
+   "rms_diff": 1.0290676241521822e-05,
+   "tracking_a": 0.0009235606820053657,
+   "tracking_b": 0.0008992457122273048,
+   "tol": 0.005,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_finger_joint2",
+   "kind": "slide",
+   "max_diff": 8.135661482810974e-05,
+   "rms_diff": 3.0000158825278664e-05,
+   "tracking_a": 0.0009204642474651345,
+   "tracking_b": 0.0009091468155384072,
+   "tol": 0.005,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint1",
+   "kind": "hinge",
+   "max_diff": 0.0028347671031951904,
+   "rms_diff": 0.0008377043320071078,
+   "tracking_a": 0.13863838984457186,
+   "tracking_b": 0.13809395752673378,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint2",
+   "kind": "hinge",
+   "max_diff": 0.0004900693893432617,
+   "rms_diff": 0.0002554496451007753,
+   "tracking_a": 0.08365414980041197,
+   "tracking_b": 0.0837797963915985,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint3",
+   "kind": "hinge",
+   "max_diff": 0.0023673400282859802,
+   "rms_diff": 0.0008339702354533692,
+   "tracking_a": 0.06914939989860723,
+   "tracking_b": 0.06688461198996375,
+   "tol": 0.05,
+   "lag_a": 3,
+   "lag_b": 3,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint4",
+   "kind": "hinge",
+   "max_diff": 0.0009214878082275391,
+   "rms_diff": 0.00030282890261766214,
+   "tracking_a": 0.07106739351049729,
+   "tracking_b": 0.07132871388898421,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint5",
+   "kind": "hinge",
+   "max_diff": 0.0030753016471862793,
+   "rms_diff": 0.001685988325204387,
+   "tracking_a": 0.17626568660970454,
+   "tracking_b": 0.1733378507847695,
+   "tol": 0.05,
+   "lag_a": 8,
+   "lag_b": 8,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint6",
+   "kind": "hinge",
+   "max_diff": 0.003385782241821289,
+   "rms_diff": 0.0018222507624780868,
+   "tracking_a": 0.17947159773536803,
+   "tracking_b": 0.17616425520607115,
+   "tol": 0.05,
+   "lag_a": 12,
+   "lag_b": 12,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint7",
+   "kind": "hinge",
+   "max_diff": 0.0009086728096008301,
+   "rms_diff": 0.0005247926396684695,
+   "tracking_a": 0.08407826644278449,
+   "tracking_b": 0.08322735053397101,
+   "tol": 0.05,
+   "lag_a": 4,
+   "lag_b": 4,
+   "ok": true
+  }
+ ],
+ "note": "--amplitude-max 0: full-range probe, 1.5 rad/s peak"
+}

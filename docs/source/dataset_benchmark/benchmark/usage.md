@@ -194,6 +194,39 @@ adapter is expected to honour, and a served policy reads them from `PolicyContex
 scores a result only under its own tier (`bench suite run --access` and `bench suite report --access`
 set it for the whole suite); `bench summarize` shows the tier of every row.
 
+## Suites on Isaac Sim
+
+Isaac Sim boots once per process and ends the process in `close()`, so the tasks of a suite cannot share one
+interpreter there. `bench suite run --isolate auto` (the default) scores each task in a child `bench run`
+on such backends and collects the result files; `--isolate always` does the same on any backend, `never`
+keeps one process:
+
+```bash
+python -m metasim bench suite run --suite tabletop-mujoco --sim isaacsim --policy replay --episodes 10
+```
+
+## Recording demos with a policy
+
+A task needs demos before the replay gate can judge it. `bench record` drives a task with any policy
+through the same evaluator, keeps the episodes the task scores as successful, and writes the
+`{robot: [{"init_state", "actions", "states"}]}` file that `get_traj` loads and `bench health` replays.
+The default policy is the scripted skills, so a new tabletop task gets a gated demo set without a human
+in the loop:
+
+```bash
+python -m metasim bench record --task pick_cube --sim mujoco --episodes 50 \
+    --out roboverse_data/trajs/maniskill/pick_cube/v2/franka_v2.pkl.gz          # scripted skills by default
+python -m metasim bench health --sim mujoco --task pick_cube --floor --repeat 2 \
+    --demos roboverse_data/trajs/maniskill/pick_cube/v2                          # gate the recorded set
+python -m metasim bench run --task pick_cube --sim mujoco --policy replay --demos <dir>   # evaluate against it
+```
+
+`--demos` on `bench run` and `bench health` points the instance pool at another demo file or directory
+than the task's own, so a recorded set is checked before it replaces the published one. `--keep-failures`
+also writes the failed episodes (for failure datasets); a JSON sidecar next to the file records the
+policy, protocol, and how many episodes were kept. Recorded this way on 2026-11-28: the five tabletop
+tasks, 20 episodes each with the scripted skills, every set replaying at 1.0 under the gate.
+
 ## Methods x perspectives: the first matrix
 
 The tiers only pay off when several *method families* are scored under several of them with one
@@ -279,6 +312,19 @@ Measured on 2026-11-27 (`bench matrix` output, 10 episodes per task; the suite p
 
 </details>
 
+Two rows were added on 2026-11-28 and live in `results/` (see the [leaderboard](leaderboard.md)): the **Isaac Sim 6
+twin** of the suite (replay 0.9 to 1.0 per task, the scripted skills 1.0 on pick, push and stack and 0.7 on pull with
+no change to the skills, so the matrix can carry an engine column), and the first **learned row**: a diffusion policy
+(`ddpm_dit`, `roboverse_learn/il`) trained for 100 epochs per task on scripted demos recorded with `bench record`
+(100 demos for pick, push and stack, 64 for pull, 48 for the peg) and scored under the `visual` tier with the
+collection camera, 20 episodes per task: push 1.00, pull 0.90, pick 0.75, peg 0.70, stack 0.20, macro 0.71. The
+ordering is informative in itself: the task the agent and the VLA found hardest from images (stack) is where the
+learned policy is weakest. The peg row has a story the gate now tells on its own: the shipped peg demos start the
+fingers at 1.0 in a 0 to 0.04 range (`bench health` reports them `invalid`), a policy trained on 48 demos collected
+from that start scored 0.55, and the policy trained on 83 demos recorded from the corrected start scores 0.70 from
+the corrected instances (`--demos`) and 0.00 from the shipped ones. An unphysical initial state is not a harder
+task; it is a different task, and the number says nothing until the state is fixed.
+
 What the matrix is meant to show, and what the first one does show: the replay ceiling and the scripted
 oracle bound what a perfect perception stack could reach; the same agent drops from near the oracle to
 near zero when its object poses are taken away, which is the perception gap the `agent-skills` tier
@@ -354,7 +400,8 @@ What a robot config promises, and what the MuJoCo and Newton handlers enforce:
 - **Joints.** `joint_limits` and `default_joint_positions` list every joint of the asset, in any
   order; the handler's joint vector is the asset's joints sorted by name, and that is the layout of
   `joint_pos`, `joint_pos_target` and the action tensor.
-- **Actuators are named after their joint.** `RobotCfg.actuators` is keyed by joint name. A joint the
+- **Actuators are matched to joints by their transmission.** `RobotCfg.actuators` is keyed by joint name;
+  the asset's actuator names are free (a Menagerie hand's `lh_A_WRJ2` drives `lh_WRJ2`). A joint the
   MJCF actuates keeps the asset's servo unless the config sets `stiffness` / `damping`; a joint the
   MJCF does not actuate gets a servo synthesized from the config (so Menagerie and mjlab files that
   ship no `<actuator>` block work as-is). A joint in neither place is **passive**: it is observed, it

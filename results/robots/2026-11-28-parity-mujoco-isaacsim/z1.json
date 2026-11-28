@@ -1,0 +1,84 @@
+{
+ "robot": "z1",
+ "sim_a": "mujoco",
+ "sim_b": "isaacsim",
+ "steps": 400,
+ "control_dt": 0.015,
+ "peak_velocity": 0.6282151815625979,
+ "judged": true,
+ "ok": true,
+ "rows": [
+  {
+   "joint": "joint1",
+   "kind": "hinge",
+   "max_diff": 0.001139312982559204,
+   "rms_diff": 0.0008820102659583153,
+   "tracking_a": 0.058306182337104176,
+   "tracking_b": 0.05744215029015973,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "joint2",
+   "kind": "hinge",
+   "max_diff": 0.0009174942970275879,
+   "rms_diff": 0.0006458860587761223,
+   "tracking_a": 0.05817106227580238,
+   "tracking_b": 0.05748089098662024,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "joint3",
+   "kind": "hinge",
+   "max_diff": 0.0010561645030975342,
+   "rms_diff": 0.0008382476528055405,
+   "tracking_a": 0.05819359469145369,
+   "tracking_b": 0.057298154112992994,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "joint4",
+   "kind": "hinge",
+   "max_diff": 0.0006116479635238647,
+   "rms_diff": 0.0002713250274120471,
+   "tracking_a": 0.05692415928572303,
+   "tracking_b": 0.05718087649077064,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "joint5",
+   "kind": "hinge",
+   "max_diff": 0.0009290874004364014,
+   "rms_diff": 0.0003960399538318572,
+   "tracking_a": 0.05666691304474955,
+   "tracking_b": 0.057162361489178797,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "joint6",
+   "kind": "hinge",
+   "max_diff": 0.0007502138614654541,
+   "rms_diff": 0.0004370780489382509,
+   "tracking_a": 0.05657044758379341,
+   "tracking_b": 0.057132985045312654,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  }
+ ]
+}

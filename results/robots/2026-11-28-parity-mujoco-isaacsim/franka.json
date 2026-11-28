@@ -1,0 +1,120 @@
+{
+ "robot": "franka",
+ "sim_a": "mujoco",
+ "sim_b": "isaacsim",
+ "steps": 400,
+ "control_dt": 0.015,
+ "peak_velocity": 0.6282151815625979,
+ "judged": true,
+ "ok": true,
+ "rows": [
+  {
+   "joint": "panda_finger_joint1",
+   "kind": "slide",
+   "max_diff": 1.0930001735687256e-05,
+   "rms_diff": 4.723879874105577e-06,
+   "tracking_a": 0.000928764912552317,
+   "tracking_b": 0.0009194703132576545,
+   "tol": 0.005,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_finger_joint2",
+   "kind": "slide",
+   "max_diff": 2.353265881538391e-05,
+   "rms_diff": 7.860875373828221e-06,
+   "tracking_a": 0.0009279409050941476,
+   "tracking_b": 0.0009226174652576455,
+   "tol": 0.005,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint1",
+   "kind": "hinge",
+   "max_diff": 0.004327591508626938,
+   "rms_diff": 0.0011339407562745208,
+   "tracking_a": 0.05803804278040636,
+   "tracking_b": 0.05701946148007943,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint2",
+   "kind": "hinge",
+   "max_diff": 0.00045692920684814453,
+   "rms_diff": 0.0002225238732832436,
+   "tracking_a": 0.056671976565538684,
+   "tracking_b": 0.05705572037593054,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint3",
+   "kind": "hinge",
+   "max_diff": 0.0011388063430786133,
+   "rms_diff": 0.00042613915858547295,
+   "tracking_a": 0.027843999760964414,
+   "tracking_b": 0.027065992796658712,
+   "tol": 0.05,
+   "lag_a": 3,
+   "lag_b": 3,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint4",
+   "kind": "hinge",
+   "max_diff": 0.0011408329010009766,
+   "rms_diff": 0.00035419188434761056,
+   "tracking_a": 0.057160896817122886,
+   "tracking_b": 0.05702391623610126,
+   "tol": 0.05,
+   "lag_a": 6,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint5",
+   "kind": "hinge",
+   "max_diff": 0.0012520402669906616,
+   "rms_diff": 0.0006915191226641534,
+   "tracking_a": 0.07298515414951696,
+   "tracking_b": 0.0717600078009288,
+   "tol": 0.05,
+   "lag_a": 8,
+   "lag_b": 8,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint6",
+   "kind": "hinge",
+   "max_diff": 0.002186298370361328,
+   "rms_diff": 0.0011787057017102608,
+   "tracking_a": 0.11442540625645226,
+   "tracking_b": 0.1122604012251629,
+   "tol": 0.05,
+   "lag_a": 12,
+   "lag_b": 12,
+   "ok": true
+  },
+  {
+   "joint": "panda_joint7",
+   "kind": "hinge",
+   "max_diff": 0.0003834962844848633,
+   "rms_diff": 0.00021702608288028824,
+   "tracking_a": 0.03482746645677248,
+   "tracking_b": 0.03447329565751711,
+   "tol": 0.05,
+   "lag_a": 4,
+   "lag_b": 4,
+   "ok": true
+  }
+ ]
+}

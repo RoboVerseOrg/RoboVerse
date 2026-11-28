@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from .access import ACCESS_PROFILES, AccessProfile, get_access_profile, restrict_observation
 from .evaluator import build_context, evaluate
-from .instances import TaskInstance, demo_budget, hash_state, instance_pool, plan_instances
+from .instances import TaskInstance, demo_budget, hash_state, instance_pool, plan_instances, validate_instances
 from .policy import (
     BUILTIN_POLICIES,
     HoldPolicy,
@@ -26,7 +26,8 @@ from .policy import (
 )
 from .prompts import PromptBank, PromptDraw, task_prompt_bank
 from .protocol import PROMPT_SPLITS, SUCCESS_RULES, EvalProtocol
-from .remote import PolicyServer, RemotePolicy
+from .record import RecordingPolicy, flatten_initial_state, record_demos
+from .remote import ConformanceReport, PolicyServer, RemotePolicy, conformance
 from .result import (
     SCHEMA,
     SCHEMA_VERSION,
@@ -49,6 +50,7 @@ __all__ = [
     "AccessProfile",
     "BenchmarkResult",
     "BenchmarkSuite",
+    "ConformanceReport",
     "EpisodeResult",
     "EvalProtocol",
     "HoldPolicy",
@@ -58,14 +60,17 @@ __all__ = [
     "PromptBank",
     "PromptDraw",
     "RandomPolicy",
+    "RecordingPolicy",
     "RemotePolicy",
     "ReplayPolicy",
     "SuiteTask",
     "TaskInstance",
     "build_context",
     "checkpoint_sha256",
+    "conformance",
     "demo_budget",
     "evaluate",
+    "flatten_initial_state",
     "get_access_profile",
     "get_suite",
     "hash_state",
@@ -74,12 +79,14 @@ __all__ = [
     "load_policy",
     "matrix",
     "plan_instances",
+    "record_demos",
     "register_suite",
     "restrict_observation",
     "suite_report",
     "suite_table",
     "summarize",
     "task_prompt_bank",
+    "validate_instances",
     "validate_result",
     "wilson_interval",
 ]

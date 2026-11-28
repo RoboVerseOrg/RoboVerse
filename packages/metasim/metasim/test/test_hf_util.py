@@ -376,3 +376,53 @@ def test_companions_are_looked_for_once_per_directory(monkeypatch, tmp_path):
     assert probes == first
     hf_util._fetch_companions(str(scene / "mesh.obj"))  # not a description file: never probed
     assert probes == first
+
+
+@pytest.mark.general
+def test_a_usd_download_brings_its_folder(monkeypatch, tmp_path):
+    """A USD composes from the files next to it, so a missing USD fetches its folder, not the one file."""
+    local = tmp_path / "roboverse_data"
+    usd = local / "robots" / "shell" / "usd" / "robot.usd"
+    trees, singles = [], []
+
+    def fake_tree(rel_dir):
+        trees.append(rel_dir)
+        usd.parent.mkdir(parents=True, exist_ok=True)
+        usd.write_bytes(b"PXR-USDC")
+        (usd.parent / "configuration").mkdir()
+        return True
+
+    monkeypatch.setattr(hf_util, "LOCAL_DIR", str(local))
+    monkeypatch.setattr(hf_util, "_download_tree", fake_tree)
+    monkeypatch.setattr(hf_util.hf_api, "file_exists", lambda repo_id, filename, repo_type: True)
+    monkeypatch.setattr(hf_util, "hf_hub_download", lambda **kw: singles.append(kw["filename"]))
+    monkeypatch.setattr(hf_util, "_fetch_companions", lambda path: None)
+    check_and_download_single(str(usd))
+    assert trees == ["robots/shell/usd"] and singles == [] and usd.exists()
+    # an MJCF keeps the single-file path (its meshes are fetched by the recursive downloader)
+    mjcf = local / "robots" / "shell" / "mjcf" / "robot.xml"
+    check_and_download_single(str(mjcf))
+    assert trees == ["robots/shell/usd"] and singles == ["robots/shell/mjcf/robot.xml"]
+
+
+@pytest.mark.general
+def test_usd_composition_is_not_probed_without_a_loaded_pxr(monkeypatch, tmp_path):
+    """The composition probe uses only a ``pxr`` the process already imported (a second one breaks Isaac Sim)."""
+    import sys
+
+    usd = tmp_path / "robot.usd"
+    usd.write_bytes(b"PXR-USDC")
+    monkeypatch.delitem(sys.modules, "pxr", raising=False)
+    imported = []
+
+    class _Finder:
+        @staticmethod
+        def find_spec(name, path=None, target=None):
+            if name == "pxr" or name.startswith("pxr."):
+                imported.append(name)
+            return None
+
+    monkeypatch.setattr(sys, "meta_path", [_Finder(), *sys.meta_path])
+    hf_util._USD_COMPOSED.discard(os.path.realpath(str(usd)))
+    check_and_download_single(str(usd))  # exists locally: only the composition hook runs
+    assert imported == [], "the downloader must not import pxr on its own"

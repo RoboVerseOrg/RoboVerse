@@ -31,7 +31,6 @@ BUDGET = {
     "tasks/maniskill": 30,  # the native-task registrations were retired on 2026-11-27 (RETIRED_TASKS.md)
     "tasks/libero": 17,  # the LIBERO ports were retired on 2026-11-27 (RETIRED_TASKS.md); the passthrough helpers remain
     "tasks/beyondmimic": 10,
-    "tasks/robosuite": 7,
     "roboverse_pack/callback_funcs": 6,
     "roboverse_pack/utils": 2,
 }

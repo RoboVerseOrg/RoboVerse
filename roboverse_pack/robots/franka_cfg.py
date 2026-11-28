@@ -8,10 +8,16 @@ from metasim.utils import configclass
 
 @configclass
 class FrankaCfg(RobotCfg):
-    """Cfg for the Franka Emika Panda robot.
+    """Cfg for the Franka Emika Panda robot: the reference embodiment of the tabletop suite.
 
-    Args:
-        RobotCfg (_type_): _description_
+    Cross-engine note (``python -m metasim robot parity franka --sims mujoco isaacsim``, 2026-11-28): MuJoCo and
+    Isaac Sim 6 track the same joint trajectory within 0.005 rad at 0.6 rad/s and within 0.004 rad at 1.5 rad/s. The
+    actuators set no ``effort_limit_sim``, so MuJoCo clamps every arm joint at the Menagerie MJCF's +-40 N m while
+    Isaac Sim uses the USD's 87 N m (joints 1-4) and 12 N m (joints 5-7); those trajectories do not expose the
+    difference. Pinning the datasheet limits here changes the MuJoCo dynamics the shipped demos were recorded under
+    (``bench health`` then replays stack_cube at 0.6 and pick_cube at 0.8 instead of 1.0), so the limits stay
+    unpinned until the demos are re-recorded for a protocol bump. Do not change the gains or limits here without
+    re-running the gate.
     """
 
     name: str = "franka"

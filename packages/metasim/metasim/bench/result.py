@@ -264,16 +264,19 @@ def summarize(results: list[BenchmarkResult]) -> str:
 def matrix(results: list[BenchmarkResult]) -> str:
     """Methods x information-access tiers: one Markdown table of task-macro success, then the per-task rows.
 
-    Rows are policies (``policy.name``, with the recorded ``family`` when present), columns the access tiers
-    the results were run under. A cell is the mean over tasks of each task's pooled success rate, with the
+    Rows are policies (``policy.name``, with the recorded ``family`` when present; suffixed ``@<simulator>`` when the
+    results span several engines, which are never pooled), columns the access tiers the results were run under. A cell is the mean over tasks of each task's pooled success rate, with the
     task count and the pooled episode count; a method evaluated on fewer tasks than another in the same column
     is marked ``*`` so the macros are not read as comparable. The second table lists every task row with its
     Wilson interval.
     """
     cells: dict[tuple[str, str, str], tuple[int, int]] = {}
     families: dict[str, str] = {}
+    simulators = {str(result.simulator) for result in results}
     for result in results:
         policy = str(result.policy.get("name", "?"))
+        if len(simulators) > 1:  # engines are never pooled: the same method on another engine is another row
+            policy = f"{policy} @{result.simulator}"
         if result.policy.get("family"):
             families[policy] = str(result.policy["family"])
         tier = _access_label(_access_key(result.protocol.get("access")))

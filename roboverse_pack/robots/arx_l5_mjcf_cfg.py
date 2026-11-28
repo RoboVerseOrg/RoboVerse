@@ -32,7 +32,7 @@ class ArxL5Cfg(RobotCfg):
         "joint4": BaseActuatorCfg(stiffness=1e5, damping=1e4, velocity_limit=2.175),
         "joint5": BaseActuatorCfg(stiffness=400, damping=50, velocity_limit=2.61),
         "joint6": BaseActuatorCfg(stiffness=250, damping=50, velocity_limit=2.61),
-        "gripper": BaseActuatorCfg(stiffness=1000, damping=100, velocity_limit=0.2, is_ee=True),
+        "joint7": BaseActuatorCfg(stiffness=1000, damping=100, velocity_limit=0.2, is_ee=True),
     }
 
     joint_limits: dict[str, tuple[float, float]] = {
@@ -42,20 +42,22 @@ class ArxL5Cfg(RobotCfg):
         "joint4": (-1.7, 1.7),
         "joint5": (-1.7, 1.7),
         "joint6": (-3.14, 3.14),
-        "gripper": (0, 0.044),
+        "joint7": (0, 0.044),
         "joint8": (-0.044, 0),
     }
 
-    ee_body_name: str = "tool0"
+    ee_body_name: str = (
+        "link6"  # the MJCF has no "tool0"; this is its last link before the tool (robot check, 2026-11-28)
+    )
 
     default_joint_positions: dict[str, float] = {
         "joint1": 0.0,
-        "joint2": -0.785398,
+        "joint2": 0.785398,  # inside the MJCF range (0, 3.14); -0.785 was unreachable (robot check, 2026-11-28)
         "joint3": 0.0,
-        "joint4": -2.356194,
+        "joint4": -1.570796,  # inside the MJCF range (-1.7, 1.7)
         "joint5": 0.0,
         "joint6": 1.570796,
-        "gripper": 0.044,
+        "joint7": 0.044,
         "joint8": -0.044,
     }
 
@@ -66,7 +68,7 @@ class ArxL5Cfg(RobotCfg):
         "joint4": "position",
         "joint5": "position",
         "joint6": "position",
-        "gripper": "position",
+        "joint7": "position",
         "joint8": "position",
     }
 

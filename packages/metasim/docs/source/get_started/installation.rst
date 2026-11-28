@@ -99,7 +99,7 @@ lists the exact versions.
 .. note::
    Isaac Sim 5.x with Isaac Lab 2.x is no longer supported: the version policy in ``metasim/sim/_versions.py``
    refuses it. The legacy code path still exists and can be forced with ``METASIM_SKIP_VERSION_CHECK=1``, but it
-   is not tested. Isaac Sim 4.5 (the ``isaacsim211`` extra) is likewise legacy.
+   is not tested. Isaac Sim 4.5 is not supported (its ``isaacsim211`` extra was removed; use ``isaacsim`` or ``tools/install/isaacsim6.sh``).
 
 .. note::
    If you encounter an error such as 'GLIBCXX_3.4.30' not found when running Isaac Sim in a conda environment, try installing GCC 12.1.0 with ``conda install -c conda-forge gcc=12.1.0``. See `Stack Overflow thread <https://stackoverflow.com/questions/72540359/glibcxx-3-4-30-not-found-for-librosa-in-conda-virtual-environment-after-tryin>`__ for more details.

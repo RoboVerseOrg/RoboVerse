@@ -45,6 +45,25 @@ class KinovaGen3Robotiq2f85Cfg(RobotCfg):
         "left_inner_finger_knuckle_joint": (-math.pi, math.pi),  # actually is -inf to +inf
         "right_inner_finger_knuckle_joint": (-math.pi, math.pi),  # actually is -inf to +inf
     }
+    # Filled 2026-11-28: the zero pose clamped into the limits, which is what the handlers fell back to without a default (robot check config row).
+    default_joint_positions: dict[str, float] = {
+        "joint_1": 0.0,
+        "joint_2": 0.0,
+        "joint_3": 0.0,
+        "joint_4": 0.0,
+        "joint_5": 0.0,
+        "joint_6": 0.0,
+        "joint_7": 0.0,
+        "finger_joint": 0.0,
+        "left_outer_finger_joint": 0.0,
+        "right_outer_finger_joint": 0.0,
+        # the passive linkage joints (no actuator): explicit so the backends agree on the reset pose
+        "right_outer_knuckle_joint": 0.0,
+        "left_inner_finger_joint": 0.0,
+        "right_inner_finger_joint": 0.0,
+        "left_inner_finger_knuckle_joint": 0.0,
+        "right_inner_finger_knuckle_joint": 0.0,
+    }
     ee_body_name: str = "end_effector_link"
 
     gripper_open_q = [0.0]

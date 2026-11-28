@@ -92,12 +92,8 @@ _KNOWN_DEFAULT_POS_ORPHAN_GAPS: dict[str, str] = {
 }
 
 _KNOWN_DEFAULT_POS_OUT_OF_RANGE_GAPS: dict[str, str] = {
-    "ArxL5Cfg": "joint2/joint4 defaults copy-pasted from Franka home pose; limits are ArxL5's narrower ranges.",
-    "VegaCfg": "torso_j1 default 0.0 but joint_limits is the single-point [0.2, 0.2] — limit looks like a fixed offset, not a range.",
-    "SoArm100Cfg": "Wrist_Pitch default -2.356 (Franka-style) outside [-0.192, 3.927].",
-    "KochCfg": "wrist_pitch default -2.356 (Franka-style) outside [-0.192, 3.927].",
-    "Go2Cfg": "RL/RR_thigh_joint default 1.0 outside [-4.54, 0.52] — sign or value error in stand-pose default.",
-    "AllegroHandCfg": "thumb_joint_0 default 0.0 below lower limit 0.263; either default→0.263 or limit→0.",
+    # ArxL5, SoArm100 and Koch left this list on 2026-11-28: their limits now match their MJCFs and the
+    # defaults lie inside them (`python -m metasim robot check`).
 }
 
 
@@ -224,83 +220,11 @@ def test_g1_tracking_resolves_mjx_mjcf_path():
     assert len(cfg.action_scale) == len(cfg.actuators)
 
 
-@pytest.mark.general
-def test_anymal_default_orientation_is_wxyz_identity():
-    """Regression: ANYmal's default_orientation must be wxyz identity [1,0,0,0].
-
-    Handlers consume default_orientation as wxyz (mujoco.py reads qw,qx,qy,qz;
-    isaacgym reorders wxyz->xyzw). The value was [0,0,0,1] (the xyzw identity),
-    which under wxyz is a 180 degree yaw — ANYmal would spawn facing backwards.
-    """
-    from roboverse_pack.robots.anymal_cfg import AnymalCfg
-
-    cfg = AnymalCfg()
-    assert cfg.default_orientation == [1.0, 0.0, 0.0, 0.0], (
-        f"expected wxyz identity [1,0,0,0], got {cfg.default_orientation} "
-        f"(w must be the largest component for an identity quaternion)"
-    )
-
-
-@pytest.mark.general
-def test_g1_feet_cfg_imports_and_constructs():
-    """Regression: ``roboverse_pack.robots.g1_feet`` must import and construct.
-
-    Every ``BaseActuatorCfg`` in that file used to pass ``kp=/kd=/force_limit=`` —
-    none of which are fields of ``BaseActuatorCfg`` — so *importing the module*
-    raised ``TypeError`` at class-body evaluation. Because the crash happened at
-    import time, ``roboverse_pack.robots.__init__`` swallowed it and ``Go1FeetCfg``
-    silently never registered as a ``RobotCfg`` subclass. The correct field names
-    are ``stiffness`` (kp), ``damping`` (kd), and ``effort_limit_sim`` (force limit),
-    as consumed by the mujoco/isaacgym/newton/pybullet handlers.
-    """
-    import importlib
-
-    mod = importlib.import_module("roboverse_pack.robots.g1_feet")
-    cfg = mod.Go1FeetCfg()
-    assert cfg.name == "go1_feet"
-    assert len(cfg.actuators) == 12
-    # Gains/limits from the XML must survive under the correct field names.
-    hip = cfg.actuators["FR_hip"]
-    assert (hip.stiffness, hip.damping, hip.effort_limit_sim) == (35.0, 0.5, 23.7)
-    assert cfg.actuators["FR_calf"].effort_limit_sim == 35.55
-
-
 # Joints that are *deliberately* pinned to a single point (lo == hi). These are
 # intentional design choices (locked/unused DoF, or a fixed offset expressed as a
 # degenerate range), not the unintended dropped-sign bug the test below hunts for.
 # Keyed by cfg class name -> set of joint names that are allowed to be degenerate.
-_DELIBERATELY_LOCKED_JOINTS: dict[str, set[str]] = {
-    # VegaCfg locks its wheels, right arm/hand, and unused torso DoF; torso_j1 is a
-    # fixed offset [0.2, 0.2]. All intentional — see vega_cfg.py.
-    "VegaCfg": {
-        "B_wheel_j1",
-        "B_wheel_j2",
-        "R_wheel_j1",
-        "R_wheel_j2",
-        "L_wheel_j1",
-        "L_wheel_j2",
-        "torso_j1",
-        "torso_j3",
-        "R_arm_j1",
-        "R_arm_j2",
-        "R_arm_j3",
-        "R_arm_j4",
-        "R_arm_j5",
-        "R_arm_j6",
-        "R_arm_j7",
-        "R_th_j0",
-        "R_th_j1",
-        "R_th_j2",
-        "R_ff_j1",
-        "R_ff_j2",
-        "R_mf_j1",
-        "R_mf_j2",
-        "R_rf_j1",
-        "R_rf_j2",
-        "R_lf_j1",
-        "R_lf_j2",
-    },
-}
+_DELIBERATELY_LOCKED_JOINTS: dict[str, set[str]] = {}
 
 
 @pytest.mark.skipif(not _CFG_PARAMS, reason="roboverse_pack not importable")
@@ -334,3 +258,20 @@ def test_robot_cfg_no_unintended_degenerate_joint_limits(cls: type[RobotCfg]):
         f"{degenerate}. If this is intentional, add the joint to "
         f"_DELIBERATELY_LOCKED_JOINTS; otherwise a sign was likely dropped."
     )
+
+
+@pytest.mark.skipif(not _CFG_PARAMS, reason="roboverse_pack not importable")
+@pytest.mark.parametrize("cls", _CFG_PARAMS)
+def test_robot_cfg_asset_fields_name_their_format(cls: type[RobotCfg]):
+    """``usd_path`` names a USD, ``mjcf_path`` an MJCF, ``urdf_path`` a URDF.
+
+    A field pointing at a file of another format reaches the backend that reads it and fails there with an
+    unrelated message (Isaac Sim spawns an empty prim from an MJCF and reports "no rigid bodies"); the rule is
+    ``metasim.utils.asset_check.check_asset_fields``, which ``robot check`` applies in its config row.
+    """
+    from metasim.utils.asset_check import check_asset_fields
+
+    instance = _try_instantiate(cls)
+    if instance is None:
+        pytest.skip(f"{cls.__name__} abstract template")
+    assert check_asset_fields(instance) == [], f"{cls.__name__}: {check_asset_fields(instance)}"

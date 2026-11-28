@@ -296,6 +296,38 @@ def test_get_robot_uses_configured_robot_package(tmp_path, monkeypatch):
 
 
 @pytest.mark.general
+def test_get_robot_resolves_a_class_not_named_after_the_robot(tmp_path, monkeypatch):
+    """``name`` is the key tasks and results use, so ``get_robot(name)`` must work when the class is named otherwise."""
+    robot_pkg = tmp_path / "odd_robots"
+    robot_pkg.mkdir()
+    _write(
+        robot_pkg / "__init__.py",
+        """
+        from metasim.scenario.robot import RobotCfg
+        from metasim.utils import configclass
+
+        @configclass
+        class VendorArmMjcfCfg(RobotCfg):
+            name: str = "arm_v1"
+            num_joints: int = 0
+        """,
+    )
+    _write(tmp_path / "metasim.toml", """
+        [packages]
+        robots = ["odd_robots"]
+        """)  # fmt: skip
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.setattr(package_discovery, "entry_points", lambda: _FakeEntryPoints({}))
+    monkeypatch.delenv("METASIM_CONFIG", raising=False)
+    from metasim.utils.setup_util import get_robot
+
+    assert type(get_robot("arm_v1")).__name__ == "VendorArmMjcfCfg"
+    with pytest.raises(ValueError, match="declares name='no_such_bot' either"):
+        get_robot("no_such_bot")
+
+
+@pytest.mark.general
 def test_task_registry_uses_builtin_example_tasks(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(package_discovery, "entry_points", lambda: _FakeEntryPoints({}))

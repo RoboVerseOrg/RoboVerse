@@ -1,7 +1,7 @@
 [build-system]
 # setuptools >= 84.0.0 is the first release where [tool.setuptools] license-files is stable under PEP 639;
 # an older builder would silently drop NOTICE and the vendored LICENSE files from the wheel.
-requires = ["setuptools>=77", "wheel"]
+requires = ["setuptools>=78.1.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -83,7 +83,6 @@ vla = [
 genesis = ["roboverse-metasim[genesis]>=1.0.0,<1.1"]
 isaacgym = ["roboverse-metasim[isaacgym]>=1.0.0,<1.1"]
 isaacsim = ["roboverse-metasim[isaacsim]>=1.0.0,<1.1"]
-isaacsim211 = ["roboverse-metasim[isaacsim211]>=1.0.0,<1.1"]
 mjx = ["roboverse-metasim[mjx]>=1.0.0,<1.1"]
 mujoco = ["roboverse-metasim[mujoco]>=1.0.0,<1.1"]
 newton = ["roboverse-metasim[newton]>=1.0.0,<1.1"]
@@ -230,9 +229,7 @@ roboverse_pack = [
 "roboverse_pack/tasks/calvin/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
 "roboverse_pack/tasks/libero/**.py" = ["D"]  # FIXME: Peihao add docstring and remove this
 "roboverse_pack/tasks/rlbench/**.py" = ["D"]  # FIXME: Feishi add docstring and remove this
-"roboverse_pack/tasks/robosuite/**.py" = ["D"]  # FIXME: Jiangran add docstring and remove this
 "roboverse_pack/tasks/simpler_env/**.py" = ["D"]  # FIXME: Boshi add docstring and remove this
-"roboverse_pack/tasks/metaworld/**.py" = ["D"]  # FIXME: Siheng add docstring and remove this
 
 [tool.ruff.lint.isort]
 known-first-party = ["metasim", "roboverse_learn", "roboverse_pack", "scripts"]

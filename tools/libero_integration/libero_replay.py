@@ -99,7 +99,7 @@ def _handler(xml: str):
     from metasim.scenario.scenario import ScenarioCfg
     from metasim.scenario.scene import SceneCfg
     from metasim.scenario.simulator_params import SimParamCfg
-    from roboverse_pack.tasks.robosuite.robosuite_env import _GroundlessMujocoHandler
+    from metasim.sim.mujoco.mujoco import MujocoHandler
 
     tmp = tempfile.NamedTemporaryFile(suffix=".xml", delete=False, mode="w")
     tmp.write(xml)
@@ -109,13 +109,15 @@ def _handler(xml: str):
         robots=[],
         lights=[],
         ground=None,
+        # the robosuite-compiled MJCF carries its own arena floor; a default ground would duplicate ``texplane``
+        add_default_ground=False,
         sim_params=SimParamCfg(dt=0.002),
         decimation=25,
         simulator="mujoco",
         num_envs=1,
         headless=True,
     )
-    h = _GroundlessMujocoHandler(sc)
+    h = MujocoHandler(sc)
     h.launch()
     return h
 

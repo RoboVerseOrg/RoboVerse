@@ -101,7 +101,16 @@ def _build_instance_pool(env) -> list[TaskInstance]:
         robot = robots[0] if len(robots) == 1 else robots
         try:
             init_states, all_actions, _ = get_traj(traj, robot, getattr(env, "handler", None))
-        except (FileNotFoundError, KeyError, ValueError) as err:
+        except FileNotFoundError as err:
+            # a task that names a demo file nobody has recorded yet (``bench record`` is about to): the pool is the
+            # task's own initial states, exactly as for a task without demos
+            from loguru import logger as log
+
+            log.warning(
+                f"{type(env).__name__}: no demo file at {traj} ({err}); evaluating from the task's own initial states"
+            )
+            return []
+        except (KeyError, ValueError) as err:
             names = [r.name for r in robots]
             raise ValueError(
                 f"{type(env).__name__}: cannot build the instance pool for robot(s) {names} from {traj}: {err}. "
@@ -186,3 +195,46 @@ def plan_instances(
             )
         )
     return planned
+
+
+JOINT_LIMIT_TOL = 1e-4
+"""How far outside a joint limit a recorded initial state may sit and still be physical: recorded states went through
+float32, so a gripper closed at its 0.04 m limit comes back as 0.0400013 (the RLBench close_box demos). 0.1 mm or
+0.1 mrad is round-off; the states this check exists for are off by whole radians (1.0 in a 0 to 0.04 range)."""
+
+
+def validate_instances(env, instances: list[TaskInstance]) -> list[str]:
+    """The initial states a task ships must be physical: every robot joint inside its limits.
+
+    An out-of-range joint (a Franka finger at 1.0 when its range is 0 to 0.04) is resolved differently by
+    every consumer of the state: one backend clamps, another settles for a few steps, a third leaves it
+    penetrating; the same demo then replays to different outcomes in the gate and in the data pipeline.
+    Returns one line per problem (``"instance 3: franka.panda_finger_joint1=1.000 outside [0.000, 0.040]"``),
+    empty when every state is inside the limits. States without a robot entry and robots without declared
+    limits are not judged.
+    """
+    robots = {r.name: r for r in (getattr(getattr(env, "scenario", None), "robots", None) or [])}
+    problems: list[str] = []
+    for inst in instances:
+        state = inst.state
+        if not isinstance(state, dict):
+            continue
+        entries = state.get("robots") if isinstance(state.get("robots"), dict) else state
+        for name, cfg in robots.items():
+            limits = getattr(cfg, "joint_limits", None) or {}
+            entry = entries.get(name) if isinstance(entries, dict) else None
+            dof = entry.get("dof_pos") if isinstance(entry, dict) else None
+            if not limits or not isinstance(dof, dict):
+                continue
+            for joint, value in dof.items():
+                lo_hi = limits.get(joint)
+                if lo_hi is None:
+                    continue
+                try:
+                    q = float(value.item() if hasattr(value, "item") else value)
+                except (TypeError, ValueError):
+                    continue
+                lo, hi = float(lo_hi[0]), float(lo_hi[1])
+                if not (lo - JOINT_LIMIT_TOL <= q <= hi + JOINT_LIMIT_TOL):
+                    problems.append(f"instance {inst.index}: {name}.{joint}={q:.3f} outside [{lo:.3f}, {hi:.3f}]")
+    return problems

@@ -378,6 +378,22 @@
     }
    ],
    "signature": "(pool: 'list[TaskInstance]', protocol: 'EvalProtocol', *, prompts: 'PromptBank | None' = None, task: 'str' = '') -> 'list[TaskInstance]'"
+  },
+  "validate_instances": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "env"
+    },
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "instances"
+    }
+   ],
+   "signature": "(env, instances: 'list[TaskInstance]') -> 'list[str]'"
   }
  },
  "metasim.bench.policy": {
@@ -1050,6 +1066,102 @@
   }
  },
  "metasim.bench.remote": {
+  "ConformanceReport": {
+   "bases": [],
+   "fields": [
+    "url",
+    "rows",
+    "metadata"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "url"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "rows"
+      },
+      {
+       "default": true,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "metadata"
+      }
+     ],
+     "signature": "(self, url: 'str', rows: 'list[ConformanceRow]' = <factory>, metadata: 'dict[str, Any]' = <factory>) -> None"
+    },
+    "ok": {
+     "params": null,
+     "signature": "<property>"
+    },
+    "table": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'str'"
+    },
+    "to_dict": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      }
+     ],
+     "signature": "(self) -> 'dict[str, Any]'"
+    }
+   }
+  },
+  "ConformanceRow": {
+   "bases": [],
+   "fields": [
+    "check",
+    "ok",
+    "detail"
+   ],
+   "kind": "class",
+   "methods": {
+    "__init__": {
+     "params": [
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "self"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "check"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "ok"
+      },
+      {
+       "default": false,
+       "kind": "POSITIONAL_OR_KEYWORD",
+       "name": "detail"
+      }
+     ],
+     "signature": "(self, check: 'str', ok: 'bool', detail: 'str') -> None"
+    }
+   }
+  },
   "ObsTree": {
    "bases": [
     "dict"
@@ -1109,7 +1221,7 @@
        "name": "body"
       }
      ],
-     "signature": "(self, body: 'bytes') -> 'dict[str, Any]'"
+     "signature": "(self, body: 'bytes | dict[str, np.ndarray]') -> 'dict[str, Any]'"
     },
     "handle_reset": {
      "params": [
@@ -1259,6 +1371,37 @@
    ],
    "signature": "(actions: 'Any', ctx: 'PolicyContext') -> 'np.ndarray'"
   },
+  "conformance": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "url"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "num_envs"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "robot_cfg"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "action_dim"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "timeout"
+    }
+   ],
+   "signature": "(url: 'str', *, num_envs: 'int' = 2, robot_cfg: 'Any' = None, action_dim: 'int' = 7, timeout: 'float' = 60.0) -> 'ConformanceReport'"
+  },
   "flatten_observation": {
    "kind": "function",
    "params": [
@@ -1279,6 +1422,48 @@
     }
    ],
    "signature": "(obs: 'Any', prefix: 'str' = 'obs', keys: 'tuple[str, ...] | None' = None) -> 'dict[str, np.ndarray]'"
+  },
+  "synthetic_context": {
+   "kind": "function",
+   "params": [
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "num_envs"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "robot_cfg"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "action_dim"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "task"
+    }
+   ],
+   "signature": "(*, num_envs: 'int' = 2, robot_cfg: 'Any' = None, action_dim: 'int' = 7, task: 'str' = 'conformance') -> 'PolicyContext'"
+  },
+  "synthetic_observation": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "ctx"
+    },
+    {
+     "default": true,
+     "kind": "KEYWORD_ONLY",
+     "name": "image_hw"
+    }
+   ],
+   "signature": "(ctx: 'PolicyContext', *, image_hw: 'tuple[int, int]' = (64, 64)) -> 'dict[str, np.ndarray]'"
   },
   "unflatten_observation": {
    "kind": "function",
@@ -1577,6 +1762,17 @@
      "signature": "(self, index: 'int', env_id: 'int', instance_index: 'int', instance_id: 'str', seed: 'int', success: 'bool', steps: 'int', terminated: 'bool', time_out: 'bool', return_sum: 'float', first_success_step: 'int | None' = None, prompt: 'str | None' = None, prompt_variant: 'str | None' = None, wall_time_s: 'float | None' = None, over_budget: 'bool | None' = None) -> None"
     }
    }
+  },
+  "matrix": {
+   "kind": "function",
+   "params": [
+    {
+     "default": false,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "results"
+    }
+   ],
+   "signature": "(results: 'list[BenchmarkResult]') -> 'str'"
   },
   "result_key": {
    "kind": "function",
@@ -10583,6 +10779,17 @@
     }
    ],
    "signature": "(sim: 'SimType')"
+  },
+  "list_robots": {
+   "kind": "function",
+   "params": [
+    {
+     "default": true,
+     "kind": "POSITIONAL_OR_KEYWORD",
+     "name": "packages"
+    }
+   ],
+   "signature": "(packages: 'list[str] | None' = None) -> 'dict[str, str]'"
   }
  },
  "metasim.utils.site_util": {

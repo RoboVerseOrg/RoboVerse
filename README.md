@@ -16,7 +16,21 @@
 </p>
 
 
+## What RoboVerse is (1.0)
+
+RoboVerse is an **evaluation entry for robot policies**: one evaluator, one result schema, explicit
+information-access tiers (what a policy may see is part of the protocol), tasks that passed a replay gate on
+the engines the release stands behind (MuJoCo and Isaac Sim 6), and a leaderboard where every number has a
+result file. Policies plug in as a tiny Python protocol or are served over HTTP from their own environment,
+so a model never has to leave your infrastructure to be scored.
+
+- [Evaluate a policy in ten minutes](docs/source/start/evaluate_a_policy.md)
+- [Add a task](docs/source/start/add_a_task.md) and [add a robot](docs/source/start/add_a_robot.md): the gate is the review
+- [Leaderboard](docs/source/dataset_benchmark/benchmark/leaderboard.md), generated from `results/`
+- `roboverse_pack/tasks/RETIRED_TASKS.md`: what was removed by the gate and how to bring it back
+
 ## 💡 News
+- [2026-11-28] 1.0: the benchmark protocol (`python -m metasim bench`), information-access tiers, the methods x perspectives matrix, and a task registry curated to what passes the gate.
 - [2025-04-10] RoboVerse gets accepted by RSS 2025!
 - [2025-04-03] Code released! This codebase is actively evolving, and we are continuously working to improve it. Contributions from the open-source community are highly encouraged, and we welcome feedback and bug reports through the GitHub Issues page.
 

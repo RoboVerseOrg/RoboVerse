@@ -3,4 +3,4 @@
 from .base import EmbodiedGenBaseTask
 from .put_mug import PutMugTask
 
-__all__ = ["EmbodiedGenBaseTask", "PutBananaTask", "PutMugTask"]
+__all__ = ["EmbodiedGenBaseTask", "PutMugTask"]

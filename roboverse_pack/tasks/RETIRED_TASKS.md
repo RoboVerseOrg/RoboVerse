@@ -8,14 +8,14 @@ Restore one task:
 git checkout 56a0e67b -- roboverse_pack/tasks/<family>/<file>.py   # then make it pass the gate before registering it again
 ```
 
-3021 classes retired. Machine-readable copy: `retired_tasks.csv` next to this file.
+3022 classes retired. Machine-readable copy: `retired_tasks.csv` next to this file.
 
 | family | classes | why |
 |---|---|---|
 | maniskill | 2666 | 1588 no demos or assets on the Hub; 999 USD assets absent from the Hub; 56 asset or demo missing on the Hub; 15 replays at 0 on Isaac Sim 6 (USD-only); 5 demos replay below 0.80; 3 no class-level scenario |
 | libero | 178 | 169 no class-level scenario; 9 demos replay below 0.80 |
 | rlbench | 78 | 73 replays at 0 on Isaac Sim 6 (USD-only); 5 demos replay below 0.80 |
-| libero_90 | 64 | 57 demos replay below 0.80; 7 asset or demo missing on the Hub |
+| libero_90 | 65 | 58 demos replay below 0.80; 7 asset or demo missing on the Hub |
 | pick_place | 14 | 9 errors when built or stepped; 4 asset or demo missing on the Hub; 1 replays at 0 on Isaac Sim 6 (USD-only) |
 | calvin | 5 | 5 replays at 0 on Isaac Sim 6 (USD-only) |
 | robosuite | 5 | 5 no class-level scenario |
@@ -512,3 +512,60 @@ git checkout 56a0e67b -- roboverse_pack/tasks/<family>/<file>.py   # then make i
 - `robosuite.nut_assembly_square` (`roboverse_pack/tasks/robosuite/robosuite_env.py`): no class-level scenario: cannot be built by the harness
 - `robosuite.pick_place_can` (`roboverse_pack/tasks/robosuite/robosuite_env.py`): no class-level scenario: cannot be built by the harness
 - `robosuite.stack` (`roboverse_pack/tasks/robosuite/robosuite_env.py`): no class-level scenario: cannot be built by the harness
+
+## Retired robot configs (2026-11-28)
+
+Robot configs whose asset files exist neither on the Hub nor in a checkout, so no backend could ever load them (`tools/assets/check_manifest.py`). Restore from `56a0e67b` together with the assets.
+
+- `roboverse_pack/robots/agibot_a2_cfg.py` (AgibotA2Dof12Cfg)
+- `roboverse_pack/robots/allegrohand_cfg.py` (AllegroHandCfg)
+- `roboverse_pack/robots/ant_cfg.py` (AntCfg)
+- `roboverse_pack/robots/anymal_cfg.py` (AnymalCfg)
+- `roboverse_pack/robots/brainco_hand_left_cfg.py` (BraincoHandLeftCfg)
+- `roboverse_pack/robots/brainco_hand_right_cfg.py` (BraincoHandRightCfg)
+- `roboverse_pack/robots/cartpole_cfg.py` (CartpoleCfg)
+- `roboverse_pack/robots/go2_cfg.py` (Go2Cfg)
+- `roboverse_pack/robots/inspire_hand_left_cfg.py` (InspireHandLeftCfg)
+- `roboverse_pack/robots/inspire_hand_right_cfg.py` (InspireHandRightCfg)
+- `roboverse_pack/robots/kinova_gen3_cfg.py` (KinovaGen3Cfg)
+- `roboverse_pack/robots/psihand_left_cfg.py` (PsihandLeftCfg)
+- `roboverse_pack/robots/psihand_right_cfg.py` (PsihandRightCfg)
+- `roboverse_pack/robots/walker_cfg.py` (WalkerCfg)
+- `roboverse_pack/robots/g1_feet.py` ()
+
+Also dropped: the `mjx_mjcf_path` of `aloha.py` and `h1_body_collision.py` (files absent).
+
+Second batch, 2026-11-28 evening (`robot check --all` config row): configs whose asset paths point outside the Hub tree
+(`data_isaaclab/...`, `roboverse_data_release/...`, a directory that is not in the repository) or declare no asset at
+all, so nothing can fetch them. Restore from `56a0e67b` together with the assets, uploaded under `roboverse_data/`.
+
+- `roboverse_pack/robots/aloha.py` (AlohaCfg: no asset path; its bimanual tasks were retired on 2026-11-27)
+- `roboverse_pack/robots/iiwa_cfg.py` (IiwaCfg: `data_isaaclab/robots/iiwa/iiwa.usd`; `iiwa14_cfg.py` is the KUKA on the Hub)
+- `roboverse_pack/robots/ur5e_2f85_cfg.py` (Ur5E2F85Cfg: `data_isaaclab/robots/UniversalRobots/ur5e/ur5e_2f85_fix.usd`)
+- `roboverse_pack/robots/h1_2_without_hand_cfg.py` (H12WithoutHandCfg: `roboverse_data_release/...`)
+- `roboverse_pack/robots/vega_cfg.py` (VegaCfg: `roboverse_pack/robots/robots_vega/...`, not in the repository; its
+  `torso_j1` default also sat outside the single-point limit)
+
+## Retired on 2026-11-28: the last libero_90 task
+
+`libero_90.kitchen_scene4_close_the_bottom_drawer_of_the_cabinet` (`roboverse_pack/tasks/libero_90/`, restore from
+`56a0e67b`) passed the 2026-11-27 gate with an unphysical start: its demo file stores `panda_finger_joint2` in
+robosuite's sign (-0.034, range [0, 0.04]), which the gate now reports as `invalid`. With the sign mirrored into range
+(the corrected file is in `scratch_poc/demos_fixed/libero90/` on the maintainer's machine, not on the Hub) the demos
+replay at 0.78 over 50 episodes, under the 0.80 threshold, so the task and the pack (the BDDL goal predicates it
+carried) are retired together. The LIBERO goal machinery stays recoverable with it.
+
+## Retired packs (2026-11-28)
+
+Packs that registered nothing in the task registry and bridged no data: thin wrappers that re-registered another
+library's `gym` ids under a RoboVerse prefix (`MetaWorld/`, `MyoSuite/`, `GymRobotics/`, `DMControl/`, `Robosuite/`),
+with no tests, no docs page and no suite that scored them. A pack earns its place by registering MetaSim tasks the
+gate runs, or by bridging an external benchmark's data or environments into MetaSim formats with tests and a docs
+page (the RoboTwin, LIBERO-plus, ManiSkill and mjlab integrations do). Restore from `56a0e67b`.
+
+- `roboverse_pack/tasks/dm_control/`
+- `roboverse_pack/tasks/gym_robotics/`
+- `roboverse_pack/tasks/metaworld/`
+- `roboverse_pack/tasks/myosuite/`
+- `roboverse_pack/tasks/robosuite/` (its five native ports were retired on 2026-11-27; the passthrough and the
+  `tools/robosuite_integration/` parity harness that served them go with them)

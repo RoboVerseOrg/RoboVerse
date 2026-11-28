@@ -34,6 +34,16 @@ class UnitreeDex31LeftCfg(RobotCfg):
         "left_hand_index_0_joint": (-1.57, 0.0),
         "left_hand_index_1_joint": (-1.75, 0.0),
     }
+    # Filled 2026-11-28: the zero pose clamped into the limits, which is what the handlers fell back to without a default (robot check config row).
+    default_joint_positions: dict[str, float] = {
+        "left_hand_thumb_0_joint": 0.0,
+        "left_hand_thumb_1_joint": 0.0,
+        "left_hand_thumb_2_joint": 0.0,
+        "left_hand_middle_0_joint": 0.0,
+        "left_hand_middle_1_joint": 0.0,
+        "left_hand_index_0_joint": 0.0,
+        "left_hand_index_1_joint": 0.0,
+    }
 
     # set False for visualization correction. Also see https://forums.developer.nvidia.com/t/how-to-flip-collision-meshes-in-isaac-gym/260779 for another example.
     isaacgym_flip_visual_attachments = False

@@ -24,14 +24,12 @@ class PlugChargerTask(ManiskillBaseTask):
             RigidObjCfg(
                 name="base",
                 usd_path="roboverse_data/assets/maniskill/charger/base/base.usd",
-                urdf_path="roboverse_data/assets/maniskill/charger/base.urdf",
                 physics=PhysicStateType.GEOM,
                 fix_base_link=True,
             ),
             RigidObjCfg(
                 name="charger",
                 usd_path="roboverse_data/assets/maniskill/charger/charger/charger.usd",
-                urdf_path="roboverse_data/assets/maniskill/charger/charger.urdf",
                 physics=PhysicStateType.RIGIDBODY,
             ),
         ]

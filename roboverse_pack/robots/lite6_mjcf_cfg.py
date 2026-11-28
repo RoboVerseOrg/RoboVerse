@@ -43,7 +43,9 @@ class Lite6Cfg(RobotCfg):
         "joint6": (-6.28319, 6.28319),
     }
 
-    ee_body_name: str = "tool0"
+    ee_body_name: str = (
+        "link6"  # the MJCF has no "tool0"; this is its last link before the tool (robot check, 2026-11-28)
+    )
 
     default_joint_positions: dict[str, float] = {
         "joint1": 0.0,

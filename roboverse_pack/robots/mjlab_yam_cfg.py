@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import MISSING
 from typing import Literal
 
 from metasim.scenario.robot import BaseActuatorCfg, RobotCfg
@@ -25,8 +26,9 @@ class MjlabYamCfg(RobotCfg):
 
     name: str = "yam"
     mjcf_path: str = "roboverse_data/robots/mjlab/asset_zoo/robots/i2rt_yam/xmls/yam.xml"
-    urdf_path: str = mjcf_path
-    usd_path: str = mjcf_path
+    # No URDF or USD of this arm is on the Hub: the URDF and Isaac Sim backends report it as n/a, not as broken.
+    urdf_path: str = MISSING
+    usd_path: str = MISSING
 
     num_joints: int = 8
     fix_base_link: bool = True

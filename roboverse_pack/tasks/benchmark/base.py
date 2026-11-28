@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -375,7 +374,9 @@ def _apply_dm_control_struct_compat_patch() -> None:
 def _get_handler_with_mujoco_compat(scenario: ScenarioCfg):
     if scenario.simulator == "mujoco":
         if getattr(scenario, "headless", False):
-            os.environ.setdefault("MUJOCO_GL", "egl")
+            from metasim.sim.gl import apply_headless_gl
+
+            apply_headless_gl()  # the one rule for a headless MuJoCo render backend
         _apply_dm_control_struct_compat_patch()
     return get_handler(scenario)
 

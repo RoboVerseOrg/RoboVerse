@@ -136,19 +136,30 @@ If you find this work useful in your research, please consider citing:
 ```
 
 ```{toctree}
+:caption: Start here
+:maxdepth: 1
+:titlesonly:
+:hidden:
+
+Evaluate a policy in ten minutes <start/evaluate_a_policy>
+Add a task <start/add_a_task>
+Add a robot <start/add_a_robot>
+```
+
+```{toctree}
 :caption: Dataset & Benchmark
 :maxdepth: 2
 :titlesonly:
 :hidden:
 
 Tasks Overview <dataset_benchmark/tasks/overview>
-Task Descriptions <dataset_benchmark/tasks/descriptions>
-Task Groups <dataset_benchmark/tasks/task_groups>
+Task Inventory <dataset_benchmark/tasks/inventory>
 Robots <dataset_benchmark/dataset/robots>
 Objects <dataset_benchmark/dataset/objects>
 Scenes <dataset_benchmark/dataset/scenes>
 Benchmark Overview <dataset_benchmark/benchmark/overview>
 Benchmark Results <dataset_benchmark/benchmark/results>
+Leaderboard <dataset_benchmark/benchmark/leaderboard>
 Benchmark Usage <dataset_benchmark/benchmark/usage>
 LIBERO + LIBERO-plus Integration <dataset_benchmark/integrations/libero>
 ManiSkill Integration <dataset_benchmark/integrations/maniskill>
@@ -184,6 +195,7 @@ SAC <roboverse_learn/reinforcement_learning/sac>
 TD3 <roboverse_learn/reinforcement_learning/td3>
 SkillBlender <roboverse_learn/reinforcement_learning/skillblender_rl>
 Humanoid <roboverse_learn/reinforcement_learning/humanoid>
+BeyondMimic (retired) <roboverse_learn/reinforcement_learning/beyondmimic>
 ```
 
 ```{toctree}

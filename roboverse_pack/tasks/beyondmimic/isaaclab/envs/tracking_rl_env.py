@@ -485,12 +485,3 @@ class TrackingRLEnv(TrackingBaseEnv, gym.Env):
 
         # reset the episode length buffer
         self.episode_length_buf[env_ids] = 0
-
-
-class TrackingRLEnvDeploy(TrackingRLEnv, gym.Env):
-    """Task class for training motion tracker for deployment. The actuators are delayed, and the policy's observations `motion_anchor_pos_b` and `base_lin_vel` are removed."""
-
-    def _init_cfg(self):
-        import roboverse_pack.tasks.beyondmimic.isaaclab.configs.flat_env_cfg as flat_env_cfg
-
-        return flat_env_cfg.G1FlatEnvCfgDeploy()

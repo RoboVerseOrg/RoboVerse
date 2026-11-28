@@ -30,6 +30,8 @@ class ILPolicy:
     robots[<robot>].joint_pos}``, exactly what ``DefaultRunner.eval`` feeds it.
     """
 
+    family = "il"
+
     name = "il"
 
     def __init__(
@@ -40,11 +42,15 @@ class ILPolicy:
         robot: str | None = None,
         device: str | None = None,
         task_name: str | None = None,
+        action_type: str | None = None,
+        obs_type: str | None = None,
     ) -> None:
         if runner is None and checkpoint is None:
             raise ValueError("ILPolicy needs a runner or a checkpoint")
         self.runner = runner
         self.checkpoint = checkpoint
+        self.action_type = action_type
+        self.obs_type = obs_type
         self.camera = camera
         self.robot = robot
         self.device = device
@@ -62,7 +68,16 @@ class ILPolicy:
             raise RuntimeError("ILPolicy needs the scenario in the policy context (ctx.extras['scenario'])")
         with open(self.checkpoint, "rb") as f:
             payload = torch.load(f, pickle_module=dill, map_location="cpu", weights_only=False)
-        workspace = DefaultRunner(payload["cfg"])
+        cfg = payload["cfg"]
+        # the checkpoint carries the training-time eval settings; a bench run states the spaces it evaluates in
+        # (joint targets by default), so a checkpoint trained with the defaults does not need an IK stack
+        runner_cfg = getattr(getattr(cfg, "eval_config", None), "policy_runner", None)
+        if runner_cfg is not None:
+            if self.action_type:
+                runner_cfg.action.action_type = self.action_type
+            if self.obs_type:
+                runner_cfg.obs.obs_type = self.obs_type
+        workspace = DefaultRunner(cfg)
         device = self.device or str(ctx.device)
         return DefaultEvalRunner(
             workspace,

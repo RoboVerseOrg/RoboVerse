@@ -90,7 +90,7 @@ def test_metasim_production_code_does_not_import_monorepo_siblings():
 def test_pyproject_builds_metasim_distribution_only():
     pyproject = _load_pyproject()
 
-    assert pyproject["build-system"]["requires"] == ["setuptools>=61.0", "wheel"]
+    assert pyproject["build-system"]["requires"] == ["setuptools>=78.1.1", "wheel"]
     assert pyproject["build-system"]["build-backend"] == "setuptools.build_meta"
 
     project = pyproject["project"]
@@ -137,7 +137,7 @@ def test_pyproject_runtime_dependencies_are_metasim_owned():
         "pyyaml",
         "scipy",
         "tomli; python_version < '3.11'",
-        "torch",
+        "torch>=2.6",
         "torchvision",
     ]
 
