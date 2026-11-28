@@ -17,6 +17,8 @@ release.
 - `tools/assets/check_manifest.py`: every `roboverse_data/...` literal in the content packs must exist on the Hub (or locally); runs in the `task-contract` workflow on every pull request. It would have caught the 2587 generated ManiSkill tasks whose assets never existed.
 - `tests/test_task_contract_static.py`: the task contract checked in source on every pull request: unique registered names, one registration per class, at most 16 registered classes per module (variants are parameters, not generated classes), a class-level scenario or a pack base class, `traj_filepath` under `roboverse_data/`.
 - `.github/workflows/nightly-gate.yml` + `tools/gate/nightly.sh`: the nightly task gate (`bench health --floor --repeat 2`) on MuJoCo and Isaac Sim 6 for every registered task, on the self-hosted GPU runner, with the health table as the job summary.
+- `results/`: the results registry (one dated directory per submission, every file validated against the result schema) and `tools/bench/leaderboard.py`, which generates `docs/source/dataset_benchmark/benchmark/leaderboard.md` from it (methods x tiers per suite, per-submission tables with provenance); CI fails when the page is stale. First submission: the 2026-11-27 methods x perspectives proof of concept (45 result files).
+- Three start pages (`docs/source/start/`): evaluate a policy in ten minutes, add a task, add a robot: the contract and the commands, with the gate as the review.
 - `docs/source/dataset_benchmark/dataset/generate_robot_docs.py` regenerates `robots.md` from the robot configs; the hand-written table listed robots that had no config.
 
 ### Changed

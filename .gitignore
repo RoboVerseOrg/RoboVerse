@@ -37,7 +37,8 @@ outputs/
 il_outputs/
 eval_outputs/
 tmp/
-results/
+# experiment outputs; the results registry (results/<suite>/<submission>/) is tracked
+results/**/*.log
 RoboVersePage
 unused/
 Open6DOR

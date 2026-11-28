@@ -1,0 +1,290 @@
+{
+  "task": "stack_cube",
+  "simulator": "mujoco",
+  "robots": [
+    "franka"
+  ],
+  "num_envs": 1,
+  "protocol": {
+    "episodes": 10,
+    "success_rule": "first",
+    "hold_steps": 1,
+    "max_episode_steps": null,
+    "seed": 0,
+    "instances": null,
+    "name": "tabletop-mujoco",
+    "demo_budget_factor": 3.0,
+    "demo_budget_quantile": 0.75,
+    "prompt_split": "canonical",
+    "access": {
+      "name": "agent-skills",
+      "observation": "rgb",
+      "cameras": null,
+      "proprioception": true,
+      "tools": "skills",
+      "memory": "episode",
+      "wall_time_s": null,
+      "llm_calls": null,
+      "llm_tokens": null,
+      "tool_calls": null
+    }
+  },
+  "policy": {
+    "name": "llm-agent",
+    "kind": "LLMAgentPolicy",
+    "family": "agent",
+    "spec": "metasim.bench.agent:LLMAgentPolicy",
+    "args": {},
+    "usage": {
+      "llm_calls": 78,
+      "llm_tokens": 141141,
+      "tool_calls": 77,
+      "llm_time_s": 253.09689541347325
+    }
+  },
+  "episodes": [
+    {
+      "index": 0,
+      "env_id": 0,
+      "instance_index": 0,
+      "instance_id": "0:0:9d10c2b6850d",
+      "seed": 0,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 23.208614138886333
+    },
+    {
+      "index": 1,
+      "env_id": 0,
+      "instance_index": 1,
+      "instance_id": "1:1:4d79bd415920",
+      "seed": 1,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 18.23966353898868
+    },
+    {
+      "index": 2,
+      "env_id": 0,
+      "instance_index": 2,
+      "instance_id": "2:2:1734988a95af",
+      "seed": 2,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 24.982163274195045
+    },
+    {
+      "index": 3,
+      "env_id": 0,
+      "instance_index": 3,
+      "instance_id": "3:3:060fb8e990f0",
+      "seed": 3,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 24.676013256888837
+    },
+    {
+      "index": 4,
+      "env_id": 0,
+      "instance_index": 4,
+      "instance_id": "4:4:d29e0f135f9d",
+      "seed": 4,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 41.170375989284366
+    },
+    {
+      "index": 5,
+      "env_id": 0,
+      "instance_index": 5,
+      "instance_id": "5:5:78d45ed89bc2",
+      "seed": 5,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 20.73730691615492
+    },
+    {
+      "index": 6,
+      "env_id": 0,
+      "instance_index": 6,
+      "instance_id": "6:6:e86f717dbf1f",
+      "seed": 6,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 37.90365789690986
+    },
+    {
+      "index": 7,
+      "env_id": 0,
+      "instance_index": 7,
+      "instance_id": "7:7:729de1c7c16c",
+      "seed": 7,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 23.834633615799248
+    },
+    {
+      "index": 8,
+      "env_id": 0,
+      "instance_index": 8,
+      "instance_id": "8:8:d46b421325a3",
+      "seed": 8,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 26.89688328979537
+    },
+    {
+      "index": 9,
+      "env_id": 0,
+      "instance_index": 9,
+      "instance_id": "9:9:afdd21af07fe",
+      "seed": 9,
+      "success": false,
+      "steps": 250,
+      "terminated": false,
+      "time_out": true,
+      "return_sum": 0.0,
+      "first_success_step": null,
+      "prompt": "Stack the red cube on top of the blue cube.",
+      "prompt_variant": "canonical",
+      "wall_time_s": 24.16172187961638
+    }
+  ],
+  "provenance": {
+    "simulator": "mujoco",
+    "num_envs": 1,
+    "dt": null,
+    "physics_dt": 0.001,
+    "decimation": 15,
+    "env_step_s": 0.015,
+    "seed": 0,
+    "control_mode": null,
+    "backend_versions": {
+      "mujoco": "3.12.0",
+      "dm-control": "1.0.45"
+    },
+    "metasim_version": "1.0.0b0",
+    "git_commit": "f0973c431aa6fd1494b5a2885f97cc4bdd4c93f0",
+    "git_dirty": true,
+    "assets": {
+      "franka": {
+        "asset": {
+          "path": "roboverse_data/robots/franka/mjcf/panda.xml",
+          "resolved": "roboverse_data/robots/franka/mjcf/panda.xml",
+          "sha256": "1414ff6358dda4f1c66d8021d473a7940ddbcbece66e0ab61156af395112d3a2",
+          "bytes": 14690
+        }
+      }
+    },
+    "python": "3.11.15",
+    "torch": "2.7.0+cu128",
+    "numpy": "2.4.6",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "device": "cpu",
+    "created_at": "2026-11-27T21:55:29+00:00",
+    "extras": {}
+  },
+  "wall_time_s": 267.22201958019286,
+  "created_at": "2026-11-27T21:55:29+00:00",
+  "notes": {
+    "instance_pool": 1000,
+    "instruction": "Stack the red cube on top of the blue cube.",
+    "task_class": "StackCubeTask",
+    "success_defined": true,
+    "episode_cap": 250,
+    "episode_cap_source": "task (below the demo budget)",
+    "access": "agent-skills",
+    "budget": {
+      "total": {
+        "llm_calls": 78,
+        "llm_tokens": 141141,
+        "tool_calls": 77,
+        "llm_time_s": 253.09689541347325
+      },
+      "per_episode": {
+        "llm_calls": 7.8,
+        "llm_tokens": 14114.1,
+        "tool_calls": 7.7
+      },
+      "budgets": {},
+      "exceeded": []
+    },
+    "suite": {
+      "name": "tabletop-mujoco",
+      "split": "core"
+    },
+    "cameras": [
+      "front"
+    ]
+  },
+  "schema": "roboverse.bench.result",
+  "schema_version": 1,
+  "summary": {
+    "episodes": 10,
+    "successes": 0,
+    "success_defined": true,
+    "success_rate": 0.0,
+    "success_rate_ci95": [
+      0.0,
+      0.2775328030260577
+    ],
+    "mean_steps": 250.0,
+    "mean_return": 0.0,
+    "time_outs": 10,
+    "over_budget": 0
+  }
+}

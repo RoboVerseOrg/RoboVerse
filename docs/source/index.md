@@ -160,6 +160,7 @@ Objects <dataset_benchmark/dataset/objects>
 Scenes <dataset_benchmark/dataset/scenes>
 Benchmark Overview <dataset_benchmark/benchmark/overview>
 Benchmark Results <dataset_benchmark/benchmark/results>
+Leaderboard <dataset_benchmark/benchmark/leaderboard>
 Benchmark Usage <dataset_benchmark/benchmark/usage>
 LIBERO + LIBERO-plus Integration <dataset_benchmark/integrations/libero>
 ManiSkill Integration <dataset_benchmark/integrations/maniskill>
