@@ -8,9 +8,9 @@
   default pose is finite (the skill library and the IL adapters depend on this);
 - **limits**: the config's ``joint_limits`` agree with the ranges the MJCF declares (a config copied from another
   robot passes the config check and still commands poses the model cannot reach);
-- **actuators**: every MJCF actuator that drives a config joint is named after that joint (the MuJoCo handler finds
-  an actuator by the joint's name and adds a second servo when it does not), and every joint the config drives
-  exists in the MJCF;
+- **actuators**: every joint the config drives exists in the MJCF and is driven by at most one MJCF actuator (the
+  MuJoCo handler matches an actuator to its joint by its transmission, so the actuator's name is free; a tendon- or
+  site-driven actuator has no action slot and is reported);
 - **hold**: on the backend, commanding the default joint positions for ``steps`` steps leaves every joint within
   ``joint_tol`` radians of its target and a fixed base within ``base_tol`` metres (a robot that drifts or explodes
   at rest cannot be evaluated).
@@ -272,7 +272,7 @@ def check_limits(cfg, tol: float = 1e-3, model=None) -> CheckRow:
 
 
 def check_actuators(cfg, model=None) -> CheckRow:
-    """MJCF actuators are named after the joints they drive; every config joint exists in the MJCF."""
+    """Every config joint exists in the MJCF and is driven by at most one MJCF actuator; names are free."""
     path = getattr(cfg, "mjcf_path", None)
     joints = sorted(getattr(cfg, "actuators", {}) or {})
     if not isinstance(path, str) or not path or not joints:
@@ -286,25 +286,26 @@ def check_actuators(cfg, model=None) -> CheckRow:
     unknown = [j for j in joints if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, j) < 0]
     if unknown:
         problems.append(f"config drives joints the MJCF does not define: {unknown}")
-    misnamed, driven = [], 0
+    drivers: dict[str, list[str]] = {}
+    stray = []
     for a in range(model.nu):
+        aname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_ACTUATOR, a) or f"#{a}"
         if int(model.actuator_trntype[a]) != int(mujoco.mjtTrn.mjTRN_JOINT):
+            stray.append(aname)  # the handler writes one target per joint: a tendon / site actuator has no slot
             continue
         joint = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, int(model.actuator_trnid[a, 0]))
-        if joint not in joints:
-            continue
-        driven += 1
-        aname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_ACTUATOR, a)
-        if aname != joint:
-            misnamed.append(f"{aname!r} drives {joint!r}")
-    if misnamed:
-        problems.append(
-            f"{len(misnamed)} actuator(s) not named after their joint (the handler would add a second servo): "
-            + "; ".join(misnamed[:4])
-        )
-    synthesized = len(joints) - len(unknown) - driven
+        drivers.setdefault(joint, []).append(aname)
+    twice = {j: names for j, names in drivers.items() if len(names) > 1}
+    if twice:
+        problems.append("joints driven by two actuators (the handler writes one target per joint): " + str(twice))
+    if stray:
+        problems.append(f"actuators that drive no joint (tendon / site transmission, unsupported): {stray[:4]}")
+    driven = [j for j in joints if j in drivers]
+    renamed = [f"{drivers[j][0]!r} drives {j!r}" for j in driven if drivers[j][0] != j]
+    synthesized = len(joints) - len(unknown) - len(driven)
     detail = "; ".join(problems) or (
-        f"{driven} MJCF actuators named after their joints"
+        f"{len(driven)} config joints driven by an MJCF actuator"
+        + (f" ({len(renamed)} named differently, matched by transmission: {'; '.join(renamed[:3])})" if renamed else "")
         + (f", {synthesized} joint(s) driven by a servo synthesized from the config" if synthesized else "")
     )
     return CheckRow("actuators", not problems, detail)

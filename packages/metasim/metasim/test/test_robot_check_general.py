@@ -215,7 +215,7 @@ def test_robot_kit_renders_a_config_that_imports_and_passes_the_static_checks(tm
     assert cfg.curobo_tcp_rel_pos == (0.0, 0.0, 0.05)
     assert check_config(cfg).ok and check_limits(cfg).ok and check_kinematics(cfg).ok
     row = check_actuators(cfg)
-    assert not row.ok and "'elbow' drives 'j2'" in row.detail, "the misnamed actuator is a named failure"
+    assert row.ok and "'elbow' drives 'j2'" in row.detail, "a differently named actuator is matched by transmission"
     with pytest.raises(FileExistsError):
         add_robot(mjcf=str(path), name="toy_actuated", out=str(out))
 
@@ -230,7 +230,9 @@ def test_actuators_check_names_misnamed_and_unknown_joints(tmp_path):
     bad = check_actuators(
         _cfg(tmp_path, mjcf_path=str(path), actuators={"j1": None, "j2": None, "f_l": None, "ghost": None})
     )
-    assert not bad.ok and "'elbow' drives 'j2'" in bad.detail and "['ghost']" in bad.detail
+    assert not bad.ok and "['ghost']" in bad.detail
+    renamed = check_actuators(_cfg(tmp_path, mjcf_path=str(path), actuators={"j1": None, "j2": None, "f_l": None}))
+    assert renamed.ok and "'elbow' drives 'j2'" in renamed.detail, "an actuator is matched by transmission, not name"
     assert check_actuators(_cfg(tmp_path, mjcf_path=None)).ok, "no MJCF: not judged"
 
 

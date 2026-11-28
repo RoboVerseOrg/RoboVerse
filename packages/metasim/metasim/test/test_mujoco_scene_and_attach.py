@@ -420,9 +420,13 @@ def test_passive_joint_is_in_the_state_and_takes_no_target(tmp_path):
         assert dict_state["dof_pos_target"]["elbow"] == pytest.approx(float(state.joint_pos[0, 0]))
 
 
-def test_actuator_not_named_after_a_joint_is_rejected(tmp_path):
-    """RoboVerse drives joints through same-named actuators; a stray actuator name is a config error."""
-    from metasim.sim.mujoco import MujocoHandler
+def test_actuator_is_matched_to_its_joint_by_transmission(tmp_path):
+    """An asset may name its actuators as it likes (``elbow_drive`` for ``elbow``): the joint it drives is what counts.
+
+    Before 2026-11-28 the handler looked actuators up by joint name, so such an asset failed at launch and a config
+    joint it drove would have received a second, synthesized servo.
+    """
+    from metasim.sim.sim_context import HandlerContext
 
     scenario = _arm_scenario(
         tmp_path,
@@ -431,8 +435,12 @@ def test_actuator_not_named_after_a_joint_is_rejected(tmp_path):
             '<position name="elbow_drive" joint="elbow" kp="50"/></actuator>'
         ),
     )
-    with pytest.raises(ValueError, match=r"actuators \['elbow_drive'\] are not named after a joint"):
-        MujocoHandler(scenario).launch()  # checked at launch, when the passive joints are listed
+    with HandlerContext(scenario) as handler:
+        assert handler.physics.model.nu == 2, "no second servo was synthesized for the renamed actuator"
+        assert handler._passive_joint_names("arm") == []
+        assert sorted(handler._get_actuator_names("arm")) == ["elbow", "shoulder"]
+        ids = handler._joint_actuator_ids("arm")
+        assert handler.physics.model.actuator(ids[0]).name.endswith("elbow_drive")
 
 
 def test_set_states_refuses_a_none_or_non_finite_joint_value(tmp_path):
