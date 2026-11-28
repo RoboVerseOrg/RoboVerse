@@ -109,6 +109,8 @@ jobs:
         run: python -m pytest tests/ -rs --cov=roboverse_pack --cov=roboverse_learn --cov-report=xml --cov-report=term --cov-fail-under=40
       - name: Leaderboard page matches the result files
         run: python tools/bench/leaderboard.py --check
+      - name: Robots page matches the configs and the robot result files
+        run: python docs/source/dataset_benchmark/dataset/generate_robot_docs.py --check
       - name: Coverage summary
         if: always()
         run: |

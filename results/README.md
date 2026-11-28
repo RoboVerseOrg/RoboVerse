@@ -18,3 +18,10 @@ per task.
 `tabletop-mujoco/2026-11-28-isaacsim-twin` is the same suite on Isaac Sim 6 (replay and scripted skills, 10
 episodes per task); `tabletop-mujoco/2026-11-28-il-ddpm-dit` is the first learned row, a diffusion policy trained
 on scripted demos per task and scored under the visual tier, 20 episodes per task.
+
+`results/robots/` holds the robot kit's runs, one directory per run: `<date>-<sim>-check/robots.json` from
+`python -m metasim robot check --all --sim <sim> --out-dir`, and `<date>-parity-<a>-<b>/<robot>.json` from
+`python -m metasim robot parity <robot> --sims <a> <b> --json`. `generate_robot_docs.py` renders the newest of each
+into the Robots page (`--check` in CI keeps it current). The first entries are the MuJoCo sweep of 2026-11-28
+(42 robots, 17 pass) and the MuJoCo vs Isaac Sim 6 parity runs of the same day (five arms within 0.04 rad, the
+H1 humanoids reported not judged).

@@ -1,0 +1,84 @@
+{
+ "robot": "ur10e",
+ "sim_a": "mujoco",
+ "sim_b": "isaacsim",
+ "steps": 400,
+ "control_dt": 0.015,
+ "peak_velocity": 0.6282151815625979,
+ "judged": true,
+ "ok": true,
+ "rows": [
+  {
+   "joint": "elbow_joint",
+   "kind": "hinge",
+   "max_diff": 0.024816843681037426,
+   "rms_diff": 0.008726763733501099,
+   "tracking_a": 0.053493007643944795,
+   "tracking_b": 0.037072680547876165,
+   "tol": 0.05,
+   "lag_a": 4,
+   "lag_b": 4,
+   "ok": true
+  },
+  {
+   "joint": "shoulder_lift_joint",
+   "kind": "hinge",
+   "max_diff": 0.016481876373291016,
+   "rms_diff": 0.006283976492950197,
+   "tracking_a": 0.06789154453454693,
+   "tracking_b": 0.057164906928240056,
+   "tol": 0.05,
+   "lag_a": 7,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "shoulder_pan_joint",
+   "kind": "hinge",
+   "max_diff": 0.03609076887369156,
+   "rms_diff": 0.011464793779800388,
+   "tracking_a": 0.06132685511308242,
+   "tracking_b": 0.057003011529443995,
+   "tol": 0.05,
+   "lag_a": 7,
+   "lag_b": 6,
+   "ok": true
+  },
+  {
+   "joint": "wrist_1_joint",
+   "kind": "hinge",
+   "max_diff": 0.014601945877075195,
+   "rms_diff": 0.005188761994057845,
+   "tracking_a": 0.05085220535923618,
+   "tracking_b": 0.045114371189314495,
+   "tol": 0.05,
+   "lag_a": 5,
+   "lag_b": 5,
+   "ok": true
+  },
+  {
+   "joint": "wrist_2_joint",
+   "kind": "hinge",
+   "max_diff": 0.01246719527989626,
+   "rms_diff": 0.004511354087527717,
+   "tracking_a": 0.04629132938063315,
+   "tracking_b": 0.04209028403146997,
+   "tol": 0.05,
+   "lag_a": 5,
+   "lag_b": 4,
+   "ok": true
+  },
+  {
+   "joint": "wrist_3_joint",
+   "kind": "hinge",
+   "max_diff": 0.013371169567108154,
+   "rms_diff": 0.004268050392309371,
+   "tracking_a": 0.049170751046783256,
+   "tracking_b": 0.04510748593474612,
+   "tol": 0.05,
+   "lag_a": 5,
+   "lag_b": 5,
+   "ok": true
+  }
+ ]
+}

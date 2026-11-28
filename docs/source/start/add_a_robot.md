@@ -69,17 +69,18 @@ python -m metasim robot check --all --out-dir gate/robots   # the sweep: one row
 
 The nightly gate runs the sweep on MuJoCo after the task gate and publishes the table.
 
-### The sweep of 2026-11-28 (MuJoCo, 43 configs)
+### The sweep of 2026-11-28 (MuJoCo, 42 configs)
 
-| verdict | robots |
-|---|---|
-| pass (17) | franka, yam, sharpa_wave_left, sharpa_wave_right, z1, so_arm100, ur5e, ur10e, lite6, gen3, iiwa14, g1, g1_dof12, g1_dof29, go1, h1, h1_wrist |
-| no MJCF, Isaac/URDF only (13) | aloha, aloha_agilex, fetch, franka_with_gripper_extension, google_robot_static, h1_2_without_hand, iiwa, kinova_gen3_robotiq_2f85, sawyer, unitree_dex3_1_left, ur5e_2f85, vega, xhand_right; most also lack defaults or limits for some actuators, vega's `torso_j1` default is outside its limits |
-| asset not on the Hub (3) | g1_tracking (`unitree_description`), openarm_wuji, openarm_bimanual_wuji |
-| placeholder config (3) | g1_dof23, g1_dof27, g1_dof29_dex3 (asset paths are `MISSING`) |
-| asset defect (4) | shadow_hand (MJCF uses the removed `apirate` option), h1_hand (no actuator for `lh_WRJ2`, no hand limits), arx_l5 (MJCF actuator `gripper` is not named after its joint `joint7`), cartpole (limits ±2.0 vs MJCF ±1.8; standalone build overflows the broadphase buffer) |
-| config defect (2) | h1_simple_hand (placeholder limits ±6, missing defaults), koch_1 (sags 0.22 rad at `pitch` under its gains) |
-| not a robot (1) | robot_template |
+The table itself is generated: [Robots, self-check](../dataset_benchmark/dataset/robots.md#self-check) renders the
+newest `results/robots/<date>-mujoco-check/robots.json` (17 pass, 25 fail). By cause: 13 configs are Isaac / URDF
+only and have no MJCF (aloha, aloha_agilex, fetch, franka_with_gripper_extension, google_robot_static,
+h1_2_without_hand, iiwa, kinova_gen3_robotiq_2f85, sawyer, unitree_dex3_1_left, ur5e_2f85, vega, xhand_right; most
+also lack defaults or limits for some actuators, vega's `torso_j1` default is outside its limits); 3 have assets
+missing on the Hub (g1_tracking, openarm_wuji, openarm_bimanual_wuji); 3 are placeholders (g1_dof23, g1_dof27,
+g1_dof29_dex3); 4 have asset defects (shadow_hand: MJCF uses the removed `apirate` option; h1_hand: no actuator for
+`lh_WRJ2`; arx_l5: MJCF actuator `gripper` is not named after its joint `joint7`; cartpole: limits ±2.0 vs MJCF
+±1.8 and a standalone build overflows the broadphase buffer); 2 have config defects (h1_simple_hand: placeholder
+limits ±6 and missing defaults; koch_1: sags 0.22 rad at `pitch` under its gains).
 
 Six of the passes were failures that morning: so_arm100, koch_1, ur5e, ur10e, lite6 and arx_l5 named a tool body
 (`tool0`) their MJCF does not have, and so_arm100, koch_1, gen3 and iiwa14 carried another arm's joint limits (the
@@ -105,11 +106,11 @@ only with this green.
 
 ### The sweep of 2026-11-28 (MuJoCo vs Isaac Sim 6, every config with an MJCF and a USD)
 
-| verdict | robots (largest cross-engine difference, 400 steps at 0.63 rad/s peak) |
-|---|---|
-| pass | gen3 0.0004 rad, z1 0.0011, franka 0.0043, ur5e 0.028, ur10e 0.036 |
-| reported, not judged | h1, h1_wrist (floating base: the knees end 1.1 to 1.7 rad apart as the two engines let the robot fall) |
-| no comparison | iiwa14 (Isaac Lab 3 cannot build the USD: no rigid bodies under the prim), so_arm100, lite6, koch_1 (no USD) |
+The table is generated: [Robots, cross-engine parity](../dataset_benchmark/dataset/robots.md#cross-engine-parity)
+renders `results/robots/2026-11-28-parity-mujoco-isaacsim/`. Gen3 (0.0004 rad), Z1 (0.0011), Franka (0.0043), UR5e
+(0.028) and UR10e (0.036) pass at 0.63 rad/s peak; H1 and H1-wrist are reported, not judged (floating base: the knees
+end 1.1 to 1.7 rad apart as the two engines let the robot fall); iiwa14 has no comparison because Isaac Lab 3 cannot
+build its USD (no rigid bodies under the prim), and so_arm100, lite6 and koch_1 have no USD.
 
 How the trajectory is shaped is the verdict's fine print, and the sweep had to learn it. Its first version began
 each phase-shifted joint with a step from the default to the first sample; that step saturated the position servos
