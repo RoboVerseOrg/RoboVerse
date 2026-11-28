@@ -535,6 +535,17 @@ Robot configs whose asset files exist neither on the Hub nor in a checkout, so n
 
 Also dropped: the `mjx_mjcf_path` of `aloha.py` and `h1_body_collision.py` (files absent).
 
+Second batch, 2026-11-28 evening (`robot check --all` config row): configs whose asset paths point outside the Hub tree
+(`data_isaaclab/...`, `roboverse_data_release/...`, a directory that is not in the repository) or declare no asset at
+all, so nothing can fetch them. Restore from `56a0e67b` together with the assets, uploaded under `roboverse_data/`.
+
+- `roboverse_pack/robots/aloha.py` (AlohaCfg: no asset path; its bimanual tasks were retired on 2026-11-27)
+- `roboverse_pack/robots/iiwa_cfg.py` (IiwaCfg: `data_isaaclab/robots/iiwa/iiwa.usd`; `iiwa14_cfg.py` is the KUKA on the Hub)
+- `roboverse_pack/robots/ur5e_2f85_cfg.py` (Ur5E2F85Cfg: `data_isaaclab/robots/UniversalRobots/ur5e/ur5e_2f85_fix.usd`)
+- `roboverse_pack/robots/h1_2_without_hand_cfg.py` (H12WithoutHandCfg: `roboverse_data_release/...`)
+- `roboverse_pack/robots/vega_cfg.py` (VegaCfg: `roboverse_pack/robots/robots_vega/...`, not in the repository; its
+  `torso_j1` default also sat outside the single-point limit)
+
 ## Retired on 2026-11-28: the last libero_90 task
 
 `libero_90.kitchen_scene4_close_the_bottom_drawer_of_the_cabinet` (`roboverse_pack/tasks/libero_90/`, restore from

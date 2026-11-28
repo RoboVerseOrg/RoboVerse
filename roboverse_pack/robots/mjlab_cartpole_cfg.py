@@ -34,7 +34,7 @@ class MjlabCartpoleCfg(RobotCfg):
         "slider": BaseActuatorCfg(stiffness=0, damping=0, effort_limit_sim=1.0, velocity_limit=20.0),
     }
     joint_limits: dict[str, tuple[float, float]] = {
-        "slider": (-2.0, 2.0),
+        "slider": (-1.8, 1.8),  # the MJCF range (robot check limits row)
         "hinge_1": (-3.14159, 3.14159),
     }
     default_joint_positions: dict[str, float] = {

@@ -24,4 +24,32 @@ class GoogleRobotStaticCfg(RobotCfg):
         "joint_head_pan": BaseActuatorCfg(velocity_limit=0.5),
         "joint_head_tilt": BaseActuatorCfg(velocity_limit=0.5),
     }
+    # Filled 2026-11-28 from the URDF <limit> elements (robot check config row).
+    joint_limits: dict[str, tuple[float, float]] = {
+        "joint_torso": (-4.49, 1.35),
+        "joint_shoulder": (-2.66, 3.18),
+        "joint_bicep": (-2.13, 3.71),
+        "joint_elbow": (-2.05, 3.79),
+        "joint_forearm": (-2.92, 2.92),
+        "joint_wrist": (-1.79, 1.79),
+        "joint_gripper": (-4.49, 1.35),
+        "joint_finger_right": (-0.0001, 1.3),
+        "joint_finger_left": (-0.0001, 1.3),
+        "joint_head_pan": (-3.79, 2.22),
+        "joint_head_tilt": (-1.17, 1.17),
+    }
+    # Filled 2026-11-28: the zero pose clamped into the limits, which is what the handlers fell back to without a default (robot check config row).
+    default_joint_positions: dict[str, float] = {
+        "joint_torso": 0.0,
+        "joint_shoulder": 0.0,
+        "joint_bicep": 0.0,
+        "joint_elbow": 0.0,
+        "joint_forearm": 0.0,
+        "joint_wrist": 0.0,
+        "joint_gripper": 0.0,
+        "joint_finger_right": 0.0,
+        "joint_finger_left": 0.0,
+        "joint_head_pan": 0.0,
+        "joint_head_tilt": 0.0,
+    }
     # ee_body_name: str = "panda_hand"

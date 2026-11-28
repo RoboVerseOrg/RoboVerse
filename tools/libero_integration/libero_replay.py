@@ -99,7 +99,18 @@ def _handler(xml: str):
     from metasim.scenario.scenario import ScenarioCfg
     from metasim.scenario.scene import SceneCfg
     from metasim.scenario.simulator_params import SimParamCfg
-    from roboverse_pack.tasks.robosuite.robosuite_env import _GroundlessMujocoHandler
+    from metasim.sim.mujoco.mujoco import MujocoHandler
+
+    class _GroundlessMujocoHandler(MujocoHandler):
+        """A MujocoHandler that injects no default ground or lights.
+
+        A LIBERO (robosuite-compiled) MJCF already carries its arena floor, lights and textures; MetaSim's default
+        ground would duplicate the ``texplane`` texture (a hard error) and add a second floor that changes contacts.
+        It lived in the robosuite pack until that pack was retired on 2026-11-28.
+        """
+
+        def _add_ground(self, mjcf_model) -> None:
+            return None
 
     tmp = tempfile.NamedTemporaryFile(suffix=".xml", delete=False, mode="w")
     tmp.write(xml)

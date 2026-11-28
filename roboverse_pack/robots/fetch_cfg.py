@@ -44,6 +44,23 @@ class FetchCfg(RobotCfg):
         "r_gripper_finger_joint": (0.0, 0.05),
         "l_gripper_finger_joint": (0.0, 0.05),
     }
+    # Filled 2026-11-28: the zero pose clamped into the limits, which is what the handlers fell back to without a default (robot check config row).
+    default_joint_positions: dict[str, float] = {
+        "r_wheel_joint": 0.0,
+        "l_wheel_joint": 0.0,
+        "torso_lift_joint": 0.0,
+        "head_pan_joint": 0.0,
+        "head_tilt_joint": 0.0,
+        "shoulder_pan_joint": 0.0,
+        "shoulder_lift_joint": 0.0,
+        "upperarm_roll_joint": 0.0,
+        "elbow_flex_joint": 0.0,
+        "forearm_roll_joint": 0.0,
+        "wrist_flex_joint": 0.0,
+        "wrist_roll_joint": 0.0,
+        "r_gripper_finger_joint": 0.0,
+        "l_gripper_finger_joint": 0.0,
+    }
     ee_body_name: str = "gripper_link"
 
     # TODO: Make it more elegant

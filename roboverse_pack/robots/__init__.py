@@ -2,7 +2,6 @@
 
 from metasim.scenario.robot import RobotCfg
 
-from .aloha import AlohaCfg
 from .aloha_agilex_cfg import AlohaAgilexCfg
 from .arx_l5_mjcf_cfg import ArxL5Cfg
 from .fetch_cfg import FetchCfg
@@ -16,14 +15,12 @@ from .g1_cfg import G1Dof12Cfg, G1Dof23Cfg, G1Dof27Cfg, G1Dof29Cfg, G1Dof29Dex3C
 from .g1_tracking import G1TrackingCfg
 from .gen3_cfg import Gen3Cfg
 from .google_robot_static_cfg import GoogleRobotStaticCfg
-from .h1_2_without_hand_cfg import H12WithoutHandCfg
 from .h1_body_collision import H1BodyCollisionCfg
 from .h1_cfg import H1Cfg
 from .h1_hand_cfg import H1HandCfg
 from .h1_simple_hand_cfg import H1SimpleHandCfg
 from .h1_wrist_cfg import H1WristCfg
 from .iiwa14_cfg import Iiwa14Cfg
-from .iiwa_cfg import IiwaCfg
 from .kinova_gen3_robotiq_2f85 import KinovaGen3Robotiq2f85Cfg
 from .koch_mjcf_cfg import KochCfg
 from .lite6_mjcf_cfg import Lite6Cfg
@@ -38,10 +35,8 @@ from .shadow_hand_cfg import ShadowHandCfg
 from .sharpa_wave_cfg import SharpaWaveLeftCfg, SharpaWaveRightCfg
 from .so_arm100_mjcf_cfg import SoArm100Cfg
 from .unitree_dex3_1_cfg import UnitreeDex31LeftCfg
-from .ur5e_2f85_cfg import Ur5E2F85Cfg
 from .ur5e_cfg import Ur5ECfg
 from .ur10e_cfg import Ur10ECfg
-from .vega_cfg import VegaCfg
 from .xhand_cfg import XhandRightCfg
 from .yam_mjcf_cfg import YamCfg
 from .z1_cfg import Z1Cfg

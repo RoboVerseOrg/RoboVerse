@@ -34,6 +34,18 @@ class FrankaWithGripperExtensionCfg(RobotCfg):
         "panda_finger_joint1": (0.0, 0.04),  # 0.0 close, 0.04 open
         "panda_finger_joint2": (0.0, 0.04),  # 0.0 close, 0.04 open
     }
+    # Filled 2026-11-28: the Franka home pose for the shared joints, fingers open (robot check config row).
+    default_joint_positions: dict[str, float] = {
+        "panda_joint1": 0.0,
+        "panda_joint2": -0.7854,
+        "panda_joint3": 0.0,
+        "panda_joint4": -2.3562,
+        "panda_joint5": 0.0,
+        "panda_joint6": 1.5708,
+        "panda_joint7": 0.7854,
+        "panda_finger_joint1": 0.04,
+        "panda_finger_joint2": 0.04,
+    }
     ee_body_name: str = "panda_hand"
     gripper_open_q = [0.04, 0.04]
     gripper_close_q = [0.0, 0.0]

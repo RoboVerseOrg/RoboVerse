@@ -37,6 +37,19 @@ class SawyerCfg(RobotCfg):
         "right_gripper_l_finger_joint": (0.0, 0.020833),
         "right_gripper_r_finger_joint": (-0.020833, 0),
     }
+    # Filled 2026-11-28: the zero pose clamped into the limits, which is what the handlers fell back to without a default (robot check config row).
+    default_joint_positions: dict[str, float] = {
+        "right_j0": 0.0,
+        "right_j1": 0.0,
+        "right_j2": 0.0,
+        "right_j3": 0.0,
+        "right_j4": 0.0,
+        "right_j5": 0.0,
+        "right_j6": 0.0,
+        "head_pan": 0.0,
+        "right_gripper_l_finger_joint": 0.0,
+        "right_gripper_r_finger_joint": 0.0,
+    }
     ee_body_name: str = "sawyer_right_hand"
     gripper_open_q = [0.020833, -0.020833]
     gripper_close_q = [0.0, 0.0]

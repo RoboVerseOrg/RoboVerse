@@ -94,7 +94,6 @@ _KNOWN_DEFAULT_POS_ORPHAN_GAPS: dict[str, str] = {
 _KNOWN_DEFAULT_POS_OUT_OF_RANGE_GAPS: dict[str, str] = {
     # ArxL5, SoArm100 and Koch left this list on 2026-11-28: their limits now match their MJCFs and the
     # defaults lie inside them (`python -m metasim robot check`).
-    "VegaCfg": "torso_j1 default 0.0 but joint_limits is the single-point [0.2, 0.2] — limit looks like a fixed offset, not a range.",
 }
 
 
@@ -225,38 +224,7 @@ def test_g1_tracking_resolves_mjx_mjcf_path():
 # intentional design choices (locked/unused DoF, or a fixed offset expressed as a
 # degenerate range), not the unintended dropped-sign bug the test below hunts for.
 # Keyed by cfg class name -> set of joint names that are allowed to be degenerate.
-_DELIBERATELY_LOCKED_JOINTS: dict[str, set[str]] = {
-    # VegaCfg locks its wheels, right arm/hand, and unused torso DoF; torso_j1 is a
-    # fixed offset [0.2, 0.2]. All intentional — see vega_cfg.py.
-    "VegaCfg": {
-        "B_wheel_j1",
-        "B_wheel_j2",
-        "R_wheel_j1",
-        "R_wheel_j2",
-        "L_wheel_j1",
-        "L_wheel_j2",
-        "torso_j1",
-        "torso_j3",
-        "R_arm_j1",
-        "R_arm_j2",
-        "R_arm_j3",
-        "R_arm_j4",
-        "R_arm_j5",
-        "R_arm_j6",
-        "R_arm_j7",
-        "R_th_j0",
-        "R_th_j1",
-        "R_th_j2",
-        "R_ff_j1",
-        "R_ff_j2",
-        "R_mf_j1",
-        "R_mf_j2",
-        "R_rf_j1",
-        "R_rf_j2",
-        "R_lf_j1",
-        "R_lf_j2",
-    },
-}
+_DELIBERATELY_LOCKED_JOINTS: dict[str, set[str]] = {}
 
 
 @pytest.mark.skipif(not _CFG_PARAMS, reason="roboverse_pack not importable")

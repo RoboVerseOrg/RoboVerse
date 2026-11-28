@@ -126,8 +126,9 @@ Each task is a first-class `BaseTaskEnv` (`NativeLiberoEnv`); a static bundle un
   threshold ranges (open and close are **not** complements — there is a dead zone —
   and close/turn-off require **all** joints). **Verified 0 mismatch vs
   `env._check_success` over demo state-replay on all 130 base tasks.**
-- **Control** — `roboverse_pack.tasks.robosuite._osc.NativeOSC`, robosuite's OSC_POSE
-  math reimplemented in NumPy (arm + parallel-jaw gripper).
+- **Control** — `NativeOSC`, robosuite's OSC_POSE math reimplemented in NumPy (arm + parallel-jaw
+  gripper). It lived in `roboverse_pack/tasks/robosuite/_osc.py`, retired with that pack on 2026-11-28;
+  restore it from `56a0e67b` together with the native LIBERO port.
 
 ### Vendored assets (library-deletable)
 
