@@ -317,9 +317,13 @@ twin** of the suite (replay 0.9 to 1.0 per task, the scripted skills 1.0 on pick
 no change to the skills, so the matrix can carry an engine column), and the first **learned row**: a diffusion policy
 (`ddpm_dit`, `roboverse_learn/il`) trained for 100 epochs per task on scripted demos recorded with `bench record`
 (100 demos for pick, push and stack, 64 for pull, 48 for the peg) and scored under the `visual` tier with the
-collection camera, 20 episodes per task: push 1.00, pull 0.90, pick 0.75, peg 0.55, stack 0.20, macro 0.68. The
-ordering is informative in itself: the two tasks the agent and the VLA found hardest from images (stack, peg) are
-the two where the learned policy is weakest, and the demo budget is lowest where the plan is longest.
+collection camera, 20 episodes per task: push 1.00, pull 0.90, pick 0.75, peg 0.70, stack 0.20, macro 0.71. The
+ordering is informative in itself: the task the agent and the VLA found hardest from images (stack) is where the
+learned policy is weakest. The peg row has a story the gate now tells on its own: the shipped peg demos start the
+fingers at 1.0 in a 0 to 0.04 range (`bench health` reports them `invalid`), a policy trained on 48 demos collected
+from that start scored 0.55, and the policy trained on 83 demos recorded from the corrected start scores 0.70 from
+the corrected instances (`--demos`) and 0.00 from the shipped ones. An unphysical initial state is not a harder
+task; it is a different task, and the number says nothing until the state is fixed.
 
 What the matrix is meant to show, and what the first one does show: the replay ceiling and the scripted
 oracle bound what a perfect perception stack could reach; the same agent drops from near the oracle to

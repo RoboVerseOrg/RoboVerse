@@ -15,7 +15,7 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 | method | privileged | agent-privileged | agent-skills | visual |
 |---|---|---|---|---|
 | llm-agent @mujoco (agent) |  | 0.880 (5 tasks, 50 ep) | 0.120 (5 tasks, 50 ep) |  |
-| il @mujoco (il) |  |  |  | 0.680 (5 tasks, 100 ep) |
+| il @mujoco (il) |  |  |  | 0.710 (5 tasks, 100 ep) |
 | scripted @isaacsim (scripted) | 0.740 (5 tasks, 50 ep) |  |  |  |
 | scripted @mujoco (scripted) | 0.900 (5 tasks, 50 ep) |  |  |  |
 | hold @mujoco | 0.000 (5 tasks, 50 ep) |  |  | 0.000 (5 tasks, 50 ep) |
@@ -29,7 +29,7 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 | task | method | privileged | agent-privileged | agent-skills | visual |
 |---|---|---|---|---|---|
 | lift_peg_upright | llm-agent @mujoco (agent) |  | 0.700 [0.40, 0.89] n=10 | 0.000 [0.00, 0.28] n=10 |  |
-| lift_peg_upright | il @mujoco (il) |  |  |  | 0.550 [0.34, 0.74] n=20 |
+| lift_peg_upright | il @mujoco (il) |  |  |  | 0.700 [0.48, 0.85] n=20 |
 | lift_peg_upright | scripted @isaacsim (scripted) | 0.000 [0.00, 0.28] n=10 |  |  |  |
 | lift_peg_upright | scripted @mujoco (scripted) | 0.900 [0.60, 0.98] n=10 |  |  |  |
 | lift_peg_upright | hold @mujoco | 0.000 [0.00, 0.28] n=10 |  |  | 0.000 [0.00, 0.28] n=10 |
@@ -130,11 +130,11 @@ Methods are comparable within a tier column only; the `*` marks a method scored 
 ### 2026-11-28-il-ddpm-dit
 
 - simulators: mujoco; policies: il; 100 episodes in 5 files
-- MetaSim 1.0.0, commit `b48b24c1a7`
+- MetaSim 1.0.0, commit `293c3b5478`
 
 | task | robots | simulator | rule | access | policy | runs | episodes | success rate | 95% CI | mean steps |
 |---|---|---|---|---|---|---|---|---|---|---|
-| lift_peg_upright | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 0.550 | [0.342, 0.742] | 379.8 |
+| lift_peg_upright | franka | mujoco | first | visual | il | 1 | 20 | 0.700 | [0.481, 0.855] | 383.8 |
 | pick_cube | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 0.750 | [0.531, 0.888] | 158.9 |
 | pull_cube | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 0.900 | [0.699, 0.972] | 211.4 |
 | push_cube | franka | mujoco | first, budget 3x p75 | visual | il | 1 | 20 | 1.000 | [0.839, 1.000] | 162.8 |

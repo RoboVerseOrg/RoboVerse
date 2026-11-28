@@ -898,11 +898,13 @@ def test_bench_run_streams_each_episode_then_saves_the_result(monkeypatch, tmp_p
     monkeypatch.setattr(bench, "evaluate", fake_evaluate)
     monkeypatch.setattr(cli, "_make_env", lambda *a, **k: _Env())
     monkeypatch.setattr(cli, "_make_policy", lambda args: (HoldPolicy(), {}))
+    monkeypatch.setattr(cli, "_apply_demos_override", lambda env, demos: None)  # the fake env has no demo file
     args = argparse.Namespace(
         task="t",
         sim="mujoco",
         robot=None,
         num_envs=1,
+        demos="demos/t/v2",
         episodes=2,
         success_rule="first",
         hold_steps=1,
@@ -927,6 +929,9 @@ def test_bench_run_streams_each_episode_then_saves_the_result(monkeypatch, tmp_p
     assert cli._bench_run(args) == 0
     assert seen == [1, 2], "one JSON line per finished episode, written as each ends"
     assert (tmp_path / "r.json").exists() and not (tmp_path / "r.json.episodes.jsonl").exists()
+    assert json.loads((tmp_path / "r.json").read_text())["notes"]["demos"] == "demos/t/v2", (
+        "scored from an overridden set"
+    )
     assert capsys.readouterr().out.startswith("t [bot @ mujoco] hold:"), "the score line names task, robot, sim, policy"
 
 

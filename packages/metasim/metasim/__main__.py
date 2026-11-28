@@ -259,6 +259,8 @@ def _bench_run(args: argparse.Namespace) -> int:
             )
             if getattr(args, "camera", None):
                 result.notes["cameras"] = list(args.camera)
+            if getattr(args, "demos", None):
+                result.notes["demos"] = args.demos  # scored from these instances, not the task's own
             # saved before close(): a backend whose shutdown ends the process (Isaac Sim's fast shutdown) must
             # not take the result with it
             path = result.save(out)
@@ -716,6 +718,8 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
                 else:
                     result = evaluate(env, ReplayPolicy(), protocol, policy_info={"spec": "replay"}, task_name=name)
                     robots = "+".join(result.robots) or "norobot"
+                    if getattr(args, "demos", None):
+                        result.notes["demos"] = args.demos
                     path = result.save(os.path.join(args.out_dir, f"{name}__{robots}__{args.sim}__replay.json"))
                     summary = result.summary
                     row.update(episodes=summary["episodes"], result=str(path))
