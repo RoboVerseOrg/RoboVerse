@@ -29,14 +29,17 @@ build as an articulation is not support, it is a red gate row.
 ## 3. Self-tests before any task
 
 ```bash
-python -m metasim bench run --task <any task that names the robot> --sim mujoco --policy hold --episodes 2
+python -m metasim robot check <name>                 # MuJoCo: config, assets, kinematics, hold
+python -m metasim robot check <name> --sim isaacsim  # the same on Isaac Sim 6
 ```
 
-`hold` must run: the robot stands at its default joint positions without drifting or exploding. Then
-`tests/test_roboverse_robot_cfg_validation.py` (default positions inside limits, no accidental locked
-joints) runs on every pull request. The skill library's kinematics (`metasim.bench.skills.ArmModel`)
-builds from `mjcf_path` and must find `ee_body_name`; the scripted plans are the fastest way to find
-out whether the arm reaches the workspace.
+Four rows, each a pass or a named failure: the config has limits and defaults for every actuator and the
+defaults lie inside the limits; the asset files the config names for that backend exist (locally or on the
+Hub); the MJCF loads in MuJoCo's model, the end-effector body is found and forward kinematics of the default
+pose is finite (the skill library and the IL adapters depend on this); and holding the default pose for 200
+steps leaves every joint within 0.05 rad and a fixed base within 1 cm. `tests/test_roboverse_robot_cfg_validation.py`
+runs the config part on every pull request. On 2026-11-28 Franka, YAM and the Sharpa hand pass all four on
+MuJoCo.
 
 ## 4. One gated task
 
@@ -47,7 +50,7 @@ parity gap in its config docstring, not hidden.
 
 ## What is coming
 
-An onboarding command (`metasim robot add`) that generates the config from the asset, runs the
-kinematics self-test, a hold-stability test and the MuJoCo vs Isaac parity test. Until then the steps
-above are the contract; the order of planned robots is Franka (reference), YAM, Sharpa, the Wuji hand,
+`metasim robot add`, which generates the config from the asset and then runs `robot check`, and a MuJoCo vs
+Isaac parity test (the same joint trajectory tracked on both engines). Until then the steps above are the
+contract; the order of planned robots is Franka (reference), YAM, Sharpa, the Wuji hand,
 UR5e, xArm7, SO-101, G1, bimanual.

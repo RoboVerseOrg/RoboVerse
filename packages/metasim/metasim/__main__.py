@@ -1062,6 +1062,36 @@ def _add_bench(sub) -> None:
     v.set_defaults(func=_bench_validate)
 
 
+def _robot_check(args: argparse.Namespace) -> int:
+    """The robot self-check (config, assets, kinematics, hold); exit 1 when a check fails."""
+    from metasim.utils.robot_check import check_robot
+
+    reports = [
+        check_robot(name, sim=args.sim, steps=args.steps, device=args.device or "cpu", hold=not args.no_hold)
+        for name in args.robot
+    ]
+    if args.json:
+        print(json.dumps([r.to_dict() for r in reports], indent=2))
+    else:
+        print("\n\n".join(r.table() for r in reports))
+    return 0 if all(r.ok for r in reports) else 1
+
+
+def _add_robot(sub) -> None:
+    r = sub.add_parser("robot", help="robot configs: self-check before a task is built on one")
+    rs = r.add_subparsers(dest="robot_command", required=True)
+    c = rs.add_parser("check", help="config, assets, kinematics and a hold test on a backend")
+    c.add_argument("robot", nargs="+", help="robot config name(s), e.g. franka")
+    c.add_argument("--sim", default="mujoco", help="backend for the assets and hold checks (default mujoco)")
+    c.add_argument("--steps", type=int, default=200, help="simulator steps to hold the default pose")
+    c.add_argument("--device", help="torch device (default cpu)")
+    c.add_argument(
+        "--no-hold", action="store_true", help="skip the simulator hold test (config, assets, kinematics only)"
+    )
+    c.add_argument("--json", action="store_true")
+    c.set_defaults(func=_robot_check)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Parse ``argv`` and run the selected sub-command; returns the process exit status."""
     parser = argparse.ArgumentParser(prog="python -m metasim")
@@ -1079,6 +1109,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--update", action="store_true", help="rewrite the snapshot from the current code")
     a.set_defaults(func=_api_snapshot)
     _add_bench(sub)
+    _add_robot(sub)
     args = parser.parse_args(argv)
     return args.func(args)
 
