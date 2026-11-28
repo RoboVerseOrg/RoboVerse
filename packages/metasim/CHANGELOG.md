@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `python -m metasim bench matrix <results...>`: methods x information-access tiers in one table (task-macro success, task and episode counts, partial task sets starred) plus the per-task rows with Wilson intervals; `BenchmarkResult.policy["family"]` records a policy's method family (`vla`, `il`, `rl`, `agent`, `scripted`, `baseline`) when the policy declares one; `bench serve` advertises it in `/metadata` and `RemotePolicy` carries it, so a served policy is recorded like a local one.
 
 ### Fixed
+- `bench run` and `bench suite run` save the result before closing the simulator; on Isaac Sim 6 the process ends inside `close()`, so every Isaac result file was lost (only the episode stream survived). A CLI test enforces the order.
 - `state_tensor_to_nested` raised `StopIteration` for a scene-only scenario (the articulation in the scene MJCF, no objects, no robots), so every such task crashed at its first `reset`; the batch size now comes from the handler and the env states are empty.
 - `bench run` crashed with `AttributeError` when its first episode finished: the per-episode stream (`<out>.episodes.jsonl`) serialised `EpisodeResult` through a `to_dict()` it does not have. It uses `dataclasses.asdict`; a CLI test now drives `_bench_run` through a finished episode.
 

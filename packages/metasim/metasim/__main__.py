@@ -257,11 +257,13 @@ def _bench_run(args: argparse.Namespace) -> int:
             result = evaluate(
                 env, policy, protocol, policy_info=policy_info, on_episode=on_episode, task_name=args.task
             )
+            if getattr(args, "camera", None):
+                result.notes["cameras"] = list(args.camera)
+            # saved before close(): a backend whose shutdown ends the process (Isaac Sim's fast shutdown) must
+            # not take the result with it
+            path = result.save(out)
         finally:
             env.close()
-    if getattr(args, "camera", None):
-        result.notes["cameras"] = list(args.camera)
-    path = result.save(out)
     os.remove(partial)
     print(
         f"{args.task} [{', '.join(result.robots)} @ {args.sim}] {policy.name}: {_score_line(result.summary)}, "
@@ -421,6 +423,13 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
                 result = evaluate(
                     env, policy, protocol, policy_info=policy_info, on_episode=_report_episode, task_name=entry.task
                 )
+                result.notes["suite"] = {"name": suite.name, "split": split}
+                if getattr(args, "camera", None):
+                    result.notes["cameras"] = list(args.camera)
+                robots = "+".join(result.robots) or "norobot"
+                result.save(
+                    os.path.join(out_dir, f"{split}__{entry.task}__{robots}__{policy.name}.json")
+                )  # before close()
             finally:
                 env.close()
         except Exception as err:  # one broken task is reported as missing, the others still run
@@ -428,11 +437,6 @@ def _bench_suite_run(args: argparse.Namespace) -> int:
             print(f"{entry.task}: ERROR {detail}", file=sys.stderr)
             failures.append({"split": split, "task": entry.task, "error": detail})
             continue
-        result.notes["suite"] = {"name": suite.name, "split": split}
-        if getattr(args, "camera", None):
-            result.notes["cameras"] = list(args.camera)
-        robots = "+".join(result.robots) or "norobot"
-        result.save(os.path.join(out_dir, f"{split}__{entry.task}__{robots}__{policy.name}.json"))
         print(f"{entry.task}: {_score_line(result.summary)}", file=sys.stderr)
         results.append(result)
     report = _write_suite_report(suite, results, out_dir)

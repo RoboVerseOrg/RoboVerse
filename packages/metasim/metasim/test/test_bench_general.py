@@ -875,7 +875,8 @@ def test_bench_run_streams_each_episode_then_saves_the_result(monkeypatch, tmp_p
         scenario = SimpleNamespace(robots=[SimpleNamespace(name="bot")], simulator="mujoco")
 
         def close(self):
-            return None
+            # Isaac Sim's fast shutdown ends the process here: the result must already be on disk
+            assert (tmp_path / "r.json").exists(), "bench run must save the result before closing the simulator"
 
     seen = []
 
