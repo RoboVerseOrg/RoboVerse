@@ -136,6 +136,17 @@ If you find this work useful in your research, please consider citing:
 ```
 
 ```{toctree}
+:caption: Start here
+:maxdepth: 1
+:titlesonly:
+:hidden:
+
+Evaluate a policy in ten minutes <start/evaluate_a_policy>
+Add a task <start/add_a_task>
+Add a robot <start/add_a_robot>
+```
+
+```{toctree}
 :caption: Dataset & Benchmark
 :maxdepth: 2
 :titlesonly:

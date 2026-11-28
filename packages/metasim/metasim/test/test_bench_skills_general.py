@@ -211,7 +211,7 @@ def test_scripted_policy_refuses_without_object_poses(tmp_path):
 
 
 def test_camera_presets_are_added_to_a_scenario_once():
-    assert set(CAMERA_PRESETS) >= {"front", "side", "top"}
+    assert set(CAMERA_PRESETS) >= {"front", "side", "top", "il"} and camera_preset("il").name == "camera0"
     assert camera_preset("front").name == "front" and camera_preset("front").data_types == ["rgb", "depth"]
     with pytest.raises(ValueError, match="unknown camera preset"):
         camera_preset("wrist")
