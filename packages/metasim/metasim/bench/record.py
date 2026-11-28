@@ -23,7 +23,7 @@ from typing import Any
 import torch
 
 from .evaluator import evaluate
-from .instances import TaskInstance
+from .instances import TaskInstance, instance_pool, validate_instances
 from .policy import PolicyContext
 from .protocol import EvalProtocol
 from .result import BenchmarkResult, EpisodeResult
@@ -116,9 +116,11 @@ class RecordingPolicy:
         """Forward to the policy and append its per-env action to each live buffer."""
         actions = self.inner.act(obs, ctx)
         per_env = _actions_as_dicts(actions, ctx)
+        nested = None  # read once per step, only when a default reset left a buffer without its start state
         for env_id, buf in self.current.items():
-            if buf.init_state is None:  # a default reset: read the state the episode actually started from
-                nested = _nested_states(self.env)
+            if buf.init_state is None:
+                if nested is None:
+                    nested = _nested_states(self.env)
                 buf.init_state = flatten_initial_state(nested[env_id])
             if env_id < len(per_env):
                 buf.actions.append(per_env[env_id])
@@ -149,6 +151,7 @@ def record_demos(
     success_only: bool = True,
     task_name: str | None = None,
     on_episode=None,
+    policy_info: dict[str, Any] | None = None,
 ) -> tuple[BenchmarkResult, dict[str, Any]]:
     """Run ``policy`` on ``env`` under ``protocol`` and write the demos to ``out``.
 
@@ -159,6 +162,18 @@ def record_demos(
     robots = [r.name for r in (getattr(env.scenario, "robots", None) or [])]
     if len(robots) != 1:
         raise ValueError(f"record_demos writes single-robot demo files; the scenario has robots {robots}")
+    problems = validate_instances(env, instance_pool(env))
+    if problems:
+        raise ValueError(
+            f"{len(problems)} initial state(s) put a robot joint outside its limits ({problems[0]}); fix the task's "
+            "demo file (or pass a corrected one with --demos) before recording from it, or every consumer of the "
+            "recorded set will resolve the unphysical start differently"
+        )
+    if not getattr(env, "actions_are_joint_targets", True):
+        raise ValueError(
+            f"{type(env).__name__} takes normalized or delta actions (actions_are_joint_targets=False); a demo file "
+            "stores absolute joint targets, so recording it would write actions that replay as garbage"
+        )
     robot = robots[0]
     recorder = RecordingPolicy(policy, env)
     demos: list[dict[str, Any]] = []
@@ -177,7 +192,12 @@ def record_demos(
             on_episode(ep)
 
     result = evaluate(
-        env, recorder, protocol, policy_info={"spec": "record"}, on_episode=_finished, task_name=task_name
+        env,
+        recorder,
+        protocol,
+        policy_info={"spec": "record", **(policy_info or {})},
+        on_episode=_finished,
+        task_name=task_name,
     )
     path = Path(out)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from .access import ACCESS_PROFILES, AccessProfile, get_access_profile, restrict_observation
 from .evaluator import build_context, evaluate
-from .instances import TaskInstance, demo_budget, hash_state, instance_pool, plan_instances
+from .instances import TaskInstance, demo_budget, hash_state, instance_pool, plan_instances, validate_instances
 from .policy import (
     BUILTIN_POLICIES,
     HoldPolicy,
@@ -84,6 +84,7 @@ __all__ = [
     "suite_table",
     "summarize",
     "task_prompt_bank",
+    "validate_instances",
     "validate_result",
     "wilson_interval",
 ]

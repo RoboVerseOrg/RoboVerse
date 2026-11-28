@@ -72,7 +72,18 @@ class RobotReport:
         return {"robot": self.robot, "simulator": self.simulator, "ok": self.ok, "rows": [asdict(r) for r in self.rows]}
 
 
-_ASSET_FIELDS = {"mujoco": ("mjcf_path",), "mjx": ("mjx_mjcf_path", "mjcf_path"), "isaacsim": ("usd_path",)}
+_ASSET_FIELDS = {
+    "mujoco": ("mjcf_path",),
+    "mjx": ("mjx_mjcf_path", "mjcf_path"),
+    "isaacsim": ("usd_path",),
+    "isaacgym": ("urdf_path",),
+    "genesis": ("urdf_path", "mjcf_path"),
+    "newton": ("urdf_path", "mjcf_path", "usd_path"),
+    "sapien3": ("urdf_path",),
+    "pybullet": ("urdf_path",),
+}
+"""Which config fields name the asset each backend loads; any one of them present and existing passes."""
+_ANY_ASSET = ("mjcf_path", "urdf_path", "usd_path")
 
 
 def check_config(cfg) -> CheckRow:
@@ -105,7 +116,7 @@ def check_assets(cfg, sim: str) -> CheckRow:
     """The asset files the config names for ``sim`` exist locally or can be fetched from the Hub."""
     import os
 
-    fields = _ASSET_FIELDS.get(sim, ("mjcf_path",))
+    fields = _ASSET_FIELDS.get(sim, _ANY_ASSET)
     declared = [
         (f, getattr(cfg, f, None)) for f in fields if isinstance(getattr(cfg, f, None), str) and getattr(cfg, f)
     ]
@@ -147,9 +158,7 @@ def check_kinematics(cfg) -> CheckRow:
         return CheckRow("kinematics", False, f"{type(err).__name__}: {str(err)[:160]}")
 
 
-def check_hold(
-    cfg, sim: str, *, steps: int = 200, joint_tol: float = 0.05, base_tol: float = 0.01, device: str = "cpu"
-) -> CheckRow:
+def check_hold(cfg, sim: str, *, steps: int = 200, joint_tol: float = 0.05, base_tol: float = 0.01) -> CheckRow:
     """Hold the default pose on ``sim`` for ``steps`` steps; joints and a fixed base must stay put."""
     import torch
 
@@ -192,13 +201,11 @@ def check_hold(
         return CheckRow("hold", False, f"{type(err).__name__}: {str(err)[:160]}")
     finally:
         # not closed here: Isaac Sim 6 ends the process inside close(), which would take the report with it.
-        # The caller closes the handler once the report is printed (RobotReport.close()).
+        # The caller closes it once the report is printed (close_handlers()).
         _OPEN_HANDLERS.append(handler)
 
 
-def check_robot(
-    name: str, *, sim: str = "mujoco", steps: int = 200, device: str = "cpu", hold: bool = True
-) -> RobotReport:
+def check_robot(name: str, *, sim: str = "mujoco", steps: int = 200, hold: bool = True) -> RobotReport:
     """Run every check for the robot config ``name`` (a registered robot) on ``sim``."""
     from metasim.utils.setup_util import get_robot
 
@@ -208,5 +215,5 @@ def check_robot(
     report.rows.append(check_assets(cfg, sim))
     report.rows.append(check_kinematics(cfg))
     if hold:
-        report.rows.append(check_hold(cfg, sim, steps=steps, device=device))
+        report.rows.append(check_hold(cfg, sim, steps=steps))
     return report

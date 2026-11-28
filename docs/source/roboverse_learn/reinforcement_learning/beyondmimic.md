@@ -73,6 +73,13 @@ python roboverse_pack/tasks/beyondmimic/scripts/replay_npz.py --registry_name={y
 
 ## Policy Training
 
+> **Retired on 2026-11-27.** The tracking tasks named below (`motion-tracking`, `motion-tracking-isaaclab`,
+> `motion-tracking-isaaclab-deploy`) are no longer registered: the release gate could not run them without the
+> WandB motion registry, so they are listed in `roboverse_pack/tasks/RETIRED_TASKS.md` with the commit to restore
+> them from. The training code under `roboverse_pack/tasks/beyondmimic/` and `roboverse_learn/rl/rsl_rl/` is
+> kept; the commands below work once the registrations are restored.
+
+
 - Isaac Lab-Native
 
 ```bash

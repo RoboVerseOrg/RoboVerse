@@ -29,9 +29,11 @@ jobs:
       - name: Run the gate
         run: tools/gate/nightly.sh ${{ matrix.sim }} gate_out/${{ matrix.sim }}
       - uses: actions/upload-artifact@v4
+        if: always()  # the gate exits 1 when a task fails; that is exactly when the report matters
         with:
           name: gate-${{ matrix.sim }}
           path: gate_out/${{ matrix.sim }}/health.*
           if-no-files-found: error
       - name: Summary
+        if: always()
         run: cat gate_out/${{ matrix.sim }}/health.md >> "$GITHUB_STEP_SUMMARY"

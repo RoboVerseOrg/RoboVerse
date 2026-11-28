@@ -295,7 +295,7 @@ def _bench_record(args: argparse.Namespace) -> int:
         )
     except ValueError as err:
         raise SystemExit(f"invalid protocol: {err}") from err
-    policy, _ = _make_policy(args)
+    policy, policy_info = _make_policy(args)
     try:
         env = _make_env(
             args.task,
@@ -318,6 +318,7 @@ def _bench_record(args: argparse.Namespace) -> int:
             success_only=not args.keep_failures,
             task_name=args.task,
             on_episode=_report_episode,
+            policy_info=policy_info,
         )
     finally:
         env.close()
@@ -411,7 +412,9 @@ def _suite_task_isolated(entry, protocol, args: argparse.Namespace, sim: str, ou
     if preset is not None and preset == protocol.access:
         cmd += ["--access", protocol.access.name]
     else:  # a custom tier travels as a file the child reads
-        access_path = os.path.join(os.path.dirname(out_path), f"access__{protocol.access.name}.json")
+        logs_dir = os.path.join(os.path.dirname(out_path), "logs")  # not next to the results: readers glob *.json there
+        os.makedirs(logs_dir, exist_ok=True)
+        access_path = os.path.join(logs_dir, f"access__{protocol.access.name}.json")
         with open(access_path, "w") as f:
             _json.dump(protocol.access.to_dict(), f)
         cmd += ["--access", access_path]
@@ -557,10 +560,10 @@ def _bench_suite_report(args: argparse.Namespace) -> int:
     return 0 if all(block["complete"] for block in report["splits"].values()) else 1
 
 
-HEALTH_STATUSES = ("ok", "low", "unreliable", "flaky", "undefined", "unsupported", "no-demos", "error")
+HEALTH_STATUSES = ("ok", "low", "unreliable", "flaky", "invalid", "undefined", "unsupported", "no-demos", "error")
 """``unreliable``: the hold policy also succeeds (the checker accepts the initial state); ``flaky``: the same replay
 scores differently on a second run (``--repeat``)."""
-HEALTH_FAILING = ("low", "unreliable", "flaky", "error")
+HEALTH_FAILING = ("low", "unreliable", "flaky", "invalid", "error")
 """The statuses that fail the gate."""
 """Outcomes of ``bench health`` for one task, in the order the table sorts them."""
 
@@ -617,6 +620,12 @@ def _health_task_isolated(name: str, args: argparse.Namespace) -> dict:
         cmd += ["--max-steps", str(args.max_steps)]
     if args.device:
         cmd += ["--device", args.device]
+    if getattr(args, "demos", None):
+        cmd += ["--demos", args.demos]
+    if getattr(args, "floor", False):
+        cmd += ["--floor"]
+    if getattr(args, "repeat", 1) and args.repeat > 1:
+        cmd += ["--repeat", str(args.repeat)]
     os.makedirs(os.path.join(args.out_dir, "logs"), exist_ok=True)
     log_path = os.path.join(args.out_dir, "logs", f"{name}.log")
     with open(log_path, "w") as log_file:
@@ -669,12 +678,13 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
     """Replay one task's demos under the protocol and classify the outcome.
 
     Returns ``{"task", "status", "success_rate", "episodes", "result", "detail"}``: ``ok`` at or above the
-    threshold, ``low`` below it, ``undefined`` when the task declares no success signal, ``unsupported`` when
-    it does not run on the backend, ``no-demos`` when it ships no demo file, ``error`` with the exception text.
+    threshold, ``low`` below it, ``invalid`` when an initial state puts a robot joint outside its limits,
+    ``undefined`` when the task declares no success signal, ``unsupported`` when it does not run on the
+    backend, ``no-demos`` when it ships no demo file, ``error`` with the exception text.
     """
     import torch
 
-    from metasim.bench import EvalProtocol, ReplayPolicy, evaluate
+    from metasim.bench import EvalProtocol, ReplayPolicy, evaluate, instance_pool, validate_instances
     from metasim.task.registry import get_task_class
 
     row = {"task": name, "status": "error", "success_rate": None, "episodes": 0, "result": None, "detail": ""}
@@ -700,6 +710,9 @@ def _health_task(name: str, args: argparse.Namespace) -> dict:
                 # the demo file is a property of the built task: some tasks pick it per robot or in __init__
                 if getattr(env, "traj_filepath", None) is None:
                     row.update(status="no-demos")
+                elif problems := validate_instances(env, instance_pool(env)):
+                    # an unphysical initial state replays differently in every consumer; the score would be noise
+                    row.update(status="invalid", detail=f"{len(problems)} out-of-limit joint value(s): {problems[0]}")
                 else:
                     result = evaluate(env, ReplayPolicy(), protocol, policy_info={"spec": "replay"}, task_name=name)
                     robots = "+".join(result.robots) or "norobot"
@@ -1066,20 +1079,21 @@ def _robot_check(args: argparse.Namespace) -> int:
     """The robot self-check (config, assets, kinematics, hold); exit 1 when a check fails."""
     from metasim.utils.robot_check import check_robot
 
-    reports = [
-        check_robot(name, sim=args.sim, steps=args.steps, device=args.device or "cpu", hold=not args.no_hold)
-        for name in args.robot
-    ]
+    reports = [check_robot(name, sim=args.sim, steps=args.steps, hold=not args.no_hold) for name in args.robot]
     if args.json:
         print(json.dumps([r.to_dict() for r in reports], indent=2))
     else:
         print("\n\n".join(r.table() for r in reports))
     sys.stdout.flush()
-    code = 0 if all(r.ok for r in reports) else 1
+    if not all(r.ok for r in reports):
+        # Isaac Sim ends the process with status 0 inside close(); a failed check must not be laundered into
+        # exit 0 by its own cleanup, so the process ends here with the verdict and the simulator dies with it.
+        sys.stderr.flush()
+        os._exit(1)
     from metasim.utils.robot_check import close_handlers
 
-    close_handlers()  # on Isaac Sim this ends the process (exit 0 unless an exception propagates); the report is out
-    return code
+    close_handlers()  # may end the process on Isaac Sim; the report is out and the verdict is pass
+    return 0
 
 
 def _add_robot(sub) -> None:
@@ -1089,7 +1103,6 @@ def _add_robot(sub) -> None:
     c.add_argument("robot", nargs="+", help="robot config name(s), e.g. franka")
     c.add_argument("--sim", default="mujoco", help="backend for the assets and hold checks (default mujoco)")
     c.add_argument("--steps", type=int, default=200, help="simulator steps to hold the default pose")
-    c.add_argument("--device", help="torch device (default cpu)")
     c.add_argument(
         "--no-hold", action="store_true", help="skip the simulator hold test (config, assets, kinematics only)"
     )

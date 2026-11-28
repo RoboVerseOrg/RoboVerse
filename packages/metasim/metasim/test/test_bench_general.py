@@ -8,6 +8,7 @@ the counting rules are pinned independently of any backend.
 from __future__ import annotations
 
 import json
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -843,7 +844,7 @@ def test_health_reliability_flags_a_checker_the_hold_policy_satisfies_and_a_flak
     row = {"task": "t", "status": "ok", "detail": ""}
     cli._health_reliability(None, "t", EvalProtocol(episodes=2), first, row, SimpleNamespace(repeat=1, floor=False))
     assert row["status"] == "ok", "without the flags the gate is the replay score alone"
-    assert cli.HEALTH_FAILING == ("low", "unreliable", "flaky", "error")
+    assert cli.HEALTH_FAILING == ("low", "unreliable", "flaky", "invalid", "error")
 
 
 def test_health_error_status_tells_unsupported_and_missing_demos_from_errors():
@@ -1022,6 +1023,7 @@ def test_suite_task_isolated_runs_bench_run_with_the_entry_protocol(monkeypatch,
     assert [cmd[i + 1] for i, v in enumerate(cmd) if v == "--instance"] == ["1", "4"]
     access_arg = cmd[cmd.index("--access") + 1]
     assert access_arg.endswith("access__visual.json"), "a tier that is not a preset travels as a file"
+    assert os.path.basename(os.path.dirname(access_arg)) == "logs", "not next to the results: readers glob *.json there"
     assert result.task == "t" and (tmp_path / "r.json").exists()
 
     # a custom profile equal to a preset is passed by name
@@ -1030,3 +1032,88 @@ def test_suite_task_isolated_runs_bench_run_with_the_entry_protocol(monkeypatch,
 
     with pytest.raises(RuntimeError, match="before saving a result"):
         cli._suite_task_isolated(SuiteTask(task="broken"), EvalProtocol(), args, "isaacsim", str(tmp_path / "r3.json"))
+
+
+# ----------------------------------------------------------------------------------------------
+# instance validity, the recorder's guards, the isolated health child
+# ----------------------------------------------------------------------------------------------
+def _limited_env(pool_states):
+    env = _ScriptedEnv(num_envs=1, schedule=[(3, 5, True)], pool_size=0)
+    env.scenario.robots[0].joint_limits = {"j0": (0.0, 1.0), "j1": (-1.0, 1.0)}
+    env._bench_instance_pool = tuple(
+        TaskInstance(index=i, seed=0, state=s, state_hash=hash_state(s)) for i, s in enumerate(pool_states)
+    )
+    return env
+
+
+def test_validate_instances_names_each_out_of_limit_joint():
+    from metasim.bench import validate_instances
+
+    good = {"objects": {}, "robots": {"bot": {"dof_pos": {"j0": 0.5, "j1": torch.tensor(-1.0)}}}}
+    bad = {"objects": {}, "robots": {"bot": {"dof_pos": {"j0": 1.0 + 0.5, "j1": 0.0}}}}
+    flat_bad = {"bot": {"dof_pos": {"j0": -0.2, "j1": 0.0}}}
+    env = _limited_env([good, bad, flat_bad])
+    problems = validate_instances(env, list(env._bench_instance_pool))
+    assert problems == [
+        "instance 1: bot.j0=1.500 outside [0.000, 1.000]",
+        "instance 2: bot.j0=-0.200 outside [0.000, 1.000]",
+    ], "both layouts are judged; the good state and the in-range joint are silent"
+    assert validate_instances(env, [TaskInstance(index=0, seed=0, state=None)]) == [], "a default reset is not judged"
+    env.scenario.robots[0].joint_limits = {}
+    assert validate_instances(env, list(env._bench_instance_pool)) == [], "no declared limits, no judgement"
+
+
+def test_record_demos_refuses_unphysical_starts_and_non_joint_actions(tmp_path):
+    from metasim.bench import record_demos
+
+    bad = {"objects": {}, "robots": {"bot": {"dof_pos": {"j0": 7.0, "j1": 0.0}}}}
+    with pytest.raises(ValueError, match=r"outside its limits \(instance 0: bot.j0=7.000"):
+        record_demos(_limited_env([bad]), HoldPolicy(), EvalProtocol(episodes=1), out=tmp_path / "x.pkl", task_name="t")
+    env = _ScriptedEnv(num_envs=1, schedule=[(3, 5, True)], pool_size=1)
+    env.actions_are_joint_targets = False
+    with pytest.raises(ValueError, match="normalized or delta actions"):
+        record_demos(env, HoldPolicy(), EvalProtocol(episodes=1), out=tmp_path / "y.pkl", task_name="t")
+
+
+def test_record_demos_keeps_the_policy_provenance(tmp_path):
+    from metasim.bench import record_demos
+
+    env = _ScriptedEnv(num_envs=1, schedule=[(3, 5, True)], pool_size=1)
+    result, _ = record_demos(
+        env, HoldPolicy(), EvalProtocol(episodes=1), out=tmp_path / "d.pkl", task_name="t",
+        policy_info={"spec": "pkg.mod:Policy", "checkpoint": "ckpt.pt", "checkpoint_sha256": "ab" * 32},
+    )  # fmt: skip
+    assert result.policy["spec"] == "pkg.mod:Policy" and result.policy["checkpoint_sha256"] == "ab" * 32
+    sidecar = json.loads((tmp_path / "d.pkl.json").read_text())
+    assert sidecar["policy"]["checkpoint"] == "ckpt.pt", "the sidecar says which checkpoint produced the demos"
+
+
+def test_health_task_isolated_forwards_the_gate_flags(monkeypatch, tmp_path):
+    """The child must receive --demos, --floor and --repeat, or the isolated gate can never say unreliable/flaky."""
+    import subprocess
+    from types import SimpleNamespace
+
+    import metasim.__main__ as cli
+
+    calls = []
+
+    def fake_run(cmd, check, stdout, stderr, env):
+        calls.append(cmd)
+        out_dir = cmd[cmd.index("--out-dir") + 1]
+        cli._write_health_row(out_dir, {"task": "t", "status": "ok", "success_rate": 1.0, "episodes": 2, "detail": ""})
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    args = SimpleNamespace(
+        sim="isaacsim", num_envs=1, episodes=2, seed=5, threshold=0.8, out_dir=str(tmp_path), robot=["franka"],
+        max_steps=None, device=None, demos="demos/t/v2", floor=True, repeat=3,
+    )  # fmt: skip
+    row = cli._health_task_isolated("t", args)
+    cmd = calls[-1]
+    assert cmd[cmd.index("--demos") + 1] == "demos/t/v2" and "--floor" in cmd and cmd[cmd.index("--repeat") + 1] == "3"
+    assert row["status"] == "ok"
+    # without the flags nothing is forwarded
+    calls.clear()
+    cli._health_task_isolated("t", SimpleNamespace(**{**vars(args), "demos": None, "floor": False, "repeat": 1}))
+    assert "--demos" not in calls[-1] and "--floor" not in calls[-1] and "--repeat" not in calls[-1]
+    assert "invalid" in cli.HEALTH_STATUSES and "invalid" in cli.HEALTH_FAILING

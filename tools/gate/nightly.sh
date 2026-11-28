@@ -15,5 +15,5 @@ export PYTHONPATH="$PWD/packages/metasim:$PWD${PYTHONPATH:+:$PYTHONPATH}" MUJOCO
 mkdir -p "$out"
 "$py" -m metasim bench health --sim "$sim" --episodes 5 --threshold 0.8 --floor --repeat 2 --isolate auto \
   --device "${ROBOVERSE_GATE_DEVICE:-cpu}" --out-dir "$out" || status=$?
-echo "gate exit: ${status:-0} (1 = at least one task is low / unreliable / flaky / error)"
+echo "gate exit: ${status:-0} (1 = at least one task is low / unreliable / flaky / invalid / error)"
 exit "${status:-0}"

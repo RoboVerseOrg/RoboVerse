@@ -50,8 +50,11 @@ python -m metasim bench health --sim mujoco --task <name> --demos demos/<name>/v
 ```
 
 Green means: the demos replay at 0.80 or better on the backend they were recorded on, the hold policy
-(no motion) scores exactly 0, and two replays of the same instances agree. `low`, `unreliable`,
-`flaky` and `error` are each a different bug, named in the row. Fix the task, not the threshold.
+(no motion) scores exactly 0, two replays of the same instances agree, and every initial state keeps each
+robot joint inside its limits. `low`, `unreliable`, `flaky`, `invalid` and `error` are each a different bug,
+named in the row. Fix the task, not the threshold. (`invalid` caught the shipped `lift_peg_upright` demos
+on 2026-11-28: the fingers start at 1.0 in a 0 to 0.04 range, and the gate and the IL collector resolved
+that differently, so the same demos replayed at 1.0 in one and 0.45 in the other.)
 
 ## 4. Publish
 

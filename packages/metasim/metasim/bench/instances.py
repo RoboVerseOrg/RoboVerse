@@ -186,3 +186,40 @@ def plan_instances(
             )
         )
     return planned
+
+
+def validate_instances(env, instances: list[TaskInstance]) -> list[str]:
+    """The initial states a task ships must be physical: every robot joint inside its limits.
+
+    An out-of-range joint (a Franka finger at 1.0 when its range is 0 to 0.04) is resolved differently by
+    every consumer of the state: one backend clamps, another settles for a few steps, a third leaves it
+    penetrating; the same demo then replays to different outcomes in the gate and in the data pipeline.
+    Returns one line per problem (``"instance 3: franka.panda_finger_joint1=1.000 outside [0.000, 0.040]"``),
+    empty when every state is inside the limits. States without a robot entry and robots without declared
+    limits are not judged.
+    """
+    robots = {r.name: r for r in (getattr(getattr(env, "scenario", None), "robots", None) or [])}
+    problems: list[str] = []
+    for inst in instances:
+        state = inst.state
+        if not isinstance(state, dict):
+            continue
+        entries = state.get("robots") if isinstance(state.get("robots"), dict) else state
+        for name, cfg in robots.items():
+            limits = getattr(cfg, "joint_limits", None) or {}
+            entry = entries.get(name) if isinstance(entries, dict) else None
+            dof = entry.get("dof_pos") if isinstance(entry, dict) else None
+            if not limits or not isinstance(dof, dict):
+                continue
+            for joint, value in dof.items():
+                lo_hi = limits.get(joint)
+                if lo_hi is None:
+                    continue
+                try:
+                    q = float(value.item() if hasattr(value, "item") else value)
+                except (TypeError, ValueError):
+                    continue
+                lo, hi = float(lo_hi[0]), float(lo_hi[1])
+                if not (lo - 1e-6 <= q <= hi + 1e-6):
+                    problems.append(f"instance {inst.index}: {name}.{joint}={q:.3f} outside [{lo:.3f}, {hi:.3f}]")
+    return problems
