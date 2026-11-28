@@ -13,6 +13,8 @@ release.
 ## [Unreleased]
 
 ### Added
+- `docs/source/start/add_a_robot.md`: the robot kit route (`robot add` from the MJCF, the six-row self-check with the new `actuators` row, `robot parity` MuJoCo vs Isaac Sim 6) with the measured Franka and YAM results and the parity sweep of every dual-asset robot (Franka, UR5e, UR10e pass at 0.63 rad/s; Z1 and Gen3 fail on MuJoCo-side wrist gains; iiwa14's USD does not build); `robot_template.py` points at it.
+- `FrankaCfg` docstring: the known MuJoCo vs Isaac Sim effort-limit gap (MJCF +-40 N m vs USD 87 / 12 N m, no `effort_limit_sim` set) and why it stays unpinned (pinning it drops the MuJoCo replay baseline of stack_cube to 0.6).
 - `SECURITY.md`: private vulnerability reporting through GitHub, acknowledgement in 3 working days, coordinated disclosure within 90 days, supported versions.
 - `tools/assets/check_manifest.py`: every `roboverse_data/...` literal in the content packs must exist on the Hub (or locally); runs in the `task-contract` workflow on every pull request. It would have caught the 2587 generated ManiSkill tasks whose assets never existed.
 - `tests/test_task_contract_static.py`: the task contract checked in source on every pull request: unique registered names, one registration per class, at most 16 registered classes per module (variants are parameters, not generated classes), a class-level scenario or a pack base class, `traj_filepath` under `roboverse_data/`.

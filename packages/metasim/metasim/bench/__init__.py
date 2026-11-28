@@ -27,7 +27,7 @@ from .policy import (
 from .prompts import PromptBank, PromptDraw, task_prompt_bank
 from .protocol import PROMPT_SPLITS, SUCCESS_RULES, EvalProtocol
 from .record import RecordingPolicy, flatten_initial_state, record_demos
-from .remote import PolicyServer, RemotePolicy
+from .remote import ConformanceReport, PolicyServer, RemotePolicy, conformance
 from .result import (
     SCHEMA,
     SCHEMA_VERSION,
@@ -50,6 +50,7 @@ __all__ = [
     "AccessProfile",
     "BenchmarkResult",
     "BenchmarkSuite",
+    "ConformanceReport",
     "EpisodeResult",
     "EvalProtocol",
     "HoldPolicy",
@@ -66,6 +67,7 @@ __all__ = [
     "TaskInstance",
     "build_context",
     "checkpoint_sha256",
+    "conformance",
     "demo_budget",
     "evaluate",
     "flatten_initial_state",

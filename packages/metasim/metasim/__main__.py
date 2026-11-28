@@ -347,6 +347,22 @@ def _bench_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bench_conformance(args: argparse.Namespace) -> int:
+    """Check a policy server against the wire protocol without a simulator; exit 1 when a contract fails."""
+    from metasim.bench import conformance
+
+    robot_cfg = None
+    if args.robot:
+        from metasim.utils.setup_util import get_robot
+
+        robot_cfg = get_robot(args.robot)
+    report = conformance(
+        args.policy_url, num_envs=args.num_envs, robot_cfg=robot_cfg, action_dim=args.action_dim, timeout=args.timeout
+    )
+    print(json.dumps(report.to_dict(), indent=2) if args.json else report.table())
+    return 0 if report.ok else 1
+
+
 def _bench_suite_list(args: argparse.Namespace) -> int:
     from metasim.bench import get_suite, list_suites
 
@@ -1001,6 +1017,17 @@ def _add_bench(sub) -> None:
     sv.add_argument("--device", help="torch device the policy runs on (default cpu)")
     sv.add_argument("--metadata", action="append", metavar="KEY=VALUE", help="extra metadata field (repeatable)")
     sv.set_defaults(func=_bench_serve)
+    cf = bs.add_parser(
+        "conformance",
+        help="check a policy server against the wire protocol (metadata, reset, act, chunks) without a simulator",
+    )
+    cf.add_argument("--policy-url", required=True, help="the server, e.g. http://127.0.0.1:8000")
+    cf.add_argument("--num-envs", type=int, default=2, help="envs in the synthetic batch (default 2)")
+    cf.add_argument("--robot", help="use this robot config's action box instead of a synthetic one, e.g. franka")
+    cf.add_argument("--action-dim", type=int, default=7, help="joints of the synthetic robot when --robot is not given")
+    cf.add_argument("--timeout", type=float, default=60.0, help="seconds per request")
+    cf.add_argument("--json", action="store_true")
+    cf.set_defaults(func=_bench_conformance)
     su = bs.add_parser("suite", help="multi-task suites: list them, run one, report task-macro scores")
     sus = su.add_subparsers(dest="suite_command", required=True)
     sl = sus.add_parser("list", help="registered suites")
@@ -1080,7 +1107,7 @@ def _add_bench(sub) -> None:
 
 
 def _robot_check(args: argparse.Namespace) -> int:
-    """The robot self-check (config, assets, kinematics, hold); exit 1 when a check fails."""
+    """The robot self-check (config, assets, kinematics, limits, actuators, hold); exit 1 when a check fails."""
     from metasim.utils.robot_check import check_robot
 
     reports = [check_robot(name, sim=args.sim, steps=args.steps, hold=not args.no_hold) for name in args.robot]
@@ -1100,10 +1127,155 @@ def _robot_check(args: argparse.Namespace) -> int:
     return 0
 
 
+def _robot_add(args) -> int:
+    """Generate a RobotCfg from an MJCF, write it, import it back and run the self-check on it."""
+    from metasim.utils.robot_check import check_robot_cfg, close_handlers
+    from metasim.utils.robot_kit import add_robot, load_cfg_from_file
+
+    defaults = {}
+    for item in args.default or []:
+        if "=" not in item:
+            print(f"--default expects joint=value, got {item!r}", file=sys.stderr)
+            return 2
+        joint, value = item.split("=", 1)
+        defaults[joint.strip()] = float(value)
+    out = args.out or os.path.join("roboverse_pack", "robots", f"{args.name}_cfg.py")
+    try:
+        spec, cls = add_robot(
+            mjcf=args.mjcf,
+            name=args.name,
+            out=out,
+            usd=args.usd,
+            urdf=args.urdf,
+            ee_body=args.ee_body,
+            gripper_joints=args.gripper_joints,
+            class_name=args.class_name,
+            overwrite=args.overwrite,
+            defaults=defaults or None,
+            command="python -m metasim " + " ".join(sys.argv[1:]),
+        )
+    except (FileExistsError, ValueError) as err:
+        print(str(err), file=sys.stderr)
+        return 1
+    print(
+        f"wrote {out}: class {cls}, {len(spec.joints)} joints ({len(spec.gripper_joints)} gripper), ee body {spec.ee_body!r}"
+    )
+    for note in spec.notes:
+        print(f"  note: {note}")
+    if args.no_check:
+        return 0
+    cfg = load_cfg_from_file(out, cls)
+    report = check_robot_cfg(cfg, sim=args.sim, steps=args.steps, hold=not args.no_hold)
+    print()
+    print(json.dumps(report.to_dict(), indent=2) if args.json else report.table())
+    print(
+        f"\nnext: export {cls} from roboverse_pack/robots/__init__.py, review the TODO lines in {out}, "
+        f"then `python -m metasim robot check {args.name}` and one gated task."
+    )
+    sys.stdout.flush()
+    if not report.ok:
+        sys.stderr.flush()
+        os._exit(1)
+    close_handlers()
+    return 0
+
+
+def _robot_parity(args) -> int:
+    """Track one canned joint trajectory on two backends and compare the traces joint by joint."""
+    from metasim.utils.robot_check import TrackingTrace, close_handlers, compare_traces, track_trajectory
+    from metasim.utils.setup_util import get_robot
+
+    cfg = get_robot(args.robot)
+    traces: list[TrackingTrace] = []
+    for path in args.load or []:
+        with open(path, encoding="utf-8") as fh:
+            traces.append(TrackingTrace.from_dict(json.load(fh)))
+    for sim in args.sims or []:
+        traces.append(
+            track_trajectory(
+                cfg,
+                sim,
+                steps=args.steps,
+                period_steps=args.period,
+                amplitude_frac=args.amplitude,
+                settle_steps=args.settle,
+            )
+        )
+    if args.save:
+        if len(args.sims or []) != 1:
+            print("--save stores the trace of exactly one --sims backend", file=sys.stderr)
+            return 2
+        with open(args.save, "w", encoding="utf-8") as fh:
+            json.dump(traces[-1].to_dict(), fh)
+        print(f"saved {traces[-1].simulator} trace to {args.save}")
+    if len(traces) < 2:
+        if args.save:
+            close_handlers()
+            return 0
+        print("robot parity needs two traces: --sims a b, or --load <trace.json> plus --sims b", file=sys.stderr)
+        return 2
+    report = compare_traces(cfg, traces[0], traces[1], tol=args.tol, tol_slide=args.tol_slide)
+    print(json.dumps(report.to_dict(), indent=2) if args.json else report.table())
+    sys.stdout.flush()
+    if not report.ok:
+        sys.stderr.flush()
+        os._exit(1)  # Isaac Sim ends the process with status 0 in close(); the verdict must survive that
+    close_handlers()
+    return 0
+
+
 def _add_robot(sub) -> None:
-    r = sub.add_parser("robot", help="robot configs: self-check before a task is built on one")
+    r = sub.add_parser(
+        "robot", help="robot configs: generate one from an MJCF, self-check before a task is built on one"
+    )
     rs = r.add_subparsers(dest="robot_command", required=True)
-    c = rs.add_parser("check", help="config, assets, kinematics and a hold test on a backend")
+    a = rs.add_parser(
+        "add", help="generate a RobotCfg file from an MJCF (joints, limits, gains, defaults, tool) and check it"
+    )
+    a.add_argument("--mjcf", required=True, help="the robot's MJCF (local path or roboverse_data/... on the Hub)")
+    a.add_argument("--name", required=True, help="the robot name every task and result will use, e.g. so_arm101")
+    a.add_argument("--out", help="where to write the config (default roboverse_pack/robots/<name>_cfg.py)")
+    a.add_argument("--class-name", help="config class name (default from --name, e.g. SoArm101Cfg)")
+    a.add_argument("--usd", help="USD path to declare for Isaac Sim")
+    a.add_argument("--urdf", help="URDF path to declare for the URDF backends")
+    a.add_argument("--ee-body", help="the tool body (default: the parent body of the gripper joints)")
+    a.add_argument(
+        "--gripper-joints", nargs="+", help="joints marked is_ee (default: slide joints and finger/jaw/gripper names)"
+    )
+    a.add_argument("--default", action="append", metavar="JOINT=VALUE", help="default joint position (repeatable)")
+    a.add_argument("--overwrite", action="store_true", help="replace an existing file at --out")
+    a.add_argument("--no-check", action="store_true", help="write the file only, skip the self-check")
+    a.add_argument("--sim", default="mujoco", help="backend for the self-check (default mujoco)")
+    a.add_argument("--steps", type=int, default=200, help="simulator steps to hold the default pose")
+    a.add_argument("--no-hold", action="store_true", help="skip the hold test in the self-check")
+    a.add_argument("--json", action="store_true")
+    a.set_defaults(func=_robot_add)
+    pa = rs.add_parser("parity", help="track one canned joint trajectory on two backends and compare the traces")
+    pa.add_argument("robot", help="robot config name, e.g. franka")
+    pa.add_argument(
+        "--sims", nargs="+", help="backends to run, e.g. mujoco isaacsim (the first two traces are compared)"
+    )
+    pa.add_argument("--load", action="append", metavar="TRACE.json", help="a trace saved with --save (repeatable)")
+    pa.add_argument("--save", metavar="TRACE.json", help="save the one backend's trace for a later run in another env")
+    pa.add_argument("--steps", type=int, default=400, help="control steps of the trajectory (default 400 = 6 s)")
+    pa.add_argument("--period", type=int, default=200, help="sinusoid period in control steps (default 200 = 3 s)")
+    pa.add_argument(
+        "--amplitude", type=float, default=0.25, help="amplitude as a fraction of the half range (default 0.25)"
+    )
+    pa.add_argument(
+        "--amplitude-max",
+        type=float,
+        default=0.3,
+        help="cap on a hinge joint's amplitude, rad (default 0.3; 0 = no cap)",
+    )
+    pa.add_argument("--settle", type=int, default=50, help="control steps at the default pose before the trajectory")
+    pa.add_argument(
+        "--tol", type=float, default=0.05, help="largest allowed cross-engine difference for a hinge joint, rad"
+    )
+    pa.add_argument("--tol-slide", type=float, default=0.005, help="the same for a slide joint, metres")
+    pa.add_argument("--json", action="store_true")
+    pa.set_defaults(func=_robot_parity)
+    c = rs.add_parser("check", help="config, assets, kinematics, limits, actuators and a hold test on a backend")
     c.add_argument("robot", nargs="+", help="robot config name(s), e.g. franka")
     c.add_argument("--sim", default="mujoco", help="backend for the assets and hold checks (default mujoco)")
     c.add_argument("--steps", type=int, default=200, help="simulator steps to hold the default pose")

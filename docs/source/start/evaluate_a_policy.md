@@ -53,8 +53,17 @@ harness never imports it:
 
 ```bash
 python -m metasim bench serve --policy my_pkg.my_module:MyPolicy --checkpoint ckpt.pt --port 8000   # in the model's env
+python -m metasim bench conformance --policy-url http://127.0.0.1:8000 --robot franka             # before any episode
 python -m metasim bench run --task pick_cube --sim mujoco --policy-url http://127.0.0.1:8000
 ```
+
+The wire protocol is `roboverse.bench.remote/1` (three routes, JSON and NPZ, no pickle; the module docstring of
+`metasim.bench.remote` is the specification), so a server can be written in any language. `bench conformance`
+exercises it the way the evaluator will, with no simulator: metadata speaks the protocol, reset accepts the
+context, act returns finite actions of the right shape (an action chunk is reported with its horizon), a reset of
+one env still answers for every env, a malformed body is refused with a JSON error. It also reports, without
+judging, whether the policy is deterministic, whether its actions leave the action box, and the `/act` latency.
+`--robot franka` checks against Franka's real action box instead of a synthetic one.
 
 ## 4. Say what the policy may see
 
