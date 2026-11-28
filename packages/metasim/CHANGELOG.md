@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `bench suite run` removes a stale `errors.json` when a re-run into the same directory has no failures (found by the new end-to-end CLI tests, which now also cover `suite run` and `record`).
-- `metasim.sim.mujoco` sets `MUJOCO_GL=egl` before `mujoco` is imported when the machine has no display and nothing was asked for: MuJoCo's Linux default is GLFW, and on a headless box the first camera render (a depth task in `bench health`) died inside the GL library instead of raising. An explicit `MUJOCO_GL` is kept; a `mujoco` imported earlier gets a warning.
+- `metasim.sim.mujoco` sets `MUJOCO_GL=egl` (or `osmesa`) before `mujoco` is imported when the machine has no display, nothing was asked for and the library is installed: MuJoCo's Linux default is GLFW, and on a headless box the first camera render (a depth task in `bench health`) died inside the GL library instead of raising. An explicit `MUJOCO_GL` is kept; a `mujoco` imported earlier gets a warning.
 - `get_robot(name)` also resolves a config whose class is not named after the robot (`KochCfg` for `koch_1`, `MjlabG1Cfg` for `g1`): the candidate packages are scanned for a `RobotCfg` whose `name` default matches, so the key every task and result uses always resolves.
 - `bench health --isolate` children (Isaac Sim) now receive `--demos`, `--floor` and `--repeat`; before, the isolated gate could never report `unreliable` or `flaky` and always replayed the task's own demos.
 - `bench suite run --isolate` writes a custom access tier to `<out>/logs/`, not next to the result files where `bench summarize` and the leaderboard glob `*.json`.

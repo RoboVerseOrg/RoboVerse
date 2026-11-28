@@ -317,26 +317,30 @@ def test_cli_has_robot_parity():
     assert ns.amplitude_max == 0.0 and "amplitude_max=args.amplitude_max" in inspect.getsource(cli._robot_parity)
 
 
-def test_mujoco_package_defaults_to_egl_on_a_headless_machine():
-    """Without a display and without MUJOCO_GL, importing the MuJoCo backend asks for EGL before `mujoco` loads."""
+def test_mujoco_package_picks_an_offscreen_gl_backend_on_a_headless_machine():
+    """Without a display and without MUJOCO_GL, importing the MuJoCo backend asks for EGL (or OSMesa) before `mujoco`
+    loads, when the machine has the library; a machine without one keeps MuJoCo's default."""
     import os
     import subprocess
     import sys
 
+    from metasim.sim.mujoco import headless_gl_backend
+
+    expected = headless_gl_backend() or "None"
     env = {k: v for k, v in os.environ.items() if k not in ("DISPLAY", "WAYLAND_DISPLAY", "MUJOCO_GL")}
     code = "import sys, os; import metasim.sim.mujoco; print(os.environ.get('MUJOCO_GL'))"
     out = subprocess.run(
-        [sys.executable, "-c", code], check=False, env=env, capture_output=True, text=True, timeout=120
+        [sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=120, check=False
     )
-    assert out.stdout.strip() == "egl", out.stderr[-500:]
+    assert out.stdout.strip() == expected, out.stderr[-500:]
     env["MUJOCO_GL"] = "disable"
     out = subprocess.run(
-        [sys.executable, "-c", code], check=False, env=env, capture_output=True, text=True, timeout=120
+        [sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=120, check=False
     )
     assert out.stdout.strip() == "disable", "an explicit choice is kept"
     env.pop("MUJOCO_GL")
     env["DISPLAY"] = ":0"
     out = subprocess.run(
-        [sys.executable, "-c", code], check=False, env=env, capture_output=True, text=True, timeout=120
+        [sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=120, check=False
     )
     assert out.stdout.strip() == "None", "with a display MuJoCo's own default stands"
